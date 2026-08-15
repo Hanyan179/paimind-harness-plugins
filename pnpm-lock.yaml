@@ -139,8 +139,8 @@ importers:
         specifier: workspace:^
         version: link:../testkit
       dsh-better-sidebar:
-        specifier: 0.12.1
-        version: 0.12.1(f02c6ba3453ad754236d42ef76962b0b)
+        specifier: 0.12.2
+        version: 0.12.2(f02c6ba3453ad754236d42ef76962b0b)
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -287,7 +287,7 @@ importers:
     dependencies:
       '@huanlin/dsh-plugin-better-sidebar-plugin-office':
         specifier: 0.1.0
-        version: 0.1.0(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(5ee287bd07c00b3171c7ee342e9431a4))(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(cordis@4.0.0-rc.8)(dsh-better-sidebar@0.12.1(f02c6ba3453ad754236d42ef76962b0b))(pdfjs-dist@6.2.108)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+        version: 0.1.0(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(5ee287bd07c00b3171c7ee342e9431a4))(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(cordis@4.0.0-rc.8)(dsh-better-sidebar@0.12.2(f02c6ba3453ad754236d42ef76962b0b))(pdfjs-dist@6.2.108)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
       '@paimind/agent-builder':
         specifier: workspace:^
         version: link:../agent-builder
@@ -364,8 +364,8 @@ importers:
         specifier: workspace:^
         version: link:../workspace-project
       dsh-better-sidebar:
-        specifier: 0.12.1
-        version: 0.12.1(f02c6ba3453ad754236d42ef76962b0b)
+        specifier: 0.12.2
+        version: 0.12.2(f02c6ba3453ad754236d42ef76962b0b)
 
   packages/harness-compat:
     dependencies:
@@ -3315,8 +3315,8 @@ packages:
   dom-helpers@5.2.1:
     resolution: {integrity: sha512-nRCa7CK3VTrM2NmGkIy4cbK7IZlgBE/PYMn55rrXefr5xXDP0LdtfPnblFDoVdcAfslJ7or6iqAUnx0CCGIWQA==}
 
-  dsh-better-sidebar@0.12.1:
-    resolution: {integrity: sha512-64kCJx58evYTd8SHsYQD6ZPEmKrcZger4HhAUH/k2YzKhQ4fGcpTzCmYkTUb65ShSO4jgSWl0gNXPf3R/YPbFA==}
+  dsh-better-sidebar@0.12.2:
+    resolution: {integrity: sha512-b9N/Ie9d8qz/ayyf6sa+8KAqRuM3i85QLpcyu5/zWGXfB440YOVIA0r2vEFG0HVmFBO8KfLLiIgG59yo0JkK9Q==}
     engines: {node: '>=20'}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
@@ -5548,7 +5548,7 @@ snapshots:
       protobufjs: 7.6.5
       yargs: 17.7.3
 
-  '@huanlin/dsh-plugin-better-sidebar-plugin-office@0.1.0(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(5ee287bd07c00b3171c7ee342e9431a4))(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(cordis@4.0.0-rc.8)(dsh-better-sidebar@0.12.1(f02c6ba3453ad754236d42ef76962b0b))(pdfjs-dist@6.2.108)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
+  '@huanlin/dsh-plugin-better-sidebar-plugin-office@0.1.0(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(5ee287bd07c00b3171c7ee342e9431a4))(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(cordis@4.0.0-rc.8)(dsh-better-sidebar@0.12.2(f02c6ba3453ad754236d42ef76962b0b))(pdfjs-dist@6.2.108)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
     dependencies:
       '@aiden0z/pptx-renderer': 1.2.4(pdfjs-dist@6.2.108)
       '@univerjs/preset-sheets-core': 0.25.1(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
@@ -5558,7 +5558,7 @@ snapshots:
       xlsx: 0.18.5
     optionalDependencies:
       '@deepseek-ai/dsh-client-runtime': 0.1.0-rc.6(5ee287bd07c00b3171c7ee342e9431a4)
-      dsh-better-sidebar: 0.12.1(f02c6ba3453ad754236d42ef76962b0b)
+      dsh-better-sidebar: 0.12.2(f02c6ba3453ad754236d42ef76962b0b)
       react: 18.3.1
     transitivePeerDependencies:
       - '@types/react'
@@ -7933,7 +7933,7 @@ snapshots:
       '@babel/runtime': 7.29.7
       csstype: 3.2.3
 
-  dsh-better-sidebar@0.12.1(f02c6ba3453ad754236d42ef76962b0b):
+  dsh-better-sidebar@0.12.2(f02c6ba3453ad754236d42ef76962b0b):
     dependencies:
       '@codemirror/commands': 6.10.4
       '@codemirror/lang-cpp': 6.0.3

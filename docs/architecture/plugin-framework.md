@@ -110,13 +110,13 @@ An upstream upgrade changes `@paimind/harness-compat` first. The remaining packa
 4. An upgrade must pass package metadata compatibility, register/dispose/open-tab contract tests, production build, isolated real-profile install/remove, desktop/narrow/light/dark browser checks, cross-plugin regression, and Harness zero-upstream-delta verification before the bundle pin moves.
 5. Missing, incompatible, or failed Better Sidebar activation hides PAIMind rail tabs and leaves native Harness conversation available. PAIMind does not maintain a second fallback rail.
 
-Better Sidebar `0.12.1` and Harness npm `0.1.0-rc.6` passed the exact-version metadata, native-module build, adapter-v3 public contract, isolated profile install/boot/remove, Extension Center/feature isolation, browser product-classification and Side Card regression, and source-zero-delta gates in R7. They are the selected matrix. The historical FP05 baseline was `0.11.0`; a later release remains only a Candidate until the same gate passes again.
+Better Sidebar `0.12.2` and Harness npm `0.1.0-rc.6` passed the exact-version metadata, native-module build, adapter-v3 public contract, isolated profile install/boot/remove, Extension Center/feature isolation, responsive Side Card, terminal interaction and real Office Viewer gates in R8. They are the selected matrix. The historical FP05 and R7 baselines were `0.11.0` and `0.12.1`; a later release remains only a Candidate until the same gate passes again.
 
-Better Sidebar `0.12.1` externalizes PPTX/XLSX viewing. The selected exact
+Better Sidebar `0.12.x` externalizes PPTX/XLSX viewing. The selected exact
 `@huanlin/dsh-plugin-better-sidebar-plugin-office@0.1.0` owns its own technical
 Harness Bundle row and activates after `dsh-better-sidebar`; PAIMind does not
 copy that provider patch. Its stale declared `dsh-better-sidebar@^0.6.0` peer is
-a recorded metadata risk, while the selected `0.12.1` combination has passed
+a recorded metadata risk, while the selected `0.12.2` combination has passed
 real browser PPTX/XLSX gates.
 
 ### Preview/Side Card provider ownership

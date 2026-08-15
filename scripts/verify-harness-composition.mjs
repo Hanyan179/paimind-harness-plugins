@@ -16,7 +16,7 @@ const providerOption = option('--provider')
 const officeProviderOption = option('--office-provider')
 const upstreamOption = option('--upstream-checkout') ?? harnessOption
 const expectedDshVersion = option('--expected-dsh-version')
-const expectedProviderVersion = option('--expected-provider-version') ?? '0.12.1'
+const expectedProviderVersion = option('--expected-provider-version') ?? '0.12.2'
 const expectedOfficeProviderVersion = option('--expected-office-provider-version') ?? '0.1.0'
 
 if ((harnessOption === undefined && (runtimeOption === undefined || dshBinOption === undefined)) || providerOption === undefined) {
@@ -46,6 +46,7 @@ const agentMarketRoot = resolve(repositoryRoot, 'packages/agent-market')
 const agentBuilderRoot = resolve(repositoryRoot, 'packages/agent-builder')
 const skillMarketRoot = resolve(repositoryRoot, 'packages/skill-market')
 const notificationsRoot = resolve(repositoryRoot, 'packages/notifications')
+const platformApiRoot = resolve(repositoryRoot, 'packages/platform-api')
 const schedulerRoot = resolve(repositoryRoot, 'packages/scheduler')
 const schedulerHarnessAdapterRoot = resolve(repositoryRoot, 'packages/scheduler-adapter-harness')
 const schedulerHttpAdapterRoot = resolve(repositoryRoot, 'packages/scheduler-adapter-http')
@@ -547,6 +548,7 @@ try {
     agentBuilderRoot,
     skillMarketRoot,
     notificationsRoot,
+    platformApiRoot,
     schedulerRoot,
     schedulerHarnessAdapterRoot,
     schedulerHttpAdapterRoot,
@@ -621,16 +623,20 @@ try {
     '@paimind/artifacts',
     '@paimind/presentation-trace',
     '@paimind/agent-market',
-    '@paimind/agent-builder',
     '@paimind/skill-market',
     '@paimind/notifications',
     '@paimind/platform-scheduler',
+    '@paimind/user-settings',
+    '@paimind/developer-resources',
+  ], [
+    '@paimind/agent-builder',
+    '@paimind/platform-api',
     '@paimind/scheduler-adapter-harness',
     '@paimind/scheduler-adapter-http',
     '@paimind/scheduler-adapter-feishu-bot',
-    '@paimind/user-settings',
-    '@paimind/developer-resources',
-  ], ['@paimind/launcher', '@paimind/conversation-extensions'])
+    '@paimind/launcher',
+    '@paimind/conversation-extensions',
+  ])
 
   dsh([
     'plugin', '--profile', 'web', 'remove',
@@ -653,6 +659,7 @@ try {
     '@paimind/agent-builder',
     '@paimind/skill-market',
     '@paimind/notifications',
+    '@paimind/platform-api',
     '@paimind/platform-scheduler',
     '@paimind/scheduler-adapter-harness',
     '@paimind/scheduler-adapter-http',
@@ -681,6 +688,8 @@ try {
     || removed.includes('paimind-agent-builder')
     || removed.includes('paimind-skill-market')
     || removed.includes('paimind-notifications')
+    || removed.includes('paimind-platform-api')
+    || removed.includes('paimind-platform-scheduler')
     || removed.includes('paimind-scheduler')
     || removed.includes('paimind-user-settings')
     || removed.includes('paimind-developer-resources')
@@ -728,11 +737,10 @@ try {
     '@paimind/artifacts',
     '@paimind/presentation-trace',
     '@paimind/agent-market',
-    '@paimind/agent-builder',
     '@paimind/skill-market',
     '@paimind/notifications',
     '@paimind/developer-resources',
-  ], ['@paimind/extension-center', '@paimind/launcher', '@paimind/conversation-extensions'])
+  ], ['@paimind/extension-center', '@paimind/agent-builder', '@paimind/launcher', '@paimind/conversation-extensions'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-extension-center',
@@ -802,10 +810,9 @@ try {
     '@paimind/artifacts',
     '@paimind/presentation-trace',
     '@paimind/agent-market',
-    '@paimind/agent-builder',
     '@paimind/skill-market',
     '@paimind/notifications',
-  ], ['@paimind/task-monitor', '@paimind/launcher', '@paimind/conversation-extensions'])
+  ], ['@paimind/task-monitor', '@paimind/agent-builder', '@paimind/launcher', '@paimind/conversation-extensions'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-task-monitor',
@@ -874,10 +881,9 @@ try {
     '@paimind/renderer-pdf',
     '@paimind/artifacts',
     '@paimind/presentation-trace',
-    '@paimind/agent-builder',
     '@paimind/skill-market',
     '@paimind/notifications',
-  ], ['@paimind/agent-market', '@paimind/launcher', '@paimind/conversation-extensions'])
+  ], ['@paimind/agent-market', '@paimind/agent-builder', '@paimind/launcher', '@paimind/conversation-extensions'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-agent-market',
@@ -1019,9 +1025,8 @@ try {
     '@paimind/artifacts',
     '@paimind/presentation-trace',
     '@paimind/agent-market',
-    '@paimind/agent-builder',
     '@paimind/notifications',
-  ], ['@paimind/skill-market', '@paimind/launcher', '@paimind/conversation-extensions'])
+  ], ['@paimind/skill-market', '@paimind/agent-builder', '@paimind/launcher', '@paimind/conversation-extensions'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-skill-market',
@@ -1091,9 +1096,8 @@ try {
     '@paimind/artifacts',
     '@paimind/presentation-trace',
     '@paimind/agent-market',
-    '@paimind/agent-builder',
     '@paimind/skill-market',
-  ], ['@paimind/notifications', '@paimind/launcher', '@paimind/conversation-extensions'])
+  ], ['@paimind/notifications', '@paimind/agent-builder', '@paimind/launcher', '@paimind/conversation-extensions'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-notifications',
@@ -1170,11 +1174,10 @@ try {
     '@paimind/artifacts',
     '@paimind/presentation-trace',
     '@paimind/agent-market',
-    '@paimind/agent-builder',
     '@paimind/skill-market',
     '@paimind/notifications',
     '@paimind/developer-resources',
-  ], ['@paimind/scheduler', '@paimind/platform-scheduler', '@paimind/scheduler-adapter-harness', '@paimind/scheduler-adapter-http', '@paimind/scheduler-adapter-feishu-bot', '@paimind/platform-api', '@paimind/launcher', '@paimind/conversation-extensions'])
+  ], ['@paimind/agent-builder', '@paimind/scheduler', '@paimind/platform-scheduler', '@paimind/scheduler-adapter-harness', '@paimind/scheduler-adapter-http', '@paimind/scheduler-adapter-feishu-bot', '@paimind/platform-api', '@paimind/launcher', '@paimind/conversation-extensions'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-scheduler',
@@ -1229,6 +1232,7 @@ try {
     agentBuilderRoot,
     skillMarketRoot,
     notificationsRoot,
+    platformApiRoot,
     schedulerRoot,
     schedulerHarnessAdapterRoot,
     schedulerHttpAdapterRoot,
@@ -1261,15 +1265,20 @@ try {
     '@paimind/artifacts',
     '@paimind/presentation-trace',
     '@paimind/agent-market',
-    '@paimind/agent-builder',
     '@paimind/skill-market',
     '@paimind/notifications',
     '@paimind/platform-scheduler',
+    '@paimind/developer-resources',
+  ], [
+    '@paimind/user-settings',
+    '@paimind/agent-builder',
+    '@paimind/platform-api',
     '@paimind/scheduler-adapter-harness',
     '@paimind/scheduler-adapter-http',
     '@paimind/scheduler-adapter-feishu-bot',
-    '@paimind/developer-resources',
-  ], ['@paimind/user-settings', '@paimind/launcher', '@paimind/conversation-extensions'])
+    '@paimind/launcher',
+    '@paimind/conversation-extensions',
+  ])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-user-settings',
@@ -1291,6 +1300,7 @@ try {
     '@paimind/agent-builder',
     '@paimind/skill-market',
     '@paimind/notifications',
+    '@paimind/platform-api',
     '@paimind/platform-scheduler',
     '@paimind/scheduler-adapter-harness',
     '@paimind/scheduler-adapter-http',
@@ -1328,6 +1338,7 @@ try {
     agentBuilderRoot,
     skillMarketRoot,
     notificationsRoot,
+    platformApiRoot,
     schedulerRoot,
     schedulerHarnessAdapterRoot,
     schedulerHttpAdapterRoot,
@@ -1363,15 +1374,20 @@ try {
     '@paimind/artifacts',
     '@paimind/presentation-trace',
     '@paimind/agent-market',
-    '@paimind/agent-builder',
     '@paimind/skill-market',
     '@paimind/notifications',
     '@paimind/platform-scheduler',
+    '@paimind/user-settings',
+  ], [
+    '@paimind/developer-resources',
+    '@paimind/agent-builder',
+    '@paimind/platform-api',
     '@paimind/scheduler-adapter-harness',
     '@paimind/scheduler-adapter-http',
     '@paimind/scheduler-adapter-feishu-bot',
-    '@paimind/user-settings',
-  ], ['@paimind/developer-resources', '@paimind/launcher', '@paimind/conversation-extensions'])
+    '@paimind/launcher',
+    '@paimind/conversation-extensions',
+  ])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-developer-resources',
@@ -1393,6 +1409,7 @@ try {
     '@paimind/agent-builder',
     '@paimind/skill-market',
     '@paimind/notifications',
+    '@paimind/platform-api',
     '@paimind/platform-scheduler',
     '@paimind/scheduler-adapter-harness',
     '@paimind/scheduler-adapter-http',

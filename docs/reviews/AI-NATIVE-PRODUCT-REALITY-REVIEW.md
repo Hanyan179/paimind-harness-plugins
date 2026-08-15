@@ -27,7 +27,7 @@ PAIMind 继续采用 Independent Plugin（独立插件）交付，但不再把�
 | Schedule（定时） | Harness Schedule v1 是 durable、session-local reminder；只在原会话 live 时准时运行，dispatch 后在原 Session 发起 follow-up，没有独立 Scheduled Session UI。 | FP13 必须复用 Schedule/Job/Session；现有 v1 不能被误报为独立离线任务。独立 Scheduled Session 需先验证公开扩展 seam，否则作为明确阻塞，不私建第二套 Schedule。 |
 | Deliverable（交付物） | 原生 UI 从成功 mutation tool 的 structured locations 折叠 Produced Files；不依赖模型正文。Native `tool/result.meta` 会随 Session 日志持久化并可由 Session Projection 重放。 | Conversation Artifact Entry（对话产物入口）复用原生行；PAIMind 生成器把结构化 Artifact Envelope 放入同一 Tool Result metadata，禁止靠正文或文件名猜测 kind。 |
 | File System（文件系统） | `ctx.fs` 公开文本写入和有界字节读取，但没有通用 `writeBytes`。 | HTML/Bento 可走 `ctx.fs.writeText`；PPTX/PDF/XLSX 通过受 Harness Sandbox/Approval 管理的 Generator Runtime/Subprocess 写入，再由 `ctx.fs.resolve/stat` 校验，不绕过权限直接写宿主路径。 |
-| Better Sidebar（增强侧栏） | 是独立、持续更新的外部 Provider；历史基线为 `0.11.0`，R7 已选择并验证 `0.12.1`。该版本把 Office Viewer 外置为独立插件。 | 保持 exact pin（精确锁版）和 Adapter-only Dependency（仅适配层依赖）；不自动跟随上游。Office 扩展通过自己的技术 Bundle 在 Provider 之后加载。新版本先进入 Candidate Gate（候选门禁）。Task Monitor 不依赖该侧栏。 |
+| Better Sidebar（增强侧栏） | 是独立、持续更新的外部 Provider；历史基线为 `0.11.0` 和 `0.12.1`，R8 已选择并验证 `0.12.2`。`0.12.x` 把 Office Viewer 外置为独立插件。 | 保持 exact pin（精确锁版）和 Adapter-only Dependency（仅适配层依赖）；不自动跟随上游。Office 扩展通过自己的技术 Bundle 在 Provider 之后加载。新版本先进入 Candidate Gate（候选门禁）。Task Monitor 不依赖该侧栏。 |
 
 ## 3. Reality gap（真实性差距）
 

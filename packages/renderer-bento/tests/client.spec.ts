@@ -3,7 +3,7 @@ import type { PaimindSidebarService } from '@paimind/better-sidebar-adapter'
 import { BentoPreviewStore, normalizeBentoRuntimeMessage } from '../src/client/index.tsx'
 
 const sidebar = (): PaimindSidebarService => ({
-  getStatus: () => ({ state: 'active', provider: 'dsh-better-sidebar', providerVersion: '0.12.1', contractVersion: 3, error: null }),
+  getStatus: () => ({ state: 'active', provider: 'dsh-better-sidebar', providerVersion: '0.12.2', contractVersion: 3, error: null }),
   subscribe: () => () => {}, registerTab: () => () => {}, openTab: vi.fn(() => true),
   getFileCapability: () => ({ state: 'available', viewerId: 'html' }),
   openFile: () => ({ state: 'opened', viewerId: 'html' }), dispose: () => {},
