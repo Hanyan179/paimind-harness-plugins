@@ -1,0 +1,29 @@
+{
+  "name": "@paimind/conversation-extensions",
+  "version": "0.1.0-alpha.0",
+  "description": "Retired marker: FP03 is provided by native DeepSeek Harness conversation capabilities",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib"],
+  "dependencies": {
+    "@paimind/contracts": "workspace:^",
+    "@paimind/harness-compat": "workspace:^"
+  },
+  "devDependencies": {
+    "@paimind/testkit": "workspace:^"
+  },
+  "scripts": { "typecheck": "tsc -b --pretty false" }
+}

@@ -1,0 +1,20 @@
+- insert:
+    - id: rq103-invariants
+      name: '@deepseek-ai/dsh-invariants'
+
+    - id: rq103-platform-scheduler
+      name: '@paimind/platform-scheduler'
+
+    - id: rq103-platform-scheduler-invariant
+      name: '@paimind/platform-scheduler/invariant'
+      inject: [invariants]
+
+    - id: rq103-feishu-bot-adapter
+      name: '@paimind/scheduler-adapter-feishu-bot'
+
+    - id: rq103-feishu-bot-adapter-invariant
+      name: '@paimind/scheduler-adapter-feishu-bot/invariant'
+      inject: [invariants]
+
+    - id: rq103-feishu-bot-example
+      name: '@paimind/scheduler-adapter-feishu-bot/example-plugin'

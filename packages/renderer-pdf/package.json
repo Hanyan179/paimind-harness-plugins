@@ -1,0 +1,42 @@
+{
+  "name": "@paimind/renderer-pdf",
+  "version": "0.1.0-alpha.0",
+  "description": "Local PDF.js preview channel for PAIMind artifacts",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
+    "./client": { "types": "./lib/types/client/index.d.ts", "default": "./lib/client.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib"],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@paimind/better-sidebar-adapter"
+      ],
+      "platform": "web"
+    }
+  },
+  "dependencies": {
+    "@paimind/better-sidebar-adapter": "workspace:^",
+    "@paimind/harness-compat": "workspace:^",
+    "pdfjs-dist": "6.2.108"
+  },
+  "peerDependencies": { "react": ">=18.0.0 <20.0.0" },
+  "devDependencies": {
+    "@paimind/testkit": "workspace:^",
+    "@testing-library/react": "^16.3.2",
+    "react": "^18.3.1"
+  },
+  "paimindBuild": {
+    "node": ["src/index.ts", "src/invariant.ts"],
+    "client": "src/client/index.tsx"
+  },
+  "scripts": { "typecheck": "tsc -b --pretty false" }
+}

@@ -1,0 +1,411 @@
+import {
+  Component,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ErrorInfo,
+  type ReactNode,
+} from 'react'
+import { createPortal } from 'react-dom'
+import {
+  contributePaimindExtension,
+  type HarnessRemoteMountService,
+  type HarnessRemoteResult,
+  type HarnessSessionService,
+  type PaimindClientContext,
+  type PaimindLocaleSource,
+} from '@paimind/harness-compat'
+import type { NotificationRecord } from '@paimind/contracts'
+import type { PaimindArtifactService } from '@paimind/artifacts'
+import type { PaimindSidebarService } from '@paimind/better-sidebar-adapter'
+import type {
+  PaimindNotificationListValue,
+  PaimindNotificationMarkReadRequest,
+  PaimindNotificationMutationResult,
+} from '../index.js'
+import TYPERT_REMOTE from '../remote.js'
+
+const BASE_INJECT = ['slots', 'locale', 'remote', 'sessions', 'paimindArtifacts', 'paimindSidebar'] as const
+export const inject = [...BASE_INJECT]
+
+interface NotificationRemoteNamespace {
+  list(): Promise<HarnessRemoteResult<PaimindNotificationListValue>>
+  markRead(request: PaimindNotificationMarkReadRequest): Promise<HarnessRemoteResult<PaimindNotificationMutationResult>>
+  markAllRead(): Promise<HarnessRemoteResult<PaimindNotificationListValue>>
+}
+
+interface NotificationsRemote extends HarnessRemoteMountService {
+  readonly paimindNotifications?: NotificationRemoteNamespace
+}
+
+export interface NotificationsClientContext extends PaimindClientContext {
+  readonly remote: NotificationsRemote
+  readonly sessions: HarnessSessionService
+  readonly paimindArtifacts: PaimindArtifactService
+  readonly paimindSidebar: PaimindSidebarService
+  inject(
+    dependencies: readonly string[],
+    install: (ctx: NotificationsClientContext) => void,
+  ): PromiseLike<unknown> & { dispose(): Promise<void> }
+}
+
+export interface NotificationCenterSnapshot {
+  readonly open: boolean
+  readonly loading: boolean
+  readonly items: readonly Readonly<NotificationRecord>[]
+  readonly error: string | null
+}
+
+const EMPTY_SNAPSHOT: NotificationCenterSnapshot = Object.freeze({
+  open: false, loading: false, items: Object.freeze([]), error: null,
+})
+
+export class NotificationCenterController {
+  private snapshot: NotificationCenterSnapshot = EMPTY_SNAPSHOT
+  private readonly listeners = new Set<() => void>()
+  private requestEpoch = 0
+  private disposed = false
+  private refreshTimer: number | undefined
+  private readonly offSessions: () => void
+
+  constructor(
+    private readonly remote: NotificationRemoteNamespace,
+    private readonly sessions: HarnessSessionService,
+    private readonly artifacts: PaimindArtifactService,
+    private readonly sidebar: PaimindSidebarService,
+  ) {
+    this.offSessions = sessions.list.subscribe(() => { this.scheduleRefresh() })
+  }
+
+  getSnapshot(): NotificationCenterSnapshot { return this.snapshot }
+
+  subscribe(listener: () => void): () => void {
+    if (this.disposed) return () => {}
+    this.listeners.add(listener)
+    return () => { this.listeners.delete(listener) }
+  }
+
+  open(): void { this.publish({ ...this.snapshot, open: true }); void this.refresh() }
+  close(): void { this.publish({ ...this.snapshot, open: false }) }
+  toggle(): void { this.snapshot.open ? this.close() : this.open() }
+
+  async refresh(): Promise<void> {
+    if (this.disposed) return
+    const epoch = ++this.requestEpoch
+    this.publish({ ...this.snapshot, loading: true, error: null })
+    try {
+      const result = await this.remote.list()
+      if (this.disposed || epoch !== this.requestEpoch) return
+      if (!result.ok) throw new Error(result.error.message)
+      this.publish({ ...this.snapshot, loading: false, items: Object.freeze([...result.value.items]), error: null })
+    } catch (error) {
+      if (this.disposed || epoch !== this.requestEpoch) return
+      this.publish({ ...this.snapshot, loading: false, error: error instanceof Error ? error.message : String(error) })
+    }
+  }
+
+  async markRead(item: Readonly<NotificationRecord>): Promise<boolean> {
+    if (item.readAt !== undefined || this.disposed) return true
+    try {
+      const result = await this.remote.markRead({ id: item.id, ifVersion: item.version })
+      if (!result.ok) { this.publish({ ...this.snapshot, error: result.error.message }); return false }
+      if (!result.value.ok) {
+        if (result.value.error.code === 'version-conflict') this.replace(result.value.error.current)
+        else await this.refresh()
+        return false
+      }
+      this.replace(result.value.value)
+      return true
+    } catch (error) {
+      this.publish({ ...this.snapshot, error: error instanceof Error ? error.message : String(error) })
+      return false
+    }
+  }
+
+  async markAllRead(): Promise<void> {
+    if (this.disposed) return
+    try {
+      const result = await this.remote.markAllRead()
+      if (!result.ok) { this.publish({ ...this.snapshot, error: result.error.message }); return }
+      this.publish({ ...this.snapshot, items: Object.freeze([...result.value.items]), error: null })
+    } catch (error) {
+      this.publish({ ...this.snapshot, error: error instanceof Error ? error.message : String(error) })
+    }
+  }
+
+  async follow(item: Readonly<NotificationRecord>): Promise<void> {
+    if (!await this.markRead(item)) return
+    const target = item.target
+    if (target === undefined) return
+    if (target.kind === 'session') {
+      this.sessions.open(target.sessionId)
+    } else if (target.kind === 'artifact') {
+      this.sessions.open(target.sessionId)
+      this.focusArtifact(target.artifactId)
+    } else if (target.kind === 'surface') {
+      this.sidebar.openTab(target.surfaceId)
+    } else {
+      const opened = window.open(target.url, '_blank', 'noopener,noreferrer')
+      if (opened !== null) opened.opener = null
+    }
+    this.close()
+  }
+
+  dispose(): void {
+    if (this.disposed) return
+    this.disposed = true
+    this.offSessions()
+    if (this.refreshTimer !== undefined) window.clearTimeout(this.refreshTimer)
+    this.listeners.clear()
+  }
+
+  private focusArtifact(artifactId: string): void {
+    let off = (): void => {}
+    let timeout: number | undefined
+    const settle = (): boolean => {
+      if (!this.artifacts.focus(artifactId)) return false
+      this.sidebar.openTab('paimind:artifacts')
+      off()
+      if (timeout !== undefined) window.clearTimeout(timeout)
+      return true
+    }
+    if (settle()) return
+    off = this.artifacts.subscribe(() => { settle() })
+    timeout = window.setTimeout(() => { off(); this.sidebar.openTab('paimind:artifacts') }, 3_000)
+  }
+
+  private replace(item: Readonly<NotificationRecord>): void {
+    this.publish({
+      ...this.snapshot,
+      items: Object.freeze(this.snapshot.items.map(current => current.id === item.id ? item : current)),
+      error: null,
+    })
+  }
+
+  private scheduleRefresh(): void {
+    if (this.disposed) return
+    if (this.refreshTimer !== undefined) window.clearTimeout(this.refreshTimer)
+    this.refreshTimer = window.setTimeout(() => {
+      this.refreshTimer = undefined
+      void this.refresh()
+    }, 120)
+  }
+
+  private publish(snapshot: NotificationCenterSnapshot): void {
+    if (this.disposed) return
+    this.snapshot = Object.freeze(snapshot)
+    for (const listener of [...this.listeners]) listener()
+  }
+}
+
+const STYLE_ID = '@paimind/notifications'
+const STYLE = `
+[data-paimind-notification-trigger] {
+  position: relative; box-sizing: border-box; width: calc(100% + 8px); min-height: 34px; margin: 4px -4px;
+  padding: 6px 8px 6px 10px; display: flex; align-items: center; gap: 8px; border: 0; border-radius: 12px;
+  color: var(--dsw-alias-label-primary, #202124); background: transparent; font: inherit; font-size: 14px; cursor: pointer;
+}
+[data-paimind-notification-trigger]:hover, [data-paimind-notification-trigger]:focus-visible {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12));
+}
+[data-paimind-notification-trigger][data-wide='false'] { width: 36px; height: 36px; margin: 8px 0; padding: 0; justify-content: center; border-radius: 50%; }
+[data-paimind-notification-trigger-label] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-paimind-notification-badge] {
+  min-width: 18px; height: 18px; padding: 0 5px; display: grid; place-items: center; border-radius: 999px;
+  color: #fff; background: var(--dsw-alias-state-error-primary, #d04444); font-size: 9px; line-height: 1; font-weight: 700;
+}
+[data-paimind-notification-trigger][data-wide='false'] [data-paimind-notification-badge] { position: absolute; top: -2px; right: -3px; }
+[data-paimind-notification-overlay] { position: fixed; inset: 0; z-index: 2147483000; display: flex; justify-content: flex-end; pointer-events: auto; }
+[data-paimind-notification-mask] { position: absolute; inset: 0; background: var(--dsw-alias-bg-mask-1, rgba(0,0,0,.32)); backdrop-filter: blur(4px); }
+[data-paimind-notification-panel] {
+  position: relative; z-index: 1; width: min(430px, 100vw); height: 100%; box-sizing: border-box; display: grid;
+  grid-template-rows: auto auto minmax(0,1fr); color: var(--dsw-alias-label-primary, #202124);
+  background: var(--dsw-alias-bg-layer-1, #fff); border-left: 1px solid var(--dsw-alias-border-l1, rgba(128,128,128,.18));
+  box-shadow: -16px 0 48px rgba(0,0,0,.18);
+}
+[data-paimind-notification-header] { display: flex; align-items: flex-start; gap: 12px; padding: 18px 18px 12px; }
+[data-paimind-notification-heading] { min-width: 0; flex: 1; }
+[data-paimind-notification-heading] h2 { margin: 0; font-size: 17px; line-height: 24px; font-weight: 600; }
+[data-paimind-notification-heading] p { margin: 3px 0 0; color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 11px; line-height: 17px; }
+[data-paimind-notification-close], [data-paimind-notification-mark-all] { border: 0; color: inherit; background: transparent; font: inherit; cursor: pointer; }
+[data-paimind-notification-close] { width: 32px; height: 32px; border-radius: 50%; font-size: 22px; }
+[data-paimind-notification-close]:hover, [data-paimind-notification-mark-all]:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.1)); }
+[data-paimind-notification-toolbar] { display: flex; align-items: center; gap: 6px; padding: 0 18px 12px; border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(128,128,128,.15)); }
+[data-paimind-notification-filter] { min-height: 30px; padding: 4px 10px; border: 0; border-radius: 8px; color: var(--dsw-alias-label-secondary, #626872); background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
+[data-paimind-notification-filter][aria-pressed='true'] { color: var(--dsw-alias-label-primary, #202124); background: var(--dsw-alias-bg-layer-2, rgba(128,128,128,.1)); }
+[data-paimind-notification-mark-all] { margin-left: auto; padding: 5px 8px; border-radius: 7px; color: var(--dsw-alias-state-business-primary, #4f7ff8); font-size: 10px; }
+[data-paimind-notification-body] { overflow: auto; padding: 12px 14px 24px; }
+[data-paimind-notification-list] { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+[data-paimind-notification-row] { position: relative; padding: 12px; border: 1px solid var(--dsw-alias-border-l1, rgba(128,128,128,.15)); border-radius: 12px; background: var(--dsw-alias-bg-layer-2, rgba(128,128,128,.04)); }
+[data-paimind-notification-row][data-unread='true'] { border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary, #4f7ff8) 38%, transparent); }
+[data-paimind-notification-row][data-unread='true']::before { content: ''; position: absolute; top: 15px; left: -4px; width: 7px; height: 7px; border-radius: 50%; background: var(--dsw-alias-state-business-primary, #4f7ff8); }
+[data-paimind-notification-row-head] { display: flex; align-items: center; gap: 8px; color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 10px; }
+[data-paimind-notification-source] { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-paimind-notification-level='success'] { color: var(--dsw-alias-state-success-primary, #2b8a57); }
+[data-paimind-notification-level='error'] { color: var(--dsw-alias-state-error-primary, #d04444); }
+[data-paimind-notification-level='warning'] { color: var(--dsw-alias-state-warning-primary, #b7791f); }
+[data-paimind-notification-title] { margin: 7px 0 0; font-size: 13px; line-height: 19px; font-weight: 600; overflow-wrap: anywhere; }
+[data-paimind-notification-text] { margin: 5px 0 0; color: var(--dsw-alias-label-secondary, #626872); font-size: 11px; line-height: 17px; white-space: pre-wrap; overflow-wrap: anywhere; }
+[data-paimind-notification-actions] { display: flex; justify-content: flex-end; gap: 6px; margin-top: 9px; }
+[data-paimind-notification-action] { min-height: 28px; padding: 4px 9px; border: 0; border-radius: 8px; color: var(--dsw-alias-state-business-primary, #4f7ff8); background: color-mix(in srgb, currentColor 10%, transparent); font: inherit; font-size: 10px; cursor: pointer; }
+[data-paimind-notification-empty], [data-paimind-notification-error] { padding: 28px 12px; color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 12px; line-height: 19px; text-align: center; }
+[data-paimind-notification-error] { color: var(--dsw-alias-state-error-primary, #d04444); }
+@media (max-width: 640px) { [data-paimind-notification-panel] { width: 100vw; } }
+`
+
+function installStyle(): () => void {
+  if (document.getElementById(STYLE_ID) !== null) return () => {}
+  const style = document.createElement('style')
+  style.id = STYLE_ID
+  style.dataset.paimindPlugin = '@paimind/notifications'
+  style.textContent = STYLE
+  document.head.append(style)
+  return () => { style.remove() }
+}
+
+function BellIcon(): React.JSX.Element {
+  return <svg viewBox="0 0 20 20" width="18" height="18" fill="none" aria-hidden="true"><path d="M4.8 8.4a5.2 5.2 0 0 1 10.4 0v3.1l1.2 2H3.6l1.2-2V8.4Z" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round"/><path d="M8.3 15.4c.3.9.9 1.4 1.7 1.4s1.4-.5 1.7-1.4" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round"/></svg>
+}
+
+export function NotificationTrigger(props: {
+  readonly wide: boolean
+  readonly controller: NotificationCenterController
+  readonly locale: PaimindLocaleSource
+}): React.JSX.Element {
+  const snapshot = useSyncExternalStore(props.controller.subscribe.bind(props.controller), props.controller.getSnapshot.bind(props.controller))
+  const locale = useSyncExternalStore(props.locale.subscribe.bind(props.locale), () => props.locale.getLocale().active)
+  const zh = locale.startsWith('zh')
+  const unread = snapshot.items.filter(item => item.readAt === undefined).length
+  return <button type="button" data-paimind-notification-trigger data-wide={props.wide} aria-label={zh ? '打开通知中心' : 'Open Notification Center'} onClick={() => { props.controller.toggle() }}>
+    <BellIcon />
+    {props.wide && <span data-paimind-notification-trigger-label>{zh ? '通知' : 'Notifications'}</span>}
+    {unread > 0 && <span data-paimind-notification-badge>{unread > 99 ? '99+' : unread}</span>}
+  </button>
+}
+
+function relativeTime(timestamp: number, zh: boolean): string {
+  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1_000))
+  if (seconds < 60) return zh ? '刚刚' : 'Now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return zh ? `${minutes} 分钟前` : `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  return zh ? `${hours} 小时前` : `${hours}h ago`
+}
+
+function actionCopy(item: Readonly<NotificationRecord>, zh: boolean): string {
+  if (item.target?.kind === 'external' && item.target.label !== undefined) return item.target.label
+  if (item.target?.kind === 'artifact') return zh ? '查看产物' : 'View artifact'
+  if (item.target?.kind === 'session') return zh ? '打开会话' : 'Open Session'
+  if (item.target?.kind === 'external') return zh ? '查看详情' : 'View details'
+  return zh ? '打开' : 'Open'
+}
+
+function levelCopy(level: NotificationRecord['level'], zh: boolean): string {
+  const copy = {
+    info: { zh: '提醒', en: 'Notice' },
+    success: { zh: '已完成', en: 'Completed' },
+    warning: { zh: '需关注', en: 'Attention' },
+    error: { zh: '失败', en: 'Failed' },
+  } as const
+  return copy[level][zh ? 'zh' : 'en']
+}
+
+export function NotificationOverlay(props: {
+  readonly controller: NotificationCenterController
+  readonly locale: PaimindLocaleSource
+}): ReactNode {
+  const snapshot = useSyncExternalStore(props.controller.subscribe.bind(props.controller), props.controller.getSnapshot.bind(props.controller))
+  const locale = useSyncExternalStore(props.locale.subscribe.bind(props.locale), () => props.locale.getLocale().active)
+  const zh = locale.startsWith('zh')
+  const [filter, setFilter] = useState<'all' | 'unread'>('all')
+  const close = useRef<HTMLButtonElement>(null)
+  const rows = useMemo(() => filter === 'all' ? snapshot.items : snapshot.items.filter(item => item.readAt === undefined), [filter, snapshot.items])
+
+  useEffect(() => {
+    if (!snapshot.open) return
+    close.current?.focus()
+    const onKey = (event: KeyboardEvent): void => { if (event.key === 'Escape') props.controller.close() }
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('keydown', onKey) }
+  }, [props.controller, snapshot.open])
+
+  if (!snapshot.open) return null
+  return createPortal(<div data-paimind-notification-overlay>
+    <div data-paimind-notification-mask onMouseDown={() => { props.controller.close() }} />
+    <section role="dialog" aria-modal="true" aria-label={zh ? '通知中心' : 'Notification Center'} data-paimind-notification-panel>
+      <header data-paimind-notification-header>
+        <div data-paimind-notification-heading><h2>{zh ? '通知中心' : 'Notification Center'}</h2><p>{zh ? '查看来自各业务应用的消息与相关操作。' : 'Messages and related actions from your business applications.'}</p></div>
+        <button ref={close} type="button" data-paimind-notification-close aria-label={zh ? '关闭通知中心' : 'Close Notification Center'} onClick={() => { props.controller.close() }}>×</button>
+      </header>
+      <div data-paimind-notification-toolbar>
+        <button type="button" data-paimind-notification-filter aria-pressed={filter === 'all'} onClick={() => { setFilter('all') }}>{zh ? '全部' : 'All'}</button>
+        <button type="button" data-paimind-notification-filter aria-pressed={filter === 'unread'} onClick={() => { setFilter('unread') }}>{zh ? '未读' : 'Unread'}</button>
+        <button type="button" data-paimind-notification-mark-all onClick={() => { void props.controller.markAllRead() }}>{zh ? '全部已读' : 'Mark all read'}</button>
+      </div>
+      <div data-paimind-notification-body>
+        {snapshot.error !== null && <div role="alert" data-paimind-notification-error>{snapshot.error}</div>}
+        {snapshot.loading && snapshot.items.length === 0 ? <div data-paimind-notification-empty>{zh ? '正在加载…' : 'Loading…'}</div>
+          : rows.length === 0 ? <div data-paimind-notification-empty>{zh ? '这里暂时没有通知。' : 'No notifications here yet.'}</div>
+            : <ul data-paimind-notification-list>{rows.map(item => <li key={item.id} data-paimind-notification-row data-unread={item.readAt === undefined}>
+              <div data-paimind-notification-row-head><span data-paimind-notification-source>{zh ? item.source.nameZh : item.source.nameEn}</span><span data-paimind-notification-level={item.level}>{levelCopy(item.level, zh)}</span><time dateTime={new Date(item.createdAt).toISOString()}>{relativeTime(item.createdAt, zh)}</time></div>
+              <h3 data-paimind-notification-title>{item.title}</h3>
+              {item.body !== undefined && <p data-paimind-notification-text>{item.body}</p>}
+              <div data-paimind-notification-actions>
+                {item.readAt === undefined && <button type="button" data-paimind-notification-action onClick={() => { void props.controller.markRead(item) }}>{zh ? '标为已读' : 'Mark read'}</button>}
+                {item.target !== undefined && <button type="button" data-paimind-notification-action onClick={() => { void props.controller.follow(item) }}>{actionCopy(item, zh)}</button>}
+              </div>
+            </li>)}</ul>}
+      </div>
+    </section>
+  </div>, document.body)
+}
+
+class NotificationBoundary extends Component<{ readonly children: ReactNode }, { readonly failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError(): { readonly failed: boolean } { return { failed: true } }
+  componentDidCatch(error: Error, info: ErrorInfo): void { console.warn('[paimind-notifications] render failed', error, info.componentStack) }
+  render(): ReactNode { return this.state.failed ? null : this.props.children }
+}
+
+export async function apply(ctx: NotificationsClientContext): Promise<() => Promise<void>> {
+  const disposeRemote = await ctx.remote.$mount(TYPERT_REMOTE)
+  const mounted = ctx.inject([...BASE_INJECT, 'remote.paimindNotifications'], (remoteCtx) => {
+    const remote = remoteCtx.remote.paimindNotifications
+    if (remote === undefined) throw new Error('PAIMind Notification Remote did not mount')
+    const controller = new NotificationCenterController(
+      remote, remoteCtx.sessions, remoteCtx.paimindArtifacts, remoteCtx.paimindSidebar,
+    )
+    contributePaimindExtension(remoteCtx.slots, {
+      id: 'paimind:notifications', packageName: '@paimind/notifications', category: 'automation',
+      nameZh: '通知中心', nameEn: 'Notification Center',
+      descriptionZh: '统一接收各业务应用消息，并提供安全的相关操作入口。',
+      descriptionEn: 'Receives messages from business applications with safe related-action links.',
+      surface: 'header-button', maturity: 'available', order: 20,
+    })
+    remoteCtx.effect(installStyle, 'paimind-notifications: styles')
+    remoteCtx.effect(() => {
+      const disposeService = remoteCtx.reflect.provide('paimindNotificationCenter', controller)
+      return () => { controller.dispose(); void disposeService() }
+    }, 'paimind-notifications: controller')
+    const injectProps = (): { readonly controller: NotificationCenterController; readonly locale: PaimindLocaleSource } => ({ controller, locale: remoteCtx.locale })
+    remoteCtx.slots.inject('sidebar.footer.action', () => remoteCtx.slots.register({
+      name: 'sidebar.footer.action', id: 'paimind-notification-trigger', order: -5, inject: injectProps,
+    }, (props: { readonly wide: boolean; readonly controller: NotificationCenterController; readonly locale: PaimindLocaleSource }) => <NotificationBoundary><NotificationTrigger {...props} /></NotificationBoundary>))
+    remoteCtx.slots.inject('shell.overlay', () => remoteCtx.slots.register({
+      name: 'shell.overlay', id: 'paimind-notification-overlay', order: 20, inject: injectProps,
+    }, (props: { readonly controller: NotificationCenterController; readonly locale: PaimindLocaleSource }) => <NotificationBoundary><NotificationOverlay {...props} /></NotificationBoundary>))
+    void controller.refresh()
+  })
+  try {
+    await mounted
+  } catch (error) {
+    await disposeRemote()
+    throw error
+  }
+  return async () => {
+    await mounted.dispose()
+    await disposeRemote()
+  }
+}

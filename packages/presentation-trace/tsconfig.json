@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types", "tsBuildInfoFile": "lib/.tsbuildinfo" },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "references": [
+    { "path": "../artifacts" },
+    { "path": "../better-sidebar-adapter" },
+    { "path": "../contracts" },
+    { "path": "../harness-compat" },
+    { "path": "../renderer-bento" }
+  ]
+}

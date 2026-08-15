@@ -1,0 +1,6 @@
+Adapted for DeepSeek Harness by PAIMind from OpenAI's official `openai-docs` Skill.
+
+Changes: removed Codex-only routing, local integration, model resolver, and product-specific tool instructions; retained the official-source research workflow in a Harness-compatible form.
+
+Source: OpenAI Codex system skills, `openai-docs`.
+License: Apache License 2.0. See LICENSE.txt.

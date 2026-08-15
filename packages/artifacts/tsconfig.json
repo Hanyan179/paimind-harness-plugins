@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types", "emitDeclarationOnly": true },
+  "include": ["src"],
+  "references": [
+    { "path": "../better-sidebar-adapter" },
+    { "path": "../contracts" },
+    { "path": "../harness-compat" },
+    { "path": "../renderer-bento" },
+    { "path": "../workspace-project" },
+    { "path": "../testkit" }
+  ]
+}

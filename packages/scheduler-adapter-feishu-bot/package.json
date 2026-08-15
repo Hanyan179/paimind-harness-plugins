@@ -1,0 +1,23 @@
+{
+  "name": "@paimind/scheduler-adapter-feishu-bot",
+  "version": "0.1.0-alpha.0",
+  "description": "Feishu custom-bot webhook adapter for PAIMind platform Scheduler",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./example-plugin": { "types": "./lib/types/example-plugin.d.ts", "default": "./lib/example-plugin.js" },
+    "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib", "example"],
+  "dependencies": {
+    "@paimind/contracts": "workspace:^",
+    "@paimind/harness-compat": "workspace:^",
+    "@paimind/platform-scheduler": "workspace:^"
+  },
+  "devDependencies": { "@paimind/testkit": "workspace:^" },
+  "paimindBuild": { "node": ["src/index.ts", "src/example-plugin.ts", "src/invariant.ts"] },
+  "scripts": { "typecheck": "tsc -b --pretty false" }
+}

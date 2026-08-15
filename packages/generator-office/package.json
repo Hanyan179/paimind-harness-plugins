@@ -1,0 +1,61 @@
+{
+  "name": "@paimind/generator-office",
+  "version": "0.1.0-alpha.0",
+  "description": "Native Harness Tool providers for PPTX, PDF and formula-bearing XLSX artifacts",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib"
+  ],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "dependencies": {
+    "@paimind/artifact-runtime": "workspace:^",
+    "@paimind/contracts": "workspace:^",
+    "@paimind/harness-compat": "workspace:^",
+    "exceljs": "4.4.0",
+    "pdf-lib": "1.17.1",
+    "pptxgenjs": "4.0.1"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0 <20.0.0"
+  },
+  "devDependencies": {
+    "@paimind/presentation-trace": "workspace:^",
+    "@paimind/testkit": "workspace:^",
+    "react": "^18.3.1"
+  },
+  "paimindBuild": {
+    "node": [
+      "src/index.ts",
+      "src/cli.ts",
+      "src/invariant.ts"
+    ],
+    "client": "src/client/index.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc -b --pretty false"
+  }
+}

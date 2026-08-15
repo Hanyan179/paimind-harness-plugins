@@ -1,0 +1,20 @@
+{
+  "name": "@paimind/artifact-runtime",
+  "version": "0.1.0-alpha.0",
+  "description": "Native Harness Job and tool-result projection runtime for PAIMind artifacts",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib"],
+  "dependencies": {
+    "@paimind/contracts": "workspace:^",
+    "@paimind/harness-compat": "workspace:^"
+  },
+  "paimindBuild": { "node": ["src/index.ts", "src/invariant.ts"] },
+  "scripts": { "typecheck": "tsc -b --pretty false" }
+}

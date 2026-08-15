@@ -1,0 +1,6 @@
+Adapted for DeepSeek Harness by PAIMind from OpenAI's official `skill-installer` Skill.
+
+Changes: removed direct `$CODEX_HOME` writes, GitHub helper scripts, and Codex restart behavior; all mutations now route through the PAIMind Skill Market inspection and confirmation flow.
+
+Source: OpenAI Codex system skills, `skill-installer`.
+License: Apache License 2.0. See LICENSE.txt.

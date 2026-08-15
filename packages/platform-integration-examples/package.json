@@ -1,0 +1,24 @@
+{
+  "name": "@paimind/platform-integration-examples",
+  "version": "0.1.0-alpha.0",
+  "description": "Executable Harness, HTTP, custom-adapter and notification integration examples, including an isolated QA action plugin",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./harness-plugin": { "types": "./lib/types/harness-plugin.d.ts", "default": "./lib/harness-plugin.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib"],
+  "dependencies": {
+    "@paimind/contracts": "workspace:^",
+    "@paimind/harness-compat": "workspace:^",
+    "@paimind/platform-sdk": "workspace:^",
+    "@paimind/platform-scheduler": "workspace:^",
+    "@paimind/scheduler-adapter-harness": "workspace:^"
+  },
+  "devDependencies": { "@paimind/testkit": "workspace:^" },
+  "paimindBuild": { "node": ["src/index.ts", "src/harness-plugin.ts"] },
+  "scripts": { "typecheck": "tsc -b --pretty false" }
+}

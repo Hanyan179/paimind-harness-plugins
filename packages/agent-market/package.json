@@ -1,0 +1,47 @@
+{
+  "name": "@paimind/agent-market",
+  "version": "0.1.0-alpha.0",
+  "description": "PAIMind catalog, market and governance product layer over native Harness Agent Presets",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
+    "./client": { "types": "./lib/types/client/index.d.ts", "default": "./lib/client.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib"],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-workspaces"
+      ],
+      "platform": "web"
+    }
+  },
+  "dependencies": {
+    "@paimind/agent-builder": "workspace:^",
+    "@paimind/contracts": "workspace:^",
+    "@paimind/harness-compat": "workspace:^",
+    "@paimind/skill-market": "workspace:^"
+  },
+  "peerDependencies": { "react": ">=18.0.0 <20.0.0" },
+  "devDependencies": {
+    "@paimind/testkit": "workspace:^",
+    "@testing-library/react": "^16.3.2",
+    "react": "^18.3.1"
+  },
+  "paimindBuild": {
+    "node": ["src/index.ts", "src/invariant.ts"],
+    "client": "src/client/index.tsx"
+  },
+  "scripts": { "typecheck": "tsc -b --pretty false" }
+}

@@ -1,0 +1,56 @@
+{
+  "name": "@paimind/better-sidebar-adapter",
+  "version": "0.1.0-alpha.0",
+  "description": "Version-pinned PAIMind boundary for the external Better Sidebar provider",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib"],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale",
+        "@paimind/workspace-project",
+        "dsh-better-sidebar"
+      ],
+      "platform": "web"
+    }
+  },
+  "dependencies": {
+    "@paimind/harness-compat": "workspace:^",
+    "@paimind/workspace-project": "workspace:^"
+  },
+  "peerDependencies": {
+    "dsh-better-sidebar": "0.12.1",
+    "react": ">=18.0.0 <20.0.0"
+  },
+  "peerDependenciesMeta": {
+    "dsh-better-sidebar": { "optional": true }
+  },
+  "devDependencies": {
+    "@paimind/testkit": "workspace:^",
+    "dsh-better-sidebar": "0.12.1",
+    "react": "^18.3.1"
+  },
+  "paimindBuild": {
+    "node": ["src/index.ts", "src/invariant.ts"],
+    "client": "src/client/index.ts"
+  },
+  "scripts": { "typecheck": "tsc -b --pretty false" }
+}

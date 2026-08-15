@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types", "emitDeclarationOnly": true },
+  "include": ["src"],
+  "references": [
+    { "path": "../contracts" },
+    { "path": "../harness-compat" },
+    { "path": "../notifications" },
+    { "path": "../platform-sdk" },
+    { "path": "../scheduler" },
+    { "path": "../scheduler-adapter-http" }
+  ]
+}
+

@@ -1,0 +1,173 @@
+- insert:
+    - id: paimind-invariants
+      name: '@deepseek-ai/dsh-invariants'
+
+    - id: paimind-extension-center
+      name: '@paimind/extension-center'
+
+    - id: paimind-extension-center-invariant
+      name: '@paimind/extension-center/invariant'
+      inject: [invariants]
+
+    - id: paimind-branding
+      name: '@paimind/branding'
+
+    - id: paimind-branding-invariant
+      name: '@paimind/branding/invariant'
+      inject: [invariants]
+
+    - id: paimind-runtime-orbs
+      name: '@paimind/runtime-orbs'
+
+    - id: paimind-runtime-orbs-invariant
+      name: '@paimind/runtime-orbs/invariant'
+      inject: [invariants]
+
+    - id: paimind-workspace-project
+      name: '@paimind/workspace-project'
+
+    - id: paimind-workspace-project-invariant
+      name: '@paimind/workspace-project/invariant'
+      inject: [invariants]
+
+    - id: paimind-better-sidebar-adapter
+      name: '@paimind/better-sidebar-adapter'
+
+    - id: paimind-better-sidebar-adapter-invariant
+      name: '@paimind/better-sidebar-adapter/invariant'
+      inject: [invariants]
+
+    - id: paimind-task-monitor
+      name: '@paimind/task-monitor'
+
+    - id: paimind-task-monitor-invariant
+      name: '@paimind/task-monitor/invariant'
+      inject: [invariants]
+
+    - id: paimind-artifact-runtime
+      name: '@paimind/artifact-runtime'
+
+    - id: paimind-artifact-runtime-invariant
+      name: '@paimind/artifact-runtime/invariant'
+      inject: [invariants]
+
+    - id: paimind-generator-web
+      name: '@paimind/generator-web'
+
+    - id: paimind-generator-web-invariant
+      name: '@paimind/generator-web/invariant'
+      inject: [invariants]
+
+    - id: paimind-generator-office
+      name: '@paimind/generator-office'
+
+    - id: paimind-generator-office-invariant
+      name: '@paimind/generator-office/invariant'
+      inject: [invariants]
+
+    - id: paimind-generator-bento
+      name: '@paimind/generator-bento'
+
+    - id: paimind-generator-bento-invariant
+      name: '@paimind/generator-bento/invariant'
+      inject: [invariants]
+
+    - id: paimind-renderer-bento
+      name: '@paimind/renderer-bento'
+
+    - id: paimind-renderer-bento-invariant
+      name: '@paimind/renderer-bento/invariant'
+      inject: [invariants]
+
+    - id: paimind-renderer-pdf
+      name: '@paimind/renderer-pdf'
+
+    - id: paimind-renderer-pdf-invariant
+      name: '@paimind/renderer-pdf/invariant'
+      inject: [invariants]
+
+    - id: paimind-artifacts
+      name: '@paimind/artifacts'
+
+    - id: paimind-artifacts-invariant
+      name: '@paimind/artifacts/invariant'
+      inject: [invariants]
+
+    - id: paimind-presentation-trace
+      name: '@paimind/presentation-trace'
+
+    - id: paimind-presentation-trace-invariant
+      name: '@paimind/presentation-trace/invariant'
+      inject: [invariants]
+
+    - id: paimind-skill-market
+      name: '@paimind/skill-market'
+
+    - id: paimind-skill-market-invariant
+      name: '@paimind/skill-market/invariant'
+      inject: [invariants]
+
+    - id: paimind-agent-builder
+      name: '@paimind/agent-builder'
+
+    - id: paimind-agent-builder-invariant
+      name: '@paimind/agent-builder/invariant'
+      inject: [invariants]
+
+    - id: paimind-agent-market
+      name: '@paimind/agent-market'
+
+    - id: paimind-agent-market-invariant
+      name: '@paimind/agent-market/invariant'
+      inject: [invariants]
+
+    - id: paimind-user-settings
+      name: '@paimind/user-settings'
+
+    - id: paimind-developer-resources
+      name: '@paimind/developer-resources'
+
+    - id: paimind-notifications
+      name: '@paimind/notifications'
+
+    - id: paimind-notifications-invariant
+      name: '@paimind/notifications/invariant'
+      inject: [invariants]
+
+    - id: paimind-platform-scheduler
+      name: '@paimind/platform-scheduler'
+
+    - id: paimind-platform-scheduler-invariant
+      name: '@paimind/platform-scheduler/invariant'
+      inject: [invariants]
+
+    - id: paimind-scheduler-adapter-harness
+      name: '@paimind/scheduler-adapter-harness'
+
+    - id: paimind-scheduler-agent-action
+      name: '@paimind/scheduler-adapter-harness/agent-action'
+
+    - id: paimind-scheduler-adapter-harness-invariant
+      name: '@paimind/scheduler-adapter-harness/invariant'
+      inject: [invariants]
+
+    - id: paimind-scheduler-adapter-http
+      name: '@paimind/scheduler-adapter-http'
+
+    - id: paimind-scheduler-adapter-http-invariant
+      name: '@paimind/scheduler-adapter-http/invariant'
+      inject: [invariants]
+
+    - id: paimind-platform-api
+      name: '@paimind/platform-api'
+
+    - id: paimind-platform-api-invariant
+      name: '@paimind/platform-api/invariant'
+      inject: [invariants]
+
+    - id: paimind-scheduler-adapter-feishu-bot
+      name: '@paimind/scheduler-adapter-feishu-bot'
+
+    - id: paimind-scheduler-adapter-feishu-bot-invariant
+      name: '@paimind/scheduler-adapter-feishu-bot/invariant'
+      inject: [invariants]

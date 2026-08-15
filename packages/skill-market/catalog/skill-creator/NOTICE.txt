@@ -1,0 +1,6 @@
+Adapted for DeepSeek Harness by PAIMind from OpenAI's official `skill-creator` Skill.
+
+Changes: replaced Codex-specific metadata, paths, helper scripts, and agent configuration with the PAIMind Skill package contract and Harness discovery rules.
+
+Source: OpenAI Codex system skills, `skill-creator`.
+License: Apache License 2.0. See LICENSE.txt.

@@ -1,0 +1,51 @@
+{
+  "name": "@paimind/developer-resources",
+  "version": "0.1.0-alpha.0",
+  "description": "Read-only PAIMind runtime diagnostics, live surface catalog, and bundled integration reference",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib"],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-host-plugin-inventory"
+      ],
+      "platform": "web"
+    }
+  },
+  "dependencies": {
+    "@paimind/contracts": "workspace:^",
+    "@paimind/harness-compat": "workspace:^"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0 <20.0.0"
+  },
+  "devDependencies": {
+    "@paimind/testkit": "workspace:^",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "paimindBuild": {
+    "node": ["src/index.ts"],
+    "client": "src/client/index.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc -b --pretty false"
+  }
+}
