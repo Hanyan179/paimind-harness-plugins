@@ -9,9 +9,14 @@
 - `推荐技能`：展示 PAIMind 发布的可安装包，支持搜索、收藏、来源、许可证、安装状态和技能详情；不依赖当前会话。
 - `已安装`：名称、说明、适用场景、当前对话可用性、更新、卸载和在当前对话使用。
 - `本地导入`：选择 `.zip` 或 `SKILL.md`，完成检查后展示名称、说明、文件数量、解压大小和风险，再由用户确认安装。
+- 社区包若声明 Python、Node.js 或系统依赖，页面单独显示“运行环境待确认”；`已安装`、`当前对话可用` 与 `运行环境已就绪` 是三个不同状态。
 - 页面不显示运行 ID、磁盘路径、摘要哈希、内部版本说明和组织权限占位。
 
-第一批推荐内容为经 Apache-2.0 许可适配的 `openai-docs`、`skill-creator` 和 `skill-installer`。每个包必须包含 `SKILL.md`、`LICENSE.txt` 与 `NOTICE.txt`，页面显示 `OpenAI Official · Adapted for Harness` 来源。
+推荐目录同时支持官方适配 Skill 与 PAIMind 内部 Skill。可溯源演示链包含
+`bento-ppt`、`fineline-investment-analysis`、`white-space-analysis` 和
+`build-walmart-buyer-proposal-outline`。内部包显示
+`PAIMind Internal · Adapted for Harness` 与
+`UNLICENSED / Internal Use Only`，并携带来源提交和修改摘要。
 
 ## 真相来源
 
@@ -19,6 +24,9 @@
 - 已安装状态来自 PAIMind 安装清单和宿主 Skill 目录。
 - 当前对话可用性来自 Harness `skills.list(sessionId)`，没有会话时显示“打开对话后检查可用性”。
 - Harness 文件系统发现、上下文注入和执行仍是唯一运行链路。
+- 安装或更新完成后，页面以有限重试读取 Harness 原生
+  `skills.list(sessionId)`；宿主热发现成功时显示“当前对话可用”，不要求
+  重启。宿主若冻结会话 Skill 快照，则明确提示新建会话，不伪造热发现。
 
 ## 安装流程
 
@@ -31,13 +39,27 @@
 - 上传中可由浏览器取消；中断上传清理临时文件。
 - 路径穿越、绝对路径、越界符号链接、加密包和异常压缩比直接拒绝。
 - 脚本和可执行文件只展示风险，安装过程不执行。
+- 使用标准 YAML 解析 `SKILL.md` frontmatter，支持折叠多行说明和嵌套 metadata；已知生态展示目录 `.claude-plugin`、`.codex-plugin` 不进入 Skill 安装目录，其余越界文件仍拒绝。
+- `requirements.txt`、`pyproject.toml`、`environment.yml` 与 `package.json` 只用于识别运行依赖类型；平台第一阶段不自动执行脚本或安装第三方依赖。
 - 更新采用目录级原子替换；失败恢复旧版本。
 - 卸载只允许 PAIMind 安装的 Skill，并移动到可恢复备份。
 
 ## 验收
 
-- 安装后无需重启即可出现在 Harness 原生技能目录并可通过 `/${name}` 真实调用。
+- 安装后无需重启即可出现在 Harness 原生技能目录；支持热发现的当前
+  Harness 会话必须直接显示“当前对话可用”并可通过 `/${name}` 真实调用。
+- 社区包必须同时验证：包结构可安装、Harness 新会话可发现、真实会话产生该 Skill 的 Context Injection（上下文注入）；仅显示“已安装”不算可用验收。
 - 没有当前对话时仍能查看和安装推荐技能；切换预设后只刷新“当前对话可用性”，不清空推荐目录。
 - 三个官方适配技能可通过同一检查、确认、安装、更新和卸载链路管理。
 - 更新、卸载、取消、磁盘不足、恶意压缩包和中途失败均有真实结果。
 - 桌面与窄屏无列表圆点、文字粘连、长文本溢出和横向滚动。
+
+## 社区包真实验收记录
+
+2026-08-16 使用官方 `ppt-master` v4.7.0 压缩包完成真实验收：
+
+- 标准 YAML 正确读取完整多行说明，不再显示为 `>`。
+- `.claude-plugin` 展示元数据未进入安装目录；实际安装 `12,912` 个包内文件。
+- 页面明确显示 Python 运行依赖与脚本风险，安装过程未执行脚本。
+- 无需重启 Harness，新建真实会话后 `上下文注入 ppt-master` 出现，真实模型按该 Skill 返回运行环境检查结果。
+- 当前宿主已具备 `python-pptx`、Pillow 与 lxml；CairoSVG、PyMuPDF 和 openpyxl 等可选路径依赖尚未补齐，因此不宣称所有 PPT Master 工作流都已运行就绪。

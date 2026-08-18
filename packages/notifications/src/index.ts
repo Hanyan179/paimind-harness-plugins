@@ -1,10 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import {
-  artifactProducedFromToolMeta,
   defineNotificationRecord,
+  type ArtifactProducedEnvelopeV1,
   type NotificationRecord,
-  type PaimindNotificationLevel,
   type PaimindNotificationPublishInput,
   type PaimindNotificationSource,
 } from '@paimind/contracts'
@@ -16,8 +15,6 @@ import {
   type PaimindStorageDomainFacility,
   type PaimindStorageDomainHandle,
   type PaimindStorageTable,
-  type PaimindToolExecutionResult,
-  type PaimindToolRunContext,
 } from '@paimind/harness-compat/host'
 
 export const name = 'paimind-notifications'
@@ -96,25 +93,10 @@ export interface PaimindNotificationService {
 
 export interface PaimindNotificationsHostContext {
   readonly storageDomain: PaimindStorageDomainFacility
-  inject(
-    dependencies: readonly string[],
-    install: (ctx: {
-      readonly paimindUserSettings: {
-        shouldPublishNotification(level: PaimindNotificationLevel): boolean
-      }
-    }) => void | (() => void),
-  ): { dispose(): void | Promise<void> }
   effect(
     install: () => void | (() => void | Promise<void>),
     label?: string,
   ): void
-  on(
-    event: 'tools/execute',
-    listener: (
-      exec: PaimindToolRunContext,
-      next: () => Promise<PaimindToolExecutionResult>,
-    ) => Promise<PaimindToolExecutionResult>,
-  ): () => void
 }
 
 function sourceSnapshot(source: PaimindNotificationSource): Readonly<PaimindNotificationSource> {
@@ -135,58 +117,32 @@ function notificationId(producerId: string, idempotencyKey: string): string {
   return `notification:${digest}`
 }
 
-/** Convert an untrusted tool error into the bounded single-line Notification body contract. */
+/** @deprecated Kept for public API compatibility; Artifact execution no longer publishes Notifications automatically. */
 export function artifactNotificationFailureBody(message: string | undefined): string {
   const normalized = (message ?? '').replace(CONTROL_RUN, ' ').replace(/\s+/g, ' ').trim()
   return normalized === '' ? 'Artifact generation failed' : normalized.slice(0, 4_096)
+}
+
+/** @deprecated Kept for public API compatibility; explicit producers now own all publication decisions. */
+export function shouldPublishArtifactNotification(
+  artifact: Pick<ArtifactProducedEnvelopeV1, 'kind' | 'previewKind'>,
+): boolean {
+  return artifact.kind !== 'bento' && artifact.previewKind !== 'bento-deck'
 }
 
 /** Durable message/read-state sidecar. It never mutates linked Harness objects. */
 export class PaimindNotificationsService
   extends PaimindHostRemoteService
   implements PaimindNotificationService {
-  static inject = ['storageDomain', 'tools']
+  static inject = ['storageDomain']
   private readonly ready: Promise<PaimindStorageDomainHandle>
   private mutationTail: Promise<void> = Promise.resolve()
-  private shouldPublishNotification: (level: PaimindNotificationLevel) => boolean = () => true
 
   constructor(private readonly notificationCtx: PaimindNotificationsHostContext) {
     super(notificationCtx, 'paimindNotifications')
     markPaimindHostRemoteMethods(this, ['list', 'markRead', 'markAllRead'])
     this.ready = notificationCtx.storageDomain.open(notificationDomainSpec)
     notificationCtx.effect(() => async () => { await (await this.ready).close() }, 'paimind-notifications: domain')
-    notificationCtx.inject(['paimindUserSettings'], optionalCtx => {
-      const policy = optionalCtx.paimindUserSettings.shouldPublishNotification.bind(optionalCtx.paimindUserSettings)
-      this.shouldPublishNotification = policy
-      return () => {
-        if (this.shouldPublishNotification === policy) this.shouldPublishNotification = () => true
-      }
-    })
-    const artifactProducer = this.registerProducer({
-      id: 'paimind.artifacts', nameZh: '产物生成', nameEn: 'Artifact generation',
-    })
-    notificationCtx.effect(() => notificationCtx.on('tools/execute', async (exec, next) => {
-      const result = await next()
-      const artifact = artifactProducedFromToolMeta(result.meta)
-      if (artifact === null || exec.agent?.session.id !== artifact.sessionId) return result
-      try {
-        await artifactProducer.publish({
-          idempotencyKey: `artifact:${artifact.artifactId}:r${artifact.revision}:${artifact.state}`,
-          title: artifact.title,
-          body: artifact.state === 'available'
-            ? `${artifact.kind.toUpperCase()} · r${artifact.revision}`
-            : artifactNotificationFailureBody(artifact.error?.message),
-          level: artifact.state === 'available' ? 'success' : 'error',
-          target: {
-            kind: 'artifact', artifactId: artifact.artifactId,
-            sessionId: artifact.sessionId, workspaceId: artifact.workspaceId,
-          },
-        })
-      } catch (error) {
-        console.warn('[paimind-notifications] artifact notification failed', error)
-      }
-      return result
-    }), 'paimind-notifications: artifact producer')
   }
 
   registerProducer(source: PaimindNotificationSource): PaimindNotificationProducer {
@@ -233,7 +189,6 @@ export class PaimindNotificationsService
     source: Readonly<PaimindNotificationSource>,
     input: PaimindNotificationPublishInput,
   ): Promise<Readonly<NotificationRecord> | undefined> {
-    if (!this.shouldPublishNotification(input.level)) return undefined
     const id = notificationId(source.id, input.idempotencyKey)
     return await this.enqueue(async table => {
       const current = table.get(id)

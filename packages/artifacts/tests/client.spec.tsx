@@ -3,8 +3,16 @@ import { describe, expect, it, vi } from 'vitest'
 import type { PaimindLocaleSource } from '@paimind/harness-compat'
 import type { PaimindSidebarService, PaimindSidebarTabScope } from '@paimind/better-sidebar-adapter'
 import type { PaimindBentoPreviewService } from '@paimind/renderer-bento'
+import { createClientContextFixture } from '@paimind/testkit'
 import { ArtifactRegistry, type PaimindArtifact } from '../src/index.ts'
-import { ArtifactPanel } from '../src/client/index.tsx'
+import {
+  ArtifactPanel,
+  installBentoArtifactDeepLink,
+  installBentoArtifactOpenPathRouter,
+  openRegisteredBentoArtifact,
+  registeredBentoArtifactForPath,
+  apply,
+} from '../src/client/index.tsx'
 
 function locale(initial = 'en'): PaimindLocaleSource & { set(value: string): void } {
   let active = initial
@@ -32,8 +40,8 @@ function service(rows: readonly PaimindArtifact[]) {
 
 function sidebar(): PaimindSidebarService {
   return {
-    getStatus: () => ({ state: 'active', provider: 'dsh-better-sidebar', providerVersion: '0.12.2', contractVersion: 3, error: null }),
-    subscribe: () => () => {}, registerTab: () => () => {}, openTab: () => true,
+    getStatus: () => ({ state: 'active', provider: 'dsh-better-sidebar', providerVersion: '0.12.2', contractVersion: 4, error: null }),
+    subscribe: () => () => {}, registerTab: () => () => {}, openTab: () => true, closeTab: () => true,
     getFileCapability: () => ({ state: 'available', viewerId: 'pdf' }),
     openFile: vi.fn(() => ({ state: 'opened', viewerId: 'pdf' })),
     dispose: () => {},
@@ -51,6 +59,86 @@ const bento = (): PaimindBentoPreviewService => ({
 })
 
 describe('FP06-FP07 artifact client surface', () => {
+  it('publishes routing and projection services without a fixed Artifacts sidebar tab', () => {
+    const fixture = createClientContextFixture()
+    const registerTab = vi.fn(() => () => {})
+    const closeTab = vi.fn(() => true)
+    const sessions = { list: { getSnapshot: () => ({ current: undefined, byId: {} }), subscribe: () => () => {} }, open: vi.fn() }
+    const workspaces = { list: { getSnapshot: () => ({ items: [] }), subscribe: () => () => {} }, openPath: vi.fn(async () => {}) }
+    const projects = { getSnapshot: () => ({ projects: [], currentProject: null }), subscribe: () => () => {} }
+    const context = Object.assign(fixture.context, {
+      sessions, workspaces, paimindWorkspaceProject: projects, paimindBentoPreview: bento(),
+      paimindSidebar: { ...sidebar(), registerTab, closeTab },
+    })
+    apply(context as never)
+    expect(registerTab).not.toHaveBeenCalled()
+    expect(closeTab).toHaveBeenCalledWith('paimind:artifacts')
+    expect(fixture.services.has('paimindArtifacts')).toBe(true)
+    fixture.disposeEffects()
+    expect(fixture.services.has('paimindArtifacts')).toBe(false)
+  })
+
+  it('routes a registered Bento file link directly to the Bento workbench and falls through for ordinary HTML', async () => {
+    const bentoArtifact = row({
+      id: 'bento', kind: 'html', previewKind: 'bento-deck', path: 'decks/proposal.bento.html',
+      title: 'Proposal', traceId: 'trace-1',
+    })
+    const registry = service([bentoArtifact])
+    const preview = bento()
+    const fallback = vi.fn(async () => {})
+    const project = {
+      workspaceId: 'workspace-1', title: 'Workspace', path: '/workspace', sessionIds: ['session-1'],
+      visibleSessionCount: 1, archivedSessionCount: 0, totalSessionCount: 1,
+      createdAt: '2026-08-17T00:00:00Z', updatedAt: '2026-08-17T00:00:00Z',
+    }
+    const workspaces = { list: { getSnapshot: vi.fn(), subscribe: vi.fn() }, startSession: vi.fn(), openPath: fallback }
+    const sessions = { list: { getSnapshot: () => ({ current: 'session-1', byId: {} }), subscribe: () => () => {} }, open: vi.fn() }
+    const projects = { getSnapshot: () => ({ state: 'ready', projects: [project], currentSessionId: 'session-1', currentProject: project, error: null }), subscribe: () => () => {}, startSession: vi.fn(), openWorkspace: vi.fn() }
+
+    const match = registeredBentoArtifactForPath('/workspace/decks/proposal.bento.html', 'session-1', registry.getSnapshot().artifacts, [project])
+    expect(match?.id).toBe('bento')
+    expect(openRegisteredBentoArtifact(match!, [project], preview)).toBe(true)
+    expect(preview.open).toHaveBeenLastCalledWith(expect.objectContaining({
+      path: '/workspace/decks/proposal.bento.html', artifactId: 'bento', traceId: 'trace-1',
+    }))
+
+    vi.mocked(preview.open).mockClear()
+    const dispose = installBentoArtifactOpenPathRouter({ workspaces, sessions, paimindWorkspaceProject: projects, paimindBentoPreview: preview } as never, registry)
+    await workspaces.openPath('decks/proposal.bento.html')
+    expect(preview.open).toHaveBeenCalledOnce()
+    expect(fallback).not.toHaveBeenCalled()
+    await workspaces.openPath('decks/ordinary.html')
+    expect(fallback).toHaveBeenCalledWith('decks/ordinary.html')
+    dispose()
+    expect(workspaces.openPath).toBe(fallback)
+  })
+
+  it('consumes an exact Artifact deep link after opening its Bento workbench', async () => {
+    const registry = service([row({
+      id: 'bento-deep-link', kind: 'html', previewKind: 'bento-deck', path: 'decks/direct.bento.html',
+      title: 'Direct deck', traceId: 'trace-direct',
+    })])
+    const preview = bento()
+    const project = {
+      workspaceId: 'workspace-1', title: 'Workspace', path: '/workspace', sessionIds: ['session-1'],
+      visibleSessionCount: 1, archivedSessionCount: 0, totalSessionCount: 1,
+      createdAt: '2026-08-17T00:00:00Z', updatedAt: '2026-08-17T00:00:00Z',
+    }
+    const sessions = { list: { getSnapshot: () => ({ current: 'session-1', byId: {} }), subscribe: () => () => {} }, open: vi.fn() }
+    const projects = { getSnapshot: () => ({ state: 'ready', projects: [project], currentSessionId: 'session-1', currentProject: project, error: null }), subscribe: () => () => {}, startSession: vi.fn(), openWorkspace: vi.fn() }
+    window.history.replaceState({}, '', '/?paimindArtifactId=bento-deep-link')
+
+    const dispose = installBentoArtifactDeepLink({ sessions, paimindWorkspaceProject: projects, paimindBentoPreview: preview } as never, registry)
+    await Promise.resolve()
+
+    expect(preview.open).toHaveBeenCalledWith(expect.objectContaining({
+      artifactId: 'bento-deep-link', traceId: 'trace-direct', path: '/workspace/decks/direct.bento.html',
+    }))
+    expect(window.location.search).toBe('')
+    expect(sessions.open).not.toHaveBeenCalled()
+    dispose()
+  })
+
   it('shows product states, disables unsettled rows and delegates a safe preview', () => {
     const registry = service([
       row(),
@@ -107,7 +195,7 @@ describe('FP06-FP07 artifact client surface', () => {
     const registry = service([
       row({ id: 'html', kind: 'html', previewKind: 'html-document', path: 'document.html', title: 'Document' }),
       row({ id: 'deck', kind: 'html', previewKind: 'html-deck', path: 'deck.html', title: 'Deck' }),
-      row({ id: 'bento', kind: 'html', previewKind: 'bento-deck', path: 'bento.html', title: 'Bento Runtime' }),
+      row({ id: 'bento', kind: 'html', previewKind: 'bento-deck', path: 'bento.html', title: 'Bento Runtime', traceId: 'trace-1' }),
       row({ id: 'sheet', kind: 'xlsx', previewKind: 'spreadsheet', path: 'model.xlsx', title: 'Workbook' }),
     ])
     const bentoPreview = bento()
@@ -120,6 +208,7 @@ describe('FP06-FP07 artifact client surface', () => {
     expect(bentoPreview.open).toHaveBeenLastCalledWith({
       sessionId: 'session-1', workspaceId: 'workspace-1', cwd: '/workspace',
       path: '/workspace/bento.html', title: 'Bento Runtime',
+      artifactSourceId: 'test', artifactId: 'bento', traceId: 'trace-1',
     })
     fireEvent.click(within(screen.getByTitle('Workbook').closest('li') as HTMLElement).getByRole('button', { name: 'Preview' }))
     expect(provider.openFile).toHaveBeenLastCalledWith({

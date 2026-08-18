@@ -1,6 +1,8 @@
 {
   "name": "@paimind/extension-center",
   "version": "0.1.0-alpha.0",
+  "license": "UNLICENSED",
+  "engines": { "node": "^22.19.0 || >=24.0.0" },
   "description": "PAIMind product capability catalog projected over the native Harness Plugin Registry",
   "type": "module",
   "main": "lib/index.js",
@@ -20,7 +22,7 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["lib"],
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "dsh": {
     "client": {
       "inject": [

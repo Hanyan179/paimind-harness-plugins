@@ -284,17 +284,6 @@ describe('FP01 runtime orbs', () => {
     expect(canvas).toHaveAttribute('data-thinking-orb-paused', 'true')
   })
 
-  it('also pauses for the PAIMind reduce preference without changing the visible state', async () => {
-    const { container } = render(
-      <RuntimeOrbDock useSession={useSnapshot(snapshot({ running: true }))} useSessions={useSessionList()} />,
-    )
-    const canvas = container.querySelector('canvas')
-    expect(canvas).toHaveAttribute('data-thinking-orb-paused', 'false')
-    document.documentElement.dataset.paimindMotion = 'reduce'
-    await waitFor(() => { expect(canvas).toHaveAttribute('data-thinking-orb-paused', 'true') })
-    expect(container.querySelector('[data-orb-state="solving"]')).not.toBeNull()
-  })
-
   it('registers additively and disposes both slot and style effects', () => {
     const fixture = createClientContextFixture()
     apply(fixture.context)

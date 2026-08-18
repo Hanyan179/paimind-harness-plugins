@@ -1,3 +1,6 @@
+import type { ReactNode } from 'react'
+import type { PaimindSidebarTabScope } from '@paimind/better-sidebar-adapter'
+
 export const BENTO_INFO_PATH = '/paimind/bento-sandbox/info'
 
 export interface PaimindBentoPreviewRequest {
@@ -6,14 +9,40 @@ export interface PaimindBentoPreviewRequest {
   readonly cwd: string
   readonly path: string
   readonly title: string
+  /** Exact Artifact identity lets an inspector activate its matching Sidecar without path inference. */
+  readonly artifactSourceId?: string
+  readonly artifactId?: string
+  readonly traceId?: string
 }
 
-export type PaimindBentoRuntimeEventType = 'paimind:bento-ready' | 'paimind:bento-slide' | 'paimind:bento-exit'
+export type PaimindBentoMode = 'preview' | 'edit' | 'trace'
+export type PaimindBentoRuntimeEventType = 'paimind:bento-ready' | 'paimind:bento-slide' | 'paimind:bento-select' | 'paimind:bento-exit'
+export type PaimindBentoSelector =
+  | { readonly kind: 'object' }
+  | { readonly kind: 'chart-point'; readonly seriesKey: string; readonly categoryKey: string }
+  | { readonly kind: 'table-cell'; readonly rowKey: string; readonly columnKey: string }
 
 export interface PaimindBentoRuntimeEvent {
   readonly type: PaimindBentoRuntimeEventType
-  readonly mode: 'edit' | 'present'
+  readonly mode: PaimindBentoMode
   readonly slide: number
+  readonly slideId?: string
+  readonly objectId?: string
+  readonly factId?: string
+  readonly selector?: PaimindBentoSelector
+}
+
+export interface PaimindBentoFocusTarget {
+  readonly slideId: string
+  readonly objectId: string
+  readonly selector: PaimindBentoSelector
+}
+
+export interface PaimindBentoInspectorContribution {
+  readonly id: string
+  /** Select and validate inspector state for this exact preview request before trace mode opens. */
+  activate?(request: PaimindBentoPreviewRequest): boolean
+  render(scope: PaimindSidebarTabScope): ReactNode
 }
 
 export interface PaimindBentoPreviewSnapshot {
@@ -21,12 +50,20 @@ export interface PaimindBentoPreviewSnapshot {
   readonly requestRevision: number
   readonly request: PaimindBentoPreviewRequest | null
   readonly runtimeEvent: PaimindBentoRuntimeEvent | null
+  readonly mode: PaimindBentoMode
+  readonly focusRevision: number
+  readonly focus: PaimindBentoFocusTarget | null
+  readonly inspectorRevision: number
 }
 
 export interface PaimindBentoPreviewService {
   getSnapshot(): PaimindBentoPreviewSnapshot
   subscribe(listener: () => void): () => void
   open(request: PaimindBentoPreviewRequest): boolean
+  setMode(mode: PaimindBentoMode): boolean
+  focus(target: PaimindBentoFocusTarget): boolean
+  registerInspector(contribution: PaimindBentoInspectorContribution): () => void
+  getInspector(): PaimindBentoInspectorContribution | null
 }
 
 export interface BentoSandboxInfo {

@@ -1,12 +1,9 @@
 import {
-  Component,
   useEffect,
   useMemo,
   useRef,
   useState,
   useSyncExternalStore,
-  type ErrorInfo,
-  type ReactNode,
 } from 'react'
 import { contributePaimindExtension, type PaimindWorkspaceClientContext } from '@paimind/harness-compat'
 import type {
@@ -14,7 +11,7 @@ import type {
   PaimindSidebarService,
   PaimindSidebarTabScope,
 } from '@paimind/better-sidebar-adapter'
-import type { PaimindWorkspaceProjectService } from '@paimind/workspace-project'
+import type { PaimindWorkspaceProjectService, WorkspaceProjectRecord } from '@paimind/workspace-project'
 import type { PaimindBentoPreviewService } from '@paimind/renderer-bento'
 import {
   ArtifactRegistry,
@@ -31,7 +28,7 @@ import {
   type PaimindArtifactView,
 } from '../index.js'
 
-export const inject = ['slots', 'sessions', 'paimindSidebar', 'paimindBentoPreview', 'locale', 'paimindWorkspaceProject']
+export const inject = ['slots', 'sessions', 'workspaces', 'paimindSidebar', 'paimindBentoPreview', 'locale', 'paimindWorkspaceProject']
 
 export interface ArtifactsClientContext extends PaimindWorkspaceClientContext {
   readonly paimindSidebar: PaimindSidebarService
@@ -211,15 +208,6 @@ function installStyle(): () => void {
   return () => { style.remove() }
 }
 
-function ArtifactIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 18 18" width="16" height="16" fill="none" aria-hidden="true">
-      <path d="M4 2.7h6.3L14 6.4v8.9H4z" stroke="currentColor" strokeWidth="1.35" strokeLinejoin="round" />
-      <path d="M10.2 2.9v3.7h3.6M6.3 10.8h5.4M6.3 13h3.6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  )
-}
-
 const STATE_COPY: Readonly<Record<PaimindArtifactState, readonly [string, string]>> = {
   available: ['可预览', 'Available'],
   updating: ['更新中', 'Updating'],
@@ -241,6 +229,143 @@ const OPEN_FAILURE_COPY: Readonly<Record<Exclude<PaimindSidebarFileOpenResult['s
   'provider-unavailable': ['侧边栏预览服务不可用。', 'The sidebar preview provider is unavailable.'],
   'editor-unavailable': ['侧边栏文件编辑器已停用或不兼容。', 'The sidebar file editor is disabled or incompatible.'],
   'viewer-unavailable': ['对应的文件查看器已停用或不兼容。', 'The matching file viewer is disabled or incompatible.'],
+}
+
+export const BENTO_ARTIFACT_DEEP_LINK_PARAM = 'paimindArtifactId'
+export const BENTO_ARTIFACT_SOURCE_DEEP_LINK_PARAM = 'paimindArtifactSourceId'
+
+function projectForArtifact(
+  projects: readonly WorkspaceProjectRecord[],
+  artifact: PaimindArtifactView,
+): WorkspaceProjectRecord | undefined {
+  return projects.find(project => (
+    project.workspaceId === artifact.workspaceId
+    && project.sessionIds.includes(artifact.sessionId)
+  ))
+}
+
+/**
+ * Open only a registered Bento Artifact. The Artifact tuple remains the
+ * authority for Session, Workspace, trace and path; neither a file suffix nor
+ * HTML prose can manufacture preview or provenance state.
+ */
+export function openRegisteredBentoArtifact(
+  artifact: PaimindArtifactView,
+  projects: readonly WorkspaceProjectRecord[],
+  bentoPreview: PaimindBentoPreviewService,
+): boolean {
+  if (artifact.state !== 'available' || artifact.kind !== 'html' || artifact.previewKind !== 'bento-deck') return false
+  const project = projectForArtifact(projects, artifact)
+  if (project === undefined) return false
+  const resolution = resolveArtifactPath(project.path, artifact.path)
+  if (resolution.state !== 'safe' || resolution.kind !== 'html') return false
+  return bentoPreview.open({
+    sessionId: artifact.sessionId,
+    workspaceId: artifact.workspaceId,
+    cwd: project.path,
+    path: resolution.path,
+    title: artifact.title,
+    artifactSourceId: artifact.sourceId,
+    artifactId: artifact.id,
+    ...(artifact.traceId === undefined ? {} : { traceId: artifact.traceId }),
+  })
+}
+
+/** Resolve one chat/file link to its registered Bento Artifact in the active Session. */
+export function registeredBentoArtifactForPath(
+  path: string,
+  currentSessionId: string | undefined,
+  artifacts: readonly PaimindArtifactView[],
+  projects: readonly WorkspaceProjectRecord[],
+): PaimindArtifactView | undefined {
+  if (currentSessionId === undefined) return undefined
+  const project = projects.find(candidate => candidate.sessionIds.includes(currentSessionId))
+  if (project === undefined) return undefined
+  const requested = resolveArtifactPath(project.path, path)
+  if (requested.state !== 'safe' || requested.kind !== 'html') return undefined
+  return artifacts.find(artifact => {
+    if (
+      artifact.sessionId !== currentSessionId
+      || artifact.workspaceId !== project.workspaceId
+      || artifact.state !== 'available'
+      || artifact.kind !== 'html'
+      || artifact.previewKind !== 'bento-deck'
+    ) return false
+    const candidate = resolveArtifactPath(project.path, artifact.path)
+    return candidate.state === 'safe' && candidate.path === requested.path
+  })
+}
+
+/**
+ * Intercept the native Workspace file-open funnel after the sidebar provider.
+ * Exact Bento Artifacts land in their workbench; every other path falls
+ * through to the original Harness/Better Sidebar behavior.
+ */
+export function installBentoArtifactOpenPathRouter(
+  ctx: Pick<ArtifactsClientContext, 'workspaces' | 'sessions' | 'paimindWorkspaceProject' | 'paimindBentoPreview'>,
+  artifacts: PaimindArtifactService,
+): () => void {
+  const original = ctx.workspaces.openPath
+  const routed = (path: string): Promise<void> => {
+    const artifact = registeredBentoArtifactForPath(
+      path,
+      ctx.sessions.list.getSnapshot().current,
+      artifacts.getSnapshot().artifacts,
+      ctx.paimindWorkspaceProject.getSnapshot().projects,
+    )
+    if (artifact !== undefined && openRegisteredBentoArtifact(
+      artifact,
+      ctx.paimindWorkspaceProject.getSnapshot().projects,
+      ctx.paimindBentoPreview,
+    )) return Promise.resolve()
+    return original.call(ctx.workspaces, path)
+  }
+  ctx.workspaces.openPath = routed
+  return () => {
+    if (ctx.workspaces.openPath === routed) ctx.workspaces.openPath = original
+  }
+}
+
+/** Consume a same-origin Artifact deep link after native projections are ready. */
+export function installBentoArtifactDeepLink(
+  ctx: Pick<ArtifactsClientContext, 'sessions' | 'paimindWorkspaceProject' | 'paimindBentoPreview'>,
+  artifacts: PaimindArtifactService,
+): () => void {
+  if (typeof window === 'undefined') return () => {}
+  const url = new URL(window.location.href)
+  const artifactId = url.searchParams.get(BENTO_ARTIFACT_DEEP_LINK_PARAM)
+  const sourceId = url.searchParams.get(BENTO_ARTIFACT_SOURCE_DEEP_LINK_PARAM)
+  if (artifactId === null || artifactId.trim() === '') return () => {}
+  let consumed = false
+  const tryOpen = (): void => {
+    if (consumed) return
+    const artifact = artifacts.getSnapshot().artifacts.find(candidate => (
+      candidate.id === artifactId
+      && (sourceId === null || candidate.sourceId === sourceId)
+      && candidate.previewKind === 'bento-deck'
+    ))
+    if (artifact === undefined) return
+    if (ctx.sessions.list.getSnapshot().current !== artifact.sessionId) {
+      ctx.sessions.open(artifact.sessionId)
+      return
+    }
+    if (!openRegisteredBentoArtifact(
+      artifact,
+      ctx.paimindWorkspaceProject.getSnapshot().projects,
+      ctx.paimindBentoPreview,
+    )) return
+    consumed = true
+    url.searchParams.delete(BENTO_ARTIFACT_DEEP_LINK_PARAM)
+    url.searchParams.delete(BENTO_ARTIFACT_SOURCE_DEEP_LINK_PARAM)
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
+  }
+  const disposers = [
+    artifacts.subscribe(tryOpen),
+    ctx.sessions.list.subscribe(tryOpen),
+    ctx.paimindWorkspaceProject.subscribe(tryOpen),
+  ]
+  queueMicrotask(tryOpen)
+  return () => { for (const dispose of disposers.reverse()) dispose() }
 }
 
 function QaArtifactSource(
@@ -295,6 +420,8 @@ function ArtifactRow(props: {
         ? 'HTML'
         : artifact.previewKind === 'spreadsheet'
           ? 'XLSX'
+          : artifact.previewKind === 'data-document'
+            ? 'JSON'
           : artifact.kind
   return (
     <li data-paimind-artifact-row data-artifact-id={artifact.id} data-state={artifact.state} data-focused={focused}>
@@ -319,14 +446,14 @@ function ArtifactRow(props: {
             {zh ? action.labelZh : action.labelEn}
           </button>
         ))}
-        <button
+        {artifact.previewKind !== 'data-document' && <button
           type="button"
           data-paimind-artifact-preview
           disabled={artifact.state !== 'available'}
           onClick={() => { onPreview(artifact) }}
         >
           {zh ? '预览' : 'Preview'}
-        </button>
+        </button>}
       </div>
     </li>
   )
@@ -386,6 +513,9 @@ export function ArtifactPanel({ service, sidebar, bentoPreview, scope }: Artifac
         cwd: scope.cwd ?? '',
         path: resolution.path,
         title: artifact.title,
+        artifactSourceId: artifact.sourceId,
+        artifactId: artifact.id,
+        ...(artifact.traceId === undefined ? {} : { traceId: artifact.traceId }),
       })
       if (!opened) setNotice([
         'Bento 隔离预览服务不可用。',
@@ -459,13 +589,6 @@ export function ArtifactPanel({ service, sidebar, bentoPreview, scope }: Artifac
   )
 }
 
-class ArtifactErrorBoundary extends Component<{ readonly children: ReactNode }, { readonly failed: boolean }> {
-  state = { failed: false }
-  static getDerivedStateFromError(): { readonly failed: boolean } { return { failed: true } }
-  componentDidCatch(error: Error, info: ErrorInfo): void { console.error('[paimind-artifacts]', error, info) }
-  render(): ReactNode { return this.state.failed ? null : this.props.children }
-}
-
 export function apply(ctx: ArtifactsClientContext): void {
   contributePaimindExtension(ctx.slots, {
     id: 'paimind:artifacts',
@@ -475,7 +598,7 @@ export function apply(ctx: ArtifactsClientContext): void {
     nameEn: 'Artifacts & Preview',
     descriptionZh: '投影 Harness Session/Workspace 产物并路由到匹配的安全预览器。',
     descriptionEn: 'Projects Harness Session/Workspace artifacts and routes them to matching safe viewers.',
-    surface: 'side-card',
+    surface: 'preview',
     maturity: 'technical-preview',
     order: 10,
   })
@@ -490,21 +613,12 @@ export function apply(ctx: ArtifactsClientContext): void {
       && new URLSearchParams(window.location.search).get('paimindArtifactPreview') === '1'
     const offQa = qaEnabled ? registry.registerSource(QaArtifactSource(ctx)) : () => {}
     const disposeService = ctx.reflect.provide('paimindArtifacts', registry)
-    const disposeTab = ctx.paimindSidebar.registerTab({
-      id: 'paimind:artifacts',
-      titleZh: 'PAIMind 产物',
-      titleEn: 'PAIMind Artifacts',
-      order: 51,
-      single: true,
-      icon: <ArtifactIcon />,
-      render: scope => (
-        <ArtifactErrorBoundary>
-          <ArtifactPanel service={registry} sidebar={ctx.paimindSidebar} bentoPreview={ctx.paimindBentoPreview} scope={scope} />
-        </ArtifactErrorBoundary>
-      ),
-    })
+    ctx.paimindSidebar.closeTab('paimind:artifacts')
+    const disposeOpenPathRouter = installBentoArtifactOpenPathRouter(ctx, registry)
+    const disposeDeepLink = installBentoArtifactDeepLink(ctx, registry)
     return () => {
-      disposeTab()
+      disposeDeepLink()
+      disposeOpenPathRouter()
       void disposeService()
       offQa()
       offProjected()
@@ -513,5 +627,5 @@ export function apply(ctx: ArtifactsClientContext): void {
       nativeSource.dispose()
       registry.dispose()
     }
-  }, 'paimind-artifacts: service and tab')
+  }, 'paimind-artifacts: service and routing')
 }

@@ -83,6 +83,11 @@ export function listPaimindNativeSchedules(
 /** Stable field vocabulary used to build one Harness settings namespace schema. */
 export type PaimindSettingsFieldSpec =
   | {
+      readonly kind: 'boolean'
+      readonly default: boolean
+      readonly description?: string
+    }
+  | {
       readonly kind: 'enum'
       readonly values: readonly [string, ...string[]]
       readonly default: string
@@ -115,6 +120,7 @@ export interface PaimindHostSettingsFacility {
     readonly ns: unknown
     readonly value: unknown
     readonly revision: number
+    readonly user?: unknown
   }[]
   mutate(
     namespace: unknown,
@@ -128,15 +134,44 @@ export interface PaimindHostSettingsFacility {
 export function describePaimindHostSettings(
   settings: PaimindHostSettingsFacility,
   namespace: string,
-): { readonly value: unknown; readonly revision: number; readonly writable: boolean } | undefined {
+): { readonly value: unknown; readonly user?: unknown; readonly revision: number; readonly writable: boolean } | undefined {
   const branded = settingsNamespace(namespace)
   const descriptor = settings.describe({ redactSecrets: true })
     .find(candidate => String(candidate.ns) === String(branded))
   return descriptor === undefined ? undefined : {
     value: descriptor.value,
+    ...(descriptor.user === undefined ? {} : { user: descriptor.user }),
     revision: descriptor.revision,
     writable: settings.writable,
   }
+}
+
+/** Host-internal raw user layer for one-time migrations; never expose this result over a Remote. */
+export function describePaimindHostSettingsUserLayer(
+  settings: PaimindHostSettingsFacility,
+  namespace: string,
+): { readonly user?: unknown; readonly revision: number } | undefined {
+  const branded = settingsNamespace(namespace)
+  const descriptor = settings.describe()
+    .find(candidate => String(candidate.ns) === String(branded))
+  return descriptor === undefined ? undefined : {
+    ...(descriptor.user === undefined ? {} : { user: descriptor.user }),
+    revision: descriptor.revision,
+  }
+}
+
+export type PaimindHostSettingsMutationOperation =
+  | { readonly op: 'set'; readonly path: readonly string[]; readonly value: unknown }
+  | { readonly op: 'unset'; readonly path: readonly string[] }
+
+/** Apply a bounded set of CAS-protected field operations through native Settings. */
+export async function mutatePaimindHostSettingsOperations(
+  settings: PaimindHostSettingsFacility,
+  namespace: string,
+  operations: readonly PaimindHostSettingsMutationOperation[],
+  expectedRevision: number,
+): Promise<void> {
+  await settings.mutate(settingsNamespace(namespace), operations, expectedRevision)
 }
 
 /** CAS-protected single-field mutation inside the canonical Host Settings document. */
@@ -147,8 +182,9 @@ export async function mutatePaimindHostSettings(
   value: unknown,
   expectedRevision: number,
 ): Promise<void> {
-  await settings.mutate(
-    settingsNamespace(namespace),
+  await mutatePaimindHostSettingsOperations(
+    settings,
+    namespace,
     [{ op: 'set', path: [field], value }],
     expectedRevision,
   )
@@ -167,9 +203,11 @@ export function registerPaimindHostSettings<T extends object>(
 ): PaimindHostSettingsScope<T> {
   const shape: Record<string, Schema> = {}
   for (const [field, spec] of Object.entries(fields) as [string, PaimindSettingsFieldSpec][]) {
-    const schema = spec.kind === 'enum'
-      ? Schema.union(spec.values.map(value => Schema.const(value)) as [Schema<string>, ...Schema<string>[]]).default(spec.default)
-      : Schema.string().max(spec.maxLength).default(spec.default)
+    const schema = spec.kind === 'boolean'
+      ? Schema.boolean().default(spec.default)
+      : spec.kind === 'enum'
+        ? Schema.union(spec.values.map(value => Schema.const(value)) as [Schema<string>, ...Schema<string>[]]).default(spec.default)
+        : Schema.string().max(spec.maxLength).default(spec.default)
     shape[field] = spec.description === undefined ? schema : schema.description(spec.description)
   }
   return settings.register(
@@ -200,9 +238,11 @@ export function installPaimindHostSettings<T extends object>(
 ): void {
   const shape: Record<string, Schema> = {}
   for (const [field, spec] of Object.entries(fields) as [string, PaimindSettingsFieldSpec][]) {
-    const schema = spec.kind === 'enum'
-      ? Schema.union(spec.values.map(value => Schema.const(value)) as [Schema<string>, ...Schema<string>[]]).default(spec.default)
-      : Schema.string().max(spec.maxLength).default(spec.default)
+    const schema = spec.kind === 'boolean'
+      ? Schema.boolean().default(spec.default)
+      : spec.kind === 'enum'
+        ? Schema.union(spec.values.map(value => Schema.const(value)) as [Schema<string>, ...Schema<string>[]]).default(spec.default)
+        : Schema.string().max(spec.maxLength).default(spec.default)
     shape[field] = spec.description === undefined ? schema : schema.description(spec.description)
   }
   installSettingsSection(
@@ -283,7 +323,7 @@ export interface PaimindHostAgent {
   readonly id: string
   readonly session: {
     readonly id: string
-    readonly header: { readonly cwd?: string }
+    readonly header: { readonly cwd?: string; readonly agentPreset?: string }
   }
 }
 
@@ -390,6 +430,7 @@ export interface PaimindHostToolRegistry {
 
 export interface PaimindHostSystemPrompt {
   section(input: { readonly name: string; readonly order?: number; readonly text: string }): () => void
+  context(input: { readonly name: string; readonly order: number; readonly text: string }): () => void
 }
 
 export interface PaimindHostFsTarget {
@@ -427,7 +468,7 @@ export interface PaimindScheduledHarnessAgent {
   readonly id: string
   readonly session: {
     readonly id: string
-    readonly header: { readonly cwd?: string }
+    readonly header: { readonly cwd?: string; readonly agentPreset?: string }
     readonly events: readonly PaimindSessionEvent[]
   }
   followup(message: unknown): void
@@ -453,6 +494,16 @@ export interface PaimindScheduledHarnessAgentRegistry {
 export interface PaimindScheduledHarnessPresetRegistry {
   resolve(id?: string): Promise<{ readonly id: string }>
   mount(agentCtx: object, id?: string): Promise<unknown>
+}
+
+/** Structural native title service; exact Harness imports stay inside this compatibility boundary. */
+export interface PaimindScheduledHarnessTitleService {
+  rename(session: PaimindHostAgent['session'], title: string): unknown
+}
+
+/** Structural default model route used when creating an autonomous Session outside ApiProxy. */
+export interface PaimindHarnessDefaultModelService {
+  currentSelection(): { readonly provider: string; readonly model: string; readonly reasoningEffort?: string }
 }
 
 /**

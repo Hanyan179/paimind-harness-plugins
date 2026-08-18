@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { NotificationRecord } from '@paimind/contracts'
 import type { PaimindStorageTable } from '@paimind/harness-compat/host'
-import { PaimindNotificationsService, artifactNotificationFailureBody } from '../src/index.ts'
+import {
+  PaimindNotificationsService,
+  artifactNotificationFailureBody,
+  shouldPublishArtifactNotification,
+} from '../src/index.ts'
 
 class MemoryTable implements PaimindStorageTable<NotificationRecord> {
   readonly records = new Map<string, NotificationRecord>()
@@ -19,19 +23,25 @@ class MemoryTable implements PaimindStorageTable<NotificationRecord> {
   }
 }
 
-function serviceFixture(policy?: (level: NotificationRecord['level']) => boolean): { readonly service: PaimindNotificationsService; readonly table: MemoryTable } {
+function serviceFixture(): { readonly service: PaimindNotificationsService; readonly table: MemoryTable } {
   const table = new MemoryTable()
   const service = Object.create(PaimindNotificationsService.prototype) as PaimindNotificationsService
   Object.assign(service, {
     ready: Promise.resolve({ table: () => table, close: async () => {} }),
     mutationTail: Promise.resolve(),
     notificationCtx: {},
-    shouldPublishNotification: policy ?? (() => true),
   })
   return { service, table }
 }
 
 describe('FP12 durable notification domain', () => {
+  it('keeps legacy artifact helpers stable without using them as publication policy', () => {
+    expect(shouldPublishArtifactNotification({ kind: 'bento', previewKind: 'bento-deck' })).toBe(false)
+    expect(shouldPublishArtifactNotification({ kind: 'html', previewKind: 'bento-deck' })).toBe(false)
+    expect(shouldPublishArtifactNotification({ kind: 'html', previewKind: 'html-document' })).toBe(true)
+    expect(shouldPublishArtifactNotification({ kind: 'pptx', previewKind: 'presentation' })).toBe(true)
+  })
+
   it('normalizes real tool failures into the single-line bounded body contract', () => {
     expect(artifactNotificationFailureBody('Error: denied\n    at secret-path\u0000tail'))
       .toBe('Error: denied at secret-path tail')
@@ -40,7 +50,9 @@ describe('FP12 durable notification domain', () => {
   })
 
   it('assigns trusted producer identity and de-duplicates by producer/key', async () => {
+    expect(PaimindNotificationsService.inject).toEqual(['storageDomain'])
     const { service, table } = serviceFixture()
+    expect(table.size).toBe(0)
     const producer = service.registerProducer({ id: 'paimind.test', nameZh: '测试源', nameEn: 'Test source' })
     const first = await producer.publish({
       idempotencyKey: 'job:one', title: 'Report ready', level: 'success',
@@ -73,11 +85,4 @@ describe('FP12 durable notification domain', () => {
     expect(all.items.find(item => item.id === two.id)?.target).toBeUndefined()
   })
 
-  it('filters only future publication through the optional live PAIMind policy', async () => {
-    const { service, table } = serviceFixture(level => level === 'warning' || level === 'error')
-    const producer = service.registerProducer({ id: 'paimind.policy', nameZh: '策略', nameEn: 'Policy' })
-    await expect(producer.publish({ idempotencyKey: 'info', title: 'Info', level: 'info' })).resolves.toBeUndefined()
-    await expect(producer.publish({ idempotencyKey: 'warning', title: 'Warning', level: 'warning' })).resolves.toBeDefined()
-    expect(table.size).toBe(1)
-  })
 })

@@ -38,7 +38,7 @@
 - `pnpm run check`: passed.
 - Type check: passed.
 - Test suite: 7 files and 33 tests passed; FP02 contributes 8 controller, UI, registration, disposal, focus, and failure-isolation tests.
-- Production build: `@paimind/launcher` host, invariant, declarations, and 30.9 kB client bundle built successfully.
+- Historical production build: the now-retired launcher host, invariant, declarations, and client bundle built successfully.
 - Framework boundary: two PAIMind client plugins discovered; zero direct Harness imports outside `@paimind/harness-compat`.
 - Real Harness composition: bundle + FP01 + FP02 installed, configuration dumped, both client manifests served, packages removed, native profile restored, and Harness Git worktree remained unchanged.
 - Desktop Dark browser: 7 destinations, all explicitly `待迁移`; focus entered the close button; every background frame column became inert; document width remained 1280/1280.

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  PaimindEnvironmentFeishuBotCredentialResolver,
   PaimindFeishuBotScheduleAdapterService,
+  PAIMIND_FEISHU_BOT_WEBHOOKS_ENV,
   definePaimindFeishuBotWebhook,
 } from '../src/index.ts'
 
@@ -27,6 +29,18 @@ function serviceFixture(scheduler: object, fetcher: typeof fetch): PaimindFeishu
 }
 
 describe('Feishu bot Scheduler Adapter', () => {
+  it('marks a missing persistent credential as non-retryable configuration failure', async () => {
+    const previous = process.env[PAIMIND_FEISHU_BOT_WEBHOOKS_ENV]
+    delete process.env[PAIMIND_FEISHU_BOT_WEBHOOKS_ENV]
+    try {
+      await expect(new PaimindEnvironmentFeishuBotCredentialResolver().resolve('credential:missing'))
+        .rejects.toMatchObject({ retryable: false, code: 'feishu-credential-unavailable' })
+    } finally {
+      if (previous === undefined) delete process.env[PAIMIND_FEISHU_BOT_WEBHOOKS_ENV]
+      else process.env[PAIMIND_FEISHU_BOT_WEBHOOKS_ENV] = previous
+    }
+  })
+
   it('accepts only official credential-free custom-bot Webhooks', () => {
     expect(definePaimindFeishuBotWebhook('https://open.feishu.cn/open-apis/bot/v2/hook/example-token').hostname)
       .toBe('open.feishu.cn')

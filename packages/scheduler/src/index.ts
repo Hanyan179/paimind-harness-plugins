@@ -19,6 +19,7 @@ import {
 import {
   PaimindSchedulerCore,
   type PaimindScheduleExecutor,
+  type PaimindScheduleActionRegistrationOptions,
   type PaimindScheduleMutationResult,
   type PaimindScheduleRunNowResult,
   type PaimindSchedulerOptions,
@@ -37,7 +38,7 @@ export * from './time.js'
 
 export const name = 'paimind-platform-scheduler'
 export const PAIMIND_SCHEDULER_DOMAIN = 'paimind_scheduler'
-export const PAIMIND_SCHEDULER_SCHEMA_VERSION = 1
+export const PAIMIND_SCHEDULER_SCHEMA_VERSION = 2
 
 export const schedulerDomainSpec = definePaimindStorageDomain({
   name: PAIMIND_SCHEDULER_DOMAIN,
@@ -67,15 +68,27 @@ export interface PaimindScheduleArchiveRequest {
   readonly ifVersion: string
 }
 
+export type PaimindScheduleRestoreRequest = PaimindScheduleArchiveRequest
+
 export interface PaimindScheduleRunNowRequest {
   readonly scheduleId: string
 }
 
 export interface PaimindSchedulerServiceApi {
-  registerAction(descriptor: PaimindScheduleActionDescriptor, executor: PaimindScheduleExecutor): Promise<() => void>
+  registerAction(
+    descriptor: PaimindScheduleActionDescriptor,
+    executor: PaimindScheduleExecutor,
+    options?: PaimindScheduleActionRegistrationOptions,
+  ): Promise<() => void>
   deactivateAction(actionId: string): Promise<boolean>
   reportRun(report: PaimindScheduleRunReport): Promise<Readonly<PaimindScheduleRun>>
   list(): Promise<PaimindSchedulerSnapshot>
+  create(input: PaimindScheduleCreateInput): Promise<Readonly<PaimindScheduleDefinition>>
+  update(input: PaimindScheduleUpdateInput): Promise<PaimindScheduleMutationResult>
+  setEnabled(input: PaimindScheduleSetEnabledRequest): Promise<PaimindScheduleMutationResult>
+  runNow(input: PaimindScheduleRunNowRequest): Promise<PaimindScheduleRunNowResult>
+  archive(input: PaimindScheduleArchiveRequest): Promise<PaimindScheduleMutationResult>
+  restore(input: PaimindScheduleRestoreRequest): Promise<PaimindScheduleMutationResult>
 }
 
 export interface PaimindSchedulerHostContext {
@@ -100,7 +113,7 @@ export class PaimindSchedulerService extends PaimindHostRemoteService implements
 
   constructor(ctx: PaimindSchedulerHostContext, options?: Partial<PaimindSchedulerOptions>) {
     super(ctx, 'paimindScheduler')
-    markPaimindHostRemoteMethods(this, ['list', 'create', 'update', 'setEnabled', 'runNow', 'archive'])
+    markPaimindHostRemoteMethods(this, ['list', 'create', 'update', 'setEnabled', 'runNow', 'archive', 'restore'])
     this.domain = ctx.storageDomain.open(schedulerDomainSpec)
     this.core = this.domain.then(async domain => {
       const core = new PaimindSchedulerCore(schedulerTables(domain), {
@@ -126,8 +139,9 @@ export class PaimindSchedulerService extends PaimindHostRemoteService implements
   async registerAction(
     descriptor: PaimindScheduleActionDescriptor,
     executor: PaimindScheduleExecutor,
+    options?: PaimindScheduleActionRegistrationOptions,
   ): Promise<() => void> {
-    return await (await this.core).registerAction(descriptor, executor)
+    return await (await this.core).registerAction(descriptor, executor, options)
   }
 
   async deactivateAction(actionId: string): Promise<boolean> {
@@ -140,7 +154,7 @@ export class PaimindSchedulerService extends PaimindHostRemoteService implements
 
   async list(): Promise<PaimindSchedulerSnapshot> {
     const core = await this.core
-    return Object.freeze({ actions: core.listActions(), definitions: core.listDefinitions(), runs: core.listRuns() })
+    return Object.freeze({ actions: core.listActions(), definitions: core.listDefinitions({ includeArchived: true }), runs: core.listRuns() })
   }
 
   async create(input: PaimindScheduleCreateInput): Promise<Readonly<PaimindScheduleDefinition>> {
@@ -163,6 +177,10 @@ export class PaimindSchedulerService extends PaimindHostRemoteService implements
 
   async archive(input: PaimindScheduleArchiveRequest): Promise<PaimindScheduleMutationResult> {
     return await (await this.core).archive(input.scheduleId, input.ifVersion, 'paimind.local-user')
+  }
+
+  async restore(input: PaimindScheduleRestoreRequest): Promise<PaimindScheduleMutationResult> {
+    return await (await this.core).restore(input.scheduleId, input.ifVersion, 'paimind.local-user')
   }
 }
 

@@ -1,6 +1,8 @@
 {
   "name": "@paimind/presentation-trace",
   "version": "0.1.0-alpha.0",
+  "license": "UNLICENSED",
+  "engines": { "node": "^22.19.0 || >=24.0.0" },
   "description": "Structured presentation provenance projection for PAIMind artifacts",
   "type": "module",
   "main": "lib/index.js",
@@ -11,7 +13,7 @@
     "./client": { "types": "./lib/types/client/index.d.ts", "default": "./lib/client.js" },
     "./package.json": "./package.json"
   },
-  "files": ["lib"],
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "dsh": {
     "client": {
       "inject": [
@@ -20,7 +22,8 @@
         "@deepseek-ai/dsh-client-ui-slots",
         "@paimind/artifacts",
         "@paimind/better-sidebar-adapter",
-        "@paimind/renderer-bento"
+        "@paimind/renderer-bento",
+        "@paimind/workspace-project"
       ],
       "platform": "web"
     }
@@ -30,7 +33,8 @@
     "@paimind/better-sidebar-adapter": "workspace:^",
     "@paimind/contracts": "workspace:^",
     "@paimind/harness-compat": "workspace:^",
-    "@paimind/renderer-bento": "workspace:^"
+    "@paimind/renderer-bento": "workspace:^",
+    "@paimind/workspace-project": "workspace:^"
   },
   "peerDependencies": { "react": ">=18.0.0 <20.0.0" },
   "devDependencies": {

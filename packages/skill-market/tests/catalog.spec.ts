@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseFavoriteSkillNames, projectSkillCatalog, serializeFavoriteSkillNames } from '../src/index.js'
+import { metadataForSkill, parseFavoriteSkillNames, projectSkillCatalog, serializeFavoriteSkillNames } from '../src/index.js'
 
 const skills = [
   { name: 'slide-builder', description: 'Build slides', whenToUse: 'Presentations', modelInvocable: true },
@@ -17,5 +17,11 @@ describe('FP11 native Skill catalog projection', () => {
   it('keeps only valid native Skill names in browser metadata', () => {
     expect(parseFavoriteSkillNames('["slide-builder","../bad",42,"slide-builder"]')).toEqual(['slide-builder'])
     expect(serializeFavoriteSkillNames(['slide-builder', 'private-review', 'slide-builder'])).toBe('["private-review","slide-builder"]')
+  })
+
+  it('projects large Skill catalogs into stable product categories without replacing native rows', () => {
+    expect(metadataForSkill({ name: 'openai-docs' })).toEqual({ category: 'research', tags: ['official-docs', 'research'] })
+    expect(metadataForSkill({ name: 'spreadsheet-inspector', description: 'Analyze Excel data' }).category).toBe('data')
+    expect(metadataForSkill({ name: 'unknown-capability', description: 'A specialized capability' }).category).toBe('general')
   })
 })

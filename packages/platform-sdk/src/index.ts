@@ -59,7 +59,7 @@ const actionRegistrationSchema = z.object({
   nameZh: z.string().trim().min(1).max(120), nameEn: z.string().trim().min(1).max(120),
   descriptionZh: z.string().trim().min(1).max(500).optional(),
   descriptionEn: z.string().trim().min(1).max(500).optional(),
-  category: z.enum(['ai', 'integration', 'message', 'health-check']),
+  category: z.enum(['ai', 'workflow', 'message', 'integration', 'health-check']),
   invokeUrl: safeUrl,
   allowedResultOrigins: z.array(safeUrl).max(20).readonly(),
 }).readonly()

@@ -31,7 +31,7 @@ await client.schedules.registerAction({
 })
 ```
 
-Receive a trigger by verifying `x-paimind-signature`, timestamp and request id with `verifyPaimindRequestSignature` and `PaimindReplayGuard`. Return `202` before long-running work. The executable implementation is in `@paimind/platform-integration-examples`.
+Receive a trigger by verifying `x-paimind-signature`, timestamp and request id with `verifyPaimindRequestSignature` and `PaimindReplayGuard`. Return `202` before long-running work. The executable implementation is in [`../../examples/platform-integration/`](../../examples/platform-integration/).
 
 Report progress and final result:
 

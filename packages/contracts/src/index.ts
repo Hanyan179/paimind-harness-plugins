@@ -32,14 +32,14 @@ export interface ArtifactRef {
 
 /** Durable semantic artifact kinds emitted by PAIMind generators. */
 export const PAIMIND_ARTIFACT_EVENT_KINDS = [
-  'pptx', 'pdf', 'xlsx', 'html', 'bento',
+  'pptx', 'pdf', 'xlsx', 'html', 'bento', 'json',
 ] as const
 
 export type PaimindArtifactEventKind = typeof PAIMIND_ARTIFACT_EVENT_KINDS[number]
 
 /** Stable preview channels; renderers register against these values explicitly. */
 export const PAIMIND_ARTIFACT_PREVIEW_CHANNELS = [
-  'presentation', 'pdf', 'spreadsheet', 'html-document', 'html-deck', 'bento-deck',
+  'presentation', 'pdf', 'spreadsheet', 'html-document', 'html-deck', 'bento-deck', 'data-document',
 ] as const
 
 export type PaimindArtifactPreviewChannel = typeof PAIMIND_ARTIFACT_PREVIEW_CHANNELS[number]
@@ -95,18 +95,45 @@ export interface ArtifactTraceEnvelopeV1 {
   readonly document: unknown
 }
 
+/** Browser-safe reference to a large trace sidecar retained in the Harness Workspace. */
+export interface ArtifactTraceDocumentRefV2 {
+  readonly path: string
+  readonly schema: string
+  readonly sha256: string
+  readonly bytes: number
+}
+
+/**
+ * Large provenance documents stay out of Session projections. Consumers must load the
+ * referenced Workspace file through a trusted Host route and verify both hash and schema.
+ */
+export interface ArtifactTraceEnvelopeV2 {
+  readonly schema: 'paimind.artifact-trace/v2'
+  readonly traceId: string
+  readonly artifactId: string
+  readonly sessionId: string
+  readonly workspaceId: string
+  readonly producerId: string
+  readonly taskId: string
+  readonly artifactRevision: number
+  readonly producedAt: number
+  readonly documentRef: ArtifactTraceDocumentRefV2
+}
+
+export type ArtifactTraceEnvelope = ArtifactTraceEnvelopeV1 | ArtifactTraceEnvelopeV2
+
 /** Tool-private metadata wrapper; the outer shape avoids collisions with other tools. */
 export interface PaimindArtifactToolMetaV1 {
   readonly schema: 'paimind.tool-result/v1'
   readonly artifact: ArtifactProducedEnvelopeV1
-  readonly trace?: ArtifactTraceEnvelopeV1
+  readonly trace?: ArtifactTraceEnvelope
 }
 
 /** Browser-safe whole-value projection folded from native tool-result events. */
 export interface PaimindArtifactProjectionV1 {
   readonly schema: 'paimind.artifacts/v1'
   readonly artifacts: readonly ArtifactProducedEnvelopeV1[]
-  readonly traces: readonly ArtifactTraceEnvelopeV1[]
+  readonly traces: readonly ArtifactTraceEnvelope[]
 }
 
 const ARTIFACT_EVENT_KIND_SET = new Set<string>(PAIMIND_ARTIFACT_EVENT_KINDS)
@@ -121,6 +148,7 @@ const ARTIFACT_PREVIEW_BY_KIND: Readonly<Record<PaimindArtifactEventKind, Readon
   xlsx: new Set(['spreadsheet']),
   html: new Set(['html-document', 'html-deck']),
   bento: new Set(['bento-deck']),
+  json: new Set(['data-document']),
 }
 
 /** Validate one untrusted candidate before it enters a projection or browser surface. */
@@ -192,8 +220,19 @@ export function artifactProducedFromToolMeta(meta: unknown): Readonly<ArtifactPr
 /** Validate structured provenance before the native Session projection retains it. */
 export function defineArtifactTraceEnvelope(
   candidate: ArtifactTraceEnvelopeV1,
-): Readonly<ArtifactTraceEnvelopeV1> {
-  if (candidate.schema !== 'paimind.artifact-trace/v1') throw new Error('unsupported artifact trace schema')
+): Readonly<ArtifactTraceEnvelopeV1>
+export function defineArtifactTraceEnvelope(
+  candidate: ArtifactTraceEnvelopeV2,
+): Readonly<ArtifactTraceEnvelopeV2>
+export function defineArtifactTraceEnvelope(
+  candidate: ArtifactTraceEnvelope,
+): Readonly<ArtifactTraceEnvelope>
+export function defineArtifactTraceEnvelope(
+  candidate: ArtifactTraceEnvelope,
+): Readonly<ArtifactTraceEnvelope> {
+  if (candidate.schema !== 'paimind.artifact-trace/v1' && candidate.schema !== 'paimind.artifact-trace/v2') {
+    throw new Error('unsupported artifact trace schema')
+  }
   for (const [field, value] of [
     ['traceId', candidate.traceId],
     ['artifactId', candidate.artifactId],
@@ -210,14 +249,29 @@ export function defineArtifactTraceEnvelope(
   if (!Number.isSafeInteger(candidate.producedAt) || candidate.producedAt < 0) {
     throw new Error('artifact trace producedAt must be a non-negative integer')
   }
-  if (typeof candidate.document !== 'object' || candidate.document === null || Array.isArray(candidate.document)) {
-    throw new Error('artifact trace document must be an object')
+  if (candidate.schema === 'paimind.artifact-trace/v1') {
+    if (typeof candidate.document !== 'object' || candidate.document === null || Array.isArray(candidate.document)) {
+      throw new Error('artifact trace document must be an object')
+    }
+  } else {
+    if (candidate.documentRef.path.trim() === '' || CONTROL_CHARACTER.test(candidate.documentRef.path)) {
+      throw new Error('artifact trace document reference has an invalid path')
+    }
+    if (candidate.documentRef.schema.trim() === '' || CONTROL_CHARACTER.test(candidate.documentRef.schema)) {
+      throw new Error('artifact trace document reference has an invalid schema')
+    }
+    if (!/^[a-f0-9]{64}$/.test(candidate.documentRef.sha256)) {
+      throw new Error('artifact trace document reference has an invalid sha256')
+    }
+    if (!Number.isSafeInteger(candidate.documentRef.bytes) || candidate.documentRef.bytes < 2) {
+      throw new Error('artifact trace document reference has an invalid byte size')
+    }
   }
   return Object.freeze({ ...candidate })
 }
 
 /** Narrow the same native tool-result metadata into a validated trace fact. */
-export function artifactTraceFromToolMeta(meta: unknown): Readonly<ArtifactTraceEnvelopeV1> | null {
+export function artifactTraceFromToolMeta(meta: unknown): Readonly<ArtifactTraceEnvelope> | null {
   if (typeof meta !== 'object' || meta === null || Array.isArray(meta)) return null
   const wrapper = meta as Partial<PaimindArtifactToolMetaV1>
   if (wrapper.schema !== 'paimind.tool-result/v1' || wrapper.trace === undefined) return null
@@ -372,17 +426,18 @@ export function defineNotificationRecord(candidate: NotificationRecord): Readonl
 }
 
 /** Platform Scheduler is independent from Harness's native Session reminder domain. */
-export const PAIMIND_SCHEDULE_RULE_KINDS = ['once', 'daily', 'weekly', 'monthly'] as const
+export const PAIMIND_SCHEDULE_RULE_KINDS = ['once', 'daily', 'weekdays', 'weekly', 'monthly'] as const
 export type PaimindScheduleRuleKind = typeof PAIMIND_SCHEDULE_RULE_KINDS[number]
 
 export type PaimindScheduleRule =
   | { readonly kind: 'once'; readonly at: string }
   | { readonly kind: 'daily'; readonly time: string }
+  | { readonly kind: 'weekdays'; readonly time: string }
   | { readonly kind: 'weekly'; readonly weekday: 1 | 2 | 3 | 4 | 5 | 6 | 7; readonly time: string }
   | { readonly kind: 'monthly'; readonly dayOfMonth: number; readonly time: string }
 
 export const PAIMIND_SCHEDULE_ACTION_CATEGORIES = [
-  'ai', 'integration', 'message', 'health-check',
+  'ai', 'workflow', 'message', 'integration', 'health-check',
 ] as const
 export type PaimindScheduleActionCategory = typeof PAIMIND_SCHEDULE_ACTION_CATEGORIES[number]
 
@@ -394,6 +449,10 @@ export interface PaimindScheduleActionDescriptor {
   readonly nameEn: string
   readonly descriptionZh?: string
   readonly descriptionEn?: string
+  /** Explicit opt-in for the hidden conversational orchestration layer. */
+  readonly conversationEnabled?: boolean
+  /** Agent-facing routing guidance; never rendered as a technical task type. */
+  readonly usageHint?: string
   readonly category: PaimindScheduleActionCategory
   readonly adapterId: string
   readonly enabled: boolean
@@ -414,11 +473,21 @@ export type PaimindScheduleRunAction =
   | { readonly kind: 'session'; readonly label: string; readonly sessionId: string }
   | { readonly kind: 'external'; readonly label: string; readonly url: string }
 
-/** Durable definition stores only platform scheduling data and an actionId. */
+export type PaimindScheduleJsonPrimitive = string | number | boolean | null
+export type PaimindScheduleJsonValue =
+  | PaimindScheduleJsonPrimitive
+  | readonly PaimindScheduleJsonValue[]
+  | { readonly [key: string]: PaimindScheduleJsonValue }
+export type PaimindScheduleActionInput = Readonly<Record<string, PaimindScheduleJsonValue>>
+
+/** Durable business definition; provider execution remains Adapter-owned. */
 export interface PaimindScheduleDefinition {
   readonly scheduleId: string
   readonly name: string
   readonly actionId: string
+  readonly actionInput?: PaimindScheduleActionInput
+  /** Native Harness Session where the business user configured this task. */
+  readonly sourceSessionId?: string
   readonly rule: PaimindScheduleRule
   readonly timeZone: string
   readonly status: PaimindScheduleDefinitionStatus
@@ -452,7 +521,7 @@ export interface PaimindScheduleAuditRecord {
   readonly auditId: string
   readonly scheduleId: string
   readonly actorId: string
-  readonly operation: 'created' | 'updated' | 'paused' | 'resumed' | 'archived' | 'dispatched' | 'manual_dispatched'
+  readonly operation: 'created' | 'updated' | 'paused' | 'resumed' | 'archived' | 'restored' | 'dispatched' | 'manual_dispatched'
   readonly occurredAt: string
   readonly version: string
 }
@@ -460,6 +529,8 @@ export interface PaimindScheduleAuditRecord {
 export interface PaimindScheduleCreateInput {
   readonly name: string
   readonly actionId: string
+  readonly actionInput?: PaimindScheduleActionInput
+  readonly sourceSessionId?: string
   readonly rule: PaimindScheduleRule
   readonly timeZone: string
   readonly enabled: boolean
@@ -475,7 +546,10 @@ export interface PaimindScheduleTriggerRequest {
   readonly contractVersion: '1.0'
   readonly runId: string
   readonly scheduleId: string
+  readonly scheduleName: string
   readonly actionId: string
+  readonly actionInput?: PaimindScheduleActionInput
+  readonly sourceSessionId?: string
   readonly trigger: PaimindScheduleRunTrigger
   readonly scheduledFor: string
   readonly idempotencyKey: string
@@ -511,16 +585,21 @@ export const PAIMIND_SCHEDULE_CAPABILITIES = Object.freeze({
   fixedInterval: false as const,
   backfill: 'latest-only' as const,
   overlappingRuns: false as const,
-  businessParameters: false as const,
+  businessParameters: true as const,
 })
 
 const SCHEDULE_ID = /^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/
 const SCHEDULE_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
 const SCHEDULE_TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/
+const SCHEDULE_RULE_KIND_SET = new Set<string>(PAIMIND_SCHEDULE_RULE_KINDS)
 const SCHEDULE_ACTION_CATEGORY_SET = new Set<string>(PAIMIND_SCHEDULE_ACTION_CATEGORIES)
 const SCHEDULE_DEFINITION_STATUS_SET = new Set<string>(['enabled', 'paused', 'archived'])
 const SCHEDULE_RUN_STATUS_SET = new Set<string>(['queued', 'running', 'succeeded', 'failed', 'needs_attention'])
 const SCHEDULE_RUN_TRIGGER_SET = new Set<string>(['schedule', 'manual'])
+const SCHEDULE_ACTION_INPUT_MAX_BYTES = 32_768
+const SCHEDULE_ACTION_INPUT_MAX_DEPTH = 8
+const SCHEDULE_ACTION_INPUT_MAX_KEYS = 128
+const SCHEDULE_FORBIDDEN_INPUT_KEY = /(?:authorization|cookie|credential|password|secret|token|connectionstring)/i
 
 function scheduleId(value: string, field: string): string {
   if (!SCHEDULE_ID.test(value)) throw new Error(`invalid schedule ${field}`)
@@ -552,11 +631,14 @@ function scheduleUrl(value: string, field: string): string {
 }
 
 export function definePaimindScheduleRule(candidate: PaimindScheduleRule): Readonly<PaimindScheduleRule> {
+  if (!SCHEDULE_RULE_KIND_SET.has(candidate.kind)) throw new Error('invalid schedule rule kind')
   if (candidate.kind === 'once') {
     return Object.freeze({ kind: 'once', at: scheduleInstant(candidate.at, 'once instant') })
   }
   if (!SCHEDULE_TIME.test(candidate.time)) throw new Error('invalid schedule local time')
-  if (candidate.kind === 'daily') return Object.freeze({ kind: 'daily', time: candidate.time })
+  if (candidate.kind === 'daily' || candidate.kind === 'weekdays') {
+    return Object.freeze({ kind: candidate.kind, time: candidate.time })
+  }
   if (candidate.kind === 'weekly') {
     if (!Number.isInteger(candidate.weekday) || candidate.weekday < 1 || candidate.weekday > 7) {
       throw new Error('invalid schedule weekday')
@@ -584,6 +666,8 @@ export function definePaimindScheduleActionDescriptor(
     ? undefined : scheduleText(candidate.descriptionZh, 'descriptionZh', 500)
   const descriptionEn = candidate.descriptionEn === undefined
     ? undefined : scheduleText(candidate.descriptionEn, 'descriptionEn', 500)
+  const usageHint = candidate.usageHint === undefined
+    ? undefined : scheduleText(candidate.usageHint, 'usageHint', 1_000)
   return Object.freeze({
     ...candidate,
     source: Object.freeze({
@@ -595,7 +679,53 @@ export function definePaimindScheduleActionDescriptor(
     nameEn: scheduleText(candidate.nameEn, 'action nameEn', 120),
     ...(descriptionZh === undefined ? {} : { descriptionZh }),
     ...(descriptionEn === undefined ? {} : { descriptionEn }),
+    ...(candidate.conversationEnabled === undefined ? {} : { conversationEnabled: candidate.conversationEnabled }),
+    ...(usageHint === undefined ? {} : { usageHint }),
   })
+}
+
+function scheduleActionInputValue(
+  value: unknown,
+  depth: number,
+  state: { keys: number },
+): PaimindScheduleJsonValue {
+  if (depth > SCHEDULE_ACTION_INPUT_MAX_DEPTH) throw new Error('schedule actionInput exceeds maximum depth')
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new Error('schedule actionInput contains a non-finite number')
+    return value
+  }
+  if (Array.isArray(value)) {
+    return Object.freeze(value.map(item => scheduleActionInputValue(item, depth + 1, state)))
+  }
+  if (typeof value !== 'object') throw new Error('schedule actionInput must contain JSON values only')
+  const prototype = Object.getPrototypeOf(value)
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new Error('schedule actionInput must contain plain JSON objects only')
+  }
+  const output: Record<string, PaimindScheduleJsonValue> = {}
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    state.keys += 1
+    if (state.keys > SCHEDULE_ACTION_INPUT_MAX_KEYS) throw new Error('schedule actionInput has too many fields')
+    const normalizedKey = scheduleText(key, 'actionInput key', 120)
+    if (Object.hasOwn(output, normalizedKey)) throw new Error(`schedule actionInput contains duplicate field "${normalizedKey}"`)
+    if (SCHEDULE_FORBIDDEN_INPUT_KEY.test(normalizedKey)) {
+      throw new Error(`schedule actionInput cannot contain sensitive field "${normalizedKey}"`)
+    }
+    output[normalizedKey] = scheduleActionInputValue(item, depth + 1, state)
+  }
+  return Object.freeze(output)
+}
+
+/** Validate, bound and deep-freeze provider-owned per-definition business input. */
+export function definePaimindScheduleActionInput(candidate: unknown): PaimindScheduleActionInput {
+  if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
+    throw new Error('schedule actionInput must be a JSON object')
+  }
+  const value = scheduleActionInputValue(candidate, 0, { keys: 0 })
+  const bytes = new TextEncoder().encode(JSON.stringify(value)).byteLength
+  if (bytes > SCHEDULE_ACTION_INPUT_MAX_BYTES) throw new Error('schedule actionInput exceeds maximum size')
+  return value as PaimindScheduleActionInput
 }
 
 export function definePaimindScheduleRunAction(
@@ -621,6 +751,10 @@ export function definePaimindScheduleDefinition(
   const updatedAt = scheduleInstant(candidate.updatedAt, 'updatedAt')
   const nextRunAt = candidate.nextRunAt === undefined ? undefined : scheduleInstant(candidate.nextRunAt, 'nextRunAt')
   const archivedAt = candidate.archivedAt === undefined ? undefined : scheduleInstant(candidate.archivedAt, 'archivedAt')
+  const sourceSessionId = candidate.sourceSessionId === undefined
+    ? undefined : scheduleText(candidate.sourceSessionId, 'sourceSessionId', 240)
+  const actionInput = candidate.actionInput === undefined
+    ? undefined : definePaimindScheduleActionInput(candidate.actionInput)
   if (candidate.status === 'archived' && archivedAt === undefined) throw new Error('archived schedule requires archivedAt')
   if (candidate.status === 'archived' && nextRunAt !== undefined) throw new Error('archived schedule cannot have nextRunAt')
   if (candidate.status !== 'archived' && archivedAt !== undefined) throw new Error('active schedule cannot have archivedAt')
@@ -629,6 +763,8 @@ export function definePaimindScheduleDefinition(
     name: scheduleText(candidate.name, 'name', 160),
     rule: definePaimindScheduleRule(candidate.rule),
     createdAt, updatedAt,
+    ...(sourceSessionId === undefined ? {} : { sourceSessionId }),
+    ...(actionInput === undefined ? {} : { actionInput }),
     ...(nextRunAt === undefined ? {} : { nextRunAt }),
     ...(archivedAt === undefined ? {} : { archivedAt }),
   })
@@ -675,11 +811,19 @@ export function definePaimindScheduleTriggerRequest(
     ['runId', candidate.runId], ['scheduleId', candidate.scheduleId],
     ['actionId', candidate.actionId], ['idempotencyKey', candidate.idempotencyKey],
   ] as const) scheduleId(value, field)
+  const scheduleName = scheduleText(candidate.scheduleName, 'scheduleName', 160)
   if (!SCHEDULE_RUN_TRIGGER_SET.has(candidate.trigger)) throw new Error('invalid schedule run trigger')
+  const sourceSessionId = candidate.sourceSessionId === undefined
+    ? undefined : scheduleText(candidate.sourceSessionId, 'sourceSessionId', 240)
+  const actionInput = candidate.actionInput === undefined
+    ? undefined : definePaimindScheduleActionInput(candidate.actionInput)
   return Object.freeze({
     ...candidate,
+    scheduleName,
     scheduledFor: scheduleInstant(candidate.scheduledFor, 'scheduledFor'),
     callbackUrl: scheduleUrl(candidate.callbackUrl, 'callback URL'),
+    ...(sourceSessionId === undefined ? {} : { sourceSessionId }),
+    ...(actionInput === undefined ? {} : { actionInput }),
   })
 }
 

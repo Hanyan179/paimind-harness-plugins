@@ -4,7 +4,7 @@
 
 ## Outcome
 
-FP06 makes PDF and PPTX artifacts associated with the current Harness Session and Workspace discoverable from one `PAIMind Artifacts` tab. PPTX preview, slide navigation and download reuse the selected Better Sidebar provider. Real browser validation proved that the provider's browser-native PDF Blob iframe was blank in the selected Chromium surface, so FP06 adds a removable local `@paimind/renderer-pdf` channel through the stable adapter; it does not patch or fork provider source and does not create a separate PPTX renderer.
+FP06 makes PDF and PPTX artifacts associated with the current Harness Session and Workspace openable from their exact Artifact or file links. It no longer registers a permanent `PAIMind Artifacts` tab. PPTX preview, slide navigation and download reuse the selected Better Sidebar provider. Real browser validation proved that the provider's browser-native PDF Blob iframe was blank in the selected Chromium surface, so FP06 adds a removable local `@paimind/renderer-pdf` channel through the stable adapter; it does not patch or fork provider source and does not create a separate PPTX renderer.
 
 This keeps the feature upgradeable while `dsh-better-sidebar` evolves independently: artifact product semantics depend only on `@paimind/better-sidebar-adapter`, and the adapter exposes a capability result instead of provider records or types.
 
@@ -27,14 +27,14 @@ This keeps the feature upgradeable while `dsh-better-sidebar` evolves independen
 
 ### `@paimind/better-sidebar-adapter`
 
-- Extends its version-neutral contract v3 with `registerFileViewer(definition)`, `getFileCapability(path)` and `openFile(request)`.
+- Contract v4 retains `registerFileViewer(definition)`, `getFileCapability(path)` and `openFile(request)`, and adds hidden on-demand tabs plus per-open dynamic titles.
 - Mirrors only the provider methods needed to match an enabled viewer, verify the hidden editor tab, close a stale editor instance and open the refreshed path.
 - Returns structured `opened`, `provider-unavailable`, `editor-unavailable`, `viewer-unavailable` or `failed` results.
 - Maps the narrow viewer registration shape needed by independent PAIMind renderers without exposing provider descriptors, stores or reducers.
 
 ### `@paimind/renderer-pdf`
 
-- Registers only the higher-priority `paimind:pdf` capability through `@paimind/better-sidebar-adapter` contract v3.
+- Registers only the higher-priority `paimind:pdf` capability through `@paimind/better-sidebar-adapter` contract v4.
 - Bundles PDF.js and its worker locally; it reads the provider-supplied media URL and owns no file transport or Artifact state.
 - Contains its own render error boundary and Download action. Uninstalling it restores the provider's original `pdf` viewer.
 - Does not import Better Sidebar modules, patch provider DOM or alter the native conversation.
@@ -42,7 +42,7 @@ This keeps the feature upgradeable while `dsh-better-sidebar` evolves independen
 ### `@paimind/artifacts`
 
 - Publishes `ctx.paimindArtifacts` as an observable projection registry; producers retain durable ownership.
-- Registers exactly one `paimind:artifacts` Better Sidebar tab.
+- Registers no fixed Better Sidebar tab; it retains the Artifact registry, projection, exact path router and deep-link router.
 - Reads native Harness `deliverables` values from the public Turn timeline and caches only Sessions actually staged in the client. It does not parse assistant prose, tool names or DOM labels.
 - Accepts later PAIMind artifact sources through a stack-safe `registerSource` contract.
 - Associates every artifact explicitly with `sessionId` and `workspaceId`.
@@ -57,8 +57,8 @@ flowchart LR
     H["Harness Turn deliverables"] --> S["Harness artifact source"]
     P["Later PAIMind producers"] --> R["Artifact registry"]
     S --> R
-    R --> T["PAIMind Artifacts tab"]
-    T --> A["Better Sidebar adapter"]
+    R --> T["Exact Artifact or file link"]
+    T --> A["Better Sidebar adapter or hidden Bento workbench"]
     A --> V["Verified provider viewer or local PDF.js channel"]
     V --> D["Provider preview and download route"]
 ```
@@ -77,9 +77,9 @@ Native paths are keyed by Session, Workspace, normalized path and latest produci
 
 ## Upstream update gate
 
-The active matrix remains exact npm `@deepseek-ai/dsh@0.1.0-rc.6` plus `dsh-better-sidebar@0.11.0`. A provider candidate cannot replace it until these FP06-specific checks pass:
+The active matrix remains exact npm `@deepseek-ai/dsh@0.1.0-rc.6` plus `dsh-better-sidebar@0.12.2`. A provider candidate cannot replace it until these FP06-specific checks pass:
 
-1. Built-in viewer inventory still matches `pdf` and `pptx`, and adapter contract v3 can register the local `paimind:pdf` channel.
+1. Built-in viewer inventory still matches `pdf` and `pptx`, and adapter contract v4 can register the local `paimind:pdf` channel.
 2. The hidden `editor` tab still supports path-keyed open, close and refresh.
 3. The local PDF.js channel loads current bytes and retains download on success/error; removing it restores the provider viewer.
 4. PPTX loads current bytes, reports slide count, navigates and retains download on success/error.

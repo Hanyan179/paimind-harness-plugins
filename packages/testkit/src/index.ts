@@ -35,8 +35,9 @@ export function createClientContextFixture(): {
   const registry: HarnessInspectableSlotRegistry = {
     inject(name, install) {
       currentInjection = name
-      const dispose = install()
-      effects.push(dispose)
+      const installed = install()
+      const disposers = typeof installed === 'function' ? [installed] : [...installed]
+      effects.push(() => { for (const dispose of disposers.reverse()) dispose() })
       currentInjection = ''
     },
     register(options, component) {

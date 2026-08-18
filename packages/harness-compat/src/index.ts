@@ -168,6 +168,48 @@ export type RuntimePhase =
 /** Small public subset of a Harness in-flight tool call used by FP01. */
 export interface HarnessRunningCall {
   readonly name: string
+  readonly callId?: string
+  readonly time?: number
+  readonly callView?: HarnessToolCallView | null
+  readonly subCalls?: readonly HarnessToolCallBlock[]
+}
+
+/** Browser-safe file location from a producer-declared Tool render intent. */
+export interface HarnessToolFileLocation {
+  readonly path: string
+  readonly line?: number
+}
+
+/** Narrow Tool call presentation used to identify exact file reads. */
+export type HarnessToolCallView =
+  | {
+    readonly card: 'generic'
+    readonly title: string
+    readonly kind?: 'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'fetch' | 'other'
+    readonly locations?: readonly HarnessToolFileLocation[]
+  }
+  | { readonly card: 'terminal'; readonly title: string; readonly cwd?: string }
+  | { readonly card: 'diff'; readonly title: string; readonly locations?: readonly HarnessToolFileLocation[] }
+
+/** Settled Tool record retained by the Chat target. */
+export interface HarnessToolResultNode {
+  readonly kind: 'tool-result'
+  readonly callId: string
+  readonly time: number
+  readonly call: { readonly name: string; readonly argsRaw: string } | null
+  readonly callView: HarnessToolCallView | null
+  readonly isError: boolean
+  readonly meta?: unknown
+  readonly subCalls?: readonly HarnessToolCallBlock[]
+}
+
+/** Running or settled Tool record; recursive children stay producer-owned. */
+export type HarnessToolCallBlock = HarnessRunningCall | HarnessToolResultNode
+
+/** Stable subset of one final Chat node used by read-only PAIMind projections. */
+export interface HarnessChatNode {
+  readonly kind: string
+  readonly data?: unknown
 }
 
 /** Small public subset of a Harness assistant partial used by FP01. */
@@ -184,14 +226,23 @@ export interface HarnessConversationSnapshot {
   readonly pending: readonly { readonly kind: string }[]
   readonly partial: HarnessPartialAssistant | null
   /** Final business nodes already projected by Harness; only structural kinds are inspected. */
-  readonly nodes?: readonly { readonly kind: string }[]
+  readonly nodes?: readonly ({ readonly kind: string } & Readonly<Record<string, unknown>>)[]
   /** Public Turn timeline used by FP06 to read independently published deliverables data. */
   readonly chat?: {
+    readonly nodes?: {
+      values(): Iterable<HarnessChatNode>
+    }
     readonly timeline: {
       readonly turnOrder: readonly number[]
       readonly turns: ReadonlyMap<number, HarnessTurnLocation>
     }
   }
+  /** Independently assembled read-only views such as the native Trajectory ledger. */
+  readonly views?: { get(key: string): unknown }
+  /** Terminal Agent failure for the current Session, when present. */
+  readonly lastAgentError?: string | null
+  /** Current inbox snapshot; presence is enough for technical detail counts. */
+  readonly queue?: readonly { readonly placement?: string }[]
 }
 
 /** Version-isolated public Turn data reader; values stay owned by their native plugin. */
@@ -390,14 +441,33 @@ export interface HarnessSessionListSnapshot {
   readonly ids?: readonly string[]
   readonly byId: Readonly<Record<string, {
     readonly id?: string
+    readonly title?: string
     readonly displayTitle?: string
     readonly cwd?: string
     readonly running: boolean
+    readonly pendingInteraction?: string
+    readonly completed?: boolean
     /** Native rule: only a blank Session may select another Agent Preset. */
     readonly blank?: boolean
     /** Preset id the native Session was composed from. */
     readonly agentPreset?: string
     readonly updatedAt?: number
+    readonly projectionValues?: Readonly<Record<string, unknown>>
+  } | undefined>>
+  /** Native direct-child catalogs, keyed by exact parent Session id. */
+  readonly subagentsByParent?: Readonly<Record<string, {
+    readonly entries: readonly (
+      | {
+        readonly kind: 'child'
+        readonly id: string
+        readonly activity: 'running' | 'inactive'
+        readonly hasChildren: boolean
+        readonly mode: 'one-shot' | 'continuable'
+        readonly label?: string
+      }
+      | { readonly kind: 'diagnostic'; readonly id: string; readonly reason: string }
+    )[]
+    readonly parentAvailable: boolean
   } | undefined>>
   /** Native `session/jobs` mirror; absence for one Session means no current records. */
   readonly jobsBySession?: Readonly<Record<string, readonly HarnessNativeJobView[] | undefined>>
@@ -423,8 +493,10 @@ export type HarnessProjectionSelector = {
 /** Additive Session-header action props used by the independent Task Monitor button. */
 export interface PaimindSessionHeaderActionProps {
   readonly sessionId: string
-  readonly useSessions: HarnessSessionsSelector
-  readonly useProjection: HarnessProjectionSelector
+  readonly useSession: HarnessSessionSelector
+  /** Optional compatibility shares; current Header slots expose Session-local hooks only. */
+  readonly useSessions?: HarnessSessionsSelector
+  readonly useProjection?: HarnessProjectionSelector
 }
 
 /** Global selector hook supplied to every Harness slot contribution. */
@@ -472,6 +544,12 @@ export interface HarnessSessionService {
   readonly list: HarnessObservableSnapshot<HarnessSessionListSnapshot>
   /** Select a canonical Harness Session as current; this owns no navigation state. */
   open(id: string): void
+  /** Navigate to one exact catalog-derived child address without inventing lineage. */
+  openSubagent?(address: {
+    readonly parentSessionId: string
+    readonly childSessionId: string
+    readonly mode: 'one-shot' | 'continuable'
+  }): void
   /** Public outward Session binding; optional keeps older Harness candidates fail-closed. */
   binding?(id: string): {
     readonly ctx?: object
@@ -534,6 +612,59 @@ export interface HarnessAgentPresetApi {
   remove(payload: { readonly agentPreset: string }): Promise<HarnessRpcResponse<Record<string, never>>>
 }
 
+/** Native new-conversation Preset selector snapshot rendered in the Harness hero. */
+export interface HarnessAgentPresetSeatSnapshot {
+  readonly current: string
+  readonly busy: boolean
+  readonly error: string | null
+}
+
+/** Version-isolated control face for the native new-conversation Preset selector. */
+export interface HarnessAgentPresetSeatControl {
+  getSnapshot(): HarnessAgentPresetSeatSnapshot
+  select(agentPreset: string): Promise<void>
+}
+
+/**
+ * Resolve the native Agent Preset hero control from its public Slot contribution.
+ * Calling the Host RPC directly changes Session state but bypasses the selector's
+ * staged/current UI state, leaving the visible checkmark stale.
+ */
+export function resolveHarnessAgentPresetSeatControl(
+  slots: HarnessInspectableSlotRegistry,
+): HarnessAgentPresetSeatControl | null {
+  const entries = slots.entries('conversation.hero.agentPreset')
+    .filter(entry => typeof entry.inject === 'function')
+  if (entries.length !== 1) return null
+  try {
+    const injected = entries[0]!.inject?.() as {
+      readonly hooks?: {
+        readonly agentPresetSeat?: HarnessObservableSnapshot<unknown>
+      }
+      readonly select?: (id: string) => Promise<void>
+    } | undefined
+    const store = injected?.hooks?.agentPresetSeat
+    if (store === undefined || typeof injected?.select !== 'function') return null
+    const snapshot = (): HarnessAgentPresetSeatSnapshot | null => {
+      const value = store.getSnapshot()
+      if (typeof value !== 'object' || value === null) return null
+      const candidate = value as { readonly current?: unknown; readonly busy?: unknown; readonly error?: unknown }
+      if (typeof candidate.current !== 'string' || typeof candidate.busy !== 'boolean'
+        || (candidate.error !== null && typeof candidate.error !== 'string')) return null
+      return Object.freeze({ current: candidate.current, busy: candidate.busy, error: candidate.error })
+    }
+    if (snapshot() === null) return null
+    return Object.freeze({
+      getSnapshot(): HarnessAgentPresetSeatSnapshot {
+        const current = snapshot()
+        if (current === null) throw new Error('Harness Agent Preset selector returned an invalid snapshot')
+        return current
+      },
+      async select(agentPreset: string): Promise<void> { await injected.select!(agentPreset) },
+    })
+  } catch { return null }
+}
+
 /** Narrow connection handle; Harness version details remain behind compat. */
 export interface HarnessAgentPresetConnection {
   readonly api: { readonly agentPresets: HarnessAgentPresetApi }
@@ -582,7 +713,7 @@ export interface PaimindLocaleSource {
 
 /** Minimal Slot API used by PAIMind client plugins. */
 export interface HarnessSlotRegistry {
-  inject(name: string, install: () => (() => void)): void
+  inject(name: string, install: () => (() => void) | Iterable<() => void>): void
   register<TProps extends object>(
     options: Readonly<Record<string, unknown>>,
     component: ComponentType<TProps>,
@@ -609,7 +740,7 @@ export interface HarnessSettingsSectionOwnerProps {
 
 /** Reversible RC6 bridge for consolidating the native Preset page under Agent Center. */
 export interface HarnessAgentPresetSettingsNavigation {
-  /** Activate the native Agent Presets page while the Settings dialog is open. */
+  /** Open Settings when needed, then activate the native Agent Presets page. */
   open(): boolean
   /** Restore the native navigation row and stop observing the Settings shell. */
   dispose(): void
@@ -623,6 +754,20 @@ function resolveHarnessSettingsLabel(entry: HarnessInspectableSlotEntry): string
   } catch { return undefined }
 }
 
+function resolveHarnessSettingsTrigger(doc: Document): HTMLButtonElement | null {
+  const eligible = (button: HTMLButtonElement): boolean => button.closest('[role="dialog"]') === null && !button.disabled
+  const slotted = [...new Set(
+    [...doc.querySelectorAll<HTMLElement>('[data-slot="settings.trigger"]')]
+      .map(node => node.closest<HTMLButtonElement>('button'))
+      .filter((button): button is HTMLButtonElement => button !== null && eligible(button)),
+  )]
+  if (slotted.length === 1) return slotted[0]!
+
+  const legacy = [...doc.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="dialog"][aria-expanded]')]
+    .filter(eligible)
+  return legacy.length === 1 ? legacy[0]! : null
+}
+
 /**
  * Hide only the exact native `agent-presets` navigation row while retaining its
  * registered page. RC6 keeps active-section state inside the Settings shell and
@@ -633,6 +778,7 @@ export function installHarnessAgentPresetSettingsNavigation(
   slots: HarnessInspectableSlotRegistry,
   doc: Document = document,
 ): HarnessAgentPresetSettingsNavigation {
+  let pendingOpen = false
   const hidden = new Map<HTMLButtonElement, {
     readonly hidden: boolean
     readonly display: string
@@ -673,8 +819,16 @@ export function installHarnessAgentPresetSettingsNavigation(
     return button
   }
 
+  const activatePending = (): void => {
+    if (!pendingOpen) return
+    const button = refresh()
+    if (button === null) return
+    pendingOpen = false
+    button.click()
+  }
+
   const Observer = doc.defaultView?.MutationObserver ?? MutationObserver
-  const observer = new Observer(() => { refresh() })
+  const observer = new Observer(() => { if (pendingOpen) activatePending(); else refresh() })
   observer.observe(doc.documentElement, { childList: true, subtree: true })
   const offSlots = slots.subscribe('settings.section', refresh)
   refresh()
@@ -682,11 +836,20 @@ export function installHarnessAgentPresetSettingsNavigation(
   return Object.freeze({
     open(): boolean {
       const button = refresh()
-      if (button === null) return false
-      button.click()
+      if (button !== null) {
+        pendingOpen = false
+        button.click()
+        return true
+      }
+      const settingsTrigger = resolveHarnessSettingsTrigger(doc)
+      if (settingsTrigger === null) return false
+      pendingOpen = true
+      settingsTrigger.click()
+      activatePending()
       return true
     },
     dispose(): void {
+      pendingOpen = false
       observer.disconnect()
       offSlots()
       restore()
@@ -909,6 +1072,26 @@ export interface PaimindHostSession {
 /** Public structural subset used only to authorize a Session-scoped file. */
 export interface PaimindHostSessionService {
   get(id: string): PaimindHostSession | undefined
+}
+
+/** Minimal raw Event face returned by Harness's native paginated Session history. */
+export interface HarnessSessionHistoryEvent {
+  readonly type: string
+  readonly seq?: number
+  readonly time?: number
+  readonly data?: unknown
+}
+
+/** Read-only native Session-history API used to fold complete resource evidence. */
+export interface HarnessSessionHistoryApi {
+  history(payload: {
+    readonly sessionId: string
+    readonly beforeSeq?: number
+    readonly maxMessages?: number
+  }, signal?: AbortSignal): Promise<HarnessRpcResponse<{
+    readonly events: readonly { readonly event: HarnessSessionHistoryEvent }[]
+    readonly hasMore: boolean
+  }>>
 }
 
 /** Host services required by the isolated Bento renderer package. */

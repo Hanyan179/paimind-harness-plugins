@@ -41,16 +41,17 @@ function fixture(items: NotificationRecord[] = [record()]) {
     open: vi.fn(),
   }
   const artifacts = {
-    getSnapshot: vi.fn(() => ({ revision: 0, artifacts: [], diagnostics: [] })),
+    getSnapshot: vi.fn(() => ({ revision: 0, artifacts: [{ id: 'artifact:one', path: '/workspace/report.bento.html' }], diagnostics: [] })),
     subscribe: vi.fn(() => () => {}), registerSource: vi.fn(), registerAction: vi.fn(),
     actionsFor: vi.fn(() => []), runAction: vi.fn(), focus: vi.fn(() => true), dispose: vi.fn(),
   }
   const sidebar = {
     getStatus: vi.fn(), subscribe: vi.fn(() => () => {}), registerTab: vi.fn(), registerFileViewer: vi.fn(),
-    openTab: vi.fn(() => true), getFileCapability: vi.fn(), openFile: vi.fn(), dispose: vi.fn(),
+    openTab: vi.fn(() => true), closeTab: vi.fn(() => true), getFileCapability: vi.fn(), openFile: vi.fn(), dispose: vi.fn(),
   }
-  const controller = new NotificationCenterController({ list, markRead, markAllRead }, sessions as never, artifacts as never, sidebar as never)
-  return { controller, list, markRead, markAllRead, sessions, artifacts, sidebar }
+  const workspaces = { openPath: vi.fn(async () => {}) }
+  const controller = new NotificationCenterController({ list, markRead, markAllRead }, sessions as never, workspaces as never, artifacts as never, sidebar as never)
+  return { controller, list, markRead, markAllRead, sessions, workspaces, artifacts, sidebar }
 }
 
 afterEach(() => { document.head.querySelectorAll('style[data-paimind-plugin]').forEach(node => { node.remove() }) })
@@ -70,7 +71,8 @@ describe('FP12 Notification Center client', () => {
     fireEvent.click(screen.getByRole('button', { name: 'View artifact' }))
     await waitFor(() => { expect(f.sessions.open).toHaveBeenCalledWith('session-1') })
     expect(f.artifacts.focus).toHaveBeenCalledWith('artifact:one')
-    expect(f.sidebar.openTab).toHaveBeenCalledWith('paimind:artifacts')
+    expect(f.workspaces.openPath).toHaveBeenCalledWith('/workspace/report.bento.html')
+    expect(f.sidebar.openTab).not.toHaveBeenCalled()
     f.controller.dispose()
   })
 
@@ -141,6 +143,7 @@ describe('FP12 Notification Center client', () => {
         }
       },
       sessions: f.sessions as never,
+      workspaces: f.workspaces as never,
       paimindArtifacts: f.artifacts as never,
       paimindSidebar: f.sidebar as never,
       locale: locale(),

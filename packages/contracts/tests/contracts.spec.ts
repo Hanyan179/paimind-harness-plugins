@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   FEATURE_PACKAGE_IDS,
   PAIMIND_SCHEDULE_CAPABILITIES,
+  definePaimindScheduleActionInput,
   definePaimindScheduleDefinition,
   definePaimindScheduleRun,
   defineNotificationRecord,
   defineNotificationTarget,
+  defineArtifactTraceEnvelope,
 } from '../src/index.ts'
 
 describe('migration contracts', () => {
@@ -40,17 +42,25 @@ describe('migration contracts', () => {
     })).toThrow(/readAt/)
   })
 
-  it('defines the platform scheduler without business parameters or session-local coupling', () => {
+  it('defines conversational schedule inputs and weekdays without exposing arbitrary payloads', () => {
     expect(PAIMIND_SCHEDULE_CAPABILITIES).toMatchObject({
-      rules: ['once', 'daily', 'weekly', 'monthly'], runNow: true, cron: false,
-      fixedInterval: false, overlappingRuns: false, businessParameters: false,
+      rules: ['once', 'daily', 'weekdays', 'weekly', 'monthly'], runNow: true, cron: false,
+      fixedInterval: false, overlappingRuns: false, businessParameters: true,
     })
     expect(definePaimindScheduleDefinition({
       scheduleId: 'schedule:one', name: 'Daily brief', actionId: 'action:brief',
-      rule: { kind: 'daily', time: '09:00' }, timeZone: 'Asia/Shanghai', status: 'enabled',
+      actionInput: { prompt: 'Create a daily brief.', options: { language: 'zh-CN' } },
+      sourceSessionId: 'session:setup',
+      rule: { kind: 'weekdays', time: '09:00' }, timeZone: 'Asia/Shanghai', status: 'enabled',
       nextRunAt: '2026-08-16T01:00:00.000Z', createdAt: '2026-08-15T01:00:00.000Z',
       updatedAt: '2026-08-15T01:00:00.000Z', version: 'version:one',
-    })).toMatchObject({ actionId: 'action:brief', status: 'enabled' })
+    })).toMatchObject({
+      actionId: 'action:brief', sourceSessionId: 'session:setup', status: 'enabled',
+      rule: { kind: 'weekdays', time: '09:00' },
+    })
+    expect(definePaimindScheduleActionInput({ nested: ['safe', 1, true] })).toEqual({ nested: ['safe', 1, true] })
+    expect(() => definePaimindScheduleActionInput({ accessToken: 'must-not-persist' })).toThrow(/sensitive field/)
+    expect(() => definePaimindScheduleActionInput({ value: Number.NaN })).toThrow(/finite/)
     expect(() => definePaimindScheduleDefinition({
       scheduleId: 'schedule:one', name: 'Broken monthly rule', actionId: 'action:brief',
       rule: { kind: 'monthly', dayOfMonth: 31, time: '09:00' }, timeZone: 'Asia/Shanghai', status: 'enabled',
@@ -73,5 +83,12 @@ describe('migration contracts', () => {
       ...base, status: 'succeeded', message: 'Done', progress: 100,
       finishedAt: '2026-08-15T01:01:00.000Z',
     })).toThrow(/only while running/)
+  })
+
+  it('accepts hashed trace sidecar references while keeping V1 inline compatibility', () => {
+    const common = { traceId: 'trace:one', artifactId: 'artifact:one', sessionId: 'session-1', workspaceId: 'workspace-1', producerId: 'producer', taskId: 'job-1', artifactRevision: 1, producedAt: 1 }
+    expect(defineArtifactTraceEnvelope({ schema: 'paimind.artifact-trace/v1', ...common, document: { schemaVersion: 'paimind.presentation-trace/v2' } }).schema).toBe('paimind.artifact-trace/v1')
+    expect(defineArtifactTraceEnvelope({ schema: 'paimind.artifact-trace/v2', ...common, documentRef: { path: 'deck.trace.json', schema: 'paimind.presentation-trace/v3', sha256: 'a'.repeat(64), bytes: 42 } }).schema).toBe('paimind.artifact-trace/v2')
+    expect(() => defineArtifactTraceEnvelope({ schema: 'paimind.artifact-trace/v2', ...common, documentRef: { path: 'deck.trace.json', schema: 'paimind.presentation-trace/v3', sha256: 'wrong', bytes: 42 } })).toThrow(/sha256/)
   })
 })

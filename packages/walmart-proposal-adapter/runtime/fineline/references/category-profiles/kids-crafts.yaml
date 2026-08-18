@@ -1,0 +1,12 @@
+category: KIDS CRAFTS
+yoy_mode: launch_week_aligned
+yoy_mode_label: WK31 anchored YoY
+yoy_mode_explanation: "KIDS CRAFTS uses Walmart fiscal WK31 as the business cycle start for primary YoY comparison."
+meaningful_growth_threshold: 0.05
+flat_growth_band: 0.05
+launch_fiscal_week: 31
+space_expansion_finelines: []
+fixed_supplier_finelines: []
+notes: "KIDS CRAFTS modular launch/reset is anchored around Walmart fiscal WK31."
+owner: ""
+last_updated: "2026-07-09"

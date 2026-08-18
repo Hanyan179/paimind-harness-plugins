@@ -6,7 +6,7 @@ Status: Activated in Local Main Profile / Local Pre-acceptance Passed（本地�
 
 - Code packages: `@paimind/platform-scheduler`, Harness/HTTP/Feishu-bot Adapters, Platform API/SDK, contracts and executable integration examples.
 - Documents: PRD, architecture, integration contract, backend standard, SDK/Adapter/E2E guides, deployment runbook and acceptance specification.
-- Active local Bundle: PAIMind selects `@paimind/platform-scheduler` with Harness, HTTP and Feishu-bot Adapter services. `@deepseek-ai/dsh-schedule`, `@deepseek-ai/dsh-time-context` and the legacy facade `@paimind/scheduler` are not loaded, so the technical plugin list and product shell expose only one scheduler.
+- Active local Bundle: PAIMind selects `@paimind/platform-scheduler` with Harness, HTTP and Feishu-bot Adapter services. `@deepseek-ai/dsh-schedule`, `@deepseek-ai/dsh-time-context` and the retired Session-local facade are not loaded, so the technical plugin list and product shell expose only one scheduler.
 - Feishu PRD: live target `QhrXdKOxwojkpEx2zb0c8ZRxnlc` was re-read at Revision 15, updated, then key sections were read back at Revision 30.
 
 ## Automated verification
@@ -30,13 +30,13 @@ The merged main Profile is running at `http://127.0.0.1:3080/`; the isolated `30
 - `@paimind/platform-scheduler` is present;
 - Harness, HTTP and Feishu-bot Adapter services are present;
 - the optional Feishu acceptance action is registered;
-- `@deepseek-ai/dsh-schedule`, `@deepseek-ai/dsh-time-context` and `@paimind/scheduler` are absent.
+- `@deepseek-ai/dsh-schedule`, `@deepseek-ai/dsh-time-context` and the retired Session-local facade are absent.
 - the technical Plugin List contains one `platform-scheduler` row and zero `schedule` or `time-context` rows.
 
 Browser read-back on `3080` confirmed:
 
 - exactly two primary views: task list and run records;
-- the only product entry is **设置 → 平台定时任务 → 打开任务列表**; the sidebar footer has no duplicate Scheduler trigger;
+- the only product entry is **设置 → 平台定时任务**; the Settings content directly renders 任务列表 and 运行记录, with no intermediate button, overlay, or duplicate sidebar trigger;
 - zero **Reschedule** and zero **Test run** buttons;
 - the registered Feishu bot keyword-test action is the only selectable action;
 - `time` changes remain stable after blur and save instead of reverting to the previous value;

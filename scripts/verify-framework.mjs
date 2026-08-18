@@ -9,10 +9,6 @@ const descriptorExemptions = new Set([
   '@paimind/workspace-project',
   '@paimind/better-sidebar-adapter',
 ])
-const bundleExemptions = new Set([
-  // Legacy Session-local facade remains buildable but is replaced by the platform surface.
-  '@paimind/scheduler',
-])
 const expectedExtensionCategories = [
   'experience', 'content-rendering', 'agents', 'skills-tools',
   'automation', 'governance', 'developer',
@@ -50,11 +46,8 @@ for (const entry of await readdir(packagesRoot, { withFileTypes: true })) {
 
 const patch = await readFile(resolve(packagesRoot, 'harness-bundle/cordis.patch.yml'), 'utf8')
 for (const packageName of pluginPackages) {
-  if (!bundleExemptions.has(packageName) && !patch.includes(packageName)) {
+  if (!patch.includes(packageName)) {
     failures.push(`${packageName}: absent from harness bundle patch`)
-  }
-  if (bundleExemptions.has(packageName) && patch.includes(`name: '${packageName}'`)) {
-    failures.push(`${packageName}: legacy Session-local facade must remain outside the active bundle patch`)
   }
 }
 
@@ -73,21 +66,42 @@ if (Object.keys(taskDependencies).some(name => name.includes('better-sidebar')))
   failures.push('@paimind/task-monitor: must not depend on Better Sidebar')
 }
 const taskClient = await readFile(resolve(packagesRoot, 'task-monitor/src/client/index.tsx'), 'utf8')
+const taskProjection = await readFile(resolve(packagesRoot, 'task-monitor/src/index.ts'), 'utf8')
 for (const marker of [
-  'conversation.session.header.actions', 'jobsBySession', "useProjection('paimind.artifacts')",
-  "category: 'automation'",
+  'conversation.session.header.actions', "id: 'agent-preset'", "id: 'job-list'",
+  'conversation.session.header.utilities', "id: 'session-log-download'", 'sessionLogDownload', "faceOf('goal')",
+  'props.useSession', "category: 'automation'",
 ]) {
-  if (!taskClient.includes(marker)) failures.push(`@paimind/task-monitor: independent Native Job projection is missing ${marker}`)
+  if (!taskClient.includes(marker)) failures.push(`@paimind/task-monitor: complete native monitor client is missing ${marker}`)
+}
+for (const marker of [
+  'input.sessions.jobsBySession', 'collectInputFiles', 'collectDeliverables',
+  "source?.kind === 'skill-invocation'", 'collectMcps', 'projectTaskMonitor',
+]) {
+  if (!taskProjection.includes(marker)) failures.push(`@paimind/task-monitor: deterministic native projection is missing ${marker}`)
 }
 for (const forbidden of ['paimindTaskPreview', 'registerTab(', 'paimindSidebar', 'PaimindTaskRegistry']) {
   if (taskClient.includes(forbidden)) failures.push(`@paimind/task-monitor: retired task surface/state marker remains: ${forbidden}`)
+}
+
+const artifactsClient = await readFile(resolve(packagesRoot, 'artifacts/src/client/index.tsx'), 'utf8')
+if (/paimindSidebar\.registerTab\s*\(\s*\{\s*id:\s*['"]paimind:artifacts['"]/.test(artifactsClient)) {
+  failures.push('@paimind/artifacts: fixed Artifacts sidebar tab must remain retired')
+}
+const bentoClient = await readFile(resolve(packagesRoot, 'renderer-bento/src/client/index.tsx'), 'utf8')
+if (!/id:\s*['"]paimind:bento-preview['"][\s\S]{0,180}hidden:\s*true/.test(bentoClient)) {
+  failures.push('@paimind/renderer-bento: Bento workbench must remain a hidden on-demand tab')
+}
+const sidebarAdapter = await readFile(resolve(packagesRoot, 'better-sidebar-adapter/src/index.ts'), 'utf8')
+for (const marker of ['PAIMIND_SIDEBAR_CONTRACT_VERSION = 4', 'readonly hidden?: boolean', 'PaimindSidebarOpenTabOptions']) {
+  if (!sidebarAdapter.includes(marker)) failures.push(`@paimind/better-sidebar-adapter: on-demand tab contract is missing ${marker}`)
 }
 
 const extensionCenterClient = await readFile(resolve(packagesRoot, 'extension-center/src/client/index.tsx'), 'utf8')
 if (/pluginInventory\.(?:add|remove|install|uninstall|enable|disable|toggle)\s*\(/.test(extensionCenterClient)) {
   failures.push('@paimind/extension-center: must not mutate the Harness Plugin Registry')
 }
-if (extensionCenterClient.includes('@paimind/launcher') || extensionCenterClient.includes('paimindLauncher')) {
+if (extensionCenterClient.includes('paimindLauncher')) {
   failures.push('@paimind/extension-center: must remain capability management rather than Launcher navigation')
 }
 
@@ -129,8 +143,14 @@ for (const forbidden of [
 
 const agentMarketClient = await readFile(resolve(packagesRoot, 'agent-market/src/client/index.tsx'), 'utf8')
 const agentMarketProjection = await readFile(resolve(packagesRoot, 'agent-market/src/index.ts'), 'utf8')
-for (const marker of ["category: 'agents'", 'api.list({})', 'api.select({ sessionId', 'props.profiles.saveProfile', 'this.remote.bindSession', 'installHarnessAgentPresetSettingsNavigation']) {
+for (const marker of ["category: 'agents'", 'api.list({})', 'resolveHarnessAgentPresetSeatControl', 'await seat.select(presetId)', 'props.profiles.saveProfile', 'this.remote.bindSession', 'installHarnessAgentPresetSettingsNavigation']) {
   if (!agentMarketClient.includes(marker)) failures.push(`@paimind/agent-market: native Preset boundary is missing ${marker}`)
+}
+for (const marker of ["slots.entries('conversation.hero.agentPreset')", 'hooks?.agentPresetSeat']) {
+  if (!brandingCompat.includes(marker)) failures.push(`@paimind/harness-compat: native Agent Preset Seat boundary is missing ${marker}`)
+}
+if (agentMarketClient.includes('api.select({ sessionId')) {
+  failures.push('@paimind/agent-market: direct Preset wire selection bypasses the native visible selector')
 }
 for (const forbidden of ['AgentRuntime', 'agentConfigStore', 'mockPreset', 'mockAgent']) {
   if (agentMarketClient.includes(forbidden) || agentMarketProjection.includes(forbidden)) {
@@ -167,13 +187,13 @@ const userSettingsClient = await readFile(resolve(packagesRoot, 'user-settings/s
 const userSettingsHost = await readFile(resolve(packagesRoot, 'user-settings/src/index.ts'), 'utf8')
 for (const marker of [
   "category: 'experience'", "surface: 'settings'", 'remote.$mount(TYPERT_REMOTE)',
-  'expectedRevision: current.revision', 'dataset.paimindMotion', 'No persistence is simulated',
+  'expectedRevision: current.revision', 'renderPaimindPersonalizationContext', 'No persistence is simulated',
 ]) {
   if (!userSettingsClient.includes(marker)) failures.push(`@paimind/user-settings: native Settings client boundary is missing ${marker}`)
 }
 for (const marker of [
-  'installPaimindHostSettings<PaimindUserPreferences>', "name: 'paimind:user-preferences'",
-  'shouldPublishNotification',
+  'installPaimindHostSettings<PaimindPersonalization>', "name: 'paimind:personalization'",
+  'systemPrompt.context',
 ]) {
   if (!userSettingsHost.includes(marker)) failures.push(`@paimind/user-settings: live Host consumer is missing ${marker}`)
 }
@@ -184,13 +204,13 @@ for (const forbidden of [
   if (userSettingsClient.includes(forbidden)) failures.push(`@paimind/user-settings: duplicate or browser-only preference marker is forbidden: ${forbidden}`)
 }
 const runtimeOrbClient = await readFile(resolve(packagesRoot, 'runtime-orbs/src/client/index.tsx'), 'utf8')
-if (!runtimeOrbClient.includes("dataset.paimindMotion === 'reduce'")) {
-  failures.push('@paimind/runtime-orbs: PAIMind reduced-motion preference is not consumed')
+if (!runtimeOrbClient.includes("matchMedia?.('(prefers-reduced-motion: reduce)')")
+  || runtimeOrbClient.includes('data-paimind-motion')) {
+  failures.push('@paimind/runtime-orbs: reduced motion must follow the operating-system preference only')
 }
 const notificationHost = await readFile(resolve(packagesRoot, 'notifications/src/index.ts'), 'utf8')
-if (!notificationHost.includes("inject(['paimindUserSettings']")
-  || !notificationHost.includes('shouldPublishNotification(input.level)')) {
-  failures.push('@paimind/notifications: future publication does not consume the optional PAIMind policy')
+if (notificationHost.includes('paimindUserSettings') || notificationHost.includes('shouldPublishNotification')) {
+  failures.push('@paimind/notifications: Personalization must not own or filter Notification publication')
 }
 
 const bundleManifest = JSON.parse(await readFile(resolve(packagesRoot, 'harness-bundle/package.json'), 'utf8'))
@@ -206,38 +226,10 @@ for (const required of [
 if (!patch.includes("name: '@paimind/scheduler-adapter-harness/agent-action'")) {
   failures.push('@paimind/harness-bundle: built-in Agent Session schedule action is missing')
 }
-if (bundleDependencies.includes('@paimind/scheduler') || patch.includes("name: '@paimind/scheduler'")) {
-  failures.push('@paimind/harness-bundle: legacy Session-local Scheduler facade must not compete with the platform Scheduler')
-}
 for (const retiredNativeSchedulerPackage of ['@deepseek-ai/dsh-schedule', '@deepseek-ai/dsh-time-context']) {
   if (bundleDependencies.includes(retiredNativeSchedulerPackage) || patch.includes(`name: '${retiredNativeSchedulerPackage}'`)) {
     failures.push(`@paimind/harness-bundle: retired native Session-reminder package must not be selected: ${retiredNativeSchedulerPackage}`)
   }
-}
-const nativeSchedulerHost = await readFile(resolve(packagesRoot, 'scheduler-native/src/index.ts'), 'utf8')
-const nativeSchedulerClient = await readFile(resolve(packagesRoot, 'scheduler-native/src/client/index.tsx'), 'utf8')
-const schedulerCompat = await readFile(resolve(packagesRoot, 'harness-compat/src/host.ts'), 'utf8')
-for (const marker of [
-  'listPaimindNativeSchedules', "static inject = ['sessions']", "markPaimindHostRemoteMethods(this, ['list'])",
-]) {
-  if (!nativeSchedulerHost.includes(marker)) failures.push(`@paimind/scheduler: native Session projection is missing ${marker}`)
-}
-for (const marker of [
-  'schedule_create', 'schedule_delete', "session.prompt([{ type: 'text', text }], 'queue')",
-  "category: 'automation'", "surface: 'header-button'", 'session-local',
-]) {
-  if (!nativeSchedulerClient.includes(marker)) failures.push(`@paimind/scheduler: native management surface is missing ${marker}`)
-}
-for (const forbidden of [
-  'definePaimindStorageDomain', 'PaimindSchedulerCore', 'PAIMIND_SCHEDULER_DOMAIN',
-  'scheduler-adapter-harness', 'scheduler-adapter-http', 'PaimindScheduleRun', 'Run Now', 'Cron',
-]) {
-  if (nativeSchedulerHost.includes(forbidden) || nativeSchedulerClient.includes(forbidden)) {
-    failures.push(`@paimind/scheduler: shadow Scheduler runtime marker is forbidden: ${forbidden}`)
-  }
-}
-for (const marker of ["from '@deepseek-ai/dsh-schedule'", 'foldScheduleEvents', 'scheduleView']) {
-  if (!schedulerCompat.includes(marker)) failures.push(`@paimind/harness-compat: native Schedule compatibility boundary is missing ${marker}`)
 }
 const futureSchedulerManifest = JSON.parse(await readFile(resolve(packagesRoot, 'scheduler/package.json'), 'utf8'))
 if (futureSchedulerManifest.name !== '@paimind/platform-scheduler') {
@@ -247,8 +239,16 @@ const platformSchedulerClient = await readFile(resolve(packagesRoot, 'scheduler/
 if (!platformSchedulerClient.includes("name: 'settings.section'") || !platformSchedulerClient.includes("surface: 'settings'")) {
   failures.push('@paimind/platform-scheduler: management entry must remain inside Settings')
 }
+if (!platformSchedulerClient.includes('<SchedulerWorkspace controller={props.controller} zh={zh}')) {
+  failures.push('@paimind/platform-scheduler: Settings must render the task workspace directly')
+}
 if (platformSchedulerClient.includes("slots.inject('sidebar.footer.action'")) {
   failures.push('@paimind/platform-scheduler: duplicate sidebar footer entry is forbidden')
+}
+for (const intermediateSchedulerSurface of ['\u6253\u5f00\u4efb\u52a1\u5217\u8868', 'Open task list', "name: 'shell.overlay', id: 'paimind-scheduler-overlay'"]) {
+  if (platformSchedulerClient.includes(intermediateSchedulerSurface)) {
+    failures.push(`@paimind/platform-scheduler: intermediate Scheduler surface is forbidden: ${intermediateSchedulerSurface}`)
+  }
 }
 for (const technicalTaskListDetail of [
   '<div data-paimind-scheduler-muted>{definition.scheduleId}</div>',
@@ -260,18 +260,6 @@ for (const technicalTaskListDetail of [
   }
 }
 
-const permissionsCore = await readFile(resolve(packagesRoot, 'permissions-core/src/index.ts'), 'utf8')
-for (const marker of [
-  'resolvePrincipal()', 'authorize(request:', "'provider-unavailable'", "'unauthenticated'", "'provider-error'",
-]) {
-  if (!permissionsCore.includes(marker)) failures.push(`@paimind/permissions-core: fail-closed provider boundary is missing ${marker}`)
-}
-for (const forbidden of [
-  'PaimindRole', 'ROLE_CAPABILITIES', 'defaultRole', 'window.localStorage', 'localStorage.',
-  'window.sessionStorage', 'sessionStorage.',
-]) {
-  if (permissionsCore.includes(forbidden)) failures.push(`@paimind/permissions-core: synthetic or caller-asserted authority is forbidden: ${forbidden}`)
-}
 for (const entry of await readdir(packagesRoot, { withFileTypes: true })) {
   if (!entry.isDirectory()) continue
   const packageRoot = resolve(packagesRoot, entry.name)
@@ -317,5 +305,5 @@ if (failures.length > 0) {
   console.error(failures.join('\n'))
   process.exitCode = 1
 } else {
-  console.log(`framework verification passed: ${pluginPackages.length} client plugin(s), exact seven-category Extension Center taxonomy, Registry remains technical-only, Task Monitor is an independent Native Job button, Bento is adapter-only, authorization fails closed without a trusted provider and exposes no synthetic Governance product, every user-visible client contributes one descriptor, only compatibility-neutral home-path imports exist outside harness-compat, zero Better Sidebar imports outside better-sidebar-adapter`)
+  console.log(`framework verification passed: ${pluginPackages.length} client plugin(s), exact seven-category Extension Center taxonomy, Registry remains technical-only, Task Monitor is a complete native read-only monitor, Bento is hidden on-demand and adapter-only, no synthetic Governance product, every user-visible client contributes one descriptor, only compatibility-neutral home-path imports exist outside harness-compat, zero Better Sidebar imports outside better-sidebar-adapter`)
 }

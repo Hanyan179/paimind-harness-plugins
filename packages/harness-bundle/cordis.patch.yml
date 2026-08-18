@@ -100,6 +100,13 @@
       name: '@paimind/presentation-trace/invariant'
       inject: [invariants]
 
+    - id: paimind-walmart-proposal-adapter
+      name: '@paimind/walmart-proposal-adapter'
+
+    - id: paimind-walmart-proposal-adapter-invariant
+      name: '@paimind/walmart-proposal-adapter/invariant'
+      inject: [invariants]
+
     - id: paimind-skill-market
       name: '@paimind/skill-market'
 
@@ -146,6 +153,10 @@
 
     - id: paimind-scheduler-agent-action
       name: '@paimind/scheduler-adapter-harness/agent-action'
+
+    - id: paimind-scheduler-agent-tool
+      name: '@paimind/scheduler-adapter-harness/agent-tool'
+      inject: [paimindScheduler, tools, systemPrompt, sessionTitle]
 
     - id: paimind-scheduler-adapter-harness-invariant
       name: '@paimind/scheduler-adapter-harness/invariant'

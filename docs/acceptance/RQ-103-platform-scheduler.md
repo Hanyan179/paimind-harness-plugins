@@ -51,7 +51,7 @@ The acceptance object is `@paimind/platform-scheduler` plus its Harness/HTTP/Fei
 - Internal Session and external isolated link.
 - Chinese/English, Light/Dark, desktop/narrow/mobile.
 - No overflow, occlusion, console error or cross-plugin unload regression.
-- The only product route is **Settings → Platform Scheduler → Open task list**.
+- The only product route is **Settings → Platform Scheduler**, which directly renders Task list and Run records without an intermediate button or overlay.
 - Task rows remain one-line summaries; detailed messages and actions stay in Run records.
 
 ## Evidence location

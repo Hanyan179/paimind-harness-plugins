@@ -14,6 +14,7 @@ import {
   type HarnessRemoteMountService,
   type HarnessRemoteResult,
   type HarnessSessionService,
+  type HarnessWorkspaceService,
   type PaimindClientContext,
   type PaimindLocaleSource,
 } from '@paimind/harness-compat'
@@ -27,7 +28,7 @@ import type {
 } from '../index.js'
 import TYPERT_REMOTE from '../remote.js'
 
-const BASE_INJECT = ['slots', 'locale', 'remote', 'sessions', 'paimindArtifacts', 'paimindSidebar'] as const
+const BASE_INJECT = ['slots', 'locale', 'remote', 'sessions', 'workspaces', 'paimindArtifacts', 'paimindSidebar'] as const
 export const inject = [...BASE_INJECT]
 
 interface NotificationRemoteNamespace {
@@ -43,6 +44,7 @@ interface NotificationsRemote extends HarnessRemoteMountService {
 export interface NotificationsClientContext extends PaimindClientContext {
   readonly remote: NotificationsRemote
   readonly sessions: HarnessSessionService
+  readonly workspaces: HarnessWorkspaceService
   readonly paimindArtifacts: PaimindArtifactService
   readonly paimindSidebar: PaimindSidebarService
   inject(
@@ -73,6 +75,7 @@ export class NotificationCenterController {
   constructor(
     private readonly remote: NotificationRemoteNamespace,
     private readonly sessions: HarnessSessionService,
+    private readonly workspaces: HarnessWorkspaceService,
     private readonly artifacts: PaimindArtifactService,
     private readonly sidebar: PaimindSidebarService,
   ) {
@@ -165,15 +168,16 @@ export class NotificationCenterController {
     let off = (): void => {}
     let timeout: number | undefined
     const settle = (): boolean => {
-      if (!this.artifacts.focus(artifactId)) return false
-      this.sidebar.openTab('paimind:artifacts')
+      const artifact = this.artifacts.getSnapshot().artifacts.find(candidate => candidate.id === artifactId)
+      if (artifact === undefined || !this.artifacts.focus(artifactId)) return false
+      void this.workspaces.openPath(artifact.path)
       off()
       if (timeout !== undefined) window.clearTimeout(timeout)
       return true
     }
     if (settle()) return
     off = this.artifacts.subscribe(() => { settle() })
-    timeout = window.setTimeout(() => { off(); this.sidebar.openTab('paimind:artifacts') }, 3_000)
+    timeout = window.setTimeout(() => { off() }, 3_000)
   }
 
   private replace(item: Readonly<NotificationRecord>): void {
@@ -375,7 +379,7 @@ export async function apply(ctx: NotificationsClientContext): Promise<() => Prom
     const remote = remoteCtx.remote.paimindNotifications
     if (remote === undefined) throw new Error('PAIMind Notification Remote did not mount')
     const controller = new NotificationCenterController(
-      remote, remoteCtx.sessions, remoteCtx.paimindArtifacts, remoteCtx.paimindSidebar,
+      remote, remoteCtx.sessions, remoteCtx.workspaces, remoteCtx.paimindArtifacts, remoteCtx.paimindSidebar,
     )
     contributePaimindExtension(remoteCtx.slots, {
       id: 'paimind:notifications', packageName: '@paimind/notifications', category: 'automation',

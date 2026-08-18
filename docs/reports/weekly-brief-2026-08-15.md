@@ -8,7 +8,7 @@
 
 - **R1–R7 rebaseline executed to completion** (verified 2026-08-14/15): native surface rationalization (R1), product truth plane with real Native Job → Artifact → Session Projection loop (R2), no-fixture real AI generation in five formats — PPTX / PDF / XLSX / HTML / Bento (R3), native Agent Preset / Skill catalogs (R4), Job/Schedule/Session-backed events (R5), governance & developer surfaces (R6), final cross-plugin E2E + prototype retirement (R7).
 - **Post-branding completion audit (2026-08-15)**: reopened executable evidence instead of trusting historical labels; found and repaired a Scheduler browser-build boundary (`remote.ts` imported Host-owned schemas pulling `node:*` into the Web bundle — schemas moved to browser-safe `src/schemas.ts`).
-- **Canonical-object audit (2026-08-15)**: reopened FP13 and removed the shadow PAIMind platform Scheduler from the formal runtime; `@paimind/scheduler` now folds official `schedule/change` events and submits create/delete only through native Session prompts.
+- **Canonical-object audit (2026-08-15)**: reopened FP13 and removed the shadow PAIMind platform Scheduler from the formal runtime; the then-selected Session facade folded official `schedule/change` events and submitted create/delete only through native Session prompts. That facade is now retired.
 - **Paramont branding**: official mountain mark, `共攀高山之巅`, native Preview badge and visible native Preset `Paramont 助手` accepted in the live browser.
 - **Provider upgrades isolated & verified**: Better Sidebar `0.12.1` (from `0.11.0`, adapter contract v3) and Office viewer `@huanlin/...@0.1.0` — real PPTX/XLSX viewing passed; pinned exact, never `latest`.
 

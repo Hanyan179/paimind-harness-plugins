@@ -17,7 +17,7 @@ Harness `0.1.0-rc.6` ships Schedule but does not enable it in the default Web Pr
 | Create, list and delete | Reuse exactly | Harness Agent-scoped Schedule Tools |
 | Time-zone interpretation | Reuse official opt-in support | Harness Time Context plus explicit Tool selector |
 | Due execution | Reuse exactly | Harness live root Agent `followup()` in the original Session |
-| Product catalog and form | PAIMind product layer | `@paimind/scheduler` independent button and Overlay/Drawer |
+| Product catalog and form | PAIMind product layer | Historical Session-local facade button and Overlay/Drawer |
 | Due notification | Optional PAIMind projection | Trusted producer from canonical dispatch event; Session target only |
 | Run now | Unsupported in Schedule v1 | No PAIMind substitute |
 | Cron/calendar recurrence | Unsupported in Schedule v1 | No PAIMind substitute |
@@ -40,7 +40,7 @@ The legacy prototype's platform/personal schedule stores, synthetic run ids, arc
 - Expose a structural Session-event reader and a safe active-view adapter.
 - Extend the structural Client Session face only with the already-public `prompt()` verb used to request native Tool execution.
 
-### `@paimind/scheduler`
+### Historical Session-local facade
 
 - Host strict Remote lists active reminders by folding the exact live Session log through official Schedule functions.
 - Client contributes an independent sidebar-footer clock and a body-level Overlay/Drawer.
@@ -80,7 +80,7 @@ flowchart LR
 5. Create an `every` rule at the native five-minute minimum, refresh and restart Harness, then verify the record recovers from the Session log. Delete it through `schedule_delete` and verify it disappears.
 6. Trigger a real invalid rule and verify no record is invented.
 7. Verify Chinese/Dark, English/Light and 560×800 Drawer behavior.
-8. Remove only `@paimind/scheduler`; native Schedule tools, conversation, Task Monitor, Notification Center and other plugins must remain usable.
+8. Remove only the historical facade; native Schedule tools, conversation, Task Monitor, Notification Center and other plugins must remain usable.
 
 ## Automated and composition verification
 

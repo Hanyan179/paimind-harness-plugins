@@ -3,8 +3,10 @@
   "compilerOptions": { "rootDir": "src", "outDir": "lib/types", "emitDeclarationOnly": true },
   "include": ["src"],
   "references": [
+    { "path": "../artifacts" },
     { "path": "../contracts" },
     { "path": "../harness-compat" },
-    { "path": "../testkit" }
+    { "path": "../testkit" },
+    { "path": "../workspace-project" }
   ]
 }

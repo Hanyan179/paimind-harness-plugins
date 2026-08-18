@@ -21,7 +21,7 @@ describe('R2 HTML generator provider', () => {
     apply({
       paimindArtifactGenerators: { register: vi.fn(() => () => {}), execute: vi.fn(), list: vi.fn(() => []) },
       tools: { register: vi.fn(value => { definition = value; return () => {} }), execute: vi.fn() },
-      systemPrompt: { section: vi.fn(() => () => {}) },
+      systemPrompt: { section: vi.fn(() => () => {}), context: vi.fn(() => () => {}) },
       effect(install) { install() },
     })
     expect(definition.presentCall({

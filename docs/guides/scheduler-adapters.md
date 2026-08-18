@@ -35,7 +35,7 @@ Create a package that depends on the standalone research package
 `@paimind/platform-scheduler` and registers a `PaimindScheduleExecutor`.
 Translate the standard trigger into the target API and return a standard final
 report or `accepted`. Keep provider authentication and fields inside the
-Adapter. Do not depend on Goal A `@paimind/scheduler`; that package is only the
+Adapter. Do not depend on the retired Session-local scheduler facade; it was only the
 native Harness Schedule management facade.
 
 ```ts

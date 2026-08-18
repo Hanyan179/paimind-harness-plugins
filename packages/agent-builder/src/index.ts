@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { cp, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
-import { dirname, join, resolve } from 'node:path'
+import { cp, mkdir, readFile, readdir, realpath, rename, rm, stat, symlink, writeFile } from 'node:fs/promises'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
 import {
   PaimindHostRemoteService,
@@ -14,9 +14,12 @@ export const name = 'paimind-agent-builder'
 export const inject = ['settings', 'sessions']
 export const AGENT_PROFILE_FILE = '.paimind-agent.json'
 export const AGENT_PRESET_ID = /^[a-z0-9][a-z0-9-_]*$/
+export const AGENT_SKILL_SCOPE_DIRECTORY = '.paimind-skills'
 const SKILL_NAME = /^[a-z0-9][a-z0-9-]*$/
 const CONTROL = /[\u0000-\u001f\u007f]/g
 const STATE_VERSION = 1
+
+export type AgentProfileKind = 'personal' | 'business'
 
 export interface AgentBusinessProfileInput {
   readonly agentId: string
@@ -29,6 +32,10 @@ export interface AgentBusinessProfileInput {
   readonly behavior: string
   readonly preferredSkillNames: readonly string[]
   readonly instructions: string
+  /** Product placement only; execution and Preset ownership remain Harness-native. */
+  readonly productKind?: AgentProfileKind
+  readonly businessCategory?: string
+  readonly businessCategoryId?: string
   readonly expectedVersion?: string
 }
 
@@ -123,11 +130,24 @@ function stableProfile(input: AgentBusinessProfileInput, revision: number, updat
   const goal = bounded(input.goal, 2_000, '目标', true)
   const behavior = bounded(input.behavior, 4_000, '行为规范', true)
   const instructions = bounded(input.instructions, 4_000, '补充要求')
+  if (input.productKind !== undefined && input.productKind !== 'personal' && input.productKind !== 'business') throw new Error('智能体类型无效')
+  const productKind: AgentProfileKind = input.productKind === 'business' ? 'business' : 'personal'
+  const businessPlacement = productKind === 'business' ? (() => {
+    const businessCategory = bounded(input.businessCategory ?? '', 80, '业务分类', true)
+    const businessCategoryId = input.businessCategoryId === undefined
+      ? `category-${createHash('sha256').update(businessCategory).digest('hex').slice(0, 12)}`
+      : validateId(input.businessCategoryId, '业务分类标识')
+    return { businessCategory, businessCategoryId }
+  })() : {}
   const preferredSkillNames = Object.freeze([...new Set(input.preferredSkillNames.map(value => value.trim()).filter(value => {
     if (!SKILL_NAME.test(value)) throw new Error(`Skill 名称无效：${value}`)
     return true
   }))])
-  const seed = { agentId, presetId, name, description, basePresetId, role, goal, behavior, preferredSkillNames, instructions, revision }
+  if (basePresetId === 'minimal' && preferredSkillNames.length > 0) throw new Error('极简模式不可封装 Skill')
+  const seed = {
+    agentId, presetId, name, description, basePresetId, role, goal, behavior, preferredSkillNames, instructions,
+    productKind, ...businessPlacement, revision,
+  }
   const digest = createHash('sha256').update(JSON.stringify(seed)).digest('hex').slice(0, 16)
   return Object.freeze({ ...seed, configVersion: `v${revision}-${digest}`, updatedAt, health: 'healthy' })
 }
@@ -138,9 +158,31 @@ function personaText(profile: AgentBusinessProfile): string {
     '', 'Role:', profile.role,
     '', 'Goal:', profile.goal,
     '', 'Behavior rules:', profile.behavior,
-    ...(profile.preferredSkillNames.length === 0 ? [] : ['', 'Preferred installed Skills:', profile.preferredSkillNames.map(value => `- ${value}`).join('\n')]),
+    ...(profile.preferredSkillNames.length === 0 ? [] : ['', 'Session-injected Skills:', profile.preferredSkillNames.map(value => `- ${value}`).join('\n')]),
     ...(profile.instructions === '' ? [] : ['', 'Additional requirements:', profile.instructions]),
   ].join('\n')
+}
+
+/** Restrict one copied native Preset to its explicitly packaged Skill projection. */
+export function replacePresetSkillScope(content: string, skillScopeRoot: string, configVersion: string): string {
+  const match = /(?:^# PAIMind skill scope:[^\n]*\n)?^- id:\s*skill-filesystem\s*$/m.exec(content)
+  if (match === null) throw new Error('基础能力模板缺少 skill-filesystem 配置')
+  const start = match.index
+  const rowStart = content.indexOf('- id:', start)
+  const next = content.slice(rowStart + 1).search(/^- id:\s*/m)
+  const end = next < 0 ? content.length : rowStart + 1 + next
+  const replacement = [
+    `# PAIMind skill scope: ${configVersion}`,
+    '- id: skill-filesystem',
+    "  name: '@deepseek-ai/dsh-skill-filesystem'",
+    '  config:',
+    "    providerName: 'paimind-agent-scope'",
+    '    includeDefaultRoots: false',
+    '    customSkillDirs:',
+    `      - ${JSON.stringify(resolve(skillScopeRoot))}`,
+    '',
+  ].join('\n')
+  return `${content.slice(0, start)}${replacement}${content.slice(end).replace(/^\n+/, '')}`
 }
 
 export function replacePresetPersona(content: string, profile: AgentBusinessProfile): string {
@@ -240,6 +282,7 @@ export function visibleAssistantReplyForFirstTurn(session: AgentBuilderHostSessi
 export class PaimindAgentProfileService extends PaimindHostRemoteService {
   static inject = ['settings', 'sessions']
   private readonly presetRoot: string
+  private readonly skillRoot: string
   private readonly stateRoot: string
   private readonly stateFile: string
   private readonly now: () => number
@@ -248,6 +291,7 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService {
   constructor(private readonly agentCtx: AgentBuilderHostContext, options: AgentBuilderOptions = {}) {
     super(agentCtx, 'paimindAgentProfiles')
     this.presetRoot = resolve(options.presetRoot ?? dshHomePath('.agent-presets'))
+    this.skillRoot = resolve(options.presetRoot === undefined ? dshHomePath('skills') : join(dirname(this.presetRoot), 'skills'))
     this.stateRoot = resolve(options.stateRoot ?? dshHomePath('.paimind-agent-center'))
     this.stateFile = join(this.stateRoot, 'state.json')
     this.now = options.now ?? Date.now
@@ -263,8 +307,15 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService {
     const profiles: AgentBusinessProfile[] = []
     for (const entry of entries) {
       if (!entry.isDirectory() || !AGENT_PRESET_ID.test(entry.name)) continue
-      const profile = await this.readProfile(join(this.presetRoot, entry.name))
-      if (profile !== undefined) profiles.push(profile)
+      const root = join(this.presetRoot, entry.name)
+      const profile = await this.readProfile(root)
+      if (profile === undefined) continue
+      try {
+        await this.ensureSkillScope(root, profile)
+        profiles.push(profile)
+      } catch (error) {
+        profiles.push(Object.freeze({ ...profile, health: 'broken', healthMessage: `会话技能范围不可用：${String(error)}` }))
+      }
     }
     return Object.freeze({ profiles: Object.freeze(profiles.sort((left, right) => right.updatedAt - left.updatedAt)) })
   }
@@ -285,7 +336,12 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService {
     try {
       const compositionFile = join(staging, 'agent.cordis.yml')
       const composition = await readFile(compositionFile, 'utf8')
-      await writeFile(compositionFile, replacePresetPersona(composition, profile), { mode: 0o600 })
+      const withPersona = replacePresetPersona(composition, profile)
+      const scopedComposition = profile.basePresetId === 'minimal'
+        ? withPersona
+        : replacePresetSkillScope(withPersona, join(source, AGENT_SKILL_SCOPE_DIRECTORY), profile.configVersion)
+      await this.createSkillScope(staging, profile)
+      await writeFile(compositionFile, scopedComposition, { mode: 0o600 })
       await writeFile(join(staging, 'preset.yml'), presetMetadata(profile), { mode: 0o600 })
       await writeFile(join(staging, AGENT_PROFILE_FILE), `${JSON.stringify(profile, null, 2)}\n`, { mode: 0o600 })
       await rename(source, backup)
@@ -392,8 +448,87 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService {
         || typeof value.goal !== 'string' || typeof value.behavior !== 'string' || !Array.isArray(value.preferredSkillNames)
         || typeof value.instructions !== 'string' || typeof value.revision !== 'number' || typeof value.configVersion !== 'string'
         || typeof value.updatedAt !== 'number') return undefined
-      return Object.freeze({ ...value, preferredSkillNames: Object.freeze(value.preferredSkillNames.filter((row): row is string => typeof row === 'string')), health: 'healthy' }) as AgentBusinessProfile
+      const productKind: AgentProfileKind = value.productKind === undefined ? 'personal' : value.productKind
+      if (productKind !== 'personal' && productKind !== 'business') return undefined
+      if (productKind === 'business' && (typeof value.businessCategory !== 'string' || value.businessCategory.trim() === ''
+        || typeof value.businessCategoryId !== 'string' || !AGENT_PRESET_ID.test(value.businessCategoryId))) return undefined
+      return Object.freeze({
+        ...value, productKind,
+        preferredSkillNames: Object.freeze(value.preferredSkillNames.filter((row): row is string => typeof row === 'string')),
+        health: 'healthy',
+      }) as AgentBusinessProfile
     } catch { return undefined }
+  }
+
+  private async ensureSkillScope(root: string, profile: AgentBusinessProfile): Promise<void> {
+    if (profile.basePresetId === 'minimal') return
+    const compositionFile = join(root, 'agent.cordis.yml')
+    const composition = await readFile(compositionFile, 'utf8')
+    const withPersona = replacePresetPersona(composition, profile)
+    const installedSkills = await this.validateInstalledSkills(profile.preferredSkillNames)
+    if (composition.includes(`# PAIMind skill scope: ${profile.configVersion}`)
+      && withPersona === composition && await this.skillScopeMatches(root, installedSkills)) return
+    const staging = join(this.stateRoot, 'staging', `${profile.presetId}-scope-${randomUUID()}`)
+    const backup = join(this.stateRoot, 'backups', `${profile.presetId}-scope-${this.now()}-${randomUUID()}`)
+    await mkdir(dirname(staging), { recursive: true, mode: 0o700 })
+    await mkdir(dirname(backup), { recursive: true, mode: 0o700 })
+    await cp(root, staging, { recursive: true, force: false })
+    try {
+      await this.createSkillScope(staging, profile)
+      await writeFile(
+        join(staging, 'agent.cordis.yml'),
+        replacePresetSkillScope(withPersona, join(root, AGENT_SKILL_SCOPE_DIRECTORY), profile.configVersion),
+        { mode: 0o600 },
+      )
+      await rename(root, backup)
+      try { await rename(staging, root) } catch (error) { await rename(backup, root); throw error }
+    } catch (error) {
+      await rm(staging, { recursive: true, force: true })
+      throw error
+    }
+  }
+
+  private async createSkillScope(stagingPresetRoot: string, profile: AgentBusinessProfile): Promise<void> {
+    const scopeRoot = join(stagingPresetRoot, AGENT_SKILL_SCOPE_DIRECTORY)
+    await rm(scopeRoot, { recursive: true, force: true })
+    await mkdir(scopeRoot, { recursive: true, mode: 0o700 })
+    if (profile.basePresetId === 'minimal') return
+    const skills = await this.validateInstalledSkills(profile.preferredSkillNames)
+    for (const skill of skills) {
+      await symlink(skill.path, join(scopeRoot, skill.name), process.platform === 'win32' ? 'junction' : 'dir')
+    }
+  }
+
+  private async skillScopeMatches(
+    presetRoot: string,
+    expected: readonly { readonly name: string; readonly path: string }[],
+  ): Promise<boolean> {
+    const scopeRoot = join(presetRoot, AGENT_SKILL_SCOPE_DIRECTORY)
+    const entries = await readdir(scopeRoot, { withFileTypes: true }).catch(() => undefined)
+    if (entries === undefined || entries.length !== expected.length) return false
+    const byName = new Map(expected.map(row => [row.name, row.path]))
+    for (const entry of entries) {
+      const expectedPath = byName.get(entry.name)
+      if (expectedPath === undefined) return false
+      const actualPath = await realpath(join(scopeRoot, entry.name)).catch(() => undefined)
+      if (actualPath !== expectedPath) return false
+    }
+    return true
+  }
+
+  private async validateInstalledSkills(names: readonly string[]): Promise<readonly { readonly name: string; readonly path: string }[]> {
+    const root = await realpath(this.skillRoot).catch(() => this.skillRoot)
+    const rows: Array<{ readonly name: string; readonly path: string }> = []
+    for (const name of names) {
+      if (!SKILL_NAME.test(name)) throw new Error(`Skill 名称无效：${name}`)
+      const candidate = join(this.skillRoot, name)
+      const resolved = await realpath(candidate).catch(() => undefined)
+      if (resolved === undefined || !(await stat(resolved)).isDirectory()) throw new Error(`已封装 Skill 不再存在：${name}`)
+      const rel = relative(root, resolved)
+      if (rel === '' || rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) throw new Error(`Skill 路径越界：${name}`)
+      rows.push(Object.freeze({ name, path: resolved }))
+    }
+    return Object.freeze(rows)
   }
 
   private async readState(): Promise<AgentCenterState> {

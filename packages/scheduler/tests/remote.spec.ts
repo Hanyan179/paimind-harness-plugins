@@ -7,7 +7,7 @@ describe('platform Scheduler remote contract', () => {
     expect(TYPERT_REMOTE.package).toBe('@paimind/platform-scheduler')
     expect(TYPERT.package).toBe('@paimind/platform-scheduler')
     expect(PAIMIND_SCHEDULER_REMOTE_DESCRIPTORS.map(item => item.method)).toEqual([
-      'list', 'create', 'update', 'setEnabled', 'archive', 'runNow',
+      'list', 'create', 'update', 'setEnabled', 'archive', 'runNow', 'restore',
     ])
     expect(PAIMIND_SCHEDULER_REMOTE_DESCRIPTORS.every(item => item.result.mode === 'strict')).toBe(true)
   })

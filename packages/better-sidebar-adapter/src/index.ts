@@ -9,7 +9,7 @@ export const name = 'paimind-better-sidebar-adapter'
 export function apply(): void {}
 
 /** Stable PAIMind-side contract version, independent of the provider package version. */
-export const PAIMIND_SIDEBAR_CONTRACT_VERSION = 3 as const
+export const PAIMIND_SIDEBAR_CONTRACT_VERSION = 4 as const
 /** Exactly verified provider release. Floating ranges are forbidden at the bundle boundary. */
 export const VERIFIED_BETTER_SIDEBAR_VERSION = '0.12.2' as const
 
@@ -39,6 +39,8 @@ export interface PaimindSidebarTabDefinition {
   readonly titleEn: string
   readonly order?: number
   readonly single?: boolean
+  /** Registered for programmatic opening without a permanent visible sidebar entry. */
+  readonly hidden?: boolean
   readonly icon?: ReactNode
   readonly render: (scope: PaimindSidebarTabScope) => ReactNode
 }
@@ -64,10 +66,17 @@ export interface PaimindSidebarService {
   subscribe(listener: () => void): () => void
   registerTab(definition: PaimindSidebarTabDefinition): () => void
   registerFileViewer(definition: PaimindSidebarFileViewerDefinition): () => void
-  openTab(id: PaimindSidebarTabDefinition['id']): boolean
+  openTab(id: PaimindSidebarTabDefinition['id'], options?: PaimindSidebarOpenTabOptions): boolean
+  /** Close one exact PAIMind-owned tab, primarily for retired-entry migration. */
+  closeTab(id: PaimindSidebarTabDefinition['id']): boolean
   getFileCapability(path: string, allowedViewerIds?: readonly string[]): PaimindSidebarFileCapability
   openFile(request: PaimindSidebarOpenFileRequest): PaimindSidebarFileOpenResult
   dispose(): void
+}
+
+export interface PaimindSidebarOpenTabOptions {
+  /** Per-open title used by on-demand workbenches. */
+  readonly title?: string
 }
 
 export type PaimindSidebarFileCapability =
@@ -99,6 +108,7 @@ export interface ExternalSidebarTabDescriptor {
   readonly icon?: ReactNode | ((size: number) => ReactNode)
   readonly order?: number
   readonly single?: boolean
+  readonly hidden?: boolean
   readonly component: (props: ExternalSidebarTabProps) => ReactNode
 }
 
@@ -219,6 +229,7 @@ export class BetterSidebarAdapter implements PaimindSidebarService {
           icon: () => (definitions.at(-1) ?? frozen).icon ?? null,
           ...(frozen.order === undefined ? {} : { order: frozen.order }),
           single: frozen.single ?? true,
+          ...(frozen.hidden === undefined ? {} : { hidden: frozen.hidden }),
           component: ({ scope, visible }) => {
             const active = definitions.at(-1) ?? frozen
             const project = this.projects.getSnapshot().projects
@@ -303,7 +314,7 @@ export class BetterSidebarAdapter implements PaimindSidebarService {
     }
   }
 
-  openTab(id: PaimindSidebarTabDefinition['id']): boolean {
+  openTab(id: PaimindSidebarTabDefinition['id'], options: PaimindSidebarOpenTabOptions = {}): boolean {
     if (
       this.disposed
       || this.status.state !== 'active'
@@ -312,7 +323,18 @@ export class BetterSidebarAdapter implements PaimindSidebarService {
       || (typeof this.provider.isTabEnabled === 'function' && !this.provider.isTabEnabled(id))
     ) return false
     try {
-      this.provider.openTab({ type: id })
+      this.provider.openTab({ type: id, ...(options.title === undefined ? {} : { title: options.title }) })
+      return true
+    } catch (error) {
+      this.fail(error)
+      return false
+    }
+  }
+
+  closeTab(id: PaimindSidebarTabDefinition['id']): boolean {
+    if (this.disposed || this.status.state !== 'active' || this.provider?.closeTab === undefined) return false
+    try {
+      this.provider.closeTab(id)
       return true
     } catch (error) {
       this.fail(error)

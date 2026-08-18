@@ -5,6 +5,7 @@ import { PaimindHarnessScheduleAdapterService } from '../src/index.ts'
 import {
   installPaimindAgentScheduleAction,
   PAIMIND_AGENT_BRIEF_ACTION_ID,
+  PAIMIND_AGENT_PROMPT_ACTION_ID,
 } from '../src/agent-action.ts'
 
 describe('Harness Scheduler Adapter', () => {
@@ -16,17 +17,21 @@ describe('Harness Scheduler Adapter', () => {
       paimindHarnessScheduleAdapter: { registerAction },
       effect: install => { cleanup = install() || undefined },
     })
-    await vi.waitFor(() => { expect(registerAction).toHaveBeenCalledTimes(1) })
+    await vi.waitFor(() => { expect(registerAction).toHaveBeenCalledTimes(2) })
     expect(registerAction).toHaveBeenCalledWith(expect.objectContaining({
       actionId: PAIMIND_AGENT_BRIEF_ACTION_ID,
       category: 'ai',
       nameZh: 'Agent · 新建会话并生成工作区简报',
       prompt: expect.stringContaining('Review the current workspace'),
-      provider: 'deepseek-official',
-      model: 'deepseek-v4-flash',
+    }))
+    expect(registerAction).toHaveBeenCalledWith(expect.objectContaining({
+      actionId: PAIMIND_AGENT_PROMPT_ACTION_ID,
+      category: 'ai',
+      conversationEnabled: true,
+      usageHint: expect.stringContaining('AI'),
     }))
     await cleanup?.()
-    expect(dispose).toHaveBeenCalledTimes(1)
+    expect(dispose).toHaveBeenCalledTimes(2)
   })
 
   it('creates a new Session and Native Job for every run and maps the final result', async () => {
@@ -36,6 +41,7 @@ describe('Harness Scheduler Adapter', () => {
       reportRun: vi.fn(async report => report),
     }
     const created: string[] = []
+    const routes: object[] = []
     const jobs: object[] = []
     const mounted: string[] = []
     const agentPresets = {
@@ -43,12 +49,14 @@ describe('Harness Scheduler Adapter', () => {
       mount: vi.fn(async (_agentCtx: object, id?: string) => { mounted.push(id ?? '') }),
     }
     const agents = {
-      create: vi.fn(async ({ sessionId, setup }: {
+      create: vi.fn(async ({ sessionId, setup, agentOptions }: {
         readonly sessionId: string
         readonly setup?: (agentCtx: object) => void | Promise<void>
+        readonly agentOptions?: { readonly provider?: string; readonly model?: string }
       }) => {
         await setup?.({})
         created.push(sessionId)
+        routes.push(agentOptions ?? {})
         const events: object[] = []
         const agent = {
           id: sessionId,
@@ -67,9 +75,14 @@ describe('Harness Scheduler Adapter', () => {
     const nativeJobs = {
       start: vi.fn(spec => { jobs.push(spec); spec.run(); return `paimind-schedule-${jobs.length}` }),
     }
+    const sessionTitle = { rename: vi.fn() }
+    const agentDefaultModel = { currentSelection: vi.fn(() => ({ provider: 'provider:default', model: 'model:default' })) }
+    const publish = vi.fn(async () => undefined)
+    const paimindNotifications = { registerProducer: vi.fn(() => ({ publish })) }
     const service = Object.create(PaimindHarnessScheduleAdapterService.prototype) as PaimindHarnessScheduleAdapterService
     Object.assign(service, {
-      adapterCtx: { paimindScheduler: scheduler, agents, agentPresets, jobs: nativeJobs },
+      adapterCtx: { paimindScheduler: scheduler, agentDefaultModel, agents, agentPresets, jobs: nativeJobs, sessionTitle, paimindNotifications },
+      notificationProducer: { publish },
       handles: new Map(),
     })
     await service.registerAction({
@@ -77,7 +90,8 @@ describe('Harness Scheduler Adapter', () => {
       nameZh: '生成简报', nameEn: 'Generate brief', prompt: 'Generate the weekly project brief.',
     })
     const request = (runId: string) => ({
-      contractVersion: '1.0' as const, runId, scheduleId: 'schedule:one', actionId: 'action:brief', trigger: 'schedule' as const,
+      contractVersion: '1.0' as const, runId, scheduleId: 'schedule:one', scheduleName: 'Weekly project brief',
+      actionId: 'action:brief', trigger: 'schedule' as const,
       scheduledFor: '2026-08-15T01:00:00.000Z', idempotencyKey: `key:${runId}`,
       callbackUrl: 'https://platform.example.test/callback',
     })
@@ -85,11 +99,23 @@ describe('Harness Scheduler Adapter', () => {
     const two = await executor!(request('run:two'), new AbortController().signal)
     expect(created).toHaveLength(2)
     expect(new Set(created).size).toBe(2)
+    expect(routes).toEqual([
+      { provider: 'provider:default', model: 'model:default' },
+      { provider: 'provider:default', model: 'model:default' },
+    ])
+    expect(agentDefaultModel.currentSelection).toHaveBeenCalledTimes(2)
     expect(nativeJobs.start).toHaveBeenCalledTimes(2)
+    expect(sessionTitle.rename).toHaveBeenCalledTimes(2)
+    expect(sessionTitle.rename).toHaveBeenCalledWith(expect.anything(), 'Weekly project brief')
     expect(mounted).toEqual(['paramont', 'paramont'])
     expect(one).toEqual({ status: 'accepted', message: 'Harness Session started' })
     expect(two).toEqual({ status: 'accepted', message: 'Harness Session started' })
     await vi.waitFor(() => { expect(scheduler.reportRun).toHaveBeenCalledTimes(2) })
+    await vi.waitFor(() => { expect(publish).toHaveBeenCalledTimes(2) })
+    expect(publish).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      idempotencyKey: 'schedule-run:run:one', title: 'Weekly project brief 已完成',
+      target: { kind: 'session', sessionId: created[0] },
+    }))
     expect(scheduler.reportRun).toHaveBeenNthCalledWith(1, expect.objectContaining({
       status: 'succeeded', message: 'Report ready',
       action: { kind: 'session', label: '打开对话', sessionId: created[0] },

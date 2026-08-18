@@ -3,9 +3,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { strToU8, zipSync } from 'fflate'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   PaimindSkillInstallerService,
+  parseSkillMetadata,
   validateSkillArchivePath,
 } from '../src/installer.js'
 
@@ -24,7 +26,7 @@ async function createInstaller(): Promise<{ service: PaimindSkillInstallerServic
   return { service: new PaimindSkillInstallerService(context as never, { skillRoot: root, stateRoot: state, now: () => 42 }), root, state }
 }
 
-async function upload(service: PaimindSkillInstallerService, fileName: string, body: string): Promise<{ uploadId: string; digest: string }> {
+async function upload(service: PaimindSkillInstallerService, fileName: string, body: string | Uint8Array): Promise<{ uploadId: string; digest: string }> {
   const request = Readable.from([Buffer.from(body)]) as IncomingMessage
   Object.assign(request, {
     headers: { 'x-paimind-upload': '1', 'x-paimind-file-name': encodeURIComponent(fileName) },
@@ -48,16 +50,68 @@ afterEach(async () => {
 })
 
 describe('streaming Skill installer', () => {
-  it('stages the three official recommendations through the same inspection and atomic install path', async () => {
+  it('parses folded community YAML frontmatter with nested metadata', () => {
+    expect(parseSkillMetadata(`---
+name: ppt-master
+description: >
+  AI-driven presentation generation and editing.
+  Supports reusable templates.
+metadata:
+  version: "4.7.0"
+  license: MIT
+---
+`)).toEqual({
+      name: 'ppt-master',
+      description: 'AI-driven presentation generation and editing. Supports reusable templates.',
+    })
+  })
+
+  it('accepts community packages with ecosystem metadata outside the Skill root', async () => {
+    const { service, root } = await createInstaller()
+    const archive = zipSync({
+      'skills/.claude-plugin/plugin.json': strToU8('{"name":"ppt-master"}'),
+      'skills/ppt-master/SKILL.md': strToU8(`---
+name: ppt-master
+description: >
+  AI-driven presentation generation and editing.
+  Supports reusable templates.
+metadata:
+  version: "4.7.0"
+---
+`),
+      'skills/ppt-master/requirements.txt': strToU8('python-pptx>=1.0.0\n'),
+      'skills/ppt-master/scripts/render.py': strToU8('print("ok")\n'),
+    })
+    const uploaded = await upload(service, 'ppt-master-skill-v4.7.0.zip', archive)
+    const preview = await service.inspectUpload({ uploadId: uploaded.uploadId })
+    expect(preview).toMatchObject({
+      name: 'ppt-master',
+      description: 'AI-driven presentation generation and editing. Supports reusable templates.',
+      fileCount: 3,
+      runtimeRequirements: ['python'],
+    })
+    expect(preview.warnings).toContain('包含脚本文件；安装过程不会执行脚本')
+    const installed = await service.installUpload(uploaded)
+    expect(installed.record.runtimeRequirements).toEqual(['python'])
+    await expect(readFile(join(root, 'ppt-master', 'SKILL.md'), 'utf8')).resolves.toContain('name: ppt-master')
+    await expect(stat(join(root, '.claude-plugin'))).rejects.toThrow()
+  })
+
+  it('stages official and PAIMind internal recommendations through the same inspection and atomic install path', async () => {
     const { service, root } = await createInstaller()
     const catalog = await service.listCatalog()
-    expect(catalog.items.map(item => item.id)).toEqual(['openai-docs', 'skill-creator', 'skill-installer'])
+    expect(catalog.items.map(item => item.id)).toEqual(['openai-docs', 'skill-creator', 'skill-installer', 'bento-ppt', 'fineline-investment-analysis', 'white-space-analysis', 'build-walmart-buyer-proposal-outline'])
     const preview = await service.inspectCatalog({ catalogId: 'openai-docs', version: '1.0.0' })
     expect(preview).toMatchObject({ name: 'openai-docs', kind: 'zip', fileCount: 3, operation: 'install' })
     const installed = await service.installUpload({ uploadId: preview.uploadId, digest: preview.digest })
     expect(installed.operation).toBe('installed')
     await expect(readFile(join(root, 'openai-docs', 'LICENSE.txt'), 'utf8')).resolves.toContain('Apache License')
     await expect(readFile(join(root, 'openai-docs', 'NOTICE.txt'), 'utf8')).resolves.toContain('Adapted for DeepSeek Harness')
+    const bento = await service.inspectCatalog({ catalogId: 'bento-ppt', version: '1.4.0' })
+    expect(bento).toMatchObject({ name: 'bento-ppt', kind: 'zip', fileCount: 3, operation: 'install' })
+    await service.installUpload({ uploadId: bento.uploadId, digest: bento.digest })
+    await expect(readFile(join(root, 'bento-ppt', 'SKILL.md'), 'utf8')).resolves.toContain('generate_traceable_bento_presentation')
+    await expect(readFile(join(root, 'bento-ppt', 'LICENSE.txt'), 'utf8')).resolves.toContain('Internal Use Only')
   })
 
   it('rejects traversal, absolute and backslash archive paths', () => {

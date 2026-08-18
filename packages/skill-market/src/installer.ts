@@ -18,6 +18,7 @@ import { basename, dirname, extname, isAbsolute, join, normalize, relative, reso
 import { pipeline } from 'node:stream/promises'
 import { Transform } from 'node:stream'
 import yauzl, { type Entry, type ZipFile } from 'yauzl'
+import { parseDocument } from 'yaml'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
 import {
   PaimindHostRemoteService,
@@ -54,6 +55,8 @@ export interface SkillPackageMetadata {
   readonly whenToUse?: string
 }
 
+export type SkillRuntimeRequirement = 'python' | 'node' | 'system'
+
 export interface SkillUploadPreview extends SkillPackageMetadata {
   readonly uploadId: string
   readonly digest: string
@@ -64,6 +67,7 @@ export interface SkillUploadPreview extends SkillPackageMetadata {
   readonly expandedBytes: number
   readonly operation: 'install' | 'update'
   readonly warnings: readonly string[]
+  readonly runtimeRequirements: readonly SkillRuntimeRequirement[]
 }
 
 export interface SkillInstallRecord extends SkillPackageMetadata {
@@ -73,6 +77,7 @@ export interface SkillInstallRecord extends SkillPackageMetadata {
   readonly installedAt: number
   readonly updatedAt: number
   readonly managed: boolean
+  readonly runtimeRequirements: readonly SkillRuntimeRequirement[]
 }
 
 export interface SkillInstallResult {
@@ -114,6 +119,7 @@ interface ArchiveInspection {
   readonly fileCount: number
   readonly expandedBytes: number
   readonly warnings: readonly string[]
+  readonly runtimeRequirements: readonly SkillRuntimeRequirement[]
 }
 
 interface InstallManifest extends SkillInstallRecord {
@@ -175,7 +181,9 @@ function contained(root: string, target: string): boolean {
 }
 
 function ignoredArchivePath(path: string): boolean {
+  const segments = path.split('/')
   return path === '__MACOSX' || path.startsWith('__MACOSX/') || basename(path) === '.DS_Store'
+    || segments.includes('.claude-plugin') || segments.includes('.codex-plugin')
 }
 
 function zipUnixMode(entry: Entry): number {
@@ -186,33 +194,33 @@ function isSymlink(entry: Entry): boolean {
   return (zipUnixMode(entry) & 0o170000) === 0o120000
 }
 
-function parseScalar(raw: string): string {
-  const value = raw.trim()
-  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-    return value.slice(1, -1).trim()
-  }
-  return value
+function metadataString(value: unknown): string {
+  return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : ''
 }
 
-/** Parse only the small standard Skill frontmatter contract; content remains Harness-owned. */
+/** Parse standard YAML frontmatter without evaluating package content or custom tags. */
 export function parseSkillMetadata(source: string): SkillPackageMetadata {
   const normalized = source.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n')
   if (!normalized.startsWith('---\n')) throw new Error('SKILL.md 缺少 YAML frontmatter')
   const end = normalized.indexOf('\n---', 4)
   if (end < 0 || end > METADATA_SCAN_BYTES) throw new Error('SKILL.md frontmatter 无效或过长')
-  const fields = new Map<string, string>()
-  for (const line of normalized.slice(4, end).split('\n')) {
-    const match = line.match(/^([a-zA-Z][a-zA-Z0-9_-]*):\s*(.*)$/)
-    if (match !== null) fields.set(match[1]!.toLocaleLowerCase(), parseScalar(match[2]!))
+  const document = parseDocument(normalized.slice(4, end), {
+    schema: 'core', uniqueKeys: true,
+  })
+  if (document.errors.length > 0) throw new Error('SKILL.md YAML frontmatter 无效')
+  const value = document.toJS({ maxAliasCount: 0 }) as unknown
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('SKILL.md YAML frontmatter 必须是对象')
   }
-  const name = fields.get('name') ?? ''
-  const description = fields.get('description') ?? ''
-  const whenToUse = fields.get('when-to-use') ?? fields.get('when_to_use')
+  const fields = value as Readonly<Record<string, unknown>>
+  const name = metadataString(fields.name)
+  const description = metadataString(fields.description)
+  const whenToUse = metadataString(fields['when-to-use'] ?? fields.when_to_use)
   if (!SKILL_NAME.test(name)) throw new Error('Skill name 必须使用小写字母、数字和连字符')
   if (description === '' || description.length > 1_000 || CONTROL.test(description)) {
     throw new Error('Skill description 缺失或无效')
   }
-  return Object.freeze({ name, description, ...(whenToUse === undefined || whenToUse === '' ? {} : { whenToUse }) })
+  return Object.freeze({ name, description, ...(whenToUse === '' ? {} : { whenToUse }) })
 }
 
 async function readPrefix(path: string): Promise<string> {
@@ -251,6 +259,7 @@ async function inspectZip(path: string): Promise<ArchiveInspection> {
   let expandedBytes = 0
   let compressedBytes = 0
   const warnings = new Set<string>()
+  const runtimeRequirements = new Set<SkillRuntimeRequirement>()
   try {
     await new Promise<void>((resolveEntries, reject) => {
       const fail = (error: Error): void => { reject(error) }
@@ -272,6 +281,11 @@ async function inspectZip(path: string): Promise<ArchiveInspection> {
             if (basename(entryPath).toLocaleLowerCase() === 'skill.md') skillFiles.push({ entry, path: entryPath })
             if (entryPath.split('/').includes('scripts')) warnings.add('包含脚本文件；安装过程不会执行脚本')
             if ((zipUnixMode(entry) & 0o111) !== 0) warnings.add('包含可执行文件；请确认来源可信')
+            const manifest = basename(entryPath).toLocaleLowerCase()
+            if (manifest === 'requirements.txt' || manifest === 'pyproject.toml' || manifest === 'environment.yml' || manifest === 'environment.yaml') {
+              runtimeRequirements.add('python')
+            }
+            if (manifest === 'package.json') runtimeRequirements.add('node')
           }
           rows.push({ entry, path: entryPath, directory })
           zip.readEntry()
@@ -300,6 +314,7 @@ async function inspectZip(path: string): Promise<ArchiveInspection> {
       fileCount: entries.filter(row => !row.directory).length,
       expandedBytes,
       warnings: Object.freeze([...warnings]),
+      runtimeRequirements: Object.freeze([...runtimeRequirements]),
     })
   } finally { zip.close() }
 }
@@ -377,6 +392,9 @@ async function readInstallManifest(path: string): Promise<SkillInstallRecord | u
       ...(typeof value.whenToUse === 'string' ? { whenToUse: value.whenToUse } : {}),
       digest: value.digest, sourceFileName: value.sourceFileName,
       installedAt: value.installedAt, updatedAt: value.updatedAt, managed: true,
+      runtimeRequirements: Object.freeze(Array.isArray(value.runtimeRequirements)
+        ? value.runtimeRequirements.filter((item): item is SkillRuntimeRequirement => ['python', 'node', 'system'].includes(String(item)))
+        : []),
     })
   } catch { return undefined }
 }
@@ -486,6 +504,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
     let fileCount: number
     let expandedBytes: number
     let warnings: readonly string[]
+    let runtimeRequirements: readonly SkillRuntimeRequirement[]
     if (extension === '.zip') {
       const inspection = await inspectZip(upload.path)
       upload.archive = inspection
@@ -493,11 +512,13 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       fileCount = inspection.fileCount
       expandedBytes = inspection.expandedBytes
       warnings = inspection.warnings
+      runtimeRequirements = inspection.runtimeRequirements
     } else {
       metadata = parseSkillMetadata(await readPrefix(upload.path))
       fileCount = 1
       expandedBytes = (await stat(upload.path)).size
       warnings = Object.freeze([])
+      runtimeRequirements = Object.freeze([])
     }
     await ensureDiskCapacity(this.stateRoot, expandedBytes)
     const operation = await pathExists(join(this.skillRoot, metadata.name)) ? 'update' : 'install'
@@ -505,7 +526,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       uploadId: upload.uploadId, digest: upload.digest, fileName: upload.fileName,
       kind: extension === '.zip' ? 'zip' as const : 'skill-md' as const,
       ...metadata, fileCount, compressedBytes: upload.compressedBytes, expandedBytes,
-      operation, warnings,
+      operation, warnings, runtimeRequirements,
     })
     upload.preview = preview
     return preview
@@ -543,6 +564,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
         ...(preview.whenToUse === undefined ? {} : { whenToUse: preview.whenToUse }),
         digest: preview.digest, sourceFileName: preview.fileName,
         installedAt: previous?.installedAt ?? now, updatedAt: now, managed: true,
+        runtimeRequirements: preview.runtimeRequirements,
       })
       await writeFile(join(staging, INSTALL_MANIFEST), `${JSON.stringify(installManifest(record), null, 2)}\n`, { mode: 0o600 })
       await rename(staging, destination)
@@ -573,6 +595,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
           ...(metadata.whenToUse === undefined ? {} : { whenToUse: metadata.whenToUse }),
           digest: await digestFile(join(root, 'SKILL.md')), sourceFileName: 'SKILL.md',
           installedAt: info.birthtimeMs, updatedAt: info.mtimeMs, managed: false,
+          runtimeRequirements: Object.freeze([]),
         }))
       } catch { /* invalid folders remain Harness-owned and are omitted from the business list */ }
     }

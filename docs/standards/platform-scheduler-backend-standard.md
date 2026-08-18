@@ -9,21 +9,21 @@
 
 ## Data and Schema Version
 
-Storage Domain: `paimind_scheduler`; Schema Version: `1`.
+Storage Domain: `paimind_scheduler`; Schema Version: `2`.
 
-- `actions`: catalog metadata and Adapter id; no credential secret.
-- `definitions`: name, `actionId`, rule, time zone, state and next occurrence.
+- `actions`: catalog metadata, Adapter id, `conversationEnabled` and `usageHint`; no credential secret. Conversation discovery is deny-by-default.
+- `definitions`: name, `actionId`, validated versioned `actionInput`, setup `sourceSessionId`, rule, time zone, state and next occurrence.
 - `runs`: trigger source, identity, occurrence, state, attempt, result and safe action.
 - `audits`: actor, operation and time.
 
-Any schema change increments the version and provides a forward migration plus rollback plan. Archived definitions and historical runs are never hard-deleted by business UI.
+Any schema change increments the version and provides a forward migration plus rollback plan. Migration requires an explicit storage path, defaults to Dry Run, validates the full transaction, creates an external exclusive backup and supports file-level rollback. Archived definitions and historical runs are never hard-deleted by business UI.
 
 ## Time
 
 - Persist UTC ISO-8601 with milliseconds and `Z`.
 - Persist IANA time-zone ids; never persist only a numeric UTC offset.
 - Use `@js-temporal/polyfill`; do not implement calendar or DST math manually.
-- Calendar rules are exactly once, daily, weekly and monthly day 1–28.
+- Calendar rules are exactly once, daily, weekdays, weekly and monthly day 1–28. Unsupported cadence is rejected and never approximated.
 
 ## State machine and idempotency
 
@@ -46,12 +46,15 @@ Any schema change increments the version and provides a forward migration plus r
 
 Values are deployment configuration, never business form fields.
 
-## Harness execution registration
+## Conversation orchestration and Harness execution
 
-- Harness actions register Prompt, working directory, Agent Preset and provider/model in business-owned code.
-- Provider and model are an atomic pair and are resolved from trusted deployment configuration.
-- These fields never enter the business-user Schedule form or durable Scheduler definition.
+- The business user provides only work, necessary target and schedule; the Agent confirms work, cadence and time zone before calling `schedule_manage`.
+- `schedule_manage` supports `capabilities`, `create`, `update`, `list`, `run_now`, `pause`, `resume` and `archive`. Delete intent maps to archive.
+- Business actions explicitly opt into conversation discovery and validate their own versioned `actionInput` before persistence.
+- The generic Agent action captures Prompt, working directory and Agent Preset from the setup Session.
+- Provider and model are an atomic pair. A trusted Action Registration may pin both; otherwise the Harness Adapter must resolve both through `agentDefaultModel.currentSelection()` when it creates the autonomous Session. Omitting the route and producing a zero-token Session is forbidden.
 - The Adapter mounts the preset during the unpublished Agent setup window so scoped tools and the native Job controller exist before execution starts.
+- Every Run owns one new Harness Session and Native Job; it never switches the user's current Session. Final notification publication is idempotent by `runId`.
 
 ## Security
 

@@ -3,6 +3,7 @@ import type { PaimindHarnessScheduleAdapter } from './index.js'
 
 export const name = 'paimind-scheduler-agent-action'
 export const PAIMIND_AGENT_BRIEF_ACTION_ID = 'paimind:agent-workspace-brief'
+export const PAIMIND_AGENT_PROMPT_ACTION_ID = 'paimind:agent-prompt'
 
 export interface PaimindAgentScheduleActionContext {
   readonly paimindHarnessScheduleAdapter: PaimindHarnessScheduleAdapter
@@ -11,9 +12,12 @@ export interface PaimindAgentScheduleActionContext {
 
 export function installPaimindAgentScheduleAction(ctx: PaimindAgentScheduleActionContext): void {
   const configuredCwd = process.env.PAIMIND_SCHEDULE_AGENT_CWD?.trim()
-  const provider = process.env.PAIMIND_SCHEDULE_AGENT_PROVIDER?.trim() || 'deepseek-official'
-  const model = process.env.PAIMIND_SCHEDULE_AGENT_MODEL?.trim() || 'deepseek-v4-flash'
-  const ready = ctx.paimindHarnessScheduleAdapter.registerAction({
+  const provider = process.env.PAIMIND_SCHEDULE_AGENT_PROVIDER?.trim()
+  const model = process.env.PAIMIND_SCHEDULE_AGENT_MODEL?.trim()
+  const modelRoute = provider === undefined && model === undefined ? {}
+    : provider !== undefined && model !== undefined ? { provider, model }
+      : (() => { throw new Error('PAIMIND_SCHEDULE_AGENT_PROVIDER and PAIMIND_SCHEDULE_AGENT_MODEL must be configured together') })()
+  const briefReady = ctx.paimindHarnessScheduleAdapter.registerAction({
     actionId: PAIMIND_AGENT_BRIEF_ACTION_ID,
     source: { id: 'paimind.agent', nameZh: 'PAIMind Agent', nameEn: 'PAIMind Agent' },
     nameZh: 'Agent · 新建会话并生成工作区简报',
@@ -22,15 +26,29 @@ export function installPaimindAgentScheduleAction(ctx: PaimindAgentScheduleActio
     descriptionEn: 'Create an independent Agent session on schedule and summarize workspace progress, risks, and next steps.',
     category: 'ai',
     cwd: configuredCwd === undefined || configuredCwd === '' ? process.cwd() : configuredCwd,
-    provider,
-    model,
+    ...modelRoute,
     prompt: [
       'Review the current workspace and produce a concise workspace brief.',
       'Cover current progress, material risks, and the next recommended actions.',
       'Do not modify files or call external systems.',
     ].join('\n'),
   })
-  ctx.effect(() => async () => { (await ready)() }, 'paimind-scheduler-agent-action: registration')
+  const promptReady = ctx.paimindHarnessScheduleAdapter.registerAction({
+    actionId: PAIMIND_AGENT_PROMPT_ACTION_ID,
+    source: { id: 'paimind.agent', nameZh: 'PAIMind 智能任务', nameEn: 'PAIMind Agent task' },
+    nameZh: '智能任务',
+    nameEn: 'Agent task',
+    descriptionZh: '按业务用户的任务说明，在设定时间创建独立对话并完成工作。',
+    descriptionEn: 'Create an independent conversation on schedule and complete the business user request.',
+    conversationEnabled: true,
+    usageHint: '当用户描述需要 AI 分析、采集、整理、生成、检查或回顾，但没有更具体的已登记业务能力时使用。',
+    category: 'ai',
+    ...modelRoute,
+  })
+  ctx.effect(() => async () => {
+    const disposers = await Promise.all([briefReady, promptReady])
+    for (const dispose of disposers.reverse()) dispose()
+  }, 'paimind-scheduler-agent-action: registrations')
 }
 
 /** Built-in platform action. Every Run creates one independent Harness Agent Session. */

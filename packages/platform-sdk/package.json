@@ -1,6 +1,8 @@
 {
   "name": "@paimind/platform-sdk",
   "version": "0.1.0-alpha.0",
+  "license": "UNLICENSED",
+  "engines": { "node": "^22.19.0 || >=24.0.0" },
   "description": "Server-side SDK and signed public contracts for PAIMind platform capabilities",
   "type": "module",
   "main": "lib/index.js",
@@ -9,7 +11,7 @@
     ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
     "./package.json": "./package.json"
   },
-  "files": ["lib"],
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "dependencies": {
     "@paimind/contracts": "workspace:^",
     "zod": "^4.4.3"
@@ -18,4 +20,3 @@
   "paimindBuild": { "node": ["src/index.ts"] },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }
-

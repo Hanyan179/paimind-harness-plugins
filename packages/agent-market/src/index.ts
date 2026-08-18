@@ -9,26 +9,75 @@ export function apply(): void {}
 export const AGENT_CENTER_FILTERS = ['all', 'featured', 'favorites', 'system', 'local'] as const
 export type AgentCenterFilter = typeof AGENT_CENTER_FILTERS[number]
 
-export type AgentProductCategory = 'general' | 'coding' | 'focused' | 'authoring' | 'custom'
+export type AgentProductMode = 'standard' | 'ptc' | 'minimal' | 'creator' | 'custom'
+export type AgentProductKind = 'platform-mode' | 'business-agent' | 'personal'
+
+export interface AgentBusinessCategoryMetadata {
+  readonly id: string
+  readonly labelZh: string
+  readonly labelEn: string
+}
+
+/** Product metadata keyed to a native Preset. Add catalog rows only after the Preset exists in Harness. */
+export interface AgentBusinessAgentDefinition {
+  readonly presetId: string
+  readonly category: AgentBusinessCategoryMetadata
+  readonly mode: AgentProductMode
+  readonly featured?: boolean
+}
+
+/** Official business taxonomy projection. Empty categories never render in the product UI. */
+export const AGENT_BUSINESS_AGENT_CATALOG: readonly AgentBusinessAgentDefinition[] = Object.freeze([])
 
 export interface AgentProductMetadata {
-  readonly category: AgentProductCategory
+  readonly kind: AgentProductKind
+  readonly category?: AgentBusinessCategoryMetadata
+  readonly mode: AgentProductMode
   readonly featured: boolean
 }
 
 const KEYED_METADATA: Readonly<Record<string, AgentProductMetadata>> = Object.freeze({
-  standard: Object.freeze({ category: 'general', featured: true }),
-  code: Object.freeze({ category: 'coding', featured: true }),
-  minimal: Object.freeze({ category: 'focused', featured: true }),
-  cordis: Object.freeze({ category: 'authoring', featured: false }),
+  standard: Object.freeze({ kind: 'platform-mode', mode: 'standard', featured: true }),
+  ptc: Object.freeze({ kind: 'platform-mode', mode: 'ptc', featured: true }),
+  code: Object.freeze({ kind: 'platform-mode', mode: 'ptc', featured: true }),
+  minimal: Object.freeze({ kind: 'platform-mode', mode: 'minimal', featured: true }),
+  cordis: Object.freeze({ kind: 'platform-mode', mode: 'creator', featured: false }),
 })
 
 /** PAIMind product metadata keyed by the one canonical Harness Preset id. */
-export function metadataForPreset(preset: HarnessAgentPresetEntry): AgentProductMetadata {
-  return KEYED_METADATA[preset.id] ?? Object.freeze({
-    category: preset.trust === 'user' ? 'custom' : 'general',
-    featured: false,
+export function metadataForPreset(
+  preset: HarnessAgentPresetEntry,
+  businessCatalog: readonly AgentBusinessAgentDefinition[] = AGENT_BUSINESS_AGENT_CATALOG,
+): AgentProductMetadata {
+  const platformMode = KEYED_METADATA[preset.id]
+  if (platformMode !== undefined) return platformMode
+  if (preset.trust === 'user') return Object.freeze({ kind: 'personal', mode: 'custom', featured: false })
+  const business = businessCatalog.find(row => row.presetId === preset.id)
+  return Object.freeze({
+    kind: 'business-agent',
+    category: business?.category ?? Object.freeze({ id: 'uncategorized', labelZh: '未分类', labelEn: 'Uncategorized' }),
+    mode: business?.mode ?? 'custom',
+    featured: business?.featured ?? false,
   })
+}
+
+export interface AgentBusinessCategoryOption extends AgentBusinessCategoryMetadata {
+  readonly count: number
+}
+
+/** Derive a compact, stable filter list from real native Presets instead of rendering a fixed category row. */
+export function collectBusinessAgentCategories(
+  presets: readonly HarnessAgentPresetEntry[],
+  businessCatalog: readonly AgentBusinessAgentDefinition[] = AGENT_BUSINESS_AGENT_CATALOG,
+): readonly AgentBusinessCategoryOption[] {
+  const categories = new Map<string, AgentBusinessCategoryOption>()
+  for (const preset of presets) {
+    const metadata = metadataForPreset(preset, businessCatalog)
+    if (preset.trust !== 'system' || metadata.kind !== 'business-agent' || metadata.category === undefined) continue
+    const current = categories.get(metadata.category.id)
+    categories.set(metadata.category.id, Object.freeze({ ...metadata.category, count: (current?.count ?? 0) + 1 }))
+  }
+  return Object.freeze([...categories.values()].sort((left, right) => left.labelZh.localeCompare(right.labelZh)))
 }
 
 export interface AgentCatalogRow {
@@ -60,7 +109,15 @@ export function projectAgentCatalog(
     if (input.filter === 'system' && row.preset.trust !== 'system') return false
     if (input.filter === 'local' && row.preset.trust !== 'user') return false
     if (query.length === 0) return true
-    return [row.preset.id, row.preset.name ?? '', row.preset.description ?? '', row.metadata.category]
+    return [
+      row.preset.id,
+      row.preset.name ?? '',
+      row.preset.description ?? '',
+      row.metadata.category?.id ?? '',
+      row.metadata.category?.labelZh ?? '',
+      row.metadata.category?.labelEn ?? '',
+      row.metadata.mode,
+    ]
       .some(value => value.toLocaleLowerCase().includes(query))
   }).sort((left, right) => {
     if (left.favorite !== right.favorite) return left.favorite ? -1 : 1

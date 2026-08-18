@@ -4,7 +4,7 @@
 
 ## Where to configure and verify
 
-Business users configure a task through Harness **Settings → Platform Scheduler → Open task list**:
+Business users configure a task directly through Harness **Settings → Platform Scheduler**:
 
 1. Open **Task list** and choose **New task**.
 2. Enter the task name.
@@ -21,7 +21,7 @@ The business form never displays the Webhook, keyword enforcement, credential re
 
 For local acceptance, add the example action from
 `packages/scheduler-adapter-feishu-bot/example/cordis.patch.yml`. Inject the
-real Webhook through a Secret Manager or process environment; never commit it
+real Webhook through a Secret Manager or the Harness Home `.env`; never commit it
 to source, Loader YAML, task definitions, logs or evidence.
 
 ```text
@@ -29,6 +29,15 @@ PAIMIND_FEISHU_BOT_WEBHOOKS_JSON={"credential:feishu-bot-rq103":"https://open.fe
 PAIMIND_FEISHU_BOT_KEYWORD=测试
 PAIMIND_FEISHU_BOT_E2E=1
 ```
+
+For the local `3080` profile, store only `PAIMIND_FEISHU_BOT_WEBHOOKS_JSON` in
+`$DSH_HOME/.env` with file mode `0600`. DSH loads this user layer on every cold
+start, so a normal restart does not lose the credential. The keyword and E2E
+auto-create switches remain optional deployment settings.
+
+Missing, malformed or unregistered credentials are Configuration Errors（配置错误）
+and fail after one attempt. Only transient provider/network delivery failures
+enter the Scheduler retry loop.
 
 `PAIMIND_FEISHU_BOT_E2E=1` is only a local acceptance helper. It creates one
 task eight seconds after startup. Normal business configuration should leave
@@ -74,6 +83,14 @@ single Settings entry:
 
 The test definition remains available for inspection but is paused after the
 successful Run to prevent an unintended repeated group message.
+
+The persistence repair was re-verified after a cold restart on 2026-08-16:
+
+- Run: `run:67e69adc-701f-4111-b857-46a757e1d97d`
+- Trigger: `manual`
+- Attempt: `1`
+- Final status: `succeeded`
+- Result: `Feishu bot accepted the scheduled message; keyword "测试" included`
 
 ## Delivery and retry boundary
 

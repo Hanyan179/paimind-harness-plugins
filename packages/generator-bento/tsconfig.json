@@ -4,6 +4,7 @@
   "include": ["src"],
   "references": [
     { "path": "../contracts" }, { "path": "../harness-compat" },
-    { "path": "../artifact-runtime" }, { "path": "../testkit" }
+    { "path": "../artifact-runtime" }, { "path": "../presentation-contracts" },
+    { "path": "../testkit" }
   ]
 }

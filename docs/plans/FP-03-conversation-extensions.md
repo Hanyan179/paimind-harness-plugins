@@ -4,7 +4,7 @@
 
 ## Outcome
 
-FP03 keeps DeepSeek Harness as the sole conversation renderer and records the native capability contract in `@paimind/conversation-extensions`. It does not create a second question flow, plan store, attachment queue, artifact list, retry machine, or renderer for Think/Read/Grep/Tool Call.
+FP03 keeps DeepSeek Harness as the sole conversation renderer. Its former compatibility marker is retired; no second question flow, plan store, attachment queue, artifact list, retry machine, or renderer for Think/Read/Grep/Tool Call is retained.
 
 ## Capability mapping
 
@@ -21,7 +21,7 @@ FP03 keeps DeepSeek Harness as the sole conversation renderer and records the na
 
 ## Code boundary
 
-`@paimind/conversation-extensions` is a composition and compatibility package:
+The retired compatibility marker historically documented these native seams:
 
 - exports a frozen capability manifest for later diagnostics and FP16 Developer Resources;
 - declares the native client modules it relies on through `dsh.client.inject`;
