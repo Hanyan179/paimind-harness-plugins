@@ -1,6 +1,9 @@
 {
   "name": "@paimind/contracts",
   "version": "0.1.0-alpha.0",
+  "description": "Stable public type contracts shared by PAIMind plugins and external consumers",
+  "license": "UNLICENSED",
+  "engines": { "node": "^22.19.0 || >=24.0.0" },
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -10,8 +13,7 @@
       "default": "./lib/index.js"
     }
   },
-  "files": ["lib"],
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "paimindBuild": { "node": ["src/index.ts"] },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }
-

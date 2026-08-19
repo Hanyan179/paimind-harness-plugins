@@ -183,8 +183,7 @@ interface VisualPreferences {
 function readPreferences(): VisualPreferences {
   return {
     dark: document.body.hasAttribute('data-ds-dark-theme'),
-    reducedMotion: document.documentElement.dataset.paimindMotion === 'reduce'
-      || (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false),
+    reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
   }
 }
 
@@ -204,13 +203,10 @@ function useVisualPreferences(): VisualPreferences {
       })
     }
     const themeObserver = new MutationObserver(refresh)
-    const motionObserver = new MutationObserver(refresh)
     themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] })
-    motionObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-paimind-motion'] })
     media?.addEventListener?.('change', refresh)
     return () => {
       themeObserver.disconnect()
-      motionObserver.disconnect()
       media?.removeEventListener?.('change', refresh)
     }
   }, [])

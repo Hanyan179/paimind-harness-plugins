@@ -35,7 +35,7 @@
 - Full PAIMind gate: 9 files / 38 tests, TypeScript build, production client bundles, and framework boundary verifier passed.
 - Native Harness provider regression: 9 files / 96 tests passed across user questions, plan review, Todo panel, conversation retry/error nodes, attachment rail/drop/message image, and produced files.
 - Isolated real Harness profile: install, boot, three PAIMind client manifests, remove, native restoration, and zero-upstream-delta passed.
-- Live profile at `http://127.0.0.1:3080/`: `@paimind/conversation-extensions` is present in the served client manifest; restart and persisted-session recovery passed.
+- Historical live profile at `http://127.0.0.1:3080/`: the former compatibility marker was present in the served client manifest; restart and persisted-session recovery passed. The marker is now retired because native Harness owns the capability.
 
 ## Browser evidence
 

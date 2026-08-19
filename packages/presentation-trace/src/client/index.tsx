@@ -8,9 +8,10 @@ import {
   type ReactNode,
 } from 'react'
 import { contributePaimindExtension, type HarnessSessionService, type PaimindClientContext } from '@paimind/harness-compat'
-import type { PaimindArtifactService } from '@paimind/artifacts'
+import { resolveArtifactPath, type PaimindArtifactService } from '@paimind/artifacts'
 import type { PaimindSidebarService, PaimindSidebarTabScope } from '@paimind/better-sidebar-adapter'
 import type { PaimindBentoPreviewService } from '@paimind/renderer-bento'
+import type { PaimindWorkspaceProjectService } from '@paimind/workspace-project'
 import {
   PresentationTraceRegistry,
   HarnessProjectedPresentationTraceSource,
@@ -21,15 +22,16 @@ import {
   type PaimindTraceFact,
   type PaimindTraceMetric,
   type PaimindTraceSlide,
-} from '../index.js'
+} from '../shared.js'
 
-export const inject = ['slots', 'sessions', 'paimindArtifacts', 'paimindSidebar', 'paimindBentoPreview', 'locale']
+export const inject = ['slots', 'sessions', 'paimindArtifacts', 'paimindSidebar', 'paimindBentoPreview', 'paimindWorkspaceProject', 'locale']
 
 export interface PresentationTraceClientContext extends PaimindClientContext {
   readonly sessions: HarnessSessionService
   readonly paimindArtifacts: PaimindArtifactService
   readonly paimindSidebar: PaimindSidebarService
   readonly paimindBentoPreview: PaimindBentoPreviewService
+  readonly paimindWorkspaceProject: PaimindWorkspaceProjectService
 }
 
 const QA_TRACE: PaimindPresentationTraceDocument = {
@@ -119,6 +121,7 @@ const STYLE = `
 [data-paimind-trace-section] { display:grid; gap:8px; padding:12px 0; border-bottom:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.14)); }
 [data-paimind-trace-section] h3 { font-size:11px; line-height:18px; color:var(--dsw-alias-label-secondary,#626872); text-transform:uppercase; letter-spacing:.04em; }
 [data-paimind-trace-scroll] { display:flex; gap:6px; overflow:auto; scrollbar-width:thin; }
+[data-paimind-trace-scroll] > [data-paimind-trace-button] { flex:0 0 min(210px,80%); }
 [data-paimind-trace-button] { min-width:0; padding:6px 9px; border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.22)); border-radius:8px; color:var(--dsw-alias-label-primary,#202124); background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.05)); font:inherit; font-size:10px; line-height:15px; cursor:pointer; text-align:left; }
 [data-paimind-trace-button][aria-pressed='true'] { border-color:var(--dsw-alias-state-business-primary,#4f7ff8); color:var(--dsw-alias-state-business-primary,#4f7ff8); background:color-mix(in srgb,currentColor 8%,transparent); }
 [data-paimind-trace-list] { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
@@ -134,7 +137,7 @@ button[data-paimind-trace-row] { width:100%; color:inherit; font:inherit; cursor
 [data-paimind-trace-cta] { width:100%; min-height:32px; border:0; border-radius:9px; color:#fff; background:var(--dsw-alias-state-business-primary,#4f7ff8); font:inherit; font-size:11px; cursor:pointer; }
 [data-paimind-trace-empty],[data-paimind-trace-error] { padding:18px 12px; color:var(--dsw-alias-label-tertiary,#7a808a); font-size:11px; line-height:18px; text-align:center; }
 [data-paimind-trace-error] { color:var(--dsw-alias-state-error-primary,#d04444); }
-@media(max-width:720px){[data-paimind-trace]{padding:11px}[data-paimind-trace-scroll]{display:grid;grid-template-columns:1fr 1fr;overflow:visible}}
+@media(max-width:720px){[data-paimind-trace]{padding:11px}[data-paimind-trace-scroll]{display:grid;grid-template-columns:1fr 1fr;overflow:visible}[data-paimind-trace-scroll] > [data-paimind-trace-button]{min-width:0;width:auto}}
 `
 
 function installStyle(): () => void {
@@ -159,7 +162,7 @@ function BusinessSheet(props: { readonly fact: PaimindTraceFact; readonly docume
   return <div data-paimind-trace-sheet>
     <div data-paimind-trace-value>{props.fact.displayValue}</div>
     <dl data-paimind-trace-sheet>
-      <div data-paimind-trace-field><dt>{props.zh ? '来源文件' : 'Source files'}</dt><dd>{sources.map(source => `${source.name} · ${source.role}`).join('\n') || missing(props.zh)}</dd></div>
+      <div data-paimind-trace-field><dt>{props.zh ? '来源文件' : 'Source files'}</dt><dd>{sources.map(source => `${source.name} · ${source.role}${source.path ? ` · ${source.path}` : ''}${source.sha256 ? ` · SHA-256 ${source.sha256.slice(0, 12)}…` : ''}`).join('\n') || missing(props.zh)}</dd></div>
       <div data-paimind-trace-field><dt>{props.zh ? '结论定义' : 'Conclusion definition'}</dt><dd>{props.fact.business.definition ?? props.fact.business.explanation}</dd></div>
       <div data-paimind-trace-field><dt>{props.zh ? '公式与方法定义' : 'Formula & method definition'}</dt><dd>{props.fact.technical?.definition ?? props.fact.technical?.calculation ?? missing(props.zh)}</dd></div>
       <div data-paimind-trace-field><dt>{props.zh ? '范围' : 'Scope'}</dt><dd>{props.fact.business.scope.period} · {props.fact.business.scope.filters.join(' · ')}</dd></div>
@@ -194,8 +197,16 @@ export function PresentationTracePanel(props: { readonly service: PaimindPresent
     const event = bento.runtimeEvent; const request = bento.request; const selection = snapshot.selection
     if (trace === null || event === null || request === null || selection === null) return
     if (request.sessionId !== selection.sessionId || request.workspaceId !== selection.workspaceId || request.path !== selection.path) return
-    if (event.slide >= 1 && event.slide <= trace.document.slides.length) {
-      setSlideIndex(event.slide - 1); setBlockId(''); setMetricId(''); setFactId(''); setDetail('business')
+    const nextSlideIndex = event.slideId === undefined ? event.slide - 1 : trace.document.slides.findIndex(slide => slide.slideId === event.slideId)
+    if (nextSlideIndex >= 0 && nextSlideIndex < trace.document.slides.length) {
+      setSlideIndex(nextSlideIndex)
+      if (event.type !== 'paimind:bento-select') { setBlockId(''); setMetricId(''); setFactId(''); setDetail('business'); return }
+      const slide = trace.document.slides[nextSlideIndex]
+      const binding = slide?.visualBindings.find(row => row.objectId === event.objectId)?.factBindings.find(row => row.factId === event.factId && JSON.stringify(row.selector) === JSON.stringify(event.selector))
+      const metric = binding === undefined ? undefined : slide?.metrics.find(row => row.facts.some(fact => fact.factId === binding.factId))
+      if (binding !== undefined && metric !== undefined) {
+        setBlockId(metric.businessBlockId); setMetricId(metric.metricId); setFactId(binding.factId); setDetail('business')
+      }
     }
   }, [bento.revision, snapshot.selection, trace])
   if (snapshot.selection === null) return <section data-paimind-trace aria-label={zh ? '演示追溯' : 'Presentation Trace'}><div data-paimind-trace-empty>{zh ? '请从 PAIMind 产物中选择“追溯”。' : 'Choose Trace from a PAIMind artifact.'}</div></section>
@@ -205,11 +216,17 @@ export function PresentationTracePanel(props: { readonly service: PaimindPresent
   const metrics = slide.metrics.filter(metric => metric.businessBlockId === activeBlock?.blockId)
   const metric = metrics.find(row => row.metricId === metricId) ?? metrics[0]
   const fact = metric?.facts.find(row => row.factId === factId) ?? metric?.facts[0]
+  const focusFact = (targetSlide: PaimindTraceSlide, targetFactId: string): void => {
+    for (const visual of targetSlide.visualBindings) {
+      const binding = visual.factBindings.find(row => row.factId === targetFactId)
+      if (binding !== undefined) { props.bento.focus({ slideId: targetSlide.slideId, objectId: visual.objectId, selector: binding.selector.kind === 'chart-point' ? { kind: 'chart-point', seriesKey: binding.selector.seriesKey ?? '', categoryKey: binding.selector.categoryKey ?? '' } : binding.selector.kind === 'table-cell' ? { kind: 'table-cell', rowKey: binding.selector.rowKey ?? '', columnKey: binding.selector.columnKey ?? '' } : { kind: 'object' } }); return }
+    }
+  }
   return <section data-paimind-trace aria-label={zh ? '演示追溯' : 'Presentation Trace'}>
     <header data-paimind-trace-header><h2>{snapshot.selection.title}</h2><div data-paimind-trace-meta><span>{snapshot.selection.sessionId}</span><span data-paimind-trace-badge>{statusCopy(trace.document.reviewStatus, zh)}</span><span>{zh ? `第 ${slideIndex + 1} / ${trace.document.slides.length} 页` : `Slide ${slideIndex + 1} / ${trace.document.slides.length}`}</span></div></header>
-    <section data-paimind-trace-section><h3>{zh ? '页面' : 'Slides'}</h3><div data-paimind-trace-scroll>{trace.document.slides.map((row, index) => <button key={row.slideId} type="button" data-paimind-trace-button aria-pressed={index === slideIndex} onClick={() => { setSlideIndex(index); setBlockId(''); setMetricId(''); setFactId(''); setDetail('business') }}>{index + 1}. {row.explanation}</button>)}</div></section>
+    <section data-paimind-trace-section><h3>{zh ? '页面' : 'Slides'}</h3><div data-paimind-trace-scroll>{trace.document.slides.map((row, index) => <button key={row.slideId} type="button" data-paimind-trace-button aria-pressed={index === slideIndex} onClick={() => { setSlideIndex(index); setBlockId(''); setMetricId(''); setFactId(''); setDetail('business'); const first = row.metrics[0]?.facts[0]; if (first !== undefined) focusFact(row, first.factId) }}>{index + 1}. {row.explanation}</button>)}</div></section>
     <section data-paimind-trace-section><h3>{zh ? '业务区块' : 'Business Blocks'}</h3><div data-paimind-trace-scroll>{slide.businessBlocks.map(block => <button key={block.blockId} type="button" data-paimind-trace-button aria-pressed={block.blockId === activeBlock?.blockId} onClick={() => { setBlockId(block.blockId); setMetricId(''); setFactId(''); setDetail('business') }}>{block.label}</button>)}</div></section>
-    <section data-paimind-trace-section><h3>{zh ? '指标事实' : 'Metric Facts'}</h3><div data-paimind-trace-scroll>{metrics.map(row => <button key={row.metricId} type="button" data-paimind-trace-button aria-pressed={row.metricId === metric?.metricId} onClick={() => { setMetricId(row.metricId); setFactId(''); setDetail('business') }}>{row.label} · {row.facts.length}</button>)}</div>{metric !== undefined && metric.facts.length > 1 && <MetricFacts metric={metric} selectedId={fact?.factId ?? ''} zh={zh} onSelect={row => { setFactId(row.factId); setDetail('business') }} />}</section>
+    <section data-paimind-trace-section><h3>{zh ? '指标事实' : 'Metric Facts'}</h3><div data-paimind-trace-scroll>{metrics.map(row => <button key={row.metricId} type="button" data-paimind-trace-button aria-pressed={row.metricId === metric?.metricId} onClick={() => { setMetricId(row.metricId); setFactId(''); setDetail('business'); const first = row.facts[0]; if (first !== undefined) focusFact(slide, first.factId) }}>{row.label} · {row.facts.length}</button>)}</div>{metric !== undefined && metric.facts.length > 1 && <MetricFacts metric={metric} selectedId={fact?.factId ?? ''} zh={zh} onSelect={row => { setFactId(row.factId); setDetail('business'); focusFact(slide, row.factId) }} />}</section>
     {fact !== undefined && <section data-paimind-trace-section><h3>{detail === 'business' ? (zh ? '业务证据' : 'Business Evidence') : (zh ? '技术追溯' : 'Technical Trace')}</h3>{detail === 'business' ? <BusinessSheet fact={fact} document={trace.document} zh={zh} onTechnical={() => { setDetail('technical') }} /> : <TechnicalSheet fact={fact} zh={zh} onBusiness={() => { setDetail('business') }} />}</section>}
     <section data-paimind-trace-section><h3>{zh ? '已登记来源' : 'Registered Sources'}</h3><ul data-paimind-trace-list>{trace.document.sources.map(source => <li key={source.id} data-paimind-trace-row><strong>{source.name}</strong><span>{source.format}{source.version ? ` · ${source.version}` : ''}{source.size ? ` · ${source.size}` : ''}</span><p>{source.role}</p></li>)}</ul></section>
   </section>
@@ -231,7 +248,7 @@ export function apply(ctx: PresentationTraceClientContext): void {
     nameEn: 'Presentation Trace',
     descriptionZh: '关联产物的数据来源、计算逻辑、代码与运行证据。',
     descriptionEn: 'Links artifacts to sources, calculations, code, and runtime evidence.',
-    surface: 'side-card',
+    surface: 'preview',
     maturity: 'technical-preview',
     order: 30,
   })
@@ -243,18 +260,55 @@ export function apply(ctx: PresentationTraceClientContext): void {
     const qaEnabled = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('paimindTracePreview') === '1'
     const offQa = qaEnabled ? registry.registerSource(qaSource()) : () => {}
     const disposeService = ctx.reflect.provide('paimindPresentationTrace', registry)
-    const disposeTab = ctx.paimindSidebar.registerTab({ id: 'paimind:presentation-trace', titleZh: '演示追溯', titleEn: 'Presentation Trace', order: 53, single: true, icon: <TraceIcon />, render: scope => <TraceErrorBoundary><PresentationTracePanel service={registry} bento={ctx.paimindBentoPreview} scope={scope} /></TraceErrorBoundary> })
+    const disposeInspector = ctx.paimindBentoPreview.registerInspector({
+      id: 'paimind:presentation-trace',
+      activate: request => {
+        if (request.artifactId === undefined || request.artifactSourceId === undefined || request.traceId === undefined) return false
+        const project = ctx.paimindWorkspaceProject.getSnapshot().projects.find(row => (
+          row.workspaceId === request.workspaceId
+          && row.sessionIds.includes(request.sessionId)
+          && row.path === request.cwd
+        ))
+        if (project === undefined) return false
+        const requestedPath = resolveArtifactPath(project.path, request.path)
+        if (requestedPath.state !== 'safe') return false
+        const artifact = ctx.paimindArtifacts.getSnapshot().artifacts.find(row =>
+          row.id === request.artifactId
+          && row.sourceId === request.artifactSourceId
+          && row.traceId === request.traceId
+          && row.sessionId === request.sessionId
+          && row.workspaceId === request.workspaceId
+          && (() => {
+            const artifactPath = resolveArtifactPath(project.path, row.path)
+            return artifactPath.state === 'safe' && artifactPath.path === requestedPath.path
+          })(),
+        )
+        return artifact !== undefined && registry.selectArtifact(artifact)
+      },
+      render: scope => <TraceErrorBoundary><PresentationTracePanel service={registry} bento={ctx.paimindBentoPreview} scope={scope} /></TraceErrorBoundary>,
+    })
     const disposeAction = ctx.paimindArtifacts.registerAction({
       id: 'paimind:presentation-trace', labelZh: '追溯', labelEn: 'Trace', supports: artifact => artifact.traceId !== undefined,
       run: artifact => {
         if (!registry.selectArtifact(artifact)) {
           return { state: 'failed', messageZh: '这个产物没有可用的结构化追溯记录。', messageEn: 'This artifact has no available structured trace.' }
         }
-        return ctx.paimindSidebar.openTab('paimind:presentation-trace')
-          ? { state: 'opened' }
-          : { state: 'failed', messageZh: '演示追溯已在侧栏设置中停用。', messageEn: 'Presentation Trace is disabled in the side card settings.' }
+        const cwd = ctx.paimindWorkspaceProject.getSnapshot().projects.find(project => project.workspaceId === artifact.workspaceId)?.path
+        if (cwd === undefined || !ctx.paimindBentoPreview.open({
+          sessionId: artifact.sessionId,
+          workspaceId: artifact.workspaceId,
+          cwd,
+          path: artifact.path,
+          title: artifact.title,
+          artifactSourceId: artifact.sourceId,
+          artifactId: artifact.id,
+          ...(artifact.traceId === undefined ? {} : { traceId: artifact.traceId }),
+        }) || !ctx.paimindBentoPreview.setMode('trace')) {
+          return { state: 'failed', messageZh: 'Bento 工作台或会话工作区不可用。', messageEn: 'The Bento workbench or Session Workspace is unavailable.' }
+        }
+        return { state: 'opened' }
       },
     })
-    return () => { disposeAction(); disposeTab(); void disposeService(); offQa(); offProjected(); projected.dispose(); registry.dispose() }
-  }, 'paimind-presentation-trace: service, action and tab')
+    return () => { disposeAction(); disposeInspector(); void disposeService(); offQa(); offProjected(); projected.dispose(); registry.dispose() }
+  }, 'paimind-presentation-trace: service, action and workbench inspector')
 }

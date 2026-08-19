@@ -5,6 +5,7 @@ import {
   definePaimindScheduleRun,
   definePaimindScheduleRunReport,
   type PaimindScheduleActionDescriptor,
+  type PaimindScheduleActionInput,
   type PaimindScheduleAuditRecord,
   type PaimindScheduleCreateInput,
   type PaimindScheduleDefinition,
@@ -40,6 +41,35 @@ export type PaimindScheduleExecutor = (
   signal: AbortSignal,
 ) => Promise<Readonly<PaimindScheduleExecutionReceipt>>
 
+export type PaimindScheduleActionInputValidator = (
+  input: PaimindScheduleActionInput | undefined,
+) => PaimindScheduleActionInput | undefined
+
+export interface PaimindScheduleActionRegistrationOptions {
+  readonly validateActionInput?: PaimindScheduleActionInputValidator
+}
+
+export interface PaimindScheduleDispatchErrorOptions {
+  readonly retryable?: boolean
+  readonly code?: string
+  readonly cause?: unknown
+}
+
+/** Lets provider Adapters distinguish transient delivery failures from invalid local configuration. */
+export class PaimindScheduleDispatchError extends Error {
+  readonly retryable: boolean
+  readonly code?: string
+  override readonly cause?: unknown
+
+  constructor(message: string, options: PaimindScheduleDispatchErrorOptions = {}) {
+    super(message)
+    this.name = 'PaimindScheduleDispatchError'
+    this.retryable = options.retryable ?? true
+    if (options.code !== undefined) this.code = options.code
+    if (options.cause !== undefined) this.cause = options.cause
+  }
+}
+
 export interface PaimindSchedulerClock {
   now(): number
   setTimeout(callback: () => void, delayMs: number): ReturnType<typeof setTimeout>
@@ -58,7 +88,7 @@ export interface PaimindSchedulerOptions {
 
 export type PaimindScheduleMutationResult =
   | { readonly ok: true; readonly value: Readonly<PaimindScheduleDefinition> }
-  | { readonly ok: false; readonly code: 'not-found' | 'version-conflict' | 'action-unavailable' | 'no-future-occurrence'; readonly message: string }
+  | { readonly ok: false; readonly code: 'not-found' | 'version-conflict' | 'action-unavailable' | 'invalid-input' | 'no-future-occurrence'; readonly message: string }
 
 export type PaimindScheduleRunNowResult =
   | { readonly ok: true; readonly value: Readonly<PaimindScheduleRun> }
@@ -91,6 +121,7 @@ function sortedValues<Value>(table: PaimindSchedulerTable<Value>): Value[] {
 export class PaimindSchedulerCore {
   private readonly clock: PaimindSchedulerClock
   private readonly executors = new Map<string, PaimindScheduleExecutor>()
+  private readonly inputValidators = new Map<string, PaimindScheduleActionInputValidator>()
   private readonly maxDispatchAttempts: number
   private readonly dispatchTimeoutMs: number
   private readonly finalResultTimeoutMs: number
@@ -129,14 +160,21 @@ export class PaimindSchedulerCore {
   async registerAction(
     descriptor: PaimindScheduleActionDescriptor,
     executor: PaimindScheduleExecutor,
+    options: PaimindScheduleActionRegistrationOptions = {},
   ): Promise<() => void> {
     const trusted = definePaimindScheduleActionDescriptor(descriptor)
     await this.enqueue(async () => { await this.tables.actions.put(trusted.actionId, trusted) })
     this.executors.set(trusted.actionId, executor)
+    if (options.validateActionInput !== undefined) {
+      this.inputValidators.set(trusted.actionId, options.validateActionInput)
+    } else {
+      this.inputValidators.delete(trusted.actionId)
+    }
     this.armWakeTimer()
     return () => {
       if (this.executors.get(trusted.actionId) === executor) {
         this.executors.delete(trusted.actionId)
+        this.inputValidators.delete(trusted.actionId)
         this.armWakeTimer()
       }
     }
@@ -149,6 +187,7 @@ export class PaimindSchedulerCore {
       const next = definePaimindScheduleActionDescriptor({ ...current, enabled: false, version: randomUUID() })
       await this.tables.actions.put(actionId, next)
       this.executors.delete(actionId)
+      this.inputValidators.delete(actionId)
       this.armWakeTimer()
       return true
     })
@@ -194,6 +233,7 @@ export class PaimindSchedulerCore {
       if (action === undefined || !action.enabled || !this.executors.has(input.actionId)) {
         throw new Error('schedule action is unavailable')
       }
+      const actionInput = this.validateActionInput(input.actionId, input.actionInput)
       const now = iso(this.clock.now())
       const nextRunAt = input.enabled ? nextScheduleOccurrence(input.rule, input.timeZone, now) : undefined
       if (input.enabled && nextRunAt === undefined) {
@@ -204,6 +244,8 @@ export class PaimindSchedulerCore {
         scheduleId,
         name: input.name,
         actionId: input.actionId,
+        ...(actionInput === undefined ? {} : { actionInput }),
+        ...(input.sourceSessionId === undefined ? {} : { sourceSessionId: input.sourceSessionId }),
         rule: input.rule,
         timeZone: input.timeZone,
         status: input.enabled ? 'enabled' : 'paused',
@@ -232,6 +274,12 @@ export class PaimindSchedulerCore {
       if (action === undefined || !action.enabled || !this.executors.has(input.actionId)) {
         return { ok: false, code: 'action-unavailable', message: 'Action is unavailable' }
       }
+      let actionInput: PaimindScheduleActionInput | undefined
+      try {
+        actionInput = this.validateActionInput(input.actionId, input.actionInput)
+      } catch (error) {
+        return { ok: false, code: 'invalid-input', message: error instanceof Error ? error.message : String(error) }
+      }
       const now = iso(this.clock.now())
       const nextRunAt = input.enabled ? nextScheduleOccurrence(input.rule, input.timeZone, now) : undefined
       if (input.enabled && nextRunAt === undefined) {
@@ -241,11 +289,18 @@ export class PaimindSchedulerCore {
           message: 'Execution time has passed. Edit the task and choose a future time.',
         }
       }
-      const { nextRunAt: _previousNextRunAt, ...currentWithoutNextRunAt } = current
+      const {
+        nextRunAt: _previousNextRunAt,
+        actionInput: _previousActionInput,
+        sourceSessionId: _previousSourceSessionId,
+        ...currentWithoutNextRunAt
+      } = current
       const next = definePaimindScheduleDefinition({
         ...currentWithoutNextRunAt,
         name: input.name,
         actionId: input.actionId,
+        ...(actionInput === undefined ? {} : { actionInput }),
+        ...(input.sourceSessionId === undefined ? {} : { sourceSessionId: input.sourceSessionId }),
         rule: input.rule,
         timeZone: input.timeZone,
         status: input.enabled ? 'enabled' : 'paused',
@@ -276,6 +331,8 @@ export class PaimindSchedulerCore {
       rule: current.rule,
       timeZone: current.timeZone,
       enabled,
+      ...(current.actionInput === undefined ? {} : { actionInput: current.actionInput }),
+      ...(current.sourceSessionId === undefined ? {} : { sourceSessionId: current.sourceSessionId }),
     }, actorId)
   }
 
@@ -338,6 +395,31 @@ export class PaimindSchedulerCore {
       })
       await this.tables.definitions.put(scheduleId, next)
       await this.audit(next, actorId, 'archived', now)
+      this.armWakeTimer()
+      return { ok: true, value: next }
+    })
+  }
+
+  /** Restore an archived definition as paused so recovery never triggers an unexpected run. */
+  async restore(scheduleId: string, ifVersion: string, actorId: string): Promise<PaimindScheduleMutationResult> {
+    return await this.enqueue(async () => {
+      const current = this.tables.definitions.get(scheduleId)
+      if (current === undefined || current.status !== 'archived') {
+        return { ok: false, code: 'not-found', message: 'Archived schedule not found' }
+      }
+      if (current.version !== ifVersion) {
+        return { ok: false, code: 'version-conflict', message: 'Schedule was changed by another user' }
+      }
+      const now = iso(this.clock.now())
+      const { archivedAt: _archivedAt, nextRunAt: _nextRunAt, ...currentWithoutArchive } = current
+      const next = definePaimindScheduleDefinition({
+        ...currentWithoutArchive,
+        status: 'paused',
+        updatedAt: now,
+        version: randomUUID(),
+      })
+      await this.tables.definitions.put(scheduleId, next)
+      await this.audit(next, actorId, 'restored', now)
       this.armWakeTimer()
       return { ok: true, value: next }
     })
@@ -424,7 +506,9 @@ export class PaimindSchedulerCore {
 
   private async dispatch(initial: PaimindScheduleRun): Promise<void> {
     let lastError = 'Action dispatch failed'
+    let attemptsUsed = 0
     for (let attempt = 1; attempt <= this.maxDispatchAttempts; attempt += 1) {
+      attemptsUsed = attempt
       const executor = this.executors.get(initial.actionId)
       const action = this.tables.actions.get(initial.actionId)
       if (executor === undefined || action === undefined || !action.enabled) {
@@ -451,11 +535,16 @@ export class PaimindSchedulerCore {
       const controller = new AbortController()
       const timeout = this.clock.setTimeout(() => controller.abort(), this.dispatchTimeoutMs)
       try {
+        const definition = this.tables.definitions.get(started.scheduleId)
+        if (definition === undefined) throw new Error('Schedule definition is unavailable')
         const receipt = await executor(Object.freeze({
           contractVersion: '1.0',
           runId: started.runId,
           scheduleId: started.scheduleId,
+          scheduleName: definition.name,
           actionId: started.actionId,
+          ...(definition.actionInput === undefined ? {} : { actionInput: definition.actionInput }),
+          ...(definition.sourceSessionId === undefined ? {} : { sourceSessionId: definition.sourceSessionId }),
           trigger: started.trigger,
           scheduledFor: started.scheduledFor,
           idempotencyKey: started.idempotencyKey,
@@ -474,10 +563,11 @@ export class PaimindSchedulerCore {
       } catch (error) {
         this.clock.clearTimeout(timeout)
         lastError = error instanceof Error ? error.message : String(error)
+        if (error instanceof PaimindScheduleDispatchError && !error.retryable) break
         if (attempt < this.maxDispatchAttempts) await this.clock.delay(this.retryDelayMs * attempt)
       }
     }
-    await this.failRun(initial.runId, `Dispatch failed after ${this.maxDispatchAttempts} attempt(s): ${lastError}`)
+    await this.failRun(initial.runId, `Dispatch failed after ${attemptsUsed} attempt(s): ${lastError}`)
   }
 
   private armRunTimeout(runId: string): void {
@@ -557,6 +647,16 @@ export class PaimindSchedulerCore {
       version: randomUUID(),
     })
     await this.tables.audits.put(record.auditId, record)
+  }
+
+  private validateActionInput(
+    actionId: string,
+    input: PaimindScheduleActionInput | undefined,
+  ): PaimindScheduleActionInput | undefined {
+    const validator = this.inputValidators.get(actionId)
+    if (validator !== undefined) return validator(input)
+    if (input !== undefined) throw new Error('Selected action does not accept per-task business input')
+    return undefined
   }
 
   private async enqueue<Result>(operation: () => Promise<Result>): Promise<Result> {

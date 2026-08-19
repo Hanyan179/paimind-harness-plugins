@@ -51,7 +51,7 @@ describe('R3 Office generator providers', () => {
     apply({
       paimindArtifactGenerators: { register: vi.fn(() => () => {}), execute: vi.fn(), list: vi.fn(() => []) },
       tools: { register: vi.fn(value => { definitions.push(value); return () => {} }), execute: vi.fn() },
-      systemPrompt: { section: vi.fn(() => () => {}) }, effect(install) { install() },
+      systemPrompt: { section: vi.fn(() => () => {}), context: vi.fn(() => () => {}) }, effect(install) { install() },
     })
     expect(definitions).toHaveLength(3)
     expect(definitions[0].presentCall({ file_path: 'deck.pptx', title: 'Deck', slides: [{ title: 'One', bullets: [] }] })).toMatchObject({ kind: 'edit', locations: [{ path: 'deck.pptx' }] })

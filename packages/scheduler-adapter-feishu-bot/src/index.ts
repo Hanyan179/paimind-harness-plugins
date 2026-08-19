@@ -6,7 +6,11 @@ import {
   type PaimindScheduleTriggerRequest,
 } from '@paimind/contracts'
 import { PaimindHostService } from '@paimind/harness-compat/host'
-import type { PaimindScheduleExecutor, PaimindSchedulerServiceApi } from '@paimind/platform-scheduler'
+import {
+  PaimindScheduleDispatchError,
+  type PaimindScheduleExecutor,
+  type PaimindSchedulerServiceApi,
+} from '@paimind/platform-scheduler'
 
 export const name = 'paimind-scheduler-adapter-feishu-bot'
 export const PAIMIND_FEISHU_BOT_SCHEDULER_ADAPTER_ID = 'adapter:paimind-feishu-bot'
@@ -75,15 +79,30 @@ export function definePaimindFeishuBotWebhook(value: string): URL {
 export class PaimindEnvironmentFeishuBotCredentialResolver implements PaimindFeishuBotCredentialResolver {
   async resolve(reference: string): Promise<URL> {
     const raw = process.env[PAIMIND_FEISHU_BOT_WEBHOOKS_ENV]
-    if (raw === undefined || raw.trim() === '') throw new Error('Feishu bot Webhook credential is unavailable')
+    if (raw === undefined || raw.trim() === '') throw new PaimindScheduleDispatchError(
+      'Feishu bot Webhook credential is unavailable. Configure it in DSH Home .env and restart Harness',
+      { retryable: false, code: 'feishu-credential-unavailable' },
+    )
     let parsed: unknown
-    try { parsed = JSON.parse(raw) } catch { throw new Error('Feishu bot credential configuration is invalid') }
+    try { parsed = JSON.parse(raw) } catch { throw new PaimindScheduleDispatchError(
+      'Feishu bot credential configuration is invalid',
+      { retryable: false, code: 'feishu-credential-invalid' },
+    ) }
     if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      throw new Error('Feishu bot credential configuration is invalid')
+      throw new PaimindScheduleDispatchError('Feishu bot credential configuration is invalid', {
+        retryable: false, code: 'feishu-credential-invalid',
+      })
     }
     const value = (parsed as Readonly<Record<string, unknown>>)[reference]
-    if (typeof value !== 'string') throw new Error('Feishu bot Webhook credential is unavailable')
-    return definePaimindFeishuBotWebhook(value)
+    if (typeof value !== 'string') throw new PaimindScheduleDispatchError(
+      'Feishu bot Webhook credential is unavailable. Configure the referenced credential in DSH Home .env',
+      { retryable: false, code: 'feishu-credential-unavailable' },
+    )
+    try { return definePaimindFeishuBotWebhook(value) } catch (cause) {
+      throw new PaimindScheduleDispatchError('Feishu bot Webhook credential is invalid', {
+        retryable: false, code: 'feishu-credential-invalid', cause,
+      })
+    }
   }
 }
 

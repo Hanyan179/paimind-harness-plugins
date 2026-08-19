@@ -19,11 +19,15 @@ const document = {
 }
 
 class BentoMock implements PaimindBentoPreviewService {
-  private snapshot: PaimindBentoPreviewSnapshot = { revision: 1, requestRevision: 1, request: { sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', path: '/workspace/deck.html', title: 'Deck' }, runtimeEvent: null }
+  private snapshot: PaimindBentoPreviewSnapshot = { revision: 1, requestRevision: 1, request: { sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', path: '/workspace/deck.html', title: 'Deck' }, runtimeEvent: null, mode: 'trace', focusRevision: 0, focus: null, inspectorRevision: 0 }
   private readonly listeners = new Set<() => void>()
   getSnapshot = () => this.snapshot
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
   open = () => true
+  setMode = () => true
+  focus = () => true
+  registerInspector = () => () => {}
+  getInspector = () => null
   slide(value: number) { this.snapshot = { ...this.snapshot, revision: this.snapshot.revision + 1, runtimeEvent: { type: 'paimind:bento-slide', mode: 'edit', slide: value } }; for (const listener of this.listeners) listener() }
 }
 

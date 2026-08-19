@@ -42,6 +42,7 @@ const rendererBentoRoot = resolve(repositoryRoot, 'packages/renderer-bento')
 const rendererPdfRoot = resolve(repositoryRoot, 'packages/renderer-pdf')
 const artifactsRoot = resolve(repositoryRoot, 'packages/artifacts')
 const presentationTraceRoot = resolve(repositoryRoot, 'packages/presentation-trace')
+const walmartProposalAdapterRoot = resolve(repositoryRoot, 'packages/walmart-proposal-adapter')
 const agentMarketRoot = resolve(repositoryRoot, 'packages/agent-market')
 const agentBuilderRoot = resolve(repositoryRoot, 'packages/agent-builder')
 const skillMarketRoot = resolve(repositoryRoot, 'packages/skill-market')
@@ -544,6 +545,7 @@ try {
     rendererPdfRoot,
     artifactsRoot,
     presentationTraceRoot,
+    walmartProposalAdapterRoot,
     agentMarketRoot,
     agentBuilderRoot,
     skillMarketRoot,
@@ -574,6 +576,7 @@ try {
     'paimind-renderer-pdf', '@paimind/renderer-pdf',
     'paimind-artifacts', '@paimind/artifacts',
     'paimind-presentation-trace', '@paimind/presentation-trace',
+    'paimind-walmart-proposal-adapter', '@paimind/walmart-proposal-adapter',
     'paimind-agent-market', '@paimind/agent-market',
     'paimind-agent-builder', '@paimind/agent-builder',
     'paimind-skill-market', '@paimind/skill-market',
@@ -634,8 +637,6 @@ try {
     '@paimind/scheduler-adapter-harness',
     '@paimind/scheduler-adapter-http',
     '@paimind/scheduler-adapter-feishu-bot',
-    '@paimind/launcher',
-    '@paimind/conversation-extensions',
   ])
 
   dsh([
@@ -655,6 +656,7 @@ try {
     '@paimind/renderer-pdf',
     '@paimind/artifacts',
     '@paimind/presentation-trace',
+    '@paimind/walmart-proposal-adapter',
     '@paimind/agent-market',
     '@paimind/agent-builder',
     '@paimind/skill-market',
@@ -684,6 +686,7 @@ try {
     || removed.includes('paimind-renderer-pdf')
     || removed.includes('paimind-artifacts')
     || removed.includes('paimind-presentation-trace')
+    || removed.includes('paimind-walmart-proposal-adapter')
     || removed.includes('paimind-agent-market')
     || removed.includes('paimind-agent-builder')
     || removed.includes('paimind-skill-market')
@@ -720,6 +723,7 @@ try {
     agentBuilderRoot,
     skillMarketRoot,
     notificationsRoot,
+    walmartProposalAdapterRoot,
     developerResourcesRoot,
   ], 'install independent features without Extension Center or bundle')
   await bootAndProbe([
@@ -740,7 +744,7 @@ try {
     '@paimind/skill-market',
     '@paimind/notifications',
     '@paimind/developer-resources',
-  ], ['@paimind/extension-center', '@paimind/agent-builder', '@paimind/launcher', '@paimind/conversation-extensions'])
+  ], ['@paimind/extension-center', '@paimind/agent-builder'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-extension-center',
@@ -757,6 +761,7 @@ try {
     '@paimind/renderer-pdf',
     '@paimind/artifacts',
     '@paimind/presentation-trace',
+    '@paimind/walmart-proposal-adapter',
     '@paimind/agent-market',
     '@paimind/agent-builder',
     '@paimind/skill-market',
@@ -812,7 +817,7 @@ try {
     '@paimind/agent-market',
     '@paimind/skill-market',
     '@paimind/notifications',
-  ], ['@paimind/task-monitor', '@paimind/agent-builder', '@paimind/launcher', '@paimind/conversation-extensions'])
+  ], ['@paimind/task-monitor', '@paimind/agent-builder'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-task-monitor',
@@ -883,7 +888,7 @@ try {
     '@paimind/presentation-trace',
     '@paimind/skill-market',
     '@paimind/notifications',
-  ], ['@paimind/agent-market', '@paimind/agent-builder', '@paimind/launcher', '@paimind/conversation-extensions'])
+  ], ['@paimind/agent-market', '@paimind/agent-builder'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-agent-market',
@@ -955,7 +960,7 @@ try {
     '@paimind/agent-market',
     '@paimind/skill-market',
     '@paimind/notifications',
-  ], ['@paimind/agent-builder', '@paimind/launcher', '@paimind/conversation-extensions'])
+  ], ['@paimind/agent-builder'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-agent-builder',
@@ -1026,7 +1031,7 @@ try {
     '@paimind/presentation-trace',
     '@paimind/agent-market',
     '@paimind/notifications',
-  ], ['@paimind/skill-market', '@paimind/agent-builder', '@paimind/launcher', '@paimind/conversation-extensions'])
+  ], ['@paimind/skill-market', '@paimind/agent-builder'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-skill-market',
@@ -1097,7 +1102,7 @@ try {
     '@paimind/presentation-trace',
     '@paimind/agent-market',
     '@paimind/skill-market',
-  ], ['@paimind/notifications', '@paimind/agent-builder', '@paimind/launcher', '@paimind/conversation-extensions'])
+  ], ['@paimind/notifications', '@paimind/agent-builder'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-notifications',
@@ -1147,6 +1152,7 @@ try {
     agentBuilderRoot,
     skillMarketRoot,
     notificationsRoot,
+    walmartProposalAdapterRoot,
     developerResourcesRoot,
   ], 'install product composition without PAIMind Scheduler')
   const withoutScheduler = dsh(['--profile', 'web', '--dump-config'], 'dump composition without PAIMind Scheduler')
@@ -1177,7 +1183,7 @@ try {
     '@paimind/skill-market',
     '@paimind/notifications',
     '@paimind/developer-resources',
-  ], ['@paimind/agent-builder', '@paimind/scheduler', '@paimind/platform-scheduler', '@paimind/scheduler-adapter-harness', '@paimind/scheduler-adapter-http', '@paimind/scheduler-adapter-feishu-bot', '@paimind/platform-api', '@paimind/launcher', '@paimind/conversation-extensions'])
+  ], ['@paimind/agent-builder', '@paimind/platform-scheduler', '@paimind/scheduler-adapter-harness', '@paimind/scheduler-adapter-http', '@paimind/scheduler-adapter-feishu-bot', '@paimind/platform-api'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
     '@paimind/test-without-scheduler',
@@ -1195,6 +1201,7 @@ try {
     '@paimind/renderer-pdf',
     '@paimind/artifacts',
     '@paimind/presentation-trace',
+    '@paimind/walmart-proposal-adapter',
     '@paimind/agent-market',
     '@paimind/agent-builder',
     '@paimind/skill-market',
@@ -1232,6 +1239,7 @@ try {
     agentBuilderRoot,
     skillMarketRoot,
     notificationsRoot,
+    walmartProposalAdapterRoot,
     platformApiRoot,
     schedulerRoot,
     schedulerHarnessAdapterRoot,
@@ -1245,7 +1253,8 @@ try {
   }
   for (const retainedMarker of [
     '@paimind/extension-center', '@paimind/runtime-orbs', '@paimind/notifications',
-    '@paimind/platform-scheduler', "name: '@deepseek-ai/dsh-settings-file'",
+    '@paimind/platform-scheduler', '@paimind/walmart-proposal-adapter',
+    "name: '@deepseek-ai/dsh-settings-file'",
   ]) {
     if (!withoutUserSettings.includes(retainedMarker)) throw new Error(`User Settings isolation lost ${retainedMarker}`)
   }
@@ -1276,8 +1285,6 @@ try {
     '@paimind/scheduler-adapter-harness',
     '@paimind/scheduler-adapter-http',
     '@paimind/scheduler-adapter-feishu-bot',
-    '@paimind/launcher',
-    '@paimind/conversation-extensions',
   ])
   dsh([
     'plugin', '--profile', 'web', 'remove',
@@ -1300,6 +1307,7 @@ try {
     '@paimind/agent-builder',
     '@paimind/skill-market',
     '@paimind/notifications',
+    '@paimind/walmart-proposal-adapter',
     '@paimind/platform-api',
     '@paimind/platform-scheduler',
     '@paimind/scheduler-adapter-harness',
@@ -1338,6 +1346,7 @@ try {
     agentBuilderRoot,
     skillMarketRoot,
     notificationsRoot,
+    walmartProposalAdapterRoot,
     platformApiRoot,
     schedulerRoot,
     schedulerHarnessAdapterRoot,
@@ -1352,7 +1361,8 @@ try {
   }
   for (const retainedMarker of [
     '@paimind/extension-center', '@paimind/runtime-orbs', '@paimind/task-monitor',
-    '@paimind/user-settings', '@deepseek-ai/dsh-host-plugin-inventory',
+    '@paimind/user-settings', '@paimind/walmart-proposal-adapter',
+    '@deepseek-ai/dsh-host-plugin-inventory',
   ]) {
     if (!withoutDeveloperResources.includes(retainedMarker)) {
       throw new Error(`Developer Resources isolation lost ${retainedMarker}`)
@@ -1385,8 +1395,6 @@ try {
     '@paimind/scheduler-adapter-harness',
     '@paimind/scheduler-adapter-http',
     '@paimind/scheduler-adapter-feishu-bot',
-    '@paimind/launcher',
-    '@paimind/conversation-extensions',
   ])
   dsh([
     'plugin', '--profile', 'web', 'remove',
@@ -1409,6 +1417,7 @@ try {
     '@paimind/agent-builder',
     '@paimind/skill-market',
     '@paimind/notifications',
+    '@paimind/walmart-proposal-adapter',
     '@paimind/platform-api',
     '@paimind/platform-scheduler',
     '@paimind/scheduler-adapter-harness',

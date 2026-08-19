@@ -1,6 +1,8 @@
 {
   "name": "@paimind/agent-builder",
   "version": "0.1.0-alpha.0",
+  "license": "UNLICENSED",
+  "engines": { "node": "^22.19.0 || >=24.0.0" },
   "description": "Headless PAIMind business-profile service over native Harness Agent Presets",
   "type": "module",
   "main": "lib/index.js",
@@ -12,7 +14,7 @@
     "./typert": { "types": "./lib/types/typert.d.ts", "default": "./lib/typert.js" },
     "./package.json": "./package.json"
   },
-  "files": ["lib"],
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "dependencies": {
     "@deepseek-ai/dsh-home-paths": "0.1.0-rc.6",
     "@paimind/contracts": "workspace:^",

@@ -1,0 +1,14 @@
+{
+  "schema": "paimind.python-runtime-source-manifest/v1",
+  "upstreamCommit": "1f9fd80ea073a4ab4b5665b2300f7930f3f0520f",
+  "files": [
+    { "path": "fineline/scripts/run_fineline_investment_analysis.py", "sha256": "a3f4398e7bf041f051c6379bd65a0c646b14769f2ae6a49157713a32b1732c42" },
+    { "path": "fineline/scripts/analyze_fineline_investment.py", "sha256": "b5f3a904c116036efc6e407215d73bcbcf5514095ba9ed5b7654775a279a48be" },
+    { "path": "fineline/scripts/data_access.py", "sha256": "1d77d9d06f2db112c1ab2b56360d832d9b95a5c8590c82730a0e978e973927b5" },
+    { "path": "white-space/scripts/run_white_space_analysis.py", "sha256": "992dcbf6bc778ade63162edf3aa2750d42b31895d5146a3290cb3ab7c294ef1d" },
+    { "path": "white-space/scripts/analyze_white_space.py", "sha256": "d5ae8b5a01993683027fced6dd8c786f0d2d538dcd2107073afd37dc1399ba5e" },
+    { "path": "white-space/scripts/data_access.py", "sha256": "9d2564cf1cf90e2a0d938ed39c9e136cb6490c2c79f9fc577f29a95460353f4c" },
+    { "path": "outline/scripts/build_outline.py", "sha256": "fd01e207de535c1471b7018f1a2b5a67380ea558b8d6ac5c397177b3ce0ca00c" },
+    { "path": "outline/scripts/artifact_inputs.py", "sha256": "f3251890cdc166367a0f24d75bb8472f58f94738868c1dc29d614d68fc51c1f4" }
+  ]
+}

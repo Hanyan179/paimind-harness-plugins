@@ -45,7 +45,7 @@ Only `@paimind/harness-compat` describes the selected Harness structures. The fe
 
 ## Permission boundary
 
-FP04 performs no authorization decision and no direct filesystem read. The native Host owns directory-picker, open-path, Sandbox, Approval, and Workspace mutation enforcement. Later packages must use `@paimind/permissions-core` for PAIMind business permissions in addition to native Host enforcement.
+FP04 performs no authorization decision and no direct filesystem read. The native Host owns directory-picker, open-path, Sandbox, Approval, and Workspace mutation enforcement. No synthetic PAIMind business-permission layer is introduced without an authenticated provider.
 
 ## Verification plan
 

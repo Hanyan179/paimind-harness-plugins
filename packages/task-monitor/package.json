@@ -1,7 +1,11 @@
 {
   "name": "@paimind/task-monitor",
   "version": "0.1.0-alpha.0",
-  "description": "Independent Session-header monitor for PAIMind-owned native Harness Jobs",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "description": "Read-only Session and Project monitor derived from native Harness facts",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -20,33 +24,50 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["lib"],
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts",
+    "lib/**/*.d.ts.map"
+  ],
   "dsh": {
     "client": {
       "inject": [
         "@deepseek-ai/dsh-client-locale",
         "@deepseek-ai/dsh-client-ui-slots",
         "@deepseek-ai/dsh-client-runtime",
-        "@deepseek-ai/dsh-client-ui-conversation"
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@paimind/artifacts",
+        "@paimind/workspace-project"
       ],
       "platform": "web"
     }
   },
   "dependencies": {
+    "@paimind/artifacts": "workspace:^",
     "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^"
+    "@paimind/harness-compat": "workspace:^",
+    "@paimind/workspace-project": "workspace:^",
+    "lucide-react": "0.562.0"
   },
   "peerDependencies": {
-    "react": ">=18.0.0 <20.0.0"
+    "react": ">=18.0.0 <20.0.0",
+    "react-dom": ">=18.0.0 <20.0.0"
   },
   "devDependencies": {
     "@paimind/testkit": "workspace:^",
     "@testing-library/react": "^16.3.2",
-    "react": "^18.3.1"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "paimindBuild": {
-    "node": ["src/index.ts", "src/invariant.ts"],
+    "node": [
+      "src/index.ts",
+      "src/invariant.ts"
+    ],
     "client": "src/client/index.tsx"
   },
-  "scripts": { "typecheck": "tsc -b --pretty false" }
+  "scripts": {
+    "typecheck": "tsc -b --pretty false"
+  }
 }

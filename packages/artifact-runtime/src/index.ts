@@ -7,7 +7,8 @@ import {
   defineArtifactTraceEnvelope,
   PAIMIND_ARTIFACT_JOB_KIND,
   type ArtifactProducedEnvelopeV1,
-  type ArtifactTraceEnvelopeV1,
+  type ArtifactTraceDocumentRefV2,
+  type ArtifactTraceEnvelope,
   type PaimindArtifactEventKind,
   type PaimindArtifactPreviewChannel,
   type PaimindArtifactProjectionV1,
@@ -35,11 +36,12 @@ export interface PaimindGeneratorOutput {
   readonly path: string
   readonly title: string
   readonly traceDocument?: unknown
+  readonly traceDocumentRef?: ArtifactTraceDocumentRefV2
 }
 
 export interface PaimindGeneratedArtifactResult {
   readonly artifact: Readonly<ArtifactProducedEnvelopeV1>
-  readonly trace?: Readonly<ArtifactTraceEnvelopeV1>
+  readonly trace?: Readonly<ArtifactTraceEnvelope>
 }
 
 export interface PaimindGeneratorExecutionContext {
@@ -78,7 +80,7 @@ export interface PaimindArtifactGeneratorService {
 
 interface ProjectionState {
   readonly artifacts: readonly Readonly<ArtifactProducedEnvelopeV1>[]
-  readonly traces: readonly Readonly<ArtifactTraceEnvelopeV1>[]
+  readonly traces: readonly Readonly<ArtifactTraceEnvelope>[]
 }
 
 const EMPTY_STATE: ProjectionState = Object.freeze({ artifacts: Object.freeze([]), traces: Object.freeze([]) })
@@ -335,7 +337,10 @@ export class ArtifactGeneratorRegistry implements PaimindArtifactGeneratorServic
       const artifactId = artifactIdFor(provider.id, owner.id, canonicalPath)
       const canonicalPrevious = prior.find(entry => entry.artifactId === artifactId)
       const producedAt = Date.now()
-      const traceId = output.traceDocument === undefined ? undefined : traceIdFor(artifactId)
+      if (output.traceDocument !== undefined && output.traceDocumentRef !== undefined) {
+        throw new Error('generator output cannot inline and reference the same trace')
+      }
+      const traceId = output.traceDocument === undefined && output.traceDocumentRef === undefined ? undefined : traceIdFor(artifactId)
       const artifact = defineArtifactProducedEnvelope({
         schema: 'paimind.artifact-produced/v1',
         artifactId,
@@ -352,17 +357,14 @@ export class ArtifactGeneratorRegistry implements PaimindArtifactGeneratorServic
         state: 'available',
         producedAt,
       })
-      const trace = traceId === undefined ? undefined : defineArtifactTraceEnvelope({
-        schema: 'paimind.artifact-trace/v1',
-        traceId,
-        artifactId,
-        sessionId: owner.id,
-        workspaceId,
-        producerId: provider.id,
-        taskId,
-        artifactRevision: artifact.revision,
-        producedAt,
+      const trace = traceId === undefined ? undefined : defineArtifactTraceEnvelope(output.traceDocumentRef === undefined ? {
+        schema: 'paimind.artifact-trace/v1', traceId, artifactId, sessionId: owner.id, workspaceId,
+        producerId: provider.id, taskId, artifactRevision: artifact.revision, producedAt,
         document: output.traceDocument,
+      } : {
+        schema: 'paimind.artifact-trace/v2', traceId, artifactId, sessionId: owner.id, workspaceId,
+        producerId: provider.id, taskId, artifactRevision: artifact.revision, producedAt,
+        documentRef: output.traceDocumentRef,
       })
       return Object.freeze({ artifact, ...(trace === undefined ? {} : { trace }) })
     } catch (error) {
@@ -396,7 +398,7 @@ export class ArtifactGeneratorRegistry implements PaimindArtifactGeneratorServic
 /** Tool definition helper: the exact envelope becomes the durable presentation metadata. */
 export function artifactToolMeta(
   artifact: Readonly<ArtifactProducedEnvelopeV1>,
-  trace?: Readonly<ArtifactTraceEnvelopeV1>,
+  trace?: Readonly<ArtifactTraceEnvelope>,
 ): Readonly<PaimindArtifactToolMetaV1> {
   return Object.freeze({ schema: 'paimind.tool-result/v1', artifact, ...(trace === undefined ? {} : { trace }) })
 }

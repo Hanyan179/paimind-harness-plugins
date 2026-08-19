@@ -11,6 +11,7 @@ const sourceSchema = z.object({
 export const schedulerRuleSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('once'), at: instant }).readonly(),
   z.object({ kind: z.literal('daily'), time: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/) }).readonly(),
+  z.object({ kind: z.literal('weekdays'), time: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/) }).readonly(),
   z.object({
     kind: z.literal('weekly'),
     weekday: z.number().int().min(1).max(7),
@@ -35,7 +36,9 @@ export const schedulerActionSchema = z.object({
   nameEn: z.string().min(1).max(120),
   descriptionZh: z.string().min(1).max(500).optional(),
   descriptionEn: z.string().min(1).max(500).optional(),
-  category: z.enum(['ai', 'integration', 'message', 'health-check']),
+  conversationEnabled: z.boolean().optional(),
+  usageHint: z.string().min(1).max(1_000).optional(),
+  category: z.enum(['ai', 'workflow', 'message', 'integration', 'health-check']),
   adapterId: id,
   enabled: z.boolean(),
   version: id,
@@ -45,6 +48,8 @@ export const schedulerDefinitionSchema = z.object({
   scheduleId: id,
   name: z.string().min(1).max(160),
   actionId: id,
+  actionInput: z.record(z.string(), z.json()).optional(),
+  sourceSessionId: z.string().min(1).max(240).optional(),
   rule: schedulerRuleSchema,
   timeZone: z.string().min(1).max(120),
   status: z.enum(['enabled', 'paused', 'archived']),
@@ -77,7 +82,7 @@ export const schedulerAuditSchema = z.object({
   auditId: id,
   scheduleId: id,
   actorId: id,
-  operation: z.enum(['created', 'updated', 'paused', 'resumed', 'archived', 'dispatched', 'manual_dispatched']),
+  operation: z.enum(['created', 'updated', 'paused', 'resumed', 'archived', 'restored', 'dispatched', 'manual_dispatched']),
   occurredAt: instant,
   version: id,
 }).readonly()

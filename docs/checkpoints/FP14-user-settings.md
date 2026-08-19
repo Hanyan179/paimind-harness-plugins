@@ -1,52 +1,38 @@
-# FP14 User Settings Checkpoint
+# FP14 Personalization Checkpoint
 
-## Result
+## Current result
 
-FP14 is Technically Verified and Product E2E Verified on 2026-08-15. PAIMind contributes one product-owned section to native Harness Settings. It does not create a Personal Center runtime, duplicate native controls, or persist browser-only prototype state.
+The former broad `PAIMind Preferences` model has been superseded by a Codex-inspired Personalization contract. Product ownership is now limited to Personality, About You, Custom Instructions and an enable switch. Notification policy and PAIMind-owned reduced motion were removed from FP14.
 
-## Ownership and compatibility
+Current acceptance state: `Technically Verified; Local Browser Pre-acceptance Passed; Product Model E2E Pending`.
+
+## Architecture
 
 ```mermaid
 flowchart LR
-    N["Harness native Settings"] --> L["Language / Theme / Model / Permission / Preset / Composer"]
-    N --> P["paimind-user-settings namespace"]
-    P --> R["rc.6 narrow Remote adapter"]
-    P --> S["Live System Prompt section"]
-    P --> M["PAIMind reduced motion"]
-    P --> F["Future Notification policy"]
+    N["Harness native Settings"] --> P["paimind-user-settings namespace"]
+    P --> T["Personality / About You / Custom Instructions"]
+    T --> C["Bounded systemPrompt.context projection"]
+    C --> S["Traceable user-role snapshot"]
+    S --> A["Next Agent response"]
 ```
 
-- Canonical storage: Harness `.dsh-home/settings.yaml`, official `installSettingsSection`, schema validation and native namespace revision/CAS.
-- Compatibility boundary: Harness rc.6 Web Settings has a static namespace allowlist, so the client calls only PAIMind `describe`/`mutate` through Typert Remote. No parallel store and no upstream edit exists.
-- Native reuse: Language, Appearance, Model, Permission, Agent Preset and Composer remain in Harness General/Models/Composer.
-- Retired prototype state: synthetic Memory/history toggles, browser notification permission and local/session-storage preference fallback.
+- Canonical storage: Harness Settings document, official `installSettingsSection`, schema validation and native revision/CAS.
+- Compatibility boundary: the rc.6 client uses the existing narrow PAIMind `describe`/`mutate` Remote because native Web Settings has a static namespace allowlist.
+- Priority: current explicit user instructions override personalization; safety, permission, tool, model, active-Agent and Workspace/project boundaries cannot be changed.
+- Empty/disabled behavior: no context is projected.
+- Explicit exclusions: Notification receive policy, PAIMind motion policy, synthetic Memory, theme, locale, model, permission and Agent Preset.
 
-## Real Product E2E
+## Verification completed in this change
 
-1. Saved `Reply with exactly FP14-PREFERENCE-VERIFIED and nothing else.` through the UI. The canonical YAML changed, a real model turn consumed the live preference prompt and returned exactly the token.
-2. Browser refresh and full Harness restart recovered the preference. Clearing it removed the behavior from a later real Bash turn.
-3. `motion: reduce` projected `data-paimind-motion=reduce`; the active Think/Tool Orbs reported `paused=true` while native activity text and the Agent turn remained functional. Restoring `system` removed the attribute.
-4. `notifications: off` suppressed only future PAIMind message publication. A real Agent-generated HTML still completed its Native Job, Artifact context, conversation link and sandboxed Viewer; unread stayed `1`, and the dialog had zero matching notification rows.
-5. Restoring `all` and generating a second real HTML produced exactly one matching Notification row and advanced unread from `1` to `2`.
-6. Chinese/Dark, English/Light and `560×800` passed. The final profile was restored to Chinese/Dark, empty instructions, `motion: system`, `notifications: all`.
+- Full repository gate: 73 test files / 224 tests, Type Check, Production Build, 20-client framework verification and 80-document link check passed.
+- Real `http://127.0.0.1:3080/` Browser pre-acceptance passed for the renamed `个性化` entry, Codex-inspired field set, native save feedback and exact context preview.
+- A unique synthetic profile survived a full Harness stop/start. The one-time migration then removed raw `personalInstructions`, `motion` and `notifications` keys while preserving the new profile.
+- Disable produced `当前不会注入任何个性化上下文。`; re-enable restored the saved profile without data loss.
+- The `560×800` responsive layout kept the switch, all three Personality choices and form content visible and usable. No `paimind-user-settings` warning or error appeared in the browser log.
+- Acceptance data was cleared after verification. The retained local state is `enabled: true`, `personality: none`, empty About You and empty Custom Instructions, so no personalization context is currently injected.
+- One real model turn that records `paimind:personalization` in the conversation remains the Product E2E gate; this checkpoint does not reuse the prior System Prompt/motion/notification evidence for that claim.
 
-## Verification matrix
+## Historical evidence boundary
 
-| Gate | Result |
-|---|---|
-| Automated | 57 test files / 174 tests passed, including Host namespace read/mutate, native revision propagation, prompt, notification and Runtime Orb consumers |
-| Type and build | Type Check, Production Build and 18-client framework scan passed |
-| Exact composition | Harness `0.1.0-rc.6` + Better Sidebar `0.11.0`; full install/boot/remove/restore and PAIMind-User-Settings-absent profile passed |
-| Browser | Real model instruction, clear, refresh, restart, active reduced motion, notification off/all branches, real Job/Artifact/Viewer and theme/narrow checks passed |
-| Isolation | Removing only FP14 preserves native settings owners, conversation and other PAIMind packages; cleanup and zero upstream delta relative to the pre-run worktree passed |
-
-## Evidence
-
-- `/Users/hansen/Documents/PAIMind-workspace/codex-output/qa/FP14-native-settings-ownership.png`
-- `/Users/hansen/Documents/PAIMind-workspace/codex-output/qa/FP14-personal-prompt-live.png`
-- `/Users/hansen/Documents/PAIMind-workspace/codex-output/qa/FP14-reduced-motion-live.png`
-- `/Users/hansen/Documents/PAIMind-workspace/codex-output/qa/FP14-notification-off-artifact-live.png`
-- `/Users/hansen/Documents/PAIMind-workspace/codex-output/qa/FP14-notification-all-live.png`
-- `/Users/hansen/Documents/PAIMind-workspace/codex-output/qa/FP14-settings-en-light-560.png`
-
-R6 continues automatically to FP15 Permissions and Administration. FP15 must reuse native Harness Permission Presets for Sandbox/Approval while PAIMind adds only server-side product authorization and governance where a real service boundary exists.
+The 2026-08-15 FP14 evidence proved the previous prompt/motion/notification design. It remains historical evidence only and does not prove the new Personalization contract. New browser evidence must show the `个性化` surface and `paimind:personalization` user-context snapshot.

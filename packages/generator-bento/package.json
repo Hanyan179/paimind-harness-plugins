@@ -1,25 +1,29 @@
 {
   "name": "@paimind/generator-bento",
   "version": "0.1.0-alpha.0",
+  "license": "UNLICENSED",
+  "engines": { "node": "^22.19.0 || >=24.0.0" },
   "description": "Native Harness Tool provider for PAIMind Bento presentation artifacts",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
     ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./presentation-spec": { "types": "./lib/types/presentation-spec.d.ts", "default": "./lib/presentation-spec.js" },
     "./client": { "types": "./lib/types/client/index.d.ts", "default": "./lib/client.js" },
     "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
     "./package.json": "./package.json"
   },
-  "files": ["lib"],
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "dsh": { "client": { "inject": ["@deepseek-ai/dsh-client-ui-slots"], "platform": "web" } },
   "dependencies": {
     "@paimind/artifact-runtime": "workspace:^",
     "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^"
+    "@paimind/harness-compat": "workspace:^",
+    "@paimind/presentation-contracts": "workspace:^"
   },
   "peerDependencies": { "react": ">=18.0.0 <20.0.0" },
   "devDependencies": { "@paimind/testkit": "workspace:^", "react": "^18.3.1" },
-  "paimindBuild": { "node": ["src/index.ts", "src/invariant.ts"], "client": "src/client/index.tsx" },
+  "paimindBuild": { "node": ["src/index.ts", "src/presentation-spec.ts", "src/invariant.ts"], "client": "src/client/index.tsx" },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }

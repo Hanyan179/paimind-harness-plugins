@@ -1,0 +1,4 @@
+PAIMind Internal · Adapted for Harness
+Source: PAIMind Python commit 1f9fd80ea073a4ab4b5665b2300f7930f3f0520f
+Modification: retained deterministic Python 3.12 analysis behind a native Harness Tool and removed live database and free-form execution instructions.
+Summary: Skill guides invocation; the Walmart adapter owns the locked runner and data_result Artifact.

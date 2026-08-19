@@ -29,7 +29,7 @@
 6. Delete the exact id from Scheduled Tasks. Confirm the Agent uses `schedule_delete` and the catalog becomes empty after refresh.
 7. Submit an invalid rule such as `every_seconds: 60`. Confirm the native `frequency_too_high` result and no active record.
 8. Check Chinese/Dark, English/Light and a 560×800 full-width Drawer. Escape must dismiss it.
-9. Remove only `@paimind/scheduler`. Confirm native Schedule Tool schemas, native conversation, Task Monitor, Notification Center and Deliverables remain usable; restore the formal Bundle afterward.
+9. Remove only the historical Session-local facade. Confirm native Schedule Tool schemas, native conversation, Task Monitor, Notification Center and Deliverables remain usable; restore the formal Bundle afterward.
 
 ## Expected product behavior
 
@@ -65,7 +65,7 @@
 - Chinese/Dark, English/Light and 560×800 full-width Drawer passed.
 - With only PAIMind Scheduler disabled, its independent clock disappeared while native `schedule_list` remained callable and returned the canonical empty list.
 - Post-correction browser proof created native `schedule-2` through the product form, read the same `after / scheduled / session-local` record from the Session log, then deleted it through native `schedule_delete`; latest Scheduler console errors were zero.
-- Final native-profile restart removed the RQ-103 research overlay from the profile patch. Config read-back contained only `@deepseek-ai/dsh-schedule`, `@paimind/scheduler` and its invariant; the live dialog stated that it manages the current Session's native Schedule without a second task store, and a fresh reload produced zero console errors.
+- Final native-profile restart removed the RQ-103 research overlay from the profile patch. Config read-back contained only `@deepseek-ai/dsh-schedule`, the then-selected PAIMind facade and its invariant; the live dialog stated that it manages the current Session's native Schedule without a second task store, and a fresh reload produced zero console errors.
 
 Evidence files are stored outside the repository:
 

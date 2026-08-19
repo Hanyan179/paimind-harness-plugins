@@ -13,7 +13,7 @@ The surface is an independent Harness Settings section, not a Launcher destinati
 | Product capability | Decision | Canonical owner |
 |---|---|---|
 | Preset id, name, description, trust, default and broken state | Reuse exactly | Harness `agentPreset.list` |
-| Blank-Session Preset selection | Reuse exactly | Harness `agentPreset.select` plus Session binding |
+| Blank-Session Preset selection | Reuse exactly | Harness native Agent Preset Seat plus Session binding |
 | Preset execution, Tool/Skill composition and persistence | Reuse exactly | Harness Agent Preset runtime |
 | Catalog search, product categories, featured rows and favorites | PAIMind product metadata keyed by Preset id | `@paimind/agent-market` |
 | Copy, delete, default setting and file authoring | Native reuse / later Builder | Harness Agent Presets UI and FP10 |
@@ -23,7 +23,7 @@ The surface is an independent Harness Settings section, not a Launcher destinati
 
 ### `@paimind/harness-compat`
 
-- Exposes only the version-isolated `agentPreset.list` and `agentPreset.select` wire shapes plus the minimal Session binding facts FP09 needs.
+- Exposes the version-isolated `agentPreset.list` wire shape, native Agent Preset Seat control and the minimal Session binding facts FP09 needs.
 - Feature code imports no `@deepseek-ai/*` package.
 
 ### `@paimind/agent-market`
@@ -33,7 +33,7 @@ The surface is an independent Harness Settings section, not a Launcher destinati
 - Preserves Host ordering as a stable tie-breaker while allowing search and product filters.
 - Product metadata contains only category/featured/favorite state keyed by Preset id. It cannot change native trust, default, broken, Tool, Skill or runtime fields.
 - Favorites use a replaceable browser-local metadata adapter in Goal A. This is explicitly not Agent configuration; cloud synchronization belongs to a later provider.
-- Selecting a card calls `agentPreset.select` only when the active Session is blank. A started Session remains locked by the native rule.
+- Selecting a card reuses the current blank Session or creates a new one, then selects through the native Agent Preset Seat. Completion requires the Session binding and the visible selector state to remain synchronized. A started Session remains locked by the native rule.
 
 ## State and failure paths
 
@@ -42,9 +42,10 @@ flowchart LR
     H["Harness agentPreset.list"] --> C["Agent Center catalog projection"]
     M["PAIMind metadata keyed by Preset id"] --> C
     C --> S{"Blank Session?"}
-    S -- "Yes" --> A["Harness agentPreset.select"]
+    S -- "Yes" --> A["Harness native Agent Preset Seat"]
     S -- "No" --> L["Native lock explanation"]
     A --> B["Native Session Preset binding"]
+    B --> V["Visible selector and binding agree"]
 ```
 
 - Empty roster: show a truthful deployment-empty state.

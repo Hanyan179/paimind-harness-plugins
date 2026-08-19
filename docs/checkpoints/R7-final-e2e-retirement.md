@@ -112,7 +112,7 @@ Post-repair evidence:
 The later canonical-object audit reopened FP13 because the formal Bundle had
 also selected a PAIMind-owned Scheduler Domain. That selection was removed.
 Goal A now loads only Harness `@deepseek-ai/dsh-schedule` plus the independent
-`@paimind/scheduler` management surface, which folds the same Session events and
+the former Session-local scheduler management surface, which folded the same Session events and
 uses native Session prompts for `schedule_create` / `schedule_delete`. The
 future platform Scheduler code remains buildable outside the Bundle. The
 final corrected full gate passed 71 test files / 208 tests; exact composition proved
@@ -120,7 +120,7 @@ the shadow Scheduler, adapters and Platform API absent; the browser created,
 read and deleted canonical `schedule-2` with no new Scheduler console errors.
 - The final persisted Web profile was audited separately from the formal Bundle.
   Its temporary RQ-103 overlay was cleared, config read-back retained only native
-  Schedule plus `@paimind/scheduler`, and the restarted `3080` empty state showed
+  Schedule plus the former Session-local facade, and the restarted `3080` empty state showed
   Paramont branding and the native-Schedule dialog with zero fresh console errors.
 - the independent Task Monitor button opened its native-Job Drawer and truthfully
   showed zero process-local tasks after restart;

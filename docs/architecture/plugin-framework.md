@@ -1,5 +1,15 @@
 # PAIMind Harness Plugin Framework
 
+## Document responsibility
+
+This document owns architecture boundaries, domain ownership and composition
+decisions. The normative package checklist lives only in
+[`../standards/plugin-authoring.md`](../standards/plugin-authoring.md), selected
+versions live only in [`../compatibility/matrix.md`](../compatibility/matrix.md),
+and package identities/roles live only in
+[`../standards/package-roles.json`](../standards/package-roles.json). Historical
+status and evidence remain in the migration ledger.
+
 ## Decision
 
 DeepSeek Harness is the only runtime. PAIMind is an out-of-tree product plugin suite loaded through a Harness Profile and Bundle; no PAIMind package patches or vendors Harness source.
@@ -24,19 +34,17 @@ The native `details` slot is already occupied by Harness Tool Details. The exter
 - `@paimind/harness-compat`: the only package allowed to encode version-sensitive Harness snapshot, slot, event, and service interfaces.
 - `@paimind/contracts`: stable PAIMind domain references and migration identifiers.
 - `@paimind/testkit`: plugin registration/disposal fixtures and later real-composition helpers.
-- `@paimind/permissions-core`: product authorization independent of Harness sandbox and approval presets.
 - `@paimind/extension-center`: PAIMind product capability registry and Settings contribution. It groups immutable descriptors into Experience, Content & Rendering, Agents, Skills & Tools, Automation, Governance and Developer, then joins technical state from Harness Plugin Inventory by package id. It owns no plugin loading, version, dependency or enablement state and never acts as a feature launcher.
 - `@paimind/branding`: independently installable Paramont Harness identity. It contributes an App-shell descriptor, replaces only the native brand artwork through a reversible `shell.overlay` portal, and owns the document product suffix, favicon and installable-app manifest. It does not own Theme, Sidebar layout, navigation or Session state.
 - `@paimind/developer-resources`: read-only native Plugin Inventory diagnostics, current `paimind.extension` Surface Catalog and bundled integration-contract reference. Extension Center remains the sole child-slot owner; Developer Resources declares no Loader control, version/dependency truth or second technical registry.
 - `@paimind/workspace-project`: headless read-only `Project = Workspace` projection; its prior native-header action is reopened for retirement and it owns no Project persistence or navigation tree.
 - `@paimind/better-sidebar-adapter`: the only package allowed to encode or call the Better Sidebar service; it exposes stable Preview/Side Card and file-capability contracts to viewer/trace packages. It has no Task Monitor responsibility.
-- `@paimind/task-monitor`: an independent Harness Session-header button and responsive Popover/Drawer projecting exact PAIMind generator kinds from native Harness Job state. It has no lifecycle store, Preview Source or Better Sidebar dependency.
-- `@paimind/artifacts`: observable association over native Harness Turn deliverables and product artifact sources; it owns no file bytes and delegates only Workspace-contained PDF/PPTX/HTML/XLSX paths through explicit viewer/service allowlists.
+- `@paimind/task-monitor`: the higher-priority implementation of the native `job-list` Session-header slot. Its responsive Popover/Bottom Sheet derives Session, Project, Goal, Todo, Plan, Workflow/Subagent, Tool Call, all native Jobs, Artifact, Deliverable, invoked Skill and evidenced MCP facts. It has no lifecycle store, Preview Source or Better Sidebar dependency; removing it restores the native Job button.
+- `@paimind/artifacts`: observable association over native Harness Turn deliverables and product artifact sources; it owns no fixed overview tab or file bytes and routes exact Workspace-contained PDF/PPTX/HTML/XLSX paths through explicit viewer/service allowlists.
 - `@paimind/renderer-pdf`: removable local PDF.js renderer registered only through the stable file-viewer adapter. It corrects the selected Chromium surface where the provider's browser-native Blob iframe was blank, and falls back to the provider viewer when absent.
-- `@paimind/renderer-bento`: the narrow product-specific renderer exception. It owns a random loopback-only origin, token-bound Session path confinement, restrictive CSP and one independent Side Card tab; it neither patches the provider HTML viewer nor exposes Harness APIs to the Bento runtime.
+- `@paimind/renderer-bento`: the narrow product-specific renderer exception. It owns a random loopback-only origin, token-bound Session path confinement, restrictive CSP and one hidden on-demand workbench tab with dynamic Artifact title; it neither patches the provider HTML viewer nor exposes Harness APIs to the Bento runtime.
 - `@paimind/agent-market`: independent Agent Center catalog and governance surface over Harness `agentPreset.list` and blank-Session `agentPreset.select`. It stores only product metadata keyed by native Preset id and owns neither Preset documents nor Agent execution.
 - `@paimind/notifications`: durable message/read-state sidecar for canonical Harness object references. The Host captures trusted producer identity, stores bounded notification rows in the Harness profile Storage Domain and exposes strict Typert Remote methods. It owns no Job, Schedule, Artifact or Session lifecycle state; its independent bell and Overlay remain usable without Extension Center and are removable without affecting native conversation.
-- `@paimind/scheduler`: unselected legacy facade over Harness Session-local Schedule objects, retained only for compatibility and historical acceptance checks.
 - `@paimind/platform-scheduler`: active RQ-103 Core for time rules, action catalog, durable task definitions, Runs, idempotency, retry, timeout and audit.
 - `@paimind/scheduler-adapter-harness`: active Adapter service that creates a new canonical Harness Session and Native Job per Run; all rc-sensitive construction and result parsing stays in `@paimind/harness-compat`.
 - `@paimind/scheduler-adapter-http`: active Adapter service for signed HTTPS `202` dispatch and result-Origin allowlist.
@@ -86,8 +94,8 @@ The native `details` slot is already occupied by Harness Tool Details. The exter
 - Generator Providers register Harness Tool/Skill capabilities and start native Harness Jobs.
 - Current Harness has no public custom Session-event registration seam. A generator therefore publishes one versioned `ArtifactProducedEnvelopeV1` and, when applicable, one correlated `ArtifactTraceEnvelopeV1` through the same native `tool/result.meta`; one public Session Projection folds those durable facts and always references the native Job id.
 - Successful results expose the same verified path through native Tool presentation `locations`, so Harness owns the Conversation Deliverable. Failed envelopes expose no location and cannot create a false clickable artifact.
-- Conversation Deliverables, Task Monitor, Artifact Preview, Presentation Trace, Notifications and Scheduler results consume the same Job plus Session Projection chain.
-- Notification producers consume versioned native Tool Result metadata or a future verified Schedule/Job seam. They never parse model prose, filenames or HTML, and they publish only message/read state plus one closed canonical target. Producer identity is assigned Host-side rather than accepted from Agent or Client input.
+- Conversation Deliverables, Task Monitor, Artifact Preview and Presentation Trace consume the same Job plus Session Projection chain. Notification Center is deliberately outside that automatic event chain.
+- Notification Center is a passive message/read-state sidecar. A business application or platform module must explicitly call a Host-registered producer or the authenticated Platform API; Tool, Job, Session, Schedule and Artifact events do not publish automatically. Producer identity is assigned Host-side rather than accepted from Agent or Client input.
 - Native Job records are process-local in the selected Harness runtime. A page refresh retains them, while a Harness process restart retains the Session Artifact projection and files but not terminal Job history. PAIMind does not build a duplicate durable Job store to hide this limitation.
 - `kind` and `previewKind` are explicit producer capabilities. No consumer parses model prose, filenames, file extensions or HTML to invent artifact semantics.
 - Technical Viewer verification and Product E2E verification are tracked separately. QA query parameters never satisfy a Product E2E gate.
@@ -131,7 +139,7 @@ real browser PPTX/XLSX gates.
 
 - Harness Permission Presets remain the sole owner of Sandbox mode and one-shot Approval policy. Full Access is a file-effect mode, not a business-administrator role.
 - The current Harness anonymous user id is correlation metadata, not an authenticated account. PAIMind therefore composes no default enterprise principal in Goal A.
-- `@paimind/permissions-core` receives a trusted server-side Authorization Provider, resolves the principal from that provider and asks the same provider for the product-capability decision. Callers never submit a trusted role.
+- No PAIMind authorization runtime is selected. Harness Permission Presets remain canonical; a future product-capability layer requires a real authenticated provider and a separately approved contract.
 - Missing provider, missing principal, explicit denial and provider failure all fail closed. PAIMind adds no browser role switcher, local RBAC store or simulated Configuration Studio publication.
 - Extension Center keeps the Governance product category, but shows an explicit no-provider state until a real authenticated provider contributes a capability. Technical absence is not relabeled as an Available governance product.
 

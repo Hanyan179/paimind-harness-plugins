@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    { "name": "@paimind/agent-builder", "path": "packages/agent-builder", "role": "headless-plugin" },
+    { "name": "@paimind/agent-market", "path": "packages/agent-market", "role": "client-plugin" },
+    { "name": "@paimind/artifact-runtime", "path": "packages/artifact-runtime", "role": "headless-plugin" },
+    { "name": "@paimind/artifacts", "path": "packages/artifacts", "role": "client-plugin" },
+    { "name": "@paimind/better-sidebar-adapter", "path": "packages/better-sidebar-adapter", "role": "client-plugin" },
+    { "name": "@paimind/branding", "path": "packages/branding", "role": "client-plugin" },
+    { "name": "@paimind/contracts", "path": "packages/contracts", "role": "shared-support" },
+    { "name": "@paimind/developer-resources", "path": "packages/developer-resources", "role": "client-plugin" },
+    { "name": "@paimind/extension-center", "path": "packages/extension-center", "role": "client-plugin" },
+    { "name": "@paimind/generator-bento", "path": "packages/generator-bento", "role": "client-plugin" },
+    { "name": "@paimind/generator-office", "path": "packages/generator-office", "role": "client-plugin" },
+    { "name": "@paimind/generator-web", "path": "packages/generator-web", "role": "client-plugin" },
+    { "name": "@paimind/harness-bundle", "path": "packages/harness-bundle", "role": "shared-support" },
+    { "name": "@paimind/harness-compat", "path": "packages/harness-compat", "role": "shared-support" },
+    { "name": "@paimind/notifications", "path": "packages/notifications", "role": "client-plugin" },
+    { "name": "@paimind/platform-api", "path": "packages/platform-api", "role": "headless-plugin" },
+    { "name": "@paimind/platform-sdk", "path": "packages/platform-sdk", "role": "shared-support" },
+    { "name": "@paimind/presentation-contracts", "path": "packages/presentation-contracts", "role": "shared-support" },
+    { "name": "@paimind/presentation-trace", "path": "packages/presentation-trace", "role": "client-plugin" },
+    { "name": "@paimind/renderer-bento", "path": "packages/renderer-bento", "role": "client-plugin" },
+    { "name": "@paimind/renderer-pdf", "path": "packages/renderer-pdf", "role": "client-plugin" },
+    { "name": "@paimind/runtime-orbs", "path": "packages/runtime-orbs", "role": "client-plugin" },
+    { "name": "@paimind/scheduler-adapter-feishu-bot", "path": "packages/scheduler-adapter-feishu-bot", "role": "headless-plugin" },
+    { "name": "@paimind/scheduler-adapter-harness", "path": "packages/scheduler-adapter-harness", "role": "headless-plugin" },
+    { "name": "@paimind/scheduler-adapter-http", "path": "packages/scheduler-adapter-http", "role": "headless-plugin" },
+    { "name": "@paimind/platform-scheduler", "path": "packages/scheduler", "role": "client-plugin" },
+    { "name": "@paimind/skill-market", "path": "packages/skill-market", "role": "client-plugin" },
+    { "name": "@paimind/task-monitor", "path": "packages/task-monitor", "role": "client-plugin" },
+    { "name": "@paimind/testkit", "path": "packages/testkit", "role": "shared-support" },
+    { "name": "@paimind/user-settings", "path": "packages/user-settings", "role": "client-plugin" },
+    { "name": "@paimind/workspace-project", "path": "packages/workspace-project", "role": "client-plugin" }
+    ,{ "name": "@paimind/walmart-proposal-adapter", "path": "packages/walmart-proposal-adapter", "role": "headless-plugin" }
+  ]
+}

@@ -1,6 +1,8 @@
 {
   "name": "@paimind/platform-api",
   "version": "0.1.0-alpha.0",
+  "license": "UNLICENSED",
+  "engines": { "node": "^22.19.0 || >=24.0.0" },
   "description": "Authenticated server-to-server API for PAIMind notifications and scheduled actions",
   "type": "module",
   "main": "lib/index.js",
@@ -10,7 +12,7 @@
     "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
     "./package.json": "./package.json"
   },
-  "files": ["lib"],
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "dependencies": {
     "@paimind/contracts": "workspace:^",
     "@paimind/harness-compat": "workspace:^",

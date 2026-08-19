@@ -1,6 +1,8 @@
 {
   "name": "@paimind/skill-market",
   "version": "0.1.0-alpha.0",
+  "license": "UNLICENSED",
+  "engines": { "node": "^22.19.0 || >=24.0.0" },
   "description": "PAIMind catalog and governance product layer over native Harness Session skills",
   "type": "module",
   "main": "lib/index.js",
@@ -15,7 +17,7 @@
     "./client": { "types": "./lib/types/client/index.d.ts", "default": "./lib/client.js" },
     "./package.json": "./package.json"
   },
-  "files": ["lib"],
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "dsh": {
     "client": {
       "inject": [
@@ -24,7 +26,7 @@
         "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-api-remotes",
         "@deepseek-ai/dsh-client-ui-conversation",
-        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-primitives",
         "@deepseek-ai/dsh-client-ui-slots"
       ],
       "platform": "web"
@@ -35,6 +37,7 @@
     "@paimind/contracts": "workspace:^",
     "@paimind/harness-compat": "workspace:^",
     "fflate": "^0.8.3",
+    "yaml": "^2.9.0",
     "yauzl": "^3.2.0",
     "zod": "^4.4.3"
   },

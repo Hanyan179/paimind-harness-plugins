@@ -22,4 +22,13 @@ describe('Scheduler calendar rules', () => {
       '2026-08-16T01:00:00Z', '2026-08-19T04:00:00Z',
     )).toBe('2026-08-19T01:00:00.000Z')
   })
+
+  it('runs weekdays Monday through Friday and skips the weekend', () => {
+    expect(nextScheduleOccurrence(
+      { kind: 'weekdays', time: '09:00' }, 'Asia/Shanghai', '2026-08-14T02:00:00Z',
+    )).toBe('2026-08-17T01:00:00.000Z')
+    expect(nextScheduleOccurrence(
+      { kind: 'weekdays', time: '09:00' }, 'Asia/Shanghai', '2026-08-17T00:00:00Z',
+    )).toBe('2026-08-17T01:00:00.000Z')
+  })
 })

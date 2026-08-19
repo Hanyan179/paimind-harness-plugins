@@ -29,7 +29,7 @@ Harness Session（会话）是平台执行事项可选择的一种 Adapter（适
 
 不提供“成功列表”“失败列表”“待处理列表”等重复一级页面；状态是筛选与 Badge（状态标识），不是新的信息架构。`progress` 只在 `running` 状态以文字百分比出现，不使用持续占位的进度条。
 
-唯一业务入口位于 Harness **设置 → 平台定时任务**。侧边栏、会话页和 Extension Center（扩展中心）不再提供第二个快捷入口，避免同一能力出现两套入口与状态。
+唯一业务入口位于 Harness **设置 → 平台定时任务**，选中后在设置内容区直接展示“任务列表 / 运行记录”，不设置说明中转页或“打开任务列表”二次操作。侧边栏、会话页和 Extension Center（扩展中心）不再提供第二个快捷入口，避免同一能力出现两套入口与状态。
 
 任务列表排序固定为：正在调度且存在下次执行时间的任务优先，并按 `nextRunAt` 从近到远排列；暂停、已执行等非活动任务随后，按最近更新时间倒序排列。运行记录按触发时间从新到旧排列。
 
@@ -138,7 +138,7 @@ Harness Session（会话）是平台执行事项可选择的一种 Adapter（适
 5. Harness 事项创建独立 Session 和 Native Job，结果可打开准确 Session。
 6. HTTP 事项验证签名、`202`、重试、回调、重放与链接白名单。
 7. 外部业务页面只通过隔离的新标签页打开。
-8. 当前 Bundle、技术插件列表和产品入口只存在平台 Scheduler，不装载 `@deepseek-ai/dsh-schedule`、`@deepseek-ai/dsh-time-context` 或旧 `@paimind/scheduler`。
+8. 当前 Bundle、技术插件列表和产品入口只存在平台 Scheduler，不装载 `@deepseek-ai/dsh-schedule`、`@deepseek-ai/dsh-time-context` 或已退役的 Session-local facade。
 9. Light／Dark、桌面／窄屏／移动宽度无溢出、遮挡或控制台错误。
 10. “立即运行”生成标记为 `manual` 的独立 Run，任务状态和 `nextRunAt` 保持不变；一次性任务执行后通过“编辑”选择未来时间，页面不得出现重复的“重新安排”操作。
 11. 共享测试环境存在时才可标记 Formal Acceptance Passed（正式验收通过）；否则为 Pre-acceptance Passed（预验收通过）。

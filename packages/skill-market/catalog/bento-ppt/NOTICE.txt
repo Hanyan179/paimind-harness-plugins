@@ -1,0 +1,4 @@
+PAIMind Internal · Adapted for Harness
+Source: PAIMind Python commit 1f9fd80ea073a4ab4b5665b2300f7930f3f0520f
+Modification: replaced Python and Codex rendering instructions with validated Outline and native Harness Tool orchestration.
+Summary: AI owns narrative and layout intent; deterministic Node.js Tools own facts, HTML, trace, validation, Jobs, and Artifacts.

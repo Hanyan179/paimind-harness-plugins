@@ -10,11 +10,14 @@ const time = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
 const rule = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('once'), at: z.iso.datetime({ offset: false }) }).readonly(),
   z.object({ kind: z.literal('daily'), time }).readonly(),
+  z.object({ kind: z.literal('weekdays'), time }).readonly(),
   z.object({ kind: z.literal('weekly'), weekday: z.number().int().min(1).max(7), time }).readonly(),
   z.object({ kind: z.literal('monthly'), dayOfMonth: z.number().int().min(1).max(28), time }).readonly(),
 ])
 const createInputBase = z.object({
   name: z.string().min(1).max(160), actionId: id, rule,
+  actionInput: z.record(z.string(), z.json()).optional(),
+  sourceSessionId: z.string().min(1).max(240).optional(),
   timeZone: z.string().min(1).max(120), enabled: z.boolean(),
 })
 const createInput = createInputBase.readonly()
@@ -23,7 +26,7 @@ const mutation = z.union([
   z.object({ ok: z.literal(true), value: schedulerDefinitionSchema }).readonly(),
   z.object({
     ok: z.literal(false),
-    code: z.enum(['not-found', 'version-conflict', 'action-unavailable', 'no-future-occurrence']),
+    code: z.enum(['not-found', 'version-conflict', 'action-unavailable', 'invalid-input', 'no-future-occurrence']),
     message: z.string(),
   }).readonly(),
 ])
@@ -103,6 +106,17 @@ export const PAIMIND_SCHEDULER_REMOTE_DESCRIPTORS = Object.freeze([
     } }],
     result: { mode: 'strict' as const, typeSymbol: '@paimind/platform-scheduler#PaimindScheduleRunNowResult', schema: runNowResult },
     sourceLocation: { file: 'packages/scheduler/src/index.ts', line: 217, column: 3 },
+  },
+  {
+    id: '@paimind/platform-scheduler#paimindScheduler/restore',
+    service: 'paimindScheduler', namespace: 'paimindScheduler', method: 'restore',
+    invocation: { kind: 'direct' as const },
+    parameters: [{ name: 'input', wire: 'input', source: 'json' as const, codec: {
+      mode: 'strict' as const, typeSymbol: '@paimind/platform-scheduler#PaimindScheduleRestoreRequest',
+      schema: z.object({ scheduleId: id, ifVersion: id }).readonly(),
+    } }],
+    result: { mode: 'strict' as const, typeSymbol: '@paimind/platform-scheduler#PaimindScheduleMutationResult', schema: mutation },
+    sourceLocation: { file: 'packages/scheduler/src/index.ts', line: 222, column: 3 },
   },
 ])
 

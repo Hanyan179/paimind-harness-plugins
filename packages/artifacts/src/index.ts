@@ -15,10 +15,10 @@ export const name = 'paimind-artifacts'
 /** Artifact discovery and presentation are browser projections; bytes stay provider-owned. */
 export function apply(): void {}
 
-export const PAIMIND_ARTIFACT_KINDS = ['pdf', 'pptx', 'html', 'xlsx'] as const
+export const PAIMIND_ARTIFACT_KINDS = ['pdf', 'pptx', 'html', 'xlsx', 'json'] as const
 export type PaimindArtifactKind = typeof PAIMIND_ARTIFACT_KINDS[number]
 export const PAIMIND_ARTIFACT_PREVIEW_KINDS = [
-  'html-document', 'html-deck', 'bento-deck', 'spreadsheet',
+  'html-document', 'html-deck', 'bento-deck', 'spreadsheet', 'data-document',
 ] as const
 export type PaimindArtifactPreviewKind = typeof PAIMIND_ARTIFACT_PREVIEW_KINDS[number]
 export type PaimindArtifactState = 'available' | 'updating' | 'missing' | 'failed'
@@ -134,6 +134,7 @@ export function kindForArtifactPath(path: string): PaimindArtifactKind | null {
 function previewKindMatches(kind: PaimindArtifactKind, previewKind: PaimindArtifactPreviewKind): boolean {
   if (kind === 'html') return previewKind === 'html-document' || previewKind === 'html-deck' || previewKind === 'bento-deck'
   if (kind === 'xlsx') return previewKind === 'spreadsheet'
+  if (kind === 'json') return previewKind === 'data-document'
   return false
 }
 

@@ -111,7 +111,7 @@ while retained local source edits are preserved rather than reset.
 Post-Goal-A product decision RQ-103 activates `@paimind/platform-scheduler` as
 the single PAIMind Scheduled Tasks surface in the formal Bundle, together with
 its Harness, HTTP and Feishu-bot Adapter services. The former
-`@paimind/scheduler` Session-local facade remains buildable but is unselected,
+The former Session-local scheduler facade remained buildable but unselected at that checkpoint;
 and the opt-in `@deepseek-ai/dsh-schedule` / `@deepseek-ai/dsh-time-context`
 rows are no longer selected by the PAIMind profile. Platform API/SDK packages
 remain separately deployable developer contracts; see

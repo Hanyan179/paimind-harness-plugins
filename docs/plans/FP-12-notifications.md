@@ -35,7 +35,7 @@ Harness `0.1.0-rc.6` has no Notification domain or public notification API. A mi
 
 - Host service opens the versioned `paimind_notifications` Storage Domain under the active Harness profile.
 - A registered producer captures its trusted source in Host code and publishes idempotently.
-- The first real producer listens after native Tool execution and consumes only the versioned PAIMind Artifact Tool Result metadata. It does not parse model prose, file names, paths or HTML.
+- The service is passive: it never listens to Tool, Job, Session, Schedule or Artifact lifecycle events. Business and platform producers must call `registerProducer(...).publish(...)` or the authenticated Platform API explicitly.
 - Client mounts the package's strict Remote descriptors and contributes an independent sidebar-footer bell plus a shell Overlay/Drawer.
 - Extension Center manages the capability under `Automation`; it is not the product entry point.
 - Artifact actions open the exact Harness Session, focus the exact artifact id and open the stable Artifacts side card adapter.
@@ -44,14 +44,11 @@ Harness `0.1.0-rc.6` has no Notification domain or public notification API. A mi
 
 ```mermaid
 flowchart LR
-    A["Harness Agent and Tool"] --> J["Harness Job lifecycle"]
-    A --> M["Native tool/result.meta Artifact envelope"]
-    M --> P["Artifact Session Projection"]
-    M --> N["Trusted Notification producer"]
+    A["Business application or platform module"] --> N["Explicit trusted Notification producer call"]
     N --> S["PAIMind message and read-state domain"]
     S --> B["Independent notification bell"]
-    B --> D["Exact Session and Artifact deep link"]
-    D --> P
+    B --> D["Explicit safe target"]
+    T["Tool Job Session Schedule and Artifact events"] -. "No automatic subscription" .-> S
 ```
 
 The notification does not persist Job status, Artifact availability, revision truth or Session content. If a linked object changes, its native projection remains authoritative.
@@ -63,19 +60,19 @@ The notification does not persist Job status, Artifact availability, revision tr
 - `markRead` uses a version compare-and-set contract. A conflict returns the current record rather than overwriting another client.
 - `markAllRead` changes read timestamps only.
 - Body is rendered as plain text; markup is never interpreted.
-- Failed notification persistence is caught after Tool execution, logged and isolated. A successful native Tool result is never converted into a conversation failure.
+- Notification publication failure is returned only to the explicit caller and never changes the referenced business or Harness object lifecycle.
 - Missing target or removed viewer leaves the message readable; native conversation remains usable.
 - Removing only this package leaves Artifact, Task Monitor, Extension Center and native conversation running.
 
 ## Product E2E gate
 
-1. Start from a real Harness Workspace/Session; do not publish a QA notification or use a preview query.
-2. Ask the real Agent to invoke a PAIMind generator Tool and create a new artifact.
-3. Verify the same execution produces a real Native Job, native Deliverable entry, Artifact projection and one unread notification from the trusted Artifact producer.
-4. Open the independent bell, filter All/Unread, inspect plain-text source/body/level and mark one/all read.
-5. Follow `View artifact`; the exact native Session must open and the exact artifact row must be focused in the Artifacts side card.
-6. Refresh the browser and restart Harness; notification and read state must recover from Harness profile storage.
-7. Trigger a real generator failure; it may emit an error notification but must not create a false available artifact.
+1. Record the current Notification count, then generate a real Artifact and verify its Tool, Job, Deliverable and Artifact results remain available while the count does not change.
+2. Publish one real message through a trusted registered producer or the authenticated Platform API.
+3. Verify exactly one new unread message appears with the caller-bound source, explicit content, level and target.
+4. Repeat the same `idempotencyKey` and verify no duplicate message is created.
+5. Open the independent bell, filter All/Unread, inspect plain-text source/body/level and mark one/all read.
+6. Follow the explicit target and verify the exact registered destination opens.
+7. Refresh the browser and restart Harness; notification and read state must recover from Harness profile storage.
 8. Verify Chinese/Dark, English/Light and 560 px narrow Drawer behavior.
 9. Remove only `@paimind/notifications`; native conversation, Task Monitor, Artifact entry and viewer must remain usable.
 
@@ -88,4 +85,4 @@ The notification does not persist Job status, Artifact availability, revision tr
 - Full tests, Type Check, Production Build and framework scan.
 - Exact Harness composition: full install/boot/remove/restore, operation without Extension Center, and an isolated composition with Notification Center absent and zero upstream source delta.
 
-FP12 reached Product E2E Verified on 2026-08-15 after the real Tool → Job → Artifact → Notification → exact deep-link chain, read-state persistence, refresh/restart, real failure and isolated-removal/reinstall gates passed in the browser.
+FP12 originally reached Product E2E Verified on 2026-08-15 with an automatic Artifact producer. The 2026-08-17 product correction retired that producer and replaced the gate with explicit-producer publication plus proof that ordinary Artifact generation does not change the Notification count.

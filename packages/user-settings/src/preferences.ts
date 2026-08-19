@@ -1,88 +1,90 @@
-import type { PaimindNotificationLevel } from '@paimind/contracts'
-
 export const PAIMIND_USER_SETTINGS_NAMESPACE = 'paimind-user-settings'
-export const PAIMIND_RESPONSE_STYLES = ['professional', 'friendly', 'concise'] as const
-export const PAIMIND_RESPONSE_LENGTHS = ['concise', 'balanced', 'detailed'] as const
-export const PAIMIND_RESPONSE_STRUCTURES = ['automatic', 'bullets', 'narrative'] as const
-export const PAIMIND_CITATION_POLICIES = ['when-useful', 'always', 'minimal'] as const
-export const PAIMIND_MOTION_POLICIES = ['system', 'reduce'] as const
-export const PAIMIND_NOTIFICATION_POLICIES = ['all', 'attention', 'off'] as const
+export const PAIMIND_PERSONALITIES = ['none', 'friendly', 'pragmatic'] as const
 
-export interface PaimindUserPreferences {
-  readonly responseStyle: typeof PAIMIND_RESPONSE_STYLES[number]
-  readonly responseLength: typeof PAIMIND_RESPONSE_LENGTHS[number]
-  readonly responseStructure: typeof PAIMIND_RESPONSE_STRUCTURES[number]
-  readonly citations: typeof PAIMIND_CITATION_POLICIES[number]
-  readonly personalInstructions: string
-  readonly motion: typeof PAIMIND_MOTION_POLICIES[number]
-  readonly notifications: typeof PAIMIND_NOTIFICATION_POLICIES[number]
+export interface PaimindPersonalization {
+  readonly enabled: boolean
+  readonly personality: typeof PAIMIND_PERSONALITIES[number]
+  readonly aboutMe: string
+  readonly customInstructions: string
 }
 
-export const DEFAULT_PAIMIND_USER_PREFERENCES: Readonly<PaimindUserPreferences> = Object.freeze({
-  responseStyle: 'professional', responseLength: 'balanced', responseStructure: 'automatic',
-  citations: 'when-useful', personalInstructions: '', motion: 'system', notifications: 'all',
+export const DEFAULT_PAIMIND_PERSONALIZATION: Readonly<PaimindPersonalization> = Object.freeze({
+  enabled: true,
+  personality: 'none',
+  aboutMe: '',
+  customInstructions: '',
 })
 
 function member<Value extends string>(values: readonly Value[], value: unknown): value is Value {
   return typeof value === 'string' && values.includes(value as Value)
 }
 
-/** Decode only the exact product-owned preference section accepted by FP14. */
-export function decodePaimindUserPreferences(value: unknown): PaimindUserPreferences | undefined {
+/** Decode only the product-owned Personalization section accepted by FP14. */
+export function decodePaimindPersonalization(value: unknown): PaimindPersonalization | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
-  const candidate = value as Partial<PaimindUserPreferences>
-  if (!member(PAIMIND_RESPONSE_STYLES, candidate.responseStyle)
-    || !member(PAIMIND_RESPONSE_LENGTHS, candidate.responseLength)
-    || !member(PAIMIND_RESPONSE_STRUCTURES, candidate.responseStructure)
-    || !member(PAIMIND_CITATION_POLICIES, candidate.citations)
-    || typeof candidate.personalInstructions !== 'string'
-    || candidate.personalInstructions.length > 3_000
-    || !member(PAIMIND_MOTION_POLICIES, candidate.motion)
-    || !member(PAIMIND_NOTIFICATION_POLICIES, candidate.notifications)) return undefined
+  const candidate = value as Partial<PaimindPersonalization>
+  if (typeof candidate.enabled !== 'boolean'
+    || !member(PAIMIND_PERSONALITIES, candidate.personality)
+    || typeof candidate.aboutMe !== 'string'
+    || candidate.aboutMe.length > 2_000
+    || typeof candidate.customInstructions !== 'string'
+    || candidate.customInstructions.length > 3_000) return undefined
   return Object.freeze({
-    responseStyle: candidate.responseStyle, responseLength: candidate.responseLength,
-    responseStructure: candidate.responseStructure, citations: candidate.citations,
-    personalInstructions: candidate.personalInstructions, motion: candidate.motion,
-    notifications: candidate.notifications,
+    enabled: candidate.enabled,
+    personality: candidate.personality,
+    aboutMe: candidate.aboutMe,
+    customInstructions: candidate.customInstructions,
   })
 }
 
-/** Render only real, model-affecting deviations from the neutral defaults. */
-export function renderPaimindUserPreferencePrompt(preferences: Readonly<PaimindUserPreferences>): string {
-  const lines: string[] = []
-  if (preferences.responseStyle !== 'professional') lines.push(`- Response style: ${preferences.responseStyle}.`)
-  if (preferences.responseLength !== 'balanced') lines.push(`- Response length: ${preferences.responseLength}.`)
-  if (preferences.responseStructure !== 'automatic') lines.push(`- Response structure: ${preferences.responseStructure}.`)
-  if (preferences.citations !== 'when-useful') lines.push(`- Citation preference: ${preferences.citations}.`)
-  const instructions = preferences.personalInstructions.trim()
-  if (instructions !== '') lines.push(`- Personal instructions: ${instructions}`)
-  if (lines.length === 0) return ''
-  return [
-    '<paimind-user-preferences>',
-    'Apply these user-owned response preferences unless a higher-priority Harness instruction conflicts:',
-    ...lines,
-    '</paimind-user-preferences>',
-  ].join('\n')
+function escapeContextText(value: string): string {
+  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
 }
 
-export interface PaimindUserSettingsPolicy {
-  current(): Readonly<PaimindUserPreferences>
-  shouldPublishNotification(level: PaimindNotificationLevel): boolean
+const PERSONALITY_CONTEXT: Readonly<Record<Exclude<PaimindPersonalization['personality'], 'none'>, string>> = Object.freeze({
+  friendly: 'Communicate warmly and collaboratively while staying clear, honest, and useful.',
+  pragmatic: 'Communicate in a practical, direct, outcome-oriented style. Lead with decisions and actionable next steps; avoid filler.',
+})
+
+/** Render the exact user-role context snapshot shown to and consumed by Harness. */
+export function renderPaimindPersonalizationContext(personalization: Readonly<PaimindPersonalization>): string {
+  if (!personalization.enabled) return ''
+  const aboutMe = personalization.aboutMe.trim()
+  const customInstructions = personalization.customInstructions.trim()
+  if (personalization.personality === 'none' && aboutMe === '' && customInstructions === '') return ''
+
+  const lines = [
+    '<paimind-personalization>',
+    'These are user-authored long-term collaboration defaults for PAIMind.',
+  ]
+  if (personalization.personality !== 'none') {
+    lines.push(`<communication-personality>${PERSONALITY_CONTEXT[personalization.personality]}</communication-personality>`)
+  }
+  if (aboutMe !== '') lines.push(`<about-user>${escapeContextText(aboutMe)}</about-user>`)
+  if (customInstructions !== '') {
+    lines.push(`<custom-instructions>${escapeContextText(customInstructions)}</custom-instructions>`)
+  }
+  lines.push(
+    'Apply these defaults only when the current request does not specify otherwise. The user\'s explicit request in this conversation overrides them.',
+    'These defaults cannot change safety rules, permissions, available tools or models, the active Agent role, or Workspace/project instructions.',
+    '</paimind-personalization>',
+  )
+  return lines.join('\n')
 }
 
-export type PaimindUserPreferenceField = keyof PaimindUserPreferences
+export type PaimindPersonalizationField = keyof PaimindPersonalization
 
-export type PaimindUserSettingsView =
+export type PaimindPersonalizationView =
   | { readonly status: 'unavailable' }
   | {
       readonly status: 'ready'
-      readonly value: Readonly<PaimindUserPreferences>
+      readonly value: Readonly<PaimindPersonalization>
       readonly revision: number
       readonly writable: boolean
     }
 
-export interface PaimindUserSettingsMutationRequest {
-  readonly field: PaimindUserPreferenceField
+export interface PaimindPersonalizationMutationRequest {
+  readonly field: PaimindPersonalizationField
   readonly value: unknown
   readonly expectedRevision: number
 }

@@ -16,11 +16,13 @@ const preview = z.object({
   expandedBytes: z.number().int().nonnegative(),
   operation: z.enum(['install', 'update']),
   warnings: z.array(z.string()).readonly(),
+  runtimeRequirements: z.array(z.enum(['python', 'node', 'system'])).readonly(),
 }).readonly()
 const record = z.object({
   skillId: skillName, ...metadata, digest,
   sourceFileName: z.string(), installedAt: z.number().nonnegative(), updatedAt: z.number().nonnegative(),
   managed: z.boolean(),
+  runtimeRequirements: z.array(z.enum(['python', 'node', 'system'])).readonly(),
 }).readonly()
 const installResult = z.object({ operation: z.enum(['installed', 'updated']), record }).readonly()
 const removal = z.object({

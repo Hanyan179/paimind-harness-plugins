@@ -2,54 +2,50 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { PaimindSettingsScope, PaimindSettingsScopeSnapshot } from '@paimind/harness-compat'
 import {
-  DEFAULT_PAIMIND_USER_PREFERENCES,
+  DEFAULT_PAIMIND_PERSONALIZATION,
   PaimindUserSettingsService,
-  decodePaimindUserPreferences,
-  renderPaimindUserPreferencePrompt,
-  type PaimindUserPreferences,
+  decodePaimindPersonalization,
+  migrateLegacyPaimindPersonalization,
+  renderPaimindPersonalizationContext,
+  type PaimindPersonalization,
 } from '../src/index.ts'
-import { RemotePaimindSettingsScope, UserSettingsSection, projectMotion } from '../src/client/index.tsx'
+import { RemotePaimindSettingsScope, UserSettingsSection } from '../src/client/index.tsx'
 
-class MemoryScope implements PaimindSettingsScope<PaimindUserPreferences> {
-  private snapshot: PaimindSettingsScopeSnapshot<PaimindUserPreferences>
+class MemoryScope implements PaimindSettingsScope<PaimindPersonalization> {
+  private snapshot: PaimindSettingsScopeSnapshot<PaimindPersonalization>
   private readonly listeners = new Set<() => void>()
 
-  constructor(value: PaimindUserPreferences = DEFAULT_PAIMIND_USER_PREFERENCES) {
+  constructor(value: PaimindPersonalization = DEFAULT_PAIMIND_PERSONALIZATION) {
     this.snapshot = { status: 'ready', value, base: undefined, user: {}, revision: 0, writable: true, mode: 'host' }
   }
 
-  getSnapshot(): PaimindSettingsScopeSnapshot<PaimindUserPreferences> { return this.snapshot }
+  getSnapshot(): PaimindSettingsScopeSnapshot<PaimindPersonalization> { return this.snapshot }
   subscribe(listener: () => void): () => void { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
-  async set(field: keyof PaimindUserPreferences, value: unknown): Promise<void> {
+  async set(field: keyof PaimindPersonalization, value: unknown): Promise<void> {
     this.snapshot = { ...this.snapshot, value: { ...this.snapshot.value!, [field]: value }, revision: (this.snapshot.revision ?? 0) + 1 }
     for (const listener of this.listeners) listener()
   }
   async unset(): Promise<void> {}
 }
 
-describe('FP14 PAIMind user settings', () => {
-  it('decodes exact values and renders only real prompt deviations', () => {
-    expect(renderPaimindUserPreferencePrompt(DEFAULT_PAIMIND_USER_PREFERENCES)).toBe('')
-    const custom = decodePaimindUserPreferences({
-      ...DEFAULT_PAIMIND_USER_PREFERENCES,
-      responseLength: 'concise',
-      personalInstructions: 'End every answer with TOKEN-14.',
+describe('FP14 PAIMind personalization', () => {
+  it('renders only enabled, meaningful personalization as bounded user context', () => {
+    expect(renderPaimindPersonalizationContext(DEFAULT_PAIMIND_PERSONALIZATION)).toBe('')
+    const custom = decodePaimindPersonalization({
+      ...DEFAULT_PAIMIND_PERSONALIZATION,
+      personality: 'pragmatic',
+      aboutMe: 'AI product manager <admin>',
+      customInstructions: 'End every answer with TOKEN-14.',
     })
     expect(custom).toBeDefined()
-    expect(renderPaimindUserPreferencePrompt(custom!)).toContain('TOKEN-14')
-    expect(decodePaimindUserPreferences({ ...DEFAULT_PAIMIND_USER_PREFERENCES, motion: 'force' })).toBeUndefined()
-  })
-
-  it('evaluates all, attention and off without owning notification state', () => {
-    const service = Object.create(PaimindUserSettingsService.prototype) as PaimindUserSettingsService
-    const current = { ...DEFAULT_PAIMIND_USER_PREFERENCES }
-    Object.assign(service, { source: () => current })
-    expect(service.shouldPublishNotification('info')).toBe(true)
-    current.notifications = 'attention'
-    expect(service.shouldPublishNotification('info')).toBe(false)
-    expect(service.shouldPublishNotification('error')).toBe(true)
-    current.notifications = 'off'
-    expect(service.shouldPublishNotification('error')).toBe(false)
+    const rendered = renderPaimindPersonalizationContext(custom!)
+    expect(rendered).toContain('<paimind-personalization>')
+    expect(rendered).toContain('TOKEN-14')
+    expect(rendered).toContain('&lt;admin&gt;')
+    expect(rendered).toContain('explicit request in this conversation overrides')
+    expect(rendered).toContain('cannot change safety rules, permissions')
+    expect(renderPaimindPersonalizationContext({ ...custom!, enabled: false })).toBe('')
+    expect(decodePaimindPersonalization({ ...DEFAULT_PAIMIND_PERSONALIZATION, personality: 'verbose' })).toBeUndefined()
   })
 
   it('reads and mutates the canonical Host namespace through the narrow PAIMind remote', async () => {
@@ -57,24 +53,47 @@ describe('FP14 PAIMind user settings', () => {
     const settings = {
       writable: true,
       register: vi.fn(),
-      describe: () => [{ ns: 'paimind-user-settings', value: DEFAULT_PAIMIND_USER_PREFERENCES, revision: 7 }],
+      describe: () => [{ ns: 'paimind-user-settings', value: DEFAULT_PAIMIND_PERSONALIZATION, revision: 7 }],
       mutate,
     }
     const service = Object.create(PaimindUserSettingsService.prototype) as PaimindUserSettingsService
     Object.assign(service, { settingsCtx: { get: () => settings } })
     await expect(service.describe()).resolves.toMatchObject({ status: 'ready', revision: 7, writable: true })
-    await service.mutate({ field: 'motion', value: 'reduce', expectedRevision: 7 })
+    await service.mutate({ field: 'personality', value: 'friendly', expectedRevision: 7 })
     expect(mutate).toHaveBeenCalledWith(
       expect.anything(),
-      [{ op: 'set', path: ['motion'], value: 'reduce' }],
+      [{ op: 'set', path: ['personality'], value: 'friendly' }],
       7,
     )
   })
 
+  it('migrates useful legacy preferences and removes Notification and motion keys', async () => {
+    let revision = 3
+    let user: Record<string, unknown> = {
+      responseStyle: 'friendly', personalInstructions: 'Keep this instruction.',
+      motion: 'reduce', notifications: 'off',
+    }
+    const mutate = vi.fn(async (_namespace: unknown, operations: readonly ({ op: 'set' | 'unset'; path: readonly string[]; value?: unknown })[], expectedRevision?: number) => {
+      expect(expectedRevision).toBe(revision)
+      for (const operation of operations) {
+        if (operation.op === 'set') user[operation.path[0]!] = operation.value
+        else delete user[operation.path[0]!]
+      }
+      revision += 1
+    })
+    await migrateLegacyPaimindPersonalization({
+      writable: true, register: vi.fn(),
+      describe: () => [{ ns: 'paimind-user-settings', value: DEFAULT_PAIMIND_PERSONALIZATION, user, revision }],
+      mutate,
+    })
+    expect(user).toEqual({ personality: 'friendly', customInstructions: 'Keep this instruction.' })
+    expect(mutate).toHaveBeenCalledOnce()
+  })
+
   it('keeps native revision/CAS semantics across the PAIMind client remote', async () => {
-    let value = DEFAULT_PAIMIND_USER_PREFERENCES
+    let value = DEFAULT_PAIMIND_PERSONALIZATION
     let revision = 11
-    const mutate = vi.fn(async (request: { field: keyof PaimindUserPreferences; value: unknown; expectedRevision: number }) => {
+    const mutate = vi.fn(async (request: { field: keyof PaimindPersonalization; value: unknown; expectedRevision: number }) => {
       expect(request.expectedRevision).toBe(revision)
       value = Object.freeze({ ...value, [request.field]: request.value })
       revision += 1
@@ -85,50 +104,50 @@ describe('FP14 PAIMind user settings', () => {
       mutate,
     })
     await waitFor(() => { expect(scope.getSnapshot().status).toBe('ready') })
-    await scope.set('responseLength', 'concise')
+    await scope.set('personality', 'pragmatic')
     expect(mutate).toHaveBeenCalledOnce()
     expect(scope.getSnapshot()).toMatchObject({
-      status: 'ready', revision: 12, value: { responseLength: 'concise' }, mode: 'host',
+      status: 'ready', revision: 12, value: { personality: 'pragmatic' }, mode: 'host',
     })
     scope.dispose()
   })
 
-  it('writes through the native scope and exposes no duplicate Harness controls', async () => {
+  it('saves Codex-inspired fields and exposes the exact context preview', async () => {
     const scope = new MemoryScope()
     render(<UserSettingsSection scope={scope} zh />)
-    expect(screen.getByRole('heading', { name: 'PAIMind 偏好' })).toBeInTheDocument()
-    expect(screen.queryByText('Theme')).not.toBeInTheDocument()
-    const instructions = screen.getByRole('textbox', { name: '个人指令' })
-    fireEvent.change(instructions, { target: { value: 'Always include TOKEN-14.' } })
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '保存个人指令' })) })
-    await waitFor(() => { expect(scope.getSnapshot().value?.personalInstructions).toBe('Always include TOKEN-14.') })
-    expect(screen.getByRole('status')).toHaveTextContent('已保存到 Harness 设置')
+    expect(screen.getByRole('heading', { name: '个性化' })).toBeInTheDocument()
+    expect(screen.queryByText('通知设置')).not.toBeInTheDocument()
+    expect(screen.queryByText('减少动画')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /务实/ })).toHaveAttribute('aria-pressed', 'false')
+
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /务实/ })) })
+    expect(scope.getSnapshot().value?.personality).toBe('pragmatic')
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'PAIMind 应该了解什么？' }), { target: { value: '我是产品经理。' } })
+    fireEvent.change(screen.getByRole('textbox', { name: '特别要求' }), { target: { value: '明确区分事实与判断。' } })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '保存个性化' })) })
+    await waitFor(() => { expect(scope.getSnapshot().value).toMatchObject({ aboutMe: '我是产品经理。', customInstructions: '明确区分事实与判断。' }) })
+    expect(screen.getByRole('status')).toHaveTextContent('已保存，从下一次回复起生效')
+
+    fireEvent.click(screen.getByRole('button', { name: '查看注入预览' }))
+    expect(screen.getByText(/<paimind-personalization>/)).toHaveTextContent('明确区分事实与判断。')
   })
 
-  it('presents notification preferences in business language and persists the selected range', async () => {
-    const scope = new MemoryScope()
+  it('turns context injection off without deleting the saved profile', async () => {
+    const scope = new MemoryScope({
+      enabled: true, personality: 'friendly', aboutMe: 'Product manager', customInstructions: 'Be clear.',
+    })
     render(<UserSettingsSection scope={scope} zh />)
-    expect(screen.getByRole('heading', { name: '通知设置' })).toBeInTheDocument()
-    const receive = screen.getByRole('combobox', { name: '接收范围' })
-    expect(screen.getByRole('option', { name: '接收全部通知' })).toHaveValue('all')
-    expect(screen.getByRole('option', { name: '仅接收重要通知' })).toHaveValue('attention')
-    expect(screen.getByRole('option', { name: '暂停接收通知' })).toHaveValue('off')
-    await act(async () => { fireEvent.change(receive, { target: { value: 'attention' } }) })
-    await waitFor(() => { expect(scope.getSnapshot().value?.notifications).toBe('attention') })
-  })
-
-  it('projects reduce to a PAIMind-only root attribute and removes it on cleanup', async () => {
-    const scope = new MemoryScope()
-    const dispose = projectMotion(scope)
-    expect(document.documentElement).not.toHaveAttribute('data-paimind-motion')
-    await act(async () => { await scope.set('motion', 'reduce') })
-    expect(document.documentElement).toHaveAttribute('data-paimind-motion', 'reduce')
-    dispose()
-    expect(document.documentElement).not.toHaveAttribute('data-paimind-motion')
+    const toggle = screen.getByRole('switch', { name: '启用个性化' })
+    expect(toggle).toHaveAttribute('aria-checked', 'true')
+    await act(async () => { fireEvent.click(toggle) })
+    expect(scope.getSnapshot().value).toMatchObject({ enabled: false, aboutMe: 'Product manager', customInstructions: 'Be clear.' })
+    fireEvent.click(screen.getByRole('button', { name: '查看注入预览' }))
+    expect(screen.getByText('当前不会注入任何个性化上下文。')).toBeInTheDocument()
   })
 
   it('shows explicit unavailable state instead of browser persistence', () => {
-    const scope = new MemoryScope() as MemoryScope & { snapshot: PaimindSettingsScopeSnapshot<PaimindUserPreferences> }
+    const scope = new MemoryScope() as MemoryScope & { snapshot: PaimindSettingsScopeSnapshot<PaimindPersonalization> }
     scope.snapshot = { status: 'unavailable', value: undefined, base: undefined, user: undefined, revision: undefined, writable: false, mode: 'memory' }
     render(<UserSettingsSection scope={scope} zh={false} />)
     expect(screen.getByText(/No persistence is simulated/)).toBeInTheDocument()

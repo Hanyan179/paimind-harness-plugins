@@ -1,0 +1,25 @@
+{
+  "name": "@paimind/walmart-proposal-adapter",
+  "version": "0.1.0-alpha.0",
+  "description": "Native Harness Tool adapter for deterministic Walmart proposal analysis and outline CLIs",
+  "license": "UNLICENSED",
+  "engines": { "node": "^22.19.0 || >=24.0.0" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map","runtime/**/*.py","runtime/**/*.mjs","runtime/**/*.json","runtime/**/*.toml","runtime/**/*.lock","runtime/**/*.yaml","runtime/**/*.sql","runtime/UPSTREAM_COMMIT"],
+  "dependencies": {
+    "@paimind/artifact-runtime": "workspace:^",
+    "@paimind/contracts": "workspace:^",
+    "@paimind/harness-compat": "workspace:^",
+    "@paimind/presentation-contracts": "workspace:^"
+  },
+  "devDependencies": { "@paimind/testkit": "workspace:^" },
+  "paimindBuild": { "node": ["src/index.ts", "src/invariant.ts"] },
+  "scripts": { "typecheck": "tsc -b --pretty false" }
+}

@@ -81,10 +81,26 @@ describe('FP05 Better Sidebar adapter', () => {
     expect(typeof descriptor?.title === 'function' ? descriptor.title() : descriptor?.title).toBe('任务-one')
     expect(descriptor?.component({ scope: { sessionId: 'session-1', cwd: '/workspace' }, visible: true }))
       .toBe('one:session-1:workspace-1')
-    expect(adapter.openTab('paimind:tasks')).toBe(true)
-    expect(external.openTab).toHaveBeenCalledWith({ type: 'paimind:tasks' })
+    expect(adapter.openTab('paimind:tasks', { title: 'Quarterly proposal' })).toBe(true)
+    expect(external.openTab).toHaveBeenCalledWith({ type: 'paimind:tasks', title: 'Quarterly proposal' })
     off()
     expect(external.dispose).toHaveBeenCalledTimes(1)
+  })
+
+  it('maps hidden on-demand tabs without exposing provider details', () => {
+    const external = provider()
+    const adapter = new BetterSidebarAdapter(external.service, locale(), projects())
+    adapter.registerTab({ ...definition('hidden'), hidden: true })
+    expect(external.descriptors.get('paimind:tasks')).toMatchObject({ hidden: true, single: true })
+  })
+
+  it('closes an exact retired PAIMind tab through the provider boundary', () => {
+    const closeTab = vi.fn()
+    const adapter = new BetterSidebarAdapter({
+      registerTab: () => () => {}, openTab: vi.fn(), closeTab,
+    }, locale(), projects())
+    expect(adapter.closeTab('paimind:artifacts')).toBe(true)
+    expect(closeTab).toHaveBeenCalledWith('paimind:artifacts')
   })
 
   it('keeps one provider descriptor while HMR definitions stack and restore', () => {

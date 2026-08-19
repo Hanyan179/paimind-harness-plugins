@@ -1,6 +1,9 @@
 {
   "name": "@paimind/harness-compat",
   "version": "0.1.0-alpha.0",
+  "description": "Version-scoped compatibility boundary for DeepSeek Harness and Cordis APIs",
+  "license": "UNLICENSED",
+  "engines": { "node": "^22.19.0 || >=24.0.0" },
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -12,11 +15,20 @@
     "./host": {
       "types": "./lib/types/host.d.ts",
       "default": "./lib/host.js"
+    },
+    "./client-icons": {
+      "types": "./lib/types/client-icons.d.ts",
+      "default": "./lib/client-icons.js"
+    },
+    "./client-surface": {
+      "types": "./lib/types/client-surface.d.ts",
+      "default": "./lib/client-surface.js"
     }
   },
-  "files": ["lib"],
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "dependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.1.0-rc.6",
     "@deepseek-ai/dsh-agent": "^0.1.0-rc.6",
     "@deepseek-ai/dsh-llm": "^0.1.0-rc.6",
     "@deepseek-ai/dsh-schedule": "^0.1.0-rc.6",
@@ -27,6 +39,6 @@
     "@deepseek-ai/schemastery": "^3.18.1",
     "@paimind/contracts": "workspace:^"
   },
-  "paimindBuild": { "node": ["src/index.ts", "src/host.ts"] },
+  "paimindBuild": { "node": ["src/index.ts", "src/host.ts", "src/client-icons.ts", "src/client-surface.ts"] },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }

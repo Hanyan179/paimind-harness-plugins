@@ -17,7 +17,7 @@ The frozen prototype is not a migration source for production RBAC: its sign-in 
 | Browser-selected member/developer/admin role | No authenticated identity in Harness; prototype uses sessionStorage | Retire |
 | Role preview and client-side visibility hiding | Not authorization | Retire |
 | Configuration Studio local draft and simulated publication | No authenticated UserAiApplication service/provider | Retire |
-| Product capability authorization contract | `@paimind/permissions-core`, provider-neutral and fail-closed | Harden as technical framework |
+| Product capability authorization contract | Retired until a real authenticated provider exists | Native reuse only |
 | Enterprise directory publication, SSO, MFA, organization membership and role assignment | Requires an authenticated cloud identity/control-plane provider | Out of Goal A implementation scope; do not simulate |
 
 ## Canonical ownership

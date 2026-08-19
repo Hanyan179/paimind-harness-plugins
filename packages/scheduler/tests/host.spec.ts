@@ -7,6 +7,7 @@ import type {
   PaimindScheduleRun,
 } from '@paimind/contracts'
 import {
+  PaimindScheduleDispatchError,
   PaimindSchedulerCore,
   type PaimindSchedulerClock,
   type PaimindSchedulerTable,
@@ -51,6 +52,80 @@ function action(): PaimindScheduleActionDescriptor {
 }
 
 describe('platform Scheduler Core', () => {
+  it('validates, persists, and dispatches definition-owned action input and setup context', async () => {
+    const store = tables()
+    const now = clock('2026-08-15T00:00:00.000Z')
+    const executor = vi.fn(async request => ({
+      contractVersion: '1.0' as const, runId: request.runId, status: 'succeeded' as const, message: 'Done',
+    }))
+    const core = new PaimindSchedulerCore(store, {
+      callbackUrl: 'https://platform.example.test/callback', clock: now,
+    })
+    await core.registerAction({ ...action(), conversationEnabled: true }, executor, {
+      validateActionInput: input => {
+        if (typeof input?.prompt !== 'string') throw new Error('prompt is required')
+        return { prompt: input.prompt.trim(), version: 1 }
+      },
+    })
+    const definition = await core.create({
+      name: 'Weekly project brief', actionId: 'action:brief',
+      actionInput: { prompt: '  Summarize the project.  ' }, sourceSessionId: 'session:setup',
+      rule: { kind: 'weekdays', time: '09:00' }, timeZone: 'Asia/Shanghai', enabled: true,
+    }, 'user:one')
+    expect(definition).toMatchObject({
+      actionInput: { prompt: 'Summarize the project.', version: 1 }, sourceSessionId: 'session:setup',
+    })
+    expect((await core.runNow(definition.scheduleId, 'user:one')).ok).toBe(true)
+    await vi.waitFor(() => { expect(executor).toHaveBeenCalledTimes(1) })
+    expect(executor).toHaveBeenCalledWith(expect.objectContaining({
+      scheduleName: 'Weekly project brief', actionInput: { prompt: 'Summarize the project.', version: 1 },
+      sourceSessionId: 'session:setup',
+    }), expect.any(AbortSignal))
+    await expect(core.create({
+      name: 'Invalid input', actionId: 'action:brief',
+      rule: { kind: 'daily', time: '09:00' }, timeZone: 'UTC', enabled: false,
+    }, 'user:one')).rejects.toThrow('prompt is required')
+  })
+
+  it('rejects definition-owned inputs for fixed actions without a validator', async () => {
+    const core = new PaimindSchedulerCore(tables(), {
+      callbackUrl: 'https://platform.example.test/callback', clock: clock('2026-08-15T00:00:00.000Z'),
+    })
+    await core.registerAction(action(), async request => ({
+      contractVersion: '1.0', runId: request.runId, status: 'succeeded', message: 'Done',
+    }))
+    await expect(core.create({
+      name: 'Unexpected input', actionId: 'action:brief', actionInput: { prompt: 'Do something else' },
+      rule: { kind: 'daily', time: '09:00' }, timeZone: 'UTC', enabled: false,
+    }, 'user:one')).rejects.toThrow('does not accept per-task business input')
+  })
+
+  it('does not retry non-retryable Adapter configuration failures', async () => {
+    const store = tables()
+    const now = clock('2026-08-15T00:00:00.000Z')
+    const executor = vi.fn(async () => {
+      throw new PaimindScheduleDispatchError('Credential is unavailable', {
+        retryable: false,
+        code: 'credential-unavailable',
+      })
+    })
+    const core = new PaimindSchedulerCore(store, {
+      callbackUrl: 'https://platform.example.test/callback', clock: now, maxDispatchAttempts: 3,
+    })
+    await core.registerAction(action(), executor)
+    const definition = await core.create({
+      name: 'Credential check', actionId: 'action:brief',
+      rule: { kind: 'daily', time: '09:00' }, timeZone: 'Asia/Shanghai', enabled: true,
+    }, 'user:one')
+    expect((await core.runNow(definition.scheduleId, 'user:one')).ok).toBe(true)
+    await vi.waitFor(() => { expect(core.listRuns()[0]?.status).toBe('failed') })
+    expect(executor).toHaveBeenCalledTimes(1)
+    expect(core.listRuns()[0]).toMatchObject({
+      attempt: 1,
+      message: 'Dispatch failed after 1 attempt(s): Credential is unavailable',
+    })
+  })
+
   it('creates one deterministic run and treats duplicate ticks as idempotent', async () => {
     const store = tables()
     const now = clock('2026-08-15T00:00:00.000Z')
@@ -208,5 +283,10 @@ describe('platform Scheduler Core', () => {
     expect(restarted.listDefinitions()).toHaveLength(0)
     expect(restarted.listDefinitions({ includeArchived: true })[0]?.status).toBe('archived')
     expect(restarted.listRuns()).toHaveLength(1)
+    const archivedDefinition = restarted.listDefinitions({ includeArchived: true })[0]!
+    const restored = await restarted.restore(archivedDefinition.scheduleId, archivedDefinition.version, 'user:one')
+    expect(restored).toMatchObject({ ok: true, value: { status: 'paused' } })
+    expect(restarted.listDefinitions()[0]).not.toHaveProperty('archivedAt')
+    expect([...store.audits.entries()].map(([, record]) => record.operation)).toContain('restored')
   })
 })

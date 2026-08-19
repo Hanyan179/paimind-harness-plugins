@@ -32,7 +32,7 @@ flowchart LR
 
 1. The formal Harness profile reported 38 current `@paimind/*` Loader rows; all 38 were native `active`, with exact `moduleName`, `entryId`, effective enablement and `fiberPhase` displayed.
 2. Native Settings → Plugins showed `developer-resources, mounted, enabled`, matching FP16's exact active row.
-3. Surface Catalog showed current Runtime Orb, Task Monitor, Artifact/Viewer, Agent, Skill, Scheduler and Developer capabilities. Retired `@paimind/launcher`, empty `@paimind/conversation-extensions` and Configuration Studio did not appear.
+3. Surface Catalog showed current Runtime Orb, Task Monitor, Artifact/Viewer, Agent, Skill, Scheduler and Developer capabilities. Retired launcher and conversation-compatibility packages plus Configuration Studio did not appear.
 4. Integration Reference showed exactly eight implemented boundaries, and every row was labeled `Bundled reference` rather than live discovery.
 5. Native Refresh and a full Harness stop/start both recovered the same live 38-entry snapshot.
 6. With Harness stopped, Refresh rejected the Remote, removed the previous success snapshot and rendered an explicit unavailable state with Retry. Restart plus Retry recovered the live snapshot.

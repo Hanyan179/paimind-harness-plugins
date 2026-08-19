@@ -1,7 +1,9 @@
 node_modules/
 lib/
 coverage/
+.tmp/
 .dsh-home/
 .DS_Store
 *.tgz
-
+__pycache__/
+*.py[cod]

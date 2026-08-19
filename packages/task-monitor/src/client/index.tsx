@@ -1,77 +1,192 @@
 import {
   Component,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
   type ErrorInfo,
-  type KeyboardEvent,
   type ReactNode,
 } from 'react'
+import { createPortal } from 'react-dom'
 import {
   contributePaimindExtension,
+  type HarnessObservableSnapshot,
+  type HarnessSessionHistoryApi,
+  type HarnessSessionService,
+  type HarnessWorkspaceService,
   type PaimindClientContext,
   type PaimindLocaleSource,
   type PaimindSessionHeaderActionProps,
 } from '@paimind/harness-compat'
 import {
-  artifactsFromProjection,
+  ArrowUpRight as PaimindUploadIcon,
+  Bot as PaimindAgentIcon,
+  BrainCircuit as PaimindThinkIcon,
+  Check as PaimindCheckIcon,
+  ChevronRight as PaimindChevronRightIcon,
+  CirclePause as PaimindPauseIcon,
+  Code2 as PaimindCodeIcon,
+  Database as PaimindDataIcon,
+  Download as PaimindDownloadIcon,
+  FileInput as PaimindInputIcon,
+  GitBranch as PaimindBranchIcon,
+  ListChecks as PaimindChecklistIcon,
+  ListTodo as PaimindTaskMonitorIcon,
+  Plug as PaimindMcpIcon,
+  Search as PaimindBrowseIcon,
+  Sparkles as PaimindToolIcon,
+  Target as PaimindGoalIcon,
+  TriangleAlert as PaimindWarningIcon,
+  WandSparkles as PaimindSkillIcon,
+  type LucideIcon,
+} from 'lucide-react'
+import type { PaimindArtifactService } from '@paimind/artifacts'
+import type { PaimindWorkspaceProjectService } from '@paimind/workspace-project'
+import {
+  collectTaskMonitorResourceHistory,
   isLivePaimindJob,
-  projectPaimindArtifactJobs,
-  type PaimindArtifactJobView,
+  projectTaskMonitor,
+  type TaskMonitorFileView,
+  type TaskMonitorJobView,
+  type TaskMonitorOverallStatus,
+  type TaskMonitorResourceHistoryV1,
+  type TaskMonitorSubagentView,
+  type TaskMonitorViewModel,
+  type TaskMonitorWorkflowStatus,
 } from '../index.js'
 
-export const inject = ['slots', 'locale']
+export const inject = ['slots', 'locale', 'sessions', 'workspaces', 'paimindArtifacts', 'paimindWorkspaceProject']
+
+export interface TaskMonitorClientContext extends PaimindClientContext {
+  readonly sessions: HarnessSessionService
+  readonly workspaces: HarnessWorkspaceService
+  readonly paimindArtifacts: PaimindArtifactService
+  readonly paimindWorkspaceProject: PaimindWorkspaceProjectService
+}
+
+export interface TaskMonitorSessionLogState {
+  readonly bySession: Readonly<Record<string, {
+    readonly open: boolean
+    readonly status: 'downloading' | 'success' | 'error'
+    readonly error: string | null
+  } | undefined>>
+}
+
+export interface TaskMonitorSessionLogService {
+  readonly store: HarnessObservableSnapshot<TaskMonitorSessionLogState>
+  download(sessionId: string): Promise<void>
+  dismiss(sessionId: string): void
+}
 
 const STYLE_ID = '@paimind/task-monitor'
+const HEADER_SHADOW_PRIORITY = -10
 const STYLE = `
-[data-paimind-task-action] { position: relative; display: inline-flex; color: inherit; font: inherit; }
-[data-paimind-task-trigger] {
-  min-height: 28px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px;
-  border: 0; border-radius: 8px; color: var(--dsw-alias-label-secondary, #626872);
-  background: transparent; font: inherit; font-size: 12px; cursor: pointer;
-}
-[data-paimind-task-trigger]:hover,
-[data-paimind-task-trigger][aria-expanded='true'] {
-  color: var(--dsw-alias-label-primary, #202124);
-  background: var(--dsw-alias-bg-layer-2, rgba(128,128,128,.09));
-}
-[data-paimind-task-trigger] svg { flex: none; }
-[data-paimind-task-live] {
-  width: 7px; height: 7px; border-radius: 50%; background: var(--dsw-alias-state-business-primary, #4f7ff8);
-  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent);
-}
-[data-paimind-task-panel] {
-  position: absolute; z-index: 110; top: calc(100% + 8px); right: 0; width: min(380px, calc(100vw - 32px));
-  max-height: min(460px, calc(100vh - 140px)); overflow: auto; box-sizing: border-box; padding: 12px;
-  border: 1px solid var(--dsw-alias-border-l1, rgba(128,128,128,.2)); border-radius: 14px;
-  color: var(--dsw-alias-label-primary, #202124); background: var(--dsw-alias-bg-layer-1, #fff);
-  box-shadow: 0 16px 44px rgba(0,0,0,.18);
-}
-[data-paimind-task-panel] header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-[data-paimind-task-panel] h2 { margin: 0; font-size: 14px; line-height: 20px; font-weight: 600; }
-[data-paimind-task-panel] header p { margin: 3px 0 0; color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 10px; line-height: 16px; }
-[data-paimind-task-count] { color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 11px; }
-[data-paimind-task-list] { display: grid; gap: 7px; margin: 12px 0 0; padding: 0; list-style: none; }
-[data-paimind-task-row] { padding: 10px; border: 1px solid var(--dsw-alias-border-l1, rgba(128,128,128,.15)); border-radius: 10px; background: var(--dsw-alias-bg-layer-2, rgba(128,128,128,.04)); }
-[data-paimind-task-row-head] { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 8px; }
-[data-paimind-task-state] { width: 7px; height: 7px; border-radius: 50%; background: var(--dsw-alias-label-tertiary, #8a9099); }
-[data-paimind-task-state][data-status='running'] { background: var(--dsw-alias-state-business-primary, #4f7ff8); }
-[data-paimind-task-state][data-status='completed'] { background: var(--dsw-alias-state-success-primary, #2b8a57); }
-[data-paimind-task-state][data-status='failed'] { background: var(--dsw-alias-state-error-primary, #d04444); }
-[data-paimind-task-state][data-status='stopping'], [data-paimind-task-state][data-status='killed'] { background: var(--dsw-alias-state-warning-primary, #b7791f); }
-[data-paimind-task-title] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; }
-[data-paimind-task-status] { color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 10px; }
-[data-paimind-task-meta] { display: flex; flex-wrap: wrap; gap: 4px 8px; margin: 5px 0 0 15px; color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 10px; }
-[data-paimind-task-artifact] { margin: 7px 0 0 15px; color: var(--dsw-alias-state-business-primary, #4f7ff8); font-size: 10px; overflow-wrap: anywhere; }
-[data-paimind-task-empty] { margin-top: 12px; padding: 16px 10px; border: 1px dashed var(--dsw-alias-border-l2, rgba(128,128,128,.24)); border-radius: 10px; color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 11px; text-align: center; }
-[data-paimind-task-note] { margin: 10px 0 0; color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 9px; line-height: 14px; }
-[data-paimind-task-error] { padding: 8px; color: var(--dsw-alias-state-error-primary, #d04444); font-size: 11px; }
-@media (max-width: 640px) {
-  [data-paimind-task-panel] { position: fixed; top: auto; right: 12px; bottom: 12px; left: 12px; width: auto; max-height: min(70vh, 520px); }
-  [data-paimind-task-trigger-label] { display: none; }
-}
+[data-paimind-task-action] { position:relative; display:inline-flex; align-items:center; color:inherit; font:inherit; }
+[data-paimind-task-trigger] { position:relative; width:32px; height:32px; display:grid; place-items:center; padding:0; border:0; border-radius:9px; color:var(--dsw-alias-label-secondary,#626872); background:transparent; cursor:pointer; }
+[data-paimind-task-trigger]:hover,[data-paimind-task-trigger]:focus-visible,[data-paimind-task-trigger][aria-pressed='true'] { color:var(--dsw-alias-label-primary,#202124); background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.11)); }
+[data-paimind-task-trigger]:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:2px; }
+[data-paimind-task-tooltip] { position:absolute; z-index:2147482999; top:calc(100% + 7px); left:50%; min-width:max-content; padding:5px 8px; border-radius:6px; color:#fff; background:#1f2329; box-shadow:0 8px 24px #0004; font-size:11px; line-height:16px; opacity:0; pointer-events:none; transform:translate(-50%,-3px); transition:opacity .14s ease,transform .14s ease; }
+[data-paimind-task-action]:hover [data-paimind-task-tooltip],[data-paimind-task-trigger]:focus-visible + [data-paimind-task-tooltip] { opacity:1; transform:translate(-50%,0); }
+[data-paimind-task-panel] { position:fixed; z-index:2147482998; width:420px; max-width:calc(100vw - 24px); box-sizing:border-box; overflow:auto; overscroll-behavior:contain; border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.18)); border-radius:14px; color:var(--dsw-alias-label-primary,#202124); background:var(--dsw-alias-bg-layer-1,#fff); box-shadow:0 12px 36px rgba(0,0,0,.16); font:inherit; }
+[data-paimind-task-panel-header] { position:sticky; z-index:2; top:0; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 18px 13px; border-bottom:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.13)); background:var(--dsw-alias-bg-layer-1,#fff); }
+[data-paimind-task-panel-header] h2 { margin:0; font-size:16px; line-height:22px; font-weight:650; letter-spacing:-.01em; }
+[data-paimind-task-panel-header] p { margin:2px 0 0; color:var(--dsw-alias-label-tertiary,#7a808a); font-size:11px; line-height:16px; }
+[data-paimind-task-status-pill] { flex:none; padding:3px 8px; border-radius:999px; color:var(--dsw-alias-label-secondary,#626872); background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.09)); font-size:10px; line-height:16px; font-weight:500; }
+[data-paimind-task-status-pill][data-status='running'] { color:var(--dsw-alias-state-business-primary,#4f7ff8); }
+[data-paimind-task-status-pill][data-status='complete'] { color:var(--dsw-alias-state-success-primary,#2b8a57); }
+[data-paimind-task-status-pill][data-status='blocked'],[data-paimind-task-status-pill][data-status='waiting'] { color:var(--dsw-alias-state-warning-primary,#b7791f); }
+[data-paimind-task-body] { padding:14px 16px 16px; }
+[data-paimind-task-summary-card] { padding:13px; border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.12)); border-radius:11px; background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.055)); }
+[data-paimind-task-summary] { min-width:0; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+[data-paimind-task-summary-copy] { min-width:0; display:grid; gap:3px; }
+[data-paimind-task-summary-copy] strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; line-height:19px; font-weight:600; }
+[data-paimind-task-summary-copy] span { min-width:0; overflow:hidden; color:var(--dsw-alias-label-tertiary,#7a808a); font-size:10px; line-height:15px; text-overflow:ellipsis; white-space:nowrap; }
+[data-paimind-task-summary-stats] { display:grid; grid-template-columns:repeat(auto-fit,minmax(58px,1fr)); gap:4px; margin-top:11px; }
+[data-paimind-task-summary-stats] button { min-width:0; display:grid; grid-template-columns:20px minmax(0,1fr); grid-template-rows:auto auto; column-gap:6px; padding:7px; border:1px solid transparent; border-radius:8px; color:inherit; background:var(--dsw-alias-bg-layer-1,#fff); font:inherit; text-align:left; cursor:pointer; transition:border-color .14s ease,background .14s ease,transform .14s ease; }
+[data-paimind-task-summary-stats] button:hover { border-color:color-mix(in srgb,var(--dsw-alias-state-business-primary,#4f7ff8) 24%,transparent); background:color-mix(in srgb,var(--dsw-alias-state-business-primary,#4f7ff8) 5%,var(--dsw-alias-bg-layer-1,#fff)); transform:translateY(-1px); }
+[data-paimind-task-summary-stats] button:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:1px; }
+[data-paimind-task-summary-stat-icon] { grid-row:1 / 3; width:20px; height:20px; display:grid; place-items:center; align-self:center; border-radius:6px; color:var(--dsw-alias-state-business-primary,#4f7ff8); background:color-mix(in srgb,currentColor 9%,transparent); }
+[data-paimind-task-summary-stats] b { font-size:12px; line-height:16px; font-weight:650; }
+[data-paimind-task-summary-stats] small { color:var(--dsw-alias-label-tertiary,#7a808a); font-size:9px; line-height:13px; }
+[data-paimind-task-section] { padding:15px 0; border-bottom:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.12)); }
+[data-paimind-task-anchor] { scroll-margin-block:12px; border-radius:8px; }
+[data-paimind-task-anchor]:focus { outline:2px solid color-mix(in srgb,var(--dsw-alias-state-business-primary,#4f7ff8) 44%,transparent); outline-offset:4px; }
+[data-paimind-task-section]:last-child { border-bottom:0; padding-bottom:0; }
+[data-paimind-task-section] h3 { margin:0 0 9px; color:var(--dsw-alias-label-secondary,#626872); font-size:12px; line-height:18px; font-weight:600; }
+[data-paimind-task-session-log] { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; padding-top:9px; border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.1)); }
+[data-paimind-task-session-log] button { min-width:0; display:inline-flex; align-items:center; gap:6px; padding:4px 7px; border:0; border-radius:7px; color:var(--dsw-alias-label-secondary,#626872); background:transparent; font:inherit; font-size:10px; line-height:16px; cursor:pointer; }
+[data-paimind-task-session-log] button:hover,[data-paimind-task-session-log] button:focus-visible { color:var(--dsw-alias-state-business-primary,#4f7ff8); }
+[data-paimind-task-session-log] button:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:2px; }
+[data-paimind-task-session-log] button:disabled { opacity:.58; cursor:wait; }
+[data-paimind-task-session-log] small { min-width:0; overflow:hidden; color:var(--dsw-alias-label-tertiary,#7a808a); font-size:9px; line-height:14px; text-align:right; text-overflow:ellipsis; white-space:nowrap; }
+[data-paimind-task-progress-head] { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:7px; color:var(--dsw-alias-label-tertiary,#7a808a); font-size:10px; line-height:15px; }
+[data-paimind-task-progress-head] b { color:var(--dsw-alias-label-primary,#202124); font-weight:600; }
+[data-paimind-task-progress] { height:4px; margin:0 0 8px; overflow:hidden; border-radius:999px; background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.12)); }
+[data-paimind-task-progress] i { display:block; height:100%; border-radius:inherit; background:var(--dsw-alias-state-business-primary,#4f7ff8); }
+[data-paimind-task-todo-group] + [data-paimind-task-todo-group] { margin-top:7px; }
+[data-paimind-task-todo-history] { margin-top:7px; }
+[data-paimind-task-todo-history] > summary { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 8px; border-radius:8px; color:var(--dsw-alias-label-secondary,#626872); background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.055)); cursor:pointer; font-size:10px; line-height:16px; list-style:none; }
+[data-paimind-task-todo-history] > summary::-webkit-details-marker { display:none; }
+[data-paimind-task-todo-history] > summary::after { content:'›'; color:var(--dsw-alias-label-tertiary,#7a808a); transform:rotate(90deg); }
+[data-paimind-task-todo-history][open] > summary::after { transform:rotate(-90deg); }
+[data-paimind-task-todo-history] > [data-paimind-task-list] { margin-top:4px; }
+[data-paimind-task-list] { display:grid; gap:1px; margin:0; padding:0; list-style:none; }
+[data-paimind-task-row] { min-width:0; display:grid; grid-template-columns:22px minmax(0,1fr) auto; align-items:center; gap:8px; min-height:34px; padding:3px 2px; border-radius:7px; }
+[data-paimind-task-row]:hover { background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.05)); }
+[data-paimind-task-row-icon] { width:17px; min-height:17px; display:grid; place-items:center; color:var(--dsw-alias-label-tertiary,#7a808a); text-align:center; font-size:10px; }
+[data-paimind-task-row-icon] svg { display:block; }
+[data-paimind-task-row-main] { min-width:0; }
+[data-paimind-task-row-main] strong,[data-paimind-task-link] { display:block; min-width:0; overflow:hidden; color:var(--dsw-alias-label-primary,#202124); font:inherit; font-size:11px; line-height:17px; font-weight:500; text-align:left; text-overflow:ellipsis; white-space:nowrap; }
+[data-paimind-task-row-main] small { display:block; min-width:0; overflow:hidden; color:var(--dsw-alias-label-tertiary,#7a808a); font-size:9px; line-height:14px; text-overflow:ellipsis; white-space:nowrap; }
+[data-paimind-task-row-meta] { max-width:92px; overflow:hidden; color:var(--dsw-alias-label-tertiary,#7a808a); font-size:9px; line-height:14px; text-overflow:ellipsis; white-space:nowrap; }
+[data-paimind-task-link] { width:100%; padding:0; border:0; background:transparent; cursor:pointer; }
+[data-paimind-task-link]:hover,[data-paimind-task-link]:focus-visible { color:var(--dsw-alias-state-business-primary,#4f7ff8); text-decoration:underline; }
+[data-paimind-task-subagent] { width:100%; border:0; color:inherit; background:transparent; font:inherit; text-align:left; cursor:pointer; }
+[data-paimind-task-subagent]:hover { background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.09)); }
+[data-paimind-task-subagent]:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:1px; background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.09)); }
+[data-paimind-task-subagent] [data-paimind-task-row-meta] { display:inline-flex; align-items:center; gap:4px; }
+[data-paimind-task-agent-avatar] { position:relative; width:22px; height:22px; display:grid; place-items:center; justify-self:center; border-radius:7px; color:var(--paimind-avatar-color,var(--dsw-alias-state-business-primary,#4f7ff8)); background:color-mix(in srgb,currentColor 10%,transparent); }
+[data-paimind-task-agent-avatar][data-variant='browse'] { --paimind-avatar-color:#5a78d1; }
+[data-paimind-task-agent-avatar][data-variant='think'] { --paimind-avatar-color:#8b63c7; }
+[data-paimind-task-agent-avatar][data-variant='data'] { --paimind-avatar-color:#2d8a6e; }
+[data-paimind-task-agent-avatar][data-variant='code'] { --paimind-avatar-color:#b36a2e; }
+[data-paimind-task-agent-avatar][data-variant='branch'] { --paimind-avatar-color:#4f7ff8; }
+[data-paimind-task-agent-avatar][data-variant='folder'] { --paimind-avatar-color:#a05f88; }
+[data-paimind-task-agent-avatar][data-variant='spark'] { --paimind-avatar-color:#3c879d; }
+[data-paimind-task-agent-avatar][data-variant='target'] { --paimind-avatar-color:#9a7335; }
+[data-paimind-task-agent-tooltip] { position:absolute; z-index:4; top:50%; left:calc(100% + 7px); width:max-content; max-width:230px; overflow:hidden; padding:4px 7px; border-radius:6px; color:#fff; background:#1f2329; box-shadow:0 6px 18px #0003; font-size:9px; line-height:14px; text-overflow:ellipsis; white-space:nowrap; opacity:0; pointer-events:none; transform:translate(-3px,-50%); transition:opacity .12s ease,transform .12s ease; }
+[data-paimind-task-agent-avatar]:hover [data-paimind-task-agent-tooltip],[data-paimind-task-subagent]:focus-visible [data-paimind-task-agent-tooltip] { opacity:1; transform:translate(0,-50%); }
+[data-paimind-task-empty] { color:var(--dsw-alias-label-tertiary,#7a808a); font-size:10px; line-height:16px; }
+[data-paimind-task-disclosure] { margin-top:4px; }
+[data-paimind-task-disclosure] summary { padding:5px 2px; color:var(--dsw-alias-label-secondary,#626872); cursor:pointer; font-size:10px; line-height:16px; list-style-position:inside; }
+[data-paimind-task-disclosure][open] summary { margin-bottom:3px; }
+[data-paimind-task-resource-list] { display:grid; gap:5px; }
+[data-paimind-task-resource-row] { min-width:0; display:grid; grid-template-columns:72px minmax(0,1fr); gap:8px; align-items:start; padding:7px 9px; border-radius:8px; background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.055)); }
+[data-paimind-task-resource-label] { display:inline-flex; align-items:center; gap:6px; color:var(--dsw-alias-label-tertiary,#7a808a); font-size:10px; line-height:19px; font-weight:500; }
+[data-paimind-task-resource-label] svg { flex:none; }
+[data-paimind-task-resource-values] { min-width:0; display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
+[data-paimind-task-chip] { max-width:100%; overflow:hidden; padding:1px 7px; border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.1)); border-radius:999px; color:var(--dsw-alias-label-secondary,#626872); background:var(--dsw-alias-bg-layer-1,#fff); font-size:10px; line-height:17px; text-overflow:ellipsis; white-space:nowrap; }
+[data-paimind-task-chip][data-kind='agent'] { color:var(--dsw-alias-state-business-primary,#4f7ff8); }
+[data-paimind-task-chip][data-kind='skill-used'],[data-paimind-task-chip][data-kind='mcp-used'] { border-color:color-mix(in srgb,var(--dsw-alias-state-success-primary,#2b8a57) 24%,transparent); color:var(--dsw-alias-state-success-primary,#2b8a57); background:color-mix(in srgb,var(--dsw-alias-state-success-primary,#2b8a57) 7%,transparent); }
+[data-paimind-task-main-agent] { position:relative; min-width:0; display:inline-flex; align-items:center; border-radius:999px; outline:none; }
+[data-paimind-task-main-agent]:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:2px; }
+[data-paimind-task-model-tooltip] { position:absolute; z-index:5; right:0; bottom:calc(100% + 6px); width:max-content; max-width:260px; overflow:hidden; padding:4px 7px; border-radius:6px; color:#fff; background:#1f2329; box-shadow:0 6px 18px #0003; font-size:9px; line-height:14px; text-overflow:ellipsis; white-space:nowrap; opacity:0; pointer-events:none; transform:translateY(3px); transition:opacity .12s ease,transform .12s ease; }
+[data-paimind-task-main-agent]:hover [data-paimind-task-model-tooltip],[data-paimind-task-main-agent]:focus-visible [data-paimind-task-model-tooltip] { opacity:1; transform:translateY(0); }
+[data-paimind-task-agent-children] { grid-column:1 / -1; min-width:0; margin-top:2px; padding:6px 0 0 74px; border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.1)); }
+[data-paimind-task-agent-children] [data-paimind-task-row] { padding-inline:0; }
+[data-paimind-task-resource-empty] { color:var(--dsw-alias-label-tertiary,#7a808a); font-size:10px; line-height:19px; }
+[data-paimind-task-chip-overflow] { flex-basis:100%; }
+[data-paimind-task-chip-overflow] > summary { width:max-content; padding:2px 4px; color:var(--dsw-alias-label-secondary,#626872); cursor:pointer; font-size:9px; line-height:15px; }
+[data-paimind-task-chip-overflow] > div { display:flex; flex-wrap:wrap; gap:5px; padding-top:4px; }
+[data-paimind-task-technical] summary { cursor:pointer; color:var(--dsw-alias-label-secondary,#626872); font-size:11px; font-weight:600; }
+[data-paimind-task-technical] dl { display:grid; grid-template-columns:auto minmax(0,1fr); gap:5px 10px; margin:10px 0 0; font-size:9px; line-height:14px; }
+[data-paimind-task-technical] dt { color:var(--dsw-alias-label-tertiary,#7a808a); }
+[data-paimind-task-technical] dd { min-width:0; margin:0; overflow-wrap:anywhere; }
+[data-paimind-task-error] { padding:7px 9px; border-radius:8px; color:var(--dsw-alias-state-error-primary,#d04444); background:color-mix(in srgb,currentColor 8%,transparent); font-size:10px; line-height:16px; }
+@media(max-width:640px){[data-paimind-task-panel]{top:auto!important; right:8px!important; bottom:8px; left:8px!important; width:auto; max-width:none; max-height:min(82vh,680px)!important; border-radius:16px}[data-paimind-task-panel-header]{padding-top:14px}[data-paimind-task-body]{padding-inline:14px}[data-paimind-task-agent-children]{padding-left:0}}
 `
 
 function installStyle(): () => void {
@@ -85,167 +200,542 @@ function installStyle(): () => void {
 }
 
 function TaskIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 18 18" width="16" height="16" fill="none" aria-hidden="true">
-      <path d="M4 4.3h10M4 9h10M4 13.7h6.5" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
-      <circle cx="2.25" cy="4.3" r=".8" fill="currentColor" />
-      <circle cx="2.25" cy="9" r=".8" fill="currentColor" />
-      <circle cx="2.25" cy="13.7" r=".8" fill="currentColor" />
-    </svg>
-  )
+  return <PaimindTaskMonitorIcon size={18} />
 }
 
-const STATUS_COPY = {
+function DownloadIcon(): React.JSX.Element {
+  return <PaimindDownloadIcon size={14} />
+}
+
+const EMPTY_SESSION_LOG_STATE: TaskMonitorSessionLogState = Object.freeze({ bySession: Object.freeze({}) })
+const EMPTY_SUBSCRIBE = (): (() => void) => () => {}
+const GET_EMPTY_SESSION_LOG = (): TaskMonitorSessionLogState => EMPTY_SESSION_LOG_STATE
+const GET_EMPTY_PROJECTION = (): undefined => undefined
+
+function useOptionalProjection(face: HarnessObservableSnapshot<unknown> | undefined): unknown {
+  const subscribe = useMemo(() => face?.subscribe.bind(face) ?? EMPTY_SUBSCRIBE, [face])
+  const getSnapshot = useMemo(() => face?.getSnapshot.bind(face) ?? GET_EMPTY_PROJECTION, [face])
+  return useSyncExternalStore(subscribe, getSnapshot, GET_EMPTY_PROJECTION)
+}
+
+function sessionLogServiceOf(ctx: TaskMonitorClientContext): TaskMonitorSessionLogService | undefined {
+  try {
+    const lookup = (ctx as unknown as { get?: (name: string) => unknown }).get
+    const candidate: unknown = lookup?.call(ctx, 'sessionLogDownload')
+    if (candidate === null || typeof candidate !== 'object') return undefined
+    const value = candidate as Partial<TaskMonitorSessionLogService>
+    if (typeof value.download !== 'function' || typeof value.dismiss !== 'function') return undefined
+    if (value.store === undefined || typeof value.store.getSnapshot !== 'function' || typeof value.store.subscribe !== 'function') return undefined
+    return value as TaskMonitorSessionLogService
+  } catch { return undefined }
+}
+
+const STATUS_COPY: Readonly<Record<TaskMonitorOverallStatus, readonly [string, string]>> = {
+  blocked: ['需处理', 'Needs attention'], waiting: ['等待你', 'Waiting for you'], running: ['进行中', 'Running'],
+  paused: ['已暂停', 'Paused'], complete: ['已完成', 'Complete'], idle: ['空闲', 'Idle'],
+}
+const JOB_STATUS: Readonly<Record<TaskMonitorJobView['status'], readonly [string, string]>> = {
   running: ['进行中', 'Running'], stopping: ['正在停止', 'Stopping'], completed: ['已完成', 'Completed'],
   killed: ['已取消', 'Cancelled'], failed: ['失败', 'Failed'],
-} as const
+}
+const WORKFLOW_STATUS: Readonly<Record<TaskMonitorWorkflowStatus, readonly [string, string]>> = {
+  running: ['进行中', 'Running'], completed: ['已完成', 'Completed'], failed: ['失败', 'Failed'],
+  cancelled: ['已取消', 'Cancelled'], interrupted: ['已中断', 'Interrupted'],
+}
+const PRIMARY_ROW_LIMIT = 4
+const TODO_ROW_LIMIT = 5
+const CHECKLIST_HISTORY_LIMIT = 3
+const RESOURCE_CHIP_LIMIT = 4
 
-function duration(job: PaimindArtifactJobView, now: number): string {
+function duration(job: TaskMonitorJobView, now: number): string {
   const end = isLivePaimindJob(job) ? now : job.finishedAt ?? job.startedAt
   const seconds = Math.max(0, Math.floor((end - job.startedAt) / 1_000))
   if (seconds < 60) return `${seconds}s`
-  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
+  const minutes = Math.floor(seconds / 60)
+  return minutes < 60 ? `${minutes}m ${seconds % 60}s` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`
+}
+
+function StatusIcon(props: { readonly status: string }): React.JSX.Element {
+  if (props.status === 'completed' || props.status === 'complete') return <PaimindCheckIcon size={13} />
+  if (props.status === 'failed' || props.status === 'blocked') return <PaimindWarningIcon size={13} />
+  if (props.status === 'running' || props.status === 'in_progress') return <PaimindToolIcon size={13} />
+  return <PaimindPauseIcon size={13} />
+}
+
+function Section(props: { readonly id?: string; readonly title: string; readonly children: ReactNode }): React.JSX.Element {
+  return <section id={props.id} data-paimind-task-section {...(props.id === undefined ? {} : { 'data-paimind-task-anchor': '', tabIndex: -1 })}><h3>{props.title}</h3>{props.children}</section>
+}
+
+function focusTaskAnchor(id: string): void {
+  const target = document.getElementById(id)
+  if (!(target instanceof HTMLElement)) return
+  target.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+  target.focus({ preventScroll: true })
+}
+
+function FileRows(props: { readonly files: readonly TaskMonitorFileView[]; readonly onOpen: (file: TaskMonitorFileView) => void }): React.JSX.Element {
+  return <ul data-paimind-task-list>{props.files.map(file => <li key={`${file.source}:${file.artifactSourceId ?? ''}:${file.path}`} data-paimind-task-row>
+    <span data-paimind-task-row-icon aria-hidden="true">{file.source === 'read' ? <PaimindInputIcon size={14} /> : <PaimindUploadIcon size={14} />}</span>
+    <div data-paimind-task-row-main><button type="button" data-paimind-task-link title={file.path} onClick={() => { props.onOpen(file) }}>{file.title}</button><small>{file.path}</small></div>
+    <span data-paimind-task-row-meta>{file.state ?? (file.revision === undefined ? file.source : `r${file.revision}`)}</span>
+  </li>)}</ul>
+}
+
+function Files(props: { readonly files: readonly TaskMonitorFileView[]; readonly zh: boolean; readonly onOpen: (file: TaskMonitorFileView) => void }): React.JSX.Element {
+  if (props.files.length === 0) return <></>
+  const primary = props.files.slice(0, PRIMARY_ROW_LIMIT)
+  const remaining = props.files.slice(PRIMARY_ROW_LIMIT)
+  return <><FileRows files={primary} onOpen={props.onOpen} />{remaining.length > 0 && <details data-paimind-task-disclosure><summary>{props.zh ? `其余 ${remaining.length} 项` : `${remaining.length} more`}</summary><FileRows files={remaining} onOpen={props.onOpen} /></details>}</>
+}
+
+interface SubagentRowData {
+  readonly id: string
+  readonly label: string
+  readonly agentPreset?: string
+  readonly mode: 'one-shot' | 'continuable'
+  readonly running: boolean
+  readonly status: string
+  readonly visualSlot: number
+}
+
+type SubagentVisual = Readonly<{
+  key: 'browse' | 'think' | 'data' | 'code' | 'branch' | 'folder' | 'spark' | 'target'
+  Icon: LucideIcon
+}>
+
+// Stable identity variants keep sibling Subagents visually distinct without
+// claiming a capability that is absent from the native Session facts. Add a
+// new semantic alias here when Harness exposes richer Agent metadata.
+const SUBAGENT_VISUALS: readonly SubagentVisual[] = Object.freeze([
+  { key: 'browse', Icon: PaimindBrowseIcon },
+  { key: 'think', Icon: PaimindThinkIcon },
+  { key: 'data', Icon: PaimindDataIcon },
+  { key: 'code', Icon: PaimindCodeIcon },
+  { key: 'branch', Icon: PaimindBranchIcon },
+  { key: 'folder', Icon: PaimindInputIcon },
+  { key: 'spark', Icon: PaimindSkillIcon },
+  { key: 'target', Icon: PaimindGoalIcon },
+])
+
+function SubagentAvatar(props: { readonly label: string; readonly slot: number }): React.JSX.Element {
+  const visual = SUBAGENT_VISUALS[props.slot % SUBAGENT_VISUALS.length] ?? SUBAGENT_VISUALS[0]!
+  return <span data-paimind-task-agent-avatar data-variant={visual.key} aria-hidden="true">
+    <visual.Icon size={14} />
+    <span data-paimind-task-agent-tooltip>{props.label}</span>
+  </span>
+}
+
+function SubagentRows(props: {
+  readonly rows: readonly SubagentRowData[]
+  readonly zh: boolean
+  readonly onOpen: (id: string, mode: 'one-shot' | 'continuable') => void
+}): React.JSX.Element {
+  if (props.rows.length === 0) return <></>
+  return <ul data-paimind-task-list>{props.rows.map(row => <li key={row.id}><button
+    type="button"
+    data-paimind-task-row
+    data-paimind-task-subagent
+    aria-label={props.zh ? `打开子代理：${row.label}` : `Open Subagent: ${row.label}`}
+    onClick={() => { props.onOpen(row.id, row.mode) }}
+  ><SubagentAvatar label={row.label} slot={row.visualSlot} /><span data-paimind-task-row-main><strong title={row.label}>{row.label}</strong><small>{row.agentPreset ?? row.id}</small></span><span data-paimind-task-row-meta>{row.status}<PaimindChevronRightIcon size={12} /></span></button></li>)}</ul>
+}
+
+function FoldedSubagents(props: {
+  readonly rows: readonly SubagentRowData[]
+  readonly zh: boolean
+  readonly onOpen: (id: string, mode: 'one-shot' | 'continuable') => void
+}): React.JSX.Element {
+  if (props.rows.length === 0) return <></>
+  const sorted = [...props.rows].sort((left, right) => Number(right.running) - Number(left.running))
+  const primary = sorted.slice(0, PRIMARY_ROW_LIMIT)
+  const remaining = sorted.slice(PRIMARY_ROW_LIMIT)
+  return <><SubagentRows rows={primary} zh={props.zh} onOpen={props.onOpen}/>{remaining.length > 0 && <details data-paimind-task-disclosure data-paimind-task-subagent-overflow><summary>{props.zh ? `其余 ${remaining.length} 个子代理` : `${remaining.length} more Subagents`}</summary><SubagentRows rows={remaining} zh={props.zh} onOpen={props.onOpen}/></details>}</>
+}
+
+function ResourceChips(props: {
+  readonly values: readonly { readonly key: string; readonly text: string; readonly kind?: string; readonly title?: string }[]
+  readonly zh: boolean
+}): React.JSX.Element {
+  const chip = (value: { readonly key: string; readonly text: string; readonly kind?: string; readonly title?: string }): React.JSX.Element => <span key={value.key} data-paimind-task-chip title={value.title} {...(value.kind === undefined ? {} : { 'data-kind': value.kind })}>{value.text}</span>
+  const primary = props.values.slice(0, RESOURCE_CHIP_LIMIT)
+  const remaining = props.values.slice(RESOURCE_CHIP_LIMIT)
+  return <>{primary.map(chip)}{remaining.length > 0 && <details data-paimind-task-chip-overflow><summary>{props.zh ? `其余 ${remaining.length} 项` : `${remaining.length} more`}</summary><div>{remaining.map(chip)}</div></details>}</>
+}
+
+function ProgressSection(props: {
+  readonly view: TaskMonitorViewModel
+  readonly zh: boolean
+  readonly now: number
+  readonly todoAnchorId: string
+}): React.JSX.Element {
+  const { view, zh } = props
+  const currentTodoList = view.todoLists.find(list => list.current)
+  const historicTodoLists = view.todoLists.filter(list => !list.current)
+  const liveJobs = view.jobs.filter(isLivePaimindJob)
+  const historicJobs = view.jobs.filter(job => !isLivePaimindJob(job))
+  const activePlan = view.plan?.active === true || view.plan?.pending === true
+  const todoRows = (todos: typeof view.todos): React.JSX.Element => {
+    if (todos.length === 0) return <></>
+    const primary = todos.slice(0, TODO_ROW_LIMIT)
+    const remaining = todos.slice(TODO_ROW_LIMIT)
+    const rows = (items: typeof view.todos): React.JSX.Element => <ul data-paimind-task-list>{items.map((todo, index) => <li key={`${todo.content}:${index}`} data-paimind-task-row><span data-paimind-task-row-icon><StatusIcon status={todo.status} /></span><div data-paimind-task-row-main><strong>{todo.content}</strong></div></li>)}</ul>
+    return <>{rows(primary)}{remaining.length > 0 && <details data-paimind-task-disclosure><summary>{zh ? `其余 ${remaining.length} 项` : `${remaining.length} more`}</summary>{rows(remaining)}</details>}</>
+  }
+  const jobRows = (jobs: readonly TaskMonitorJobView[]): React.JSX.Element => <ul data-paimind-task-list>{jobs.map(job => <li key={job.id} data-paimind-task-row><span data-paimind-task-row-icon><StatusIcon status={job.status} /></span><div data-paimind-task-row-main><strong title={job.label}>{job.label}</strong><small>{job.kind} · {job.artifact?.title ?? job.detail ?? job.id}</small></div><span data-paimind-task-row-meta>{JOB_STATUS[job.status][zh ? 0 : 1]} · {duration(job, props.now)}</span></li>)}</ul>
+  const boundedRows = <T,>(items: readonly T[], render: (rows: readonly T[]) => React.JSX.Element, label: (count: number) => string): React.JSX.Element => {
+    const primary = items.slice(0, PRIMARY_ROW_LIMIT)
+    const remaining = items.slice(PRIMARY_ROW_LIMIT)
+    return <>{render(primary)}{remaining.length > 0 && <details data-paimind-task-disclosure><summary>{label(remaining.length)}</summary>{render(remaining)}</details>}</>
+  }
+  const workflowRows = (workflows: typeof view.workflows): React.JSX.Element => <>{workflows.map(workflow => <ul key={workflow.name} data-paimind-task-list><li data-paimind-task-row><span data-paimind-task-row-icon><StatusIcon status={workflow.status} /></span><div data-paimind-task-row-main><strong>{workflow.name}</strong><small>{workflow.phases.map(phase => phase.phase ?? (zh ? '未分阶段' : 'Unphased')).join(' · ')}</small></div><span data-paimind-task-row-meta>{WORKFLOW_STATUS[workflow.status][zh ? 0 : 1]}</span></li></ul>)}</>
+  const toolRows = (tools: typeof view.runningTools): React.JSX.Element => <ul data-paimind-task-list>{tools.map((tool, index) => <li key={tool.callId ?? `${tool.name}:${index}`} data-paimind-task-row><span data-paimind-task-row-icon><PaimindToolIcon size={13} /></span><div data-paimind-task-row-main><strong>{tool.name}</strong><small>{tool.callId}</small></div><span data-paimind-task-row-meta>{zh ? '工具调用' : 'Tool Call'}</span></li>)}</ul>
+  const visibleTodoHistory = historicTodoLists.slice(0, CHECKLIST_HISTORY_LIMIT)
+  const olderTodoHistory = historicTodoLists.slice(CHECKLIST_HISTORY_LIMIT)
+  const todoHistory = (lists: typeof historicTodoLists, offset = 0): React.JSX.Element => <>{lists.map((list, index) => <details key={list.id} data-paimind-task-todo-history><summary><span>{zh ? `${index + offset === 0 && currentTodoList === undefined ? '最近' : '历史'}清单 ${historicTodoLists.length - index - offset}` : `${index + offset === 0 && currentTodoList === undefined ? 'Latest' : 'Previous'} checklist ${historicTodoLists.length - index - offset}`} · {list.progress.completed}/{list.progress.total}</span></summary>{todoRows(list.items)}</details>)}</>
+  return <>
+    {view.todoLists.length > 0 && <div id={props.todoAnchorId} data-paimind-task-anchor tabIndex={-1}>
+      {currentTodoList !== undefined && currentTodoList.progress.total > 0 && <div data-paimind-task-todo-group><div data-paimind-task-progress-head><span>{zh ? '当前清单' : 'Current checklist'}</span><b>{currentTodoList.progress.completed}/{currentTodoList.progress.total}</b></div><div data-paimind-task-progress aria-label={`${currentTodoList.progress.completed}/${currentTodoList.progress.total}`}><i style={{ width: `${currentTodoList.progress.completed / currentTodoList.progress.total * 100}%` }} /></div>{todoRows(currentTodoList.items.filter(todo => todo.status !== 'completed'))}{currentTodoList.progress.completed > 0 && <details data-paimind-task-disclosure><summary>{zh ? `已完成 ${currentTodoList.progress.completed} 项` : `${currentTodoList.progress.completed} completed`}</summary>{todoRows(currentTodoList.items.filter(todo => todo.status === 'completed'))}</details>}</div>}
+      {visibleTodoHistory.length > 0 && <div data-paimind-task-todo-group>{todoHistory(visibleTodoHistory)}{olderTodoHistory.length > 0 && <details data-paimind-task-disclosure><summary>{zh ? `更早 ${olderTodoHistory.length} 个清单` : `${olderTodoHistory.length} older checklists`}</summary>{todoHistory(olderTodoHistory, CHECKLIST_HISTORY_LIMIT)}</details>}</div>}
+    </div>}
+    {view.goal !== null && <ul data-paimind-task-list><li data-paimind-task-row><span data-paimind-task-row-icon><PaimindGoalIcon size={14} /></span><div data-paimind-task-row-main><strong>{view.goal.objective}</strong><small>{view.goal.blockedReason ?? `${zh ? '目标轮次' : 'Goal rounds'} ${view.goal.roundsStarted}/${view.goal.maxGoalRounds}`}</small></div><span data-paimind-task-row-meta>{view.goal.phase}</span></li></ul>}
+    {view.workflows.length > 0 && boundedRows(view.workflows, workflowRows, count => zh ? `其余 ${count} 个工作流` : `${count} more Workflows`)}
+    {view.runningTools.length > 0 && boundedRows(view.runningTools, toolRows, count => zh ? `其余 ${count} 个工具调用` : `${count} more Tool Calls`)}
+    {liveJobs.length > 0 && boundedRows(liveJobs, jobRows, count => zh ? `其余 ${count} 个进行中任务` : `${count} more live Jobs`)}
+    {historicJobs.length > 0 && <details data-paimind-task-disclosure><summary>{zh ? `历史任务 ${historicJobs.length} 项` : `${historicJobs.length} historical Jobs`}</summary>{boundedRows(historicJobs, jobRows, count => zh ? `其余 ${count} 项` : `${count} more`)}</details>}
+    {activePlan && view.plan !== null && <ul data-paimind-task-list><li data-paimind-task-row><span data-paimind-task-row-icon><PaimindChecklistIcon size={14} /></span><div data-paimind-task-row-main><strong>{zh ? '计划模式' : 'Plan mode'}</strong><small>{view.plan.pending ? (zh ? '状态切换待生效' : 'State change pending') : (zh ? '状态已同步' : 'State synchronized')}</small></div><span data-paimind-task-row-meta>{view.plan.active ? (zh ? '已启用' : 'Active') : (zh ? '待生效' : 'Pending')}</span></li></ul>}
+  </>
+}
+
+function Resources(props: {
+  readonly view: TaskMonitorViewModel
+  readonly zh: boolean
+  readonly loading: boolean
+  readonly subagentAnchorId: string
+  readonly onSubagent: (id: string, mode: 'one-shot' | 'continuable') => void
+}): React.JSX.Element {
+  const { view, zh } = props
+  const modelTooltipId = useId()
+  const mainAgentLabel = view.session.agentPreset ?? (zh ? '主 Agent' : 'Main Agent')
+  const hasMainAgent = view.session.agentPreset !== undefined || view.model !== undefined
+  const subagentSlots = new Map(view.subagents.map((subagent, index) => [subagent.id, index]))
+  const subagentRows = view.subagents.map((subagent: TaskMonitorSubagentView): SubagentRowData => ({
+    id: subagent.id,
+    label: subagent.label,
+    ...(subagent.agentPreset === undefined ? {} : { agentPreset: subagent.agentPreset }),
+    mode: subagent.mode,
+    running: subagent.activity === 'running',
+    status: subagent.activity === 'running' ? (zh ? '进行中' : 'Running') : (zh ? '空闲' : 'Inactive'),
+    visualSlot: subagentSlots.get(subagent.id) ?? 0,
+  }))
+  const skillValues = view.skills.map(skill => ({ key: `skill:${skill}`, text: skill, kind: 'skill-used', title: zh ? '本会话已使用' : 'Used in this Session' }))
+  const mcpValues = view.mcps.filter(mcp => mcp.status === 'used').map(mcp => ({ key: `mcp:${mcp.server}`, text: mcp.server, kind: 'mcp-used', title: zh ? '本会话已使用' : 'Used in this Session' }))
+  return <div data-paimind-task-resource-list aria-busy={props.loading}>
+    {(hasMainAgent || subagentRows.length > 0) && <div data-paimind-task-resource-row data-paimind-task-agent-group>
+      <b data-paimind-task-resource-label title={zh ? '主 Agent 与子代理' : 'Main Agent and Subagents'}><PaimindAgentIcon size={15} />Agent</b>
+      {hasMainAgent && <div data-paimind-task-resource-values><span data-paimind-task-main-agent tabIndex={view.model === undefined ? undefined : 0} {...(view.model === undefined ? {} : { 'aria-describedby': modelTooltipId })}><span data-paimind-task-chip data-kind="agent">{mainAgentLabel} · {zh ? '主 Agent' : 'Main Agent'}</span>{view.model !== undefined && <span id={modelTooltipId} role="tooltip" data-paimind-task-model-tooltip>{view.model.provider} · {view.model.model}</span>}</span></div>}
+      {subagentRows.length > 0 && <div id={props.subagentAnchorId} data-paimind-task-anchor data-paimind-task-agent-children tabIndex={-1}><FoldedSubagents rows={subagentRows} zh={zh} onOpen={props.onSubagent} /></div>}
+    </div>}
+    {skillValues.length > 0 && <div data-paimind-task-resource-row><b data-paimind-task-resource-label title={zh ? '已使用的 Skill' : 'Used Skills'}><PaimindSkillIcon size={15} />Skill</b><div data-paimind-task-resource-values><ResourceChips values={skillValues} zh={zh} /></div></div>}
+    {mcpValues.length > 0 && <div data-paimind-task-resource-row><b data-paimind-task-resource-label title={zh ? '已使用的 MCP' : 'Used MCP Servers'}><PaimindMcpIcon size={15} />MCP</b><div data-paimind-task-resource-values><ResourceChips values={mcpValues} zh={zh} /></div></div>}
+  </div>
 }
 
 export interface TaskMonitorActionProps extends PaimindSessionHeaderActionProps {
   readonly locale: PaimindLocaleSource
+  readonly sessions: HarnessSessionService
+  readonly workspaces: HarnessWorkspaceService
+  readonly artifacts: PaimindArtifactService
+  readonly projects: PaimindWorkspaceProjectService
+  readonly sessionLog?: TaskMonitorSessionLogService
+  readonly sessionHistory?: HarnessSessionHistoryApi
 }
 
-export function TaskMonitorAction({ sessionId, useSessions, useProjection, locale }: TaskMonitorActionProps): React.JSX.Element {
-  const jobs = useSessions(snapshot => snapshot.jobsBySession?.[sessionId] ?? [])
-  const projection = useProjection('paimind.artifacts')
-  const activeLocale = useSyncExternalStore(
-    locale.subscribe.bind(locale),
-    () => locale.getLocale().active,
-    () => locale.getLocale().active,
+function sessionHistoryApiOf(ctx: TaskMonitorClientContext): HarnessSessionHistoryApi | undefined {
+  try {
+    const lookup = (ctx as unknown as { get?: (name: string) => unknown }).get
+    const candidate = lookup?.call(ctx, 'connection') as { readonly api?: { readonly sessions?: Partial<HarnessSessionHistoryApi> } } | undefined
+    return typeof candidate?.api?.sessions?.history === 'function' ? candidate.api.sessions as HarnessSessionHistoryApi : undefined
+  } catch { return undefined }
+}
+
+const RESOURCE_HISTORY_CACHE = new Map<string, TaskMonitorResourceHistoryV1>()
+const RESOURCE_HISTORY_REQUESTS = new Map<string, Promise<TaskMonitorResourceHistoryV1 | undefined>>()
+const RESOURCE_HISTORY_CACHE_LIMIT = 32
+
+function mergeResourceHistory(
+  baseline: TaskMonitorResourceHistoryV1 | undefined,
+  update: TaskMonitorResourceHistoryV1,
+): TaskMonitorResourceHistoryV1 {
+  if (baseline === undefined) return update
+  const todoSnapshots = new Map(baseline.todoSnapshots.map(snapshot => [snapshot.seq, snapshot]))
+  for (const snapshot of update.todoSnapshots) todoSnapshots.set(snapshot.seq, snapshot)
+  const capturedThroughSeq = baseline.capturedThroughSeq === null
+    ? update.capturedThroughSeq
+    : update.capturedThroughSeq === null
+      ? baseline.capturedThroughSeq
+      : Math.max(baseline.capturedThroughSeq, update.capturedThroughSeq)
+  return Object.freeze({
+    schema: update.schema,
+    capturedThroughSeq,
+    skills: Object.freeze([...new Set([...baseline.skills, ...update.skills])]),
+    mcps: Object.freeze([...new Set([...baseline.mcps, ...update.mcps])]),
+    todoSnapshots: Object.freeze([...todoSnapshots.values()].sort((left, right) => left.seq - right.seq).slice(-100)),
+  })
+}
+
+async function loadResourceHistory(api: HarnessSessionHistoryApi, sessionId: string, baseline?: TaskMonitorResourceHistoryV1): Promise<TaskMonitorResourceHistoryV1 | undefined> {
+  const events: Parameters<typeof collectTaskMonitorResourceHistory>[0][number][] = []
+  let beforeSeq: number | undefined
+  for (let page = 0; page < 100; page++) {
+    const response = await api.history({ sessionId, maxMessages: 100, ...(beforeSeq === undefined ? {} : { beforeSeq }) })
+    if (!response.result.ok) return undefined
+    const value = response.result.value
+    if (!Array.isArray(value.events) || typeof value.hasMore !== 'boolean') return undefined
+    let firstSeq: number | undefined
+    let reachedBaseline = false
+    for (const entry of value.events) {
+      const event = entry?.event
+      if (event === null || typeof event !== 'object' || typeof event.type !== 'string') return undefined
+      if (baseline?.capturedThroughSeq !== null && baseline?.capturedThroughSeq !== undefined
+        && Number.isSafeInteger(event.seq) && event.seq! <= baseline.capturedThroughSeq) reachedBaseline = true
+      else events.push(event)
+      if (Number.isSafeInteger(event.seq)) firstSeq = Math.min(firstSeq ?? event.seq!, event.seq!)
+    }
+    if (reachedBaseline || !value.hasMore) return mergeResourceHistory(baseline, collectTaskMonitorResourceHistory(events))
+    if (firstSeq === undefined || firstSeq === beforeSeq) return undefined
+    beforeSeq = firstSeq
+  }
+  return undefined
+}
+
+function refreshResourceHistory(api: HarnessSessionHistoryApi, sessionId: string): Promise<TaskMonitorResourceHistoryV1 | undefined> {
+  const active = RESOURCE_HISTORY_REQUESTS.get(sessionId)
+  if (active !== undefined) return active
+  const request = loadResourceHistory(api, sessionId, RESOURCE_HISTORY_CACHE.get(sessionId)).then(value => {
+    if (value !== undefined) {
+      RESOURCE_HISTORY_CACHE.delete(sessionId)
+      RESOURCE_HISTORY_CACHE.set(sessionId, value)
+      while (RESOURCE_HISTORY_CACHE.size > RESOURCE_HISTORY_CACHE_LIMIT) {
+        const oldest = RESOURCE_HISTORY_CACHE.keys().next().value as string | undefined
+        if (oldest === undefined) break
+        RESOURCE_HISTORY_CACHE.delete(oldest)
+      }
+    }
+    return value
+  })
+  RESOURCE_HISTORY_REQUESTS.set(sessionId, request)
+  void request.then(
+    () => { if (RESOURCE_HISTORY_REQUESTS.get(sessionId) === request) RESOURCE_HISTORY_REQUESTS.delete(sessionId) },
+    () => { if (RESOURCE_HISTORY_REQUESTS.get(sessionId) === request) RESOURCE_HISTORY_REQUESTS.delete(sessionId) },
   )
+  return request
+}
+
+export function TaskMonitorAction(props: TaskMonitorActionProps): React.JSX.Element {
+  const sessionsSnapshot = useSyncExternalStore(props.sessions.list.subscribe.bind(props.sessions.list), props.sessions.list.getSnapshot.bind(props.sessions.list), props.sessions.list.getSnapshot.bind(props.sessions.list))
+  const conversation = props.useSession(snapshot => snapshot)
+  const projections = props.sessions.binding?.(props.sessionId)?.session.projections
+  const goal = useOptionalProjection(projections?.faceOf('goal'))
+  const todos = useOptionalProjection(projections?.faceOf('todos'))
+  const plan = useOptionalProjection(projections?.faceOf('plan'))
+  const artifactSnapshot = useSyncExternalStore(props.artifacts.subscribe.bind(props.artifacts), props.artifacts.getSnapshot.bind(props.artifacts), props.artifacts.getSnapshot.bind(props.artifacts))
+  const projectSnapshot = useSyncExternalStore(props.projects.subscribe.bind(props.projects), props.projects.getSnapshot.bind(props.projects), props.projects.getSnapshot.bind(props.projects))
+  const sessionLogSubscribe = useMemo(() => props.sessionLog?.store.subscribe.bind(props.sessionLog.store) ?? EMPTY_SUBSCRIBE, [props.sessionLog])
+  const getSessionLogSnapshot = useMemo(() => props.sessionLog?.store.getSnapshot.bind(props.sessionLog.store) ?? GET_EMPTY_SESSION_LOG, [props.sessionLog])
+  const sessionLogSnapshot = useSyncExternalStore(sessionLogSubscribe, getSessionLogSnapshot, GET_EMPTY_SESSION_LOG)
+  const activeLocale = useSyncExternalStore(props.locale.subscribe.bind(props.locale), () => props.locale.getLocale().active, () => props.locale.getLocale().active)
   const zh = activeLocale.startsWith('zh')
-  const rows = useMemo(
-    () => projectPaimindArtifactJobs(jobs, artifactsFromProjection(projection)),
-    [jobs, projection],
-  )
-  const liveCount = rows.filter(isLivePaimindJob).length
+  const project = projectSnapshot.projects.find(candidate => candidate.sessionIds.includes(props.sessionId))
+  const [resourceHistory, setResourceHistory] = useState<TaskMonitorResourceHistoryV1 | undefined>(() => RESOURCE_HISTORY_CACHE.get(props.sessionId))
+  const [resourceHistoryLoading, setResourceHistoryLoading] = useState(false)
+  const view = useMemo(() => projectTaskMonitor({
+    sessionId: props.sessionId,
+    sessions: sessionsSnapshot,
+    conversation,
+    goal,
+    todos,
+    plan,
+    artifacts: artifactSnapshot.artifacts,
+    ...(resourceHistory === undefined ? {} : { resourceHistory }),
+    ...(project === undefined ? {} : { projectTitle: project.title, projectPath: project.path }),
+  }), [props.sessionId, sessionsSnapshot, conversation, goal, todos, plan, artifactSnapshot, project, resourceHistory])
   const [open, setOpen] = useState(false)
+  const [navigationError, setNavigationError] = useState<string | undefined>()
   const [now, setNow] = useState(() => Date.now())
-  const root = useRef<HTMLDivElement>(null)
-  const trigger = useRef<HTMLButtonElement>(null)
+  const [position, setPosition] = useState<CSSProperties>({})
+  const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
+  const panelId = useId()
+  const tooltipId = useId()
+  const todoAnchorId = useId()
+  const subagentAnchorId = useId()
+  const outputAnchorId = useId()
 
   useEffect(() => {
-    if (!open) return
-    const closeOutside = (event: PointerEvent): void => {
-      if (event.target instanceof Node && !root.current?.contains(event.target)) setOpen(false)
+    let active = true
+    setNavigationError(undefined)
+    const cached = RESOURCE_HISTORY_CACHE.get(props.sessionId)
+    setResourceHistory(cached)
+    if (props.sessionHistory === undefined || conversation.running) {
+      setResourceHistoryLoading(false)
+      return () => { active = false }
     }
-    document.addEventListener('pointerdown', closeOutside)
-    return () => { document.removeEventListener('pointerdown', closeOutside) }
+    setResourceHistoryLoading(cached === undefined)
+    void refreshResourceHistory(props.sessionHistory, props.sessionId)
+      .then(value => {
+        if (!active) return
+        if (value !== undefined) setResourceHistory(value)
+        setResourceHistoryLoading(false)
+      })
+      .catch(() => { if (active) setResourceHistoryLoading(false) })
+    return () => { active = false }
+  }, [props.sessionId, props.sessionHistory, conversation.running])
+
+  const liveCount = view.runningTools.length + view.jobs.filter(isLivePaimindJob).length
+    + view.workflows.filter(workflow => workflow.status === 'running').length
+  useEffect(() => {
+    if (!open) return
+    const refresh = (): void => {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (rect === undefined) return
+      const width = Math.min(420, window.innerWidth - 24)
+      const left = Math.min(Math.max(12, rect.right - width), Math.max(12, window.innerWidth - width - 12))
+      const top = Math.max(12, rect.bottom + 8)
+      setPosition({ left, top, maxHeight: Math.max(220, window.innerHeight - top - 12) })
+    }
+    const outside = (event: PointerEvent): void => {
+      if (!(event.target instanceof Node)) return
+      if (!rootRef.current?.contains(event.target) && !panelRef.current?.contains(event.target)) setOpen(false)
+    }
+    const key = (event: globalThis.KeyboardEvent): void => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setOpen(false)
+      triggerRef.current?.focus()
+    }
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(refresh)
+    if (triggerRef.current !== null) observer?.observe(triggerRef.current)
+    refresh()
+    document.addEventListener('pointerdown', outside)
+    document.addEventListener('keydown', key)
+    window.addEventListener('resize', refresh)
+    window.addEventListener('scroll', refresh, true)
+    return () => {
+      observer?.disconnect()
+      document.removeEventListener('pointerdown', outside)
+      document.removeEventListener('keydown', key)
+      window.removeEventListener('resize', refresh)
+      window.removeEventListener('scroll', refresh, true)
+    }
   }, [open])
 
   useEffect(() => {
     if (!open || liveCount === 0) return
     setNow(Date.now())
-    const timer = setInterval(() => { setNow(Date.now()) }, 1_000)
-    return () => { clearInterval(timer) }
+    const timer = window.setInterval(() => { setNow(Date.now()) }, 1_000)
+    return () => { window.clearInterval(timer) }
   }, [open, liveCount])
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key !== 'Escape' || !open) return
-    event.preventDefault()
-    setOpen(false)
-    trigger.current?.focus()
+  const openFile = (file: TaskMonitorFileView): void => { void props.workspaces.openPath(file.path) }
+  const openSubagent = (childSessionId: string, mode: 'one-shot' | 'continuable'): void => {
+    setNavigationError(undefined)
+    if (props.sessions.openSubagent !== undefined) {
+      try {
+        props.sessions.openSubagent({ parentSessionId: props.sessionId, childSessionId, mode })
+        setOpen(false)
+        return
+      } catch { /* Fall through to exact native Session navigation. */ }
+    }
+    if (sessionsSnapshot.byId[childSessionId] !== undefined) {
+      try {
+        props.sessions.open(childSessionId)
+        setOpen(false)
+        return
+      } catch { /* Keep the panel open and expose a deterministic error. */ }
+    }
+    setNavigationError(zh ? '无法打开子代理，请刷新后重试。' : 'Unable to open the Subagent. Refresh and try again.')
   }
-
-  const label = zh ? `PAIMind 任务（${rows.length}）` : `PAIMind Tasks (${rows.length})`
-  return (
-    <div ref={root} data-paimind-task-action onKeyDown={onKeyDown}>
-      <button
-        ref={trigger}
-        type="button"
-        data-paimind-task-trigger
-        aria-label={label}
-        aria-expanded={open}
-        onClick={() => { setNow(Date.now()); setOpen(value => !value) }}
-      >
-        {liveCount > 0 && <i data-paimind-task-live aria-hidden="true" />}
-        <TaskIcon />
-        <span data-paimind-task-trigger-label>{zh ? '任务' : 'Tasks'}</span>
-        {rows.length > 0 && <span>{rows.length}</span>}
-      </button>
-      {open && (
-        <section data-paimind-task-panel aria-label={zh ? 'PAIMind 任务监控' : 'PAIMind Task Monitor'}>
-          <header>
-            <div>
-              <h2>{zh ? '任务监控' : 'Task Monitor'}</h2>
-              <p>{zh ? '只显示 PAIMind 生成器创建的 Harness 原生任务' : 'Native Harness Jobs created by PAIMind generators only'}</p>
-            </div>
-            <span data-paimind-task-count>{rows.length}</span>
-          </header>
-          {rows.length === 0 ? (
-            <div data-paimind-task-empty>{zh ? '当前会话还没有产物生成任务。' : 'No artifact generation Jobs in this Session yet.'}</div>
-          ) : (
-            <ul data-paimind-task-list>
-              {rows.map(job => (
-                <li key={job.id} data-paimind-task-row data-status={job.status}>
-                  <div data-paimind-task-row-head>
-                    <i data-paimind-task-state data-status={job.status} aria-hidden="true" />
-                    <span data-paimind-task-title>{job.label}</span>
-                    <span data-paimind-task-status>{STATUS_COPY[job.status][zh ? 0 : 1]}</span>
-                  </div>
-                  <div data-paimind-task-meta>
-                    <span>{job.id}</span><span>{duration(job, now)}</span>{job.detail !== undefined && <span>{job.detail}</span>}
-                  </div>
-                  {job.artifact !== undefined && (
-                    <div data-paimind-task-artifact>
-                      {job.artifact.state === 'available'
-                        ? `${zh ? '产物' : 'Artifact'} · ${job.artifact.title} · r${job.artifact.revision}`
-                        : `${zh ? '产物失败' : 'Artifact failed'} · ${job.artifact.error?.message ?? job.artifact.state}`}
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-          <p data-paimind-task-note>
-            {zh
-              ? '任务状态来自当前 Harness 进程；产物结果来自可持久化的 Session 投影。Harness 重启后任务历史会清空，但产物仍可恢复。'
-              : 'Job state is process-local Harness truth; artifact results are durable Session projections. Jobs reset on restart while artifacts recover.'}
-          </p>
-        </section>
-      )}
+  const label = zh ? '任务监控' : 'Task Monitor'
+  const sessionLog = sessionLogSnapshot.bySession[props.sessionId]
+  const requestSessionLog = (): void => {
+    if (props.sessionLog === undefined || sessionLog?.status === 'downloading') return
+    void props.sessionLog.download(props.sessionId).finally(() => { props.sessionLog?.dismiss(props.sessionId) })
+  }
+  const sessionLogStatus = sessionLog?.status === 'downloading'
+    ? (zh ? '正在准备 ZIP' : 'Preparing ZIP')
+    : sessionLog?.status === 'success'
+      ? (zh ? '已交给浏览器下载' : 'Sent to browser downloads')
+      : sessionLog?.status === 'error'
+        ? (sessionLog.error ?? (zh ? '下载失败' : 'Download failed'))
+        : (zh ? '包含当前会话与子会话' : 'Includes this Session and descendants')
+  const hasProgress = view.goal !== null || view.todoLists.length > 0 || view.runningTools.length > 0 || view.jobs.length > 0
+    || view.workflows.length > 0 || view.plan?.active === true || view.plan?.pending === true
+  const hasResources = view.session.agentPreset !== undefined || view.model !== undefined || view.subagents.length > 0 || view.skills.length > 0 || view.mcps.some(mcp => mcp.status === 'used')
+  const artifactCount = view.outputs.filter(output => output.source === 'artifact').length
+  const summaryStats = [
+    ...(view.todoLists.length === 0 ? [] : [{ key: 'todos', value: view.todoLists.length, label: zh ? '清单' : 'Todos', targetId: todoAnchorId, icon: <PaimindChecklistIcon size={13} /> }]),
+    ...(view.subagents.length === 0 ? [] : [{ key: 'subagents', value: view.subagents.length, label: zh ? '子代理' : 'Subagents', targetId: subagentAnchorId, icon: <PaimindBranchIcon size={13} /> }]),
+    ...(view.outputs.length === 0 ? [] : [{ key: 'outputs', value: view.outputs.length, label: zh ? '产物' : 'Outputs', targetId: outputAnchorId, icon: <PaimindUploadIcon size={13} /> }]),
+  ]
+  const taskSummaryLabel = zh ? '任务摘要' : 'Task Summary'
+  const panel = open ? <section ref={panelRef} id={panelId} role="region" aria-label={label} data-paimind-task-panel style={position}>
+    <header data-paimind-task-panel-header><div><h2>{taskSummaryLabel}</h2><p>{zh ? '当前会话 · 原生状态' : 'Current Session · native facts'}</p></div><span data-paimind-task-status-pill data-status={view.status}>{STATUS_COPY[view.status][zh ? 0 : 1]}</span></header>
+    <div data-paimind-task-body>
+      <section data-paimind-task-summary-card aria-label={zh ? '当前摘要' : 'Current Summary'}><div data-paimind-task-summary><div data-paimind-task-summary-copy><strong title={view.session.title}>{view.session.title}</strong>{view.session.projectTitle !== undefined && <span>{view.session.projectTitle}</span>}</div></div>{summaryStats.length > 0 && <div data-paimind-task-summary-stats>{summaryStats.map(stat => <button type="button" key={stat.key} data-paimind-task-summary-stat={stat.key} aria-label={zh ? `查看${stat.label}：${stat.value}` : `View ${stat.value} ${stat.label}`} onClick={() => { focusTaskAnchor(stat.targetId) }}><span data-paimind-task-summary-stat-icon aria-hidden="true">{stat.icon}</span><b>{stat.value}</b><small>{stat.label}</small></button>)}</div>}{props.sessionLog !== undefined && <div data-paimind-task-session-log><button type="button" aria-label={zh ? '下载会话日志' : 'Download Session Log'} disabled={sessionLog?.status === 'downloading'} onClick={requestSessionLog}><DownloadIcon />{zh ? '会话日志' : 'Session Log'}</button><small title={sessionLogStatus}>{sessionLogStatus}</small></div>}{(navigationError ?? view.error) !== undefined && <p data-paimind-task-error>{navigationError ?? view.error}</p>}</section>
+      {hasProgress && <Section title={zh ? '任务进度' : 'Task Progress'}><ProgressSection view={view} zh={zh} now={now} todoAnchorId={todoAnchorId} /></Section>}
+      {hasResources && <Section title={zh ? 'Agent、Skill 与 MCP' : 'Agent, Skill & MCP'}><Resources view={view} zh={zh} loading={resourceHistoryLoading} subagentAnchorId={subagentAnchorId} onSubagent={openSubagent} /></Section>}
+      {view.outputs.length > 0 && <Section id={outputAnchorId} title={zh ? '输出与产物' : 'Outputs & Artifacts'}><Files files={view.outputs} zh={zh} onOpen={openFile} /></Section>}
+      {view.inputs.length > 0 && <Section title={zh ? '输入文件' : 'Input Files'}><Files files={view.inputs} zh={zh} onOpen={openFile} /></Section>}
+      <section data-paimind-task-section><details data-paimind-task-technical><summary>{zh ? '技术详情' : 'Technical Details'}</summary><dl><dt>Session</dt><dd>{view.session.id}</dd>{project !== undefined && <><dt>Project</dt><dd>{project.workspaceId}</dd></>}{view.jobs.length > 0 && <><dt>Jobs</dt><dd>{view.jobs.length}</dd></>}{artifactCount > 0 && <><dt>Artifacts</dt><dd>{artifactCount}</dd></>}{view.queueCount > 0 && <><dt>Queue</dt><dd>{view.queueCount}</dd></>}</dl></details></section>
     </div>
-  )
+  </section> : null
+  return <div ref={rootRef} data-paimind-task-action>
+    <button ref={triggerRef} type="button" data-paimind-task-trigger aria-label={label} aria-describedby={tooltipId} aria-controls={panelId} aria-expanded={open} aria-pressed={open} onClick={() => { setNow(Date.now()); setOpen(value => !value) }}><TaskIcon /></button>
+    <span id={tooltipId} role="tooltip" data-paimind-task-tooltip>{label}</span>
+    {panel !== null && typeof document !== 'undefined' ? createPortal(panel, document.body) : null}
+  </div>
 }
 
-interface BoundaryProps extends TaskMonitorActionProps {}
-interface BoundaryState { readonly failed: boolean }
-
-class TaskMonitorBoundary extends Component<BoundaryProps, BoundaryState> {
+interface BoundaryState { readonly failed: boolean; readonly message?: string }
+class TaskMonitorBoundary extends Component<TaskMonitorActionProps, BoundaryState> {
   state: BoundaryState = { failed: false }
-  static getDerivedStateFromError(): BoundaryState { return { failed: true } }
-  componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.warn('[paimind-task-monitor] render failed', error, info.componentStack)
-  }
+  static getDerivedStateFromError(error: unknown): BoundaryState { return { failed: true, message: error instanceof Error ? error.message : String(error) } }
+  componentDidCatch(error: Error, info: ErrorInfo): void { console.warn('[paimind-task-monitor] render failed', error, info.componentStack) }
   render(): ReactNode {
-    if (this.state.failed) return <span role="alert" data-paimind-task-error>Task Monitor unavailable</span>
-    return <TaskMonitorAction {...this.props} />
+    if (!this.state.failed) return <TaskMonitorAction {...this.props} />
+    const zh = this.props.locale.getLocale().active.startsWith('zh')
+    return <button type="button" data-paimind-task-trigger data-paimind-task-boundary-error={this.state.message ?? 'unknown'} aria-label={zh ? '任务监控暂不可用' : 'Task Monitor unavailable'}><TaskIcon /></button>
   }
 }
 
-export function apply(ctx: PaimindClientContext): void {
+function HiddenHeaderSeat(): null { return null }
+
+export function apply(ctx: TaskMonitorClientContext): void {
+  const sessionLog = sessionLogServiceOf(ctx)
+  const sessionHistory = sessionHistoryApiOf(ctx)
   contributePaimindExtension(ctx.slots, {
-    id: 'paimind:task-monitor',
-    packageName: '@paimind/task-monitor',
-    category: 'automation',
-    nameZh: '任务监控',
-    nameEn: 'Task Monitor',
-    descriptionZh: '独立入口，直接投影 PAIMind 生成器创建的 Harness 原生 Job。',
-    descriptionEn: 'Independent entry projecting native Harness Jobs created by PAIMind generators.',
-    surface: 'header-button',
-    maturity: 'technical-preview',
-    order: 10,
+    id: 'paimind:task-monitor', packageName: '@paimind/task-monitor', category: 'automation',
+    nameZh: '任务监控', nameEn: 'Task Monitor',
+    descriptionZh: '以浮动摘要投影当前 Session、Project、Goal、Todo、Subagent、Tool、Job、Artifact、Skill 与 MCP 的原生事实。',
+    descriptionEn: 'Floating read-only summary of native Session, Project, Goal, Todo, Subagent, Tool, Job, Artifact, Skill, and MCP facts.',
+    surface: 'header-button', maturity: 'technical-preview', order: 10,
   })
   ctx.effect(installStyle, 'paimind-task-monitor: styles')
-  ctx.slots.inject('conversation.session.header.actions', () => ctx.slots.register({
-    name: 'conversation.session.header.actions',
-    id: 'paimind-task-monitor',
-    order: 24,
-  }, (props: PaimindSessionHeaderActionProps) => <TaskMonitorBoundary {...props} locale={ctx.locale} />))
+  ctx.slots.inject('conversation.session.header.actions', () => [
+    ctx.slots.register({
+      name: 'conversation.session.header.actions', id: 'agent-preset', order: -10, priority: HEADER_SHADOW_PRIORITY,
+    }, HiddenHeaderSeat),
+    ctx.slots.register({
+      name: 'conversation.session.header.actions', id: 'subagent-catalog', order: 10, priority: HEADER_SHADOW_PRIORITY,
+    }, HiddenHeaderSeat),
+    ctx.slots.register({
+      name: 'conversation.session.header.actions', id: 'job-list', order: 20, priority: HEADER_SHADOW_PRIORITY,
+    }, HiddenHeaderSeat),
+  ])
+  ctx.slots.inject('conversation.session.header.utilities', () => [
+    ctx.slots.register({
+      name: 'conversation.session.header.utilities', id: 'session-log-download', order: 0, priority: HEADER_SHADOW_PRIORITY,
+    }, (slotProps: PaimindSessionHeaderActionProps) => <TaskMonitorBoundary {...slotProps} locale={ctx.locale} sessions={ctx.sessions} workspaces={ctx.workspaces} artifacts={ctx.paimindArtifacts} projects={ctx.paimindWorkspaceProject} {...(sessionLog === undefined ? {} : { sessionLog })} {...(sessionHistory === undefined ? {} : { sessionHistory })} />),
+  ])
 }

@@ -6,6 +6,13 @@ import { build } from 'esbuild'
 const root = resolve('.')
 const packagesRoot = resolve(root, 'packages')
 const buildPackages = []
+const clientPlatformExternals = [
+  'react',
+  'react/jsx-runtime',
+  'react-dom',
+  'react-dom/client',
+  '@deepseek-ai/dsh-client-ui-primitives',
+]
 const rawImportPlugin = {
   name: 'paimind-raw-import',
   setup(api) {
@@ -78,7 +85,10 @@ for (const { packageRoot, manifest, spec } of buildPackages) {
       target: 'es2022',
       jsx: 'automatic',
       plugins: [rawImportPlugin],
-      external: ['react', 'react/jsx-runtime', 'react-dom', 'react-dom/client'],
+      // Harness seeds these shared browser modules into its client module
+      // table. Keeping the official primitive/icon package external avoids a
+      // duplicate React/UI runtime and lets hot unload retain one icon system.
+      external: clientPlatformExternals,
       sourcemap: true,
       logLevel: 'info',
       banner: {
