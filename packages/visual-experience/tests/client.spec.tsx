@@ -174,8 +174,11 @@ describe('PAIMind visual experience client', () => {
 
     const overlay = document.querySelector<HTMLElement>("[data-slot='conversation.input.overlay']")
     if (overlay === null) throw new Error('composer overlay fixture is missing')
-    overlay.innerHTML = '<div role="listbox"><button role="option">参考资料</button></div>'
+    overlay.innerHTML = '<div role="listbox" aria-activedescendant="candidate-1"><div><div role="presentation">Skill（技能）</div><button id="candidate-1" role="option" aria-selected="true"><span class="fixture_itemName">完整技能名称</span><span class="fixture_itemDescription">用于验证渐进式披露的完整说明。</span></button></div></div>'
     await waitFor(() => expect(document.body).toHaveAttribute('data-paimind-composer-overlay', 'open'))
+    await waitFor(() => expect(overlay.querySelector('[data-paimind-composer-disclosure]')).toHaveTextContent('完整技能名称'))
+    expect(overlay.querySelector('[data-paimind-composer-disclosure]')).toHaveTextContent('用于验证渐进式披露的完整说明。')
+    expect(overlay.querySelector('[data-paimind-candidate-description]')).toHaveTextContent('用于验证渐进式披露的完整说明。')
 
     await act(async () => { scope.push('native') })
     await waitFor(() => expect(document.body).toHaveAttribute('data-paimind-experience', 'native'))
@@ -416,7 +419,9 @@ describe('PAIMind visual experience client', () => {
     expect(style).not.toContain("[data-phase]{background:var(--paimind-canvas)!important}")
     expect(style).toContain("bottom:calc(100% + 8px)!important")
     expect(style).toContain('background:color-mix(in srgb,var(--paimind-canvas) 94%,white 6%)!important')
-    expect(style).toContain('grid-template-rows:auto auto;height:auto!important;min-height:66px')
+    expect(style).toContain('[data-paimind-composer-disclosure]')
+    expect(style).toContain('grid-template-columns:minmax(250px,42%) minmax(0,1fr)')
+    expect(style).toContain('[data-paimind-candidate-description]{display:none!important}')
     expect(style).toContain('[data-paimind-agent-avatar]{display:block')
     expect(style).toContain('@media(prefers-reduced-motion:reduce)')
     fixture.disposeEffects()

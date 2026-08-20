@@ -154,6 +154,9 @@ export class NativeHarnessInputTriggerBridge {
   private nativeReference: HarnessInputTriggerSource | null = null
   private nativeCandidatesDescriptor: PropertyDescriptor | null = null
   private nativeCandidates: HarnessInputTriggerSource['candidates'] | null = null
+  private nativeSkill: HarnessInputTriggerSource | null = null
+  private nativeSkillCandidatesDescriptor: PropertyDescriptor | null = null
+  private nativeSkillCandidatesOwner: HarnessInputTriggerSource['candidates'] | null = null
   private registeredDisposers: Array<() => void> = []
   private readonly pendingContextQuery = new Map<string, string>()
   private active = false
@@ -184,13 +187,16 @@ export class NativeHarnessInputTriggerBridge {
     session: HarnessInputTriggerSession,
     request: HarnessInputTriggerCandidateRequest,
   ): Promise<readonly HarnessInputTriggerCandidate[]> {
-    const source = this.resolveNativeSkill()
-    return source === null ? Promise.resolve([]) : source.candidates.call(source, session, request)
+    const source = this.nativeSkill ?? this.resolveNativeSkill()
+    const candidates = this.nativeSkillCandidatesOwner ?? source?.candidates
+    return source === null || candidates === undefined
+      ? Promise.resolve([])
+      : candidates.call(source, session, request)
   }
 
   /** Route an @ Skill pick through the native `/name ` outcome owner. */
   pickNativeSkill(pick: HarnessInputTriggerPick): HarnessInputTriggerOutcome {
-    const source = this.resolveNativeSkill()
+    const source = this.nativeSkill ?? this.resolveNativeSkill()
     return source?.onPick.call(source, pick)
   }
 
@@ -201,16 +207,26 @@ export class NativeHarnessInputTriggerBridge {
   activate(sources: readonly HarnessInputTriggerSource[]): boolean {
     if (this.disposed || this.active || this.inputTriggers === null || this.sessions === null) return this.active
     const nativeReference = this.resolveNativeReference()
-    if (nativeReference === null) return false
+    const nativeSkill = this.resolveNativeSkill()
+    if (nativeReference === null || nativeSkill === null) return false
     const descriptor = Object.getOwnPropertyDescriptor(nativeReference, 'candidates')
-    if (descriptor === undefined || typeof descriptor.value !== 'function'
-      || descriptor.configurable !== true || descriptor.writable !== true) return false
+    const skillDescriptor = Object.getOwnPropertyDescriptor(nativeSkill, 'candidates')
+    if (descriptor === undefined || skillDescriptor === undefined
+      || typeof descriptor.value !== 'function' || typeof skillDescriptor.value !== 'function'
+      || descriptor.configurable !== true || descriptor.writable !== true
+      || skillDescriptor.configurable !== true || skillDescriptor.writable !== true) return false
 
     this.nativeReference = nativeReference
     this.nativeCandidatesDescriptor = descriptor
     this.nativeCandidates = descriptor.value as HarnessInputTriggerSource['candidates']
+    this.nativeSkill = nativeSkill
+    this.nativeSkillCandidatesDescriptor = skillDescriptor
+    this.nativeSkillCandidatesOwner = skillDescriptor.value as HarnessInputTriggerSource['candidates']
     const pausedCandidates: HarnessInputTriggerSource['candidates'] = async () => []
     Object.defineProperty(nativeReference, 'candidates', { ...descriptor, value: pausedCandidates })
+    // `@` is the single Agent / Skill chooser in PAIMind mode. Keep the native
+    // Skill source and pick owner intact, but hide its discovery rows from `/`.
+    Object.defineProperty(nativeSkill, 'candidates', { ...skillDescriptor, value: pausedCandidates })
 
     const contextSource: HarnessInputTriggerSource = {
       trigger: '@',
@@ -247,9 +263,13 @@ export class NativeHarnessInputTriggerBridge {
       for (const dispose of this.registeredDisposers.reverse()) dispose()
       this.registeredDisposers = []
       Object.defineProperty(nativeReference, 'candidates', descriptor)
+      Object.defineProperty(nativeSkill, 'candidates', skillDescriptor)
       this.nativeReference = null
       this.nativeCandidatesDescriptor = null
       this.nativeCandidates = null
+      this.nativeSkill = null
+      this.nativeSkillCandidatesDescriptor = null
+      this.nativeSkillCandidatesOwner = null
       throw error
     }
   }
@@ -263,10 +283,16 @@ export class NativeHarnessInputTriggerBridge {
     if (this.nativeReference !== null && this.nativeCandidatesDescriptor !== null) {
       Object.defineProperty(this.nativeReference, 'candidates', this.nativeCandidatesDescriptor)
     }
+    if (this.nativeSkill !== null && this.nativeSkillCandidatesDescriptor !== null) {
+      Object.defineProperty(this.nativeSkill, 'candidates', this.nativeSkillCandidatesDescriptor)
+    }
     this.pendingContextQuery.clear()
     this.nativeReference = null
     this.nativeCandidatesDescriptor = null
     this.nativeCandidates = null
+    this.nativeSkill = null
+    this.nativeSkillCandidatesDescriptor = null
+    this.nativeSkillCandidatesOwner = null
     this.active = false
   }
 
@@ -329,6 +355,9 @@ export class NativeHarnessInputTriggerBridge {
     if (!this.active) return false
     const controller = this.controller(sessionId)
     if (controller === null) return false
+    // The pointer-owned Context browser must replace an open keyboard trigger
+    // menu instead of sharing its stale `/` or `@` state.
+    controller.dismiss()
     this.pendingContextQuery.set(sessionId, query)
     controller.toggleSource(CONTEXT_SOURCE, {
       trigger: '@', query, quoted: false,

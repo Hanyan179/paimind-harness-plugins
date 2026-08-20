@@ -198,6 +198,7 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
   const [selected, setSelected] = useState<string | null>(null)
   const [favoriteIds, setFavoriteIds] = useState<readonly string[]>(() => parseFavoriteSkillNames(props.storage?.getItem(SKILL_FAVORITES_STORAGE_KEY) ?? null))
   const [preview, setPreview] = useState<SkillUploadPreview | null>(null)
+  const [uploadGuideOpen, setUploadGuideOpen] = useState(false)
   const [uninstallTarget, setUninstallTarget] = useState<SkillInstallRecord | null>(null)
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -211,6 +212,7 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
   const uploadRef = useRef<HTMLInputElement>(null)
   const uploadAbort = useRef<AbortController | null>(null)
   const previewPrimary = useRef<HTMLButtonElement>(null)
+  const uploadGuidePrimary = useRef<HTMLButtonElement>(null)
   const uninstallPrimary = useRef<HTMLButtonElement>(null)
 
   useEffect(() => () => { uploadAbort.current?.abort() }, [])
@@ -269,6 +271,7 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
   }, [agentPreset, pendingDiscovery, props.api, revision, sessionId])
 
   useEffect(() => { if (preview !== null) previewPrimary.current?.focus() }, [preview])
+  useEffect(() => { if (uploadGuideOpen) uploadGuidePrimary.current?.focus() }, [uploadGuideOpen])
   useEffect(() => { if (uninstallTarget !== null) uninstallPrimary.current?.focus() }, [uninstallTarget])
 
   const bindingAvailable = sessionId !== undefined && props.sessions.binding?.(sessionId)?.ctx !== undefined
@@ -304,7 +307,11 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
     try { setPreview(remoteValue(await props.installer.inspectCatalog({ catalogId: item.id, version: item.version }))) }
     catch (reason) { setError(messageOf(reason)) } finally { setBusy(false) }
   }
-  const chooseUpload = (): void => { uploadRef.current?.click() }
+  const chooseUpload = (): void => { setError(null); setUploadGuideOpen(true) }
+  const openUploadPicker = (): void => {
+    uploadRef.current?.click()
+    setUploadGuideOpen(false)
+  }
   const inspectFile = async (file: File): Promise<void> => {
     uploadAbort.current?.abort()
     const controller = new AbortController(); uploadAbort.current = controller
@@ -399,6 +406,14 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
         </div>}
       </section>
     </div>
+    {uploadGuideOpen && <div data-paimind-skill-dialog-backdrop><section role="dialog" aria-modal="true" aria-labelledby="paimind-skill-import-guide-title" aria-describedby="paimind-skill-import-guide-copy" data-paimind-skill-dialog data-paimind-skill-import-guide onKeyDown={event => { handleDialogKey(event, () => { setUploadGuideOpen(false) }) }}>
+      <div data-paimind-skill-dialog-head><span data-paimind-skill-detail-icon><PaimindUploadIcon size={24} /></span><div><p data-paimind-skill-eyebrow>{zh ? '本地个人导入' : 'Local personal import'}</p><h2 id="paimind-skill-import-guide-title">{zh ? '选择一个可识别的 Skill 包' : 'Choose a recognizable Skill package'}</h2></div></div>
+      <p id="paimind-skill-import-guide-copy">{zh ? '导入前先确认包结构。选择文件后会先进行安全检查和预览，只有再次确认才会安装。' : 'Check the package structure first. After selection, PAIMind performs a safety review and preview before anything is installed.'}</p>
+      <div data-paimind-skill-import-formats><section><strong>SKILL.md</strong><p>{zh ? '适合只有一份说明文件的 Skill。文件必须包含 YAML Frontmatter（至少 name 与 description）。' : 'For a single-file Skill. It must include YAML frontmatter with at least name and description.'}</p></section><section><strong>ZIP</strong><p>{zh ? '适合包含脚本、参考资料或资源的 Skill。ZIP 根目录必须能找到 SKILL.md。' : 'For Skills with scripts, references, or assets. SKILL.md must be discoverable at the ZIP root.'}</p></section></div>
+      <div data-paimind-skill-import-tree aria-label={zh ? 'Skill 包结构示例' : 'Skill package structure example'}><code>my-skill/<br />├── SKILL.md <b>{zh ? '必需' : 'required'}</b><br />├── scripts/ <i>{zh ? '可选' : 'optional'}</i><br />├── references/ <i>{zh ? '可选' : 'optional'}</i><br />└── assets/ <i>{zh ? '可选' : 'optional'}</i></code></div>
+      <ul data-paimind-skill-import-rules><li>{zh ? '不要包含密码、令牌或其他凭证。' : 'Do not include passwords, tokens, or other credentials.'}</li><li>{zh ? '本阶段只安装到当前用户的个人 Skill 范围。' : 'This phase installs only to the current user’s personal Skill scope.'}</li><li>{zh ? 'PAIMind 负责检查与安装；Harness 继续负责发现和执行。' : 'PAIMind reviews and installs; Harness remains responsible for discovery and execution.'}</li></ul>
+      <div data-paimind-skill-dialog-actions><button ref={uploadGuidePrimary} type="button" data-paimind-skill-button data-primary="true" onClick={openUploadPicker}><PaimindUploadIcon size={14} />{zh ? '选择 Skill 包' : 'Choose Skill package'}</button><button type="button" data-paimind-skill-button onClick={() => { setUploadGuideOpen(false) }}>{zh ? '取消' : 'Cancel'}</button></div>
+    </section></div>}
     {preview !== null && <div data-paimind-skill-dialog-backdrop><section role="dialog" aria-modal="true" aria-labelledby="paimind-skill-install-title" data-paimind-skill-dialog onKeyDown={event => { handleDialogKey(event, () => { if (!busy) setPreview(null) }) }}><div data-paimind-skill-dialog-head><span data-paimind-skill-detail-icon><PaimindSkillIcon size={24} /></span><div><p data-paimind-skill-eyebrow>{preview.operation === 'update' ? (zh ? '更新检查' : 'Update review') : (zh ? '安装检查' : 'Install review')}</p><h2 id="paimind-skill-install-title">{preview.operation === 'update' ? (zh ? `更新 ${preview.name}` : `Update ${preview.name}`) : (zh ? `安装 ${preview.name}` : `Install ${preview.name}`)}</h2></div></div><p>{preview.description}</p><dl data-paimind-skill-review-grid><div><dt>{zh ? '文件' : 'Files'}</dt><dd>{preview.fileCount}</dd></div><div><dt>{zh ? '解压大小' : 'Expanded'}</dt><dd>{new Intl.NumberFormat(locale).format(preview.expandedBytes)} B</dd></div><div><dt>{zh ? '操作' : 'Operation'}</dt><dd>{preview.operation === 'update' ? (zh ? '原子替换' : 'Atomic replace') : (zh ? '全新安装' : 'New install')}</dd></div></dl>{preview.operation === 'update' && <p data-paimind-skill-safe-copy>{zh ? '更新失败时 Installer 会恢复旧版本；成功后旧版本进入可恢复备份。' : 'The Installer restores the previous version if update fails; after success, the prior version remains recoverable.'}</p>}{preview.runtimeRequirements.length > 0 && <p data-paimind-skill-warning><PaimindWarningIcon size={14} />{zh ? `运行环境待确认：${preview.runtimeRequirements.map(value => value === 'python' ? 'Python 依赖' : value === 'node' ? 'Node.js 依赖' : '系统依赖').join('、')}。安装完成不代表依赖已就绪。` : `Runtime setup to verify: ${preview.runtimeRequirements.join(', ')}. Installed does not mean runtime-ready.`}</p>}{preview.warnings.map(value => <p key={value} data-paimind-skill-warning><PaimindWarningIcon size={14} />{value}</p>)}<div data-paimind-skill-dialog-actions><button ref={previewPrimary} type="button" data-paimind-skill-button data-primary="true" disabled={busy} onClick={() => { void confirmInstall() }}><PaimindCheckIcon size={14} />{preview.operation === 'update' ? (zh ? '确认更新' : 'Confirm update') : (zh ? '确认安装' : 'Confirm install')}</button><button type="button" data-paimind-skill-button disabled={busy} onClick={() => { setPreview(null) }}>{zh ? '取消' : 'Cancel'}</button></div></section></div>}
     {uninstallTarget !== null && <div data-paimind-skill-dialog-backdrop><section role="dialog" aria-modal="true" aria-labelledby="paimind-skill-uninstall-title" data-paimind-skill-dialog onKeyDown={event => { handleDialogKey(event, () => { if (!busy) setUninstallTarget(null) }) }}><div data-paimind-skill-dialog-head data-danger="true"><span data-paimind-skill-detail-icon><PaimindTrashIcon size={22} /></span><div><p data-paimind-skill-eyebrow>{zh ? '可恢复卸载' : 'Recoverable uninstall'}</p><h2 id="paimind-skill-uninstall-title">{zh ? `卸载 ${uninstallTarget.name}` : `Uninstall ${uninstallTarget.name}`}</h2></div></div><p>{zh ? 'Skill 将从 Harness 发现目录移出，并保存在 PAIMind 备份区。对话历史不会被删除；如需恢复，可从备份回退。' : 'The Skill will leave Harness discovery and move to the PAIMind backup area. Conversation history is not deleted; the backup can be used for recovery.'}</p><div data-paimind-skill-dialog-actions><button ref={uninstallPrimary} type="button" data-paimind-skill-button data-danger="true" disabled={busy} onClick={() => { void uninstall() }}><PaimindTrashIcon size={14} />{zh ? '带备份卸载' : 'Uninstall with backup'}</button><button type="button" data-paimind-skill-button disabled={busy} onClick={() => { setUninstallTarget(null) }}>{zh ? '保留 Skill' : 'Keep Skill'}</button></div></section></div>}
   </section>

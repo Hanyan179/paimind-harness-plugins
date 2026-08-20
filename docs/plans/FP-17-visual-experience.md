@@ -60,7 +60,9 @@
 - PAIMind 模式 `@`：只展示 canonical Agent Preset 与 Harness native Skill；Agent 选择走原生 Preset seat，Skill 选择插入可执行 `/<skill> ` token。
 - `@ Skill` 候选严格服从当前 canonical Preset 的原生 Session Skill capability：没有 packaged Session Skills 的 Agent 可以只显示 Agent；切换到具备 Skills 的 Agent 后，同一个菜单必须同时呈现 Agent 与该 Session 的真实 Skill，禁止填充固定数量或跨 Agent 伪造候选。
 - PAIMind 模式 `+ Add context`：通过原 controller 打开原生 `reference` source，保留 File、Folder、Session、codec、CAS、undo 与 selection route。
-- `/`：保留 Harness 原生 command / mode / plan / skill provider、顺序与执行，仅优化分类、详情、锚定、最大高度、响应式和主题对比度。
+- `/`：只保留 Harness 原生 command / mode / plan provider、顺序与执行；原生 Skill discovery 在 PAIMind 模式下从 `/` 隐藏并统一由 `@` 承载。
+- 桌面候选菜单保持左侧紧凑列表、右侧只读详情；鼠标悬停或键盘焦点变化时，详情区展示完整类型、名称和说明，列表省略号不再承担信息披露。移动端按同一信息层级纵向堆叠。
+- `+ Add context` 是独立点击入口；点击时先关闭正在显示的 `@` 或 `/` 候选，再打开原生上下文来源，不参与 Slash 键盘菜单。
 - Native / Dispose：原 `reference` source identity、codec、候选函数、provider roster 与原生加号行为完整恢复；Presenter 释放后把 `candidate.icon` 文本 token 原样放回。
 
 ## 稳定契约

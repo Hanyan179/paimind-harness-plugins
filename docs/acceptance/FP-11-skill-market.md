@@ -20,6 +20,13 @@
 6. 安装后无需重启即可由 Harness 原生文件系统发现，并在真实会话调用。
 7. 页面不显示内部运行 ID、磁盘路径、摘要哈希和不可用版本占位。
 8. 通过类型检查、构建、插件隔离以及桌面/受限宽度浏览器检查。
+9. 点击“导入本地 Skill”必须先展示导入说明，不直接打开文件选择器；说明覆盖可选 `SKILL.md` / ZIP、必需 YAML Frontmatter、ZIP 根目录结构、可选资源目录、凭证风险、个人范围和 Harness 原生发现与执行边界。用户再次点击“选择 Skill 包”后才打开文件选择器。
+
+## 2026-08-21 导入说明 Local Pre-Acceptance
+
+- 真实 `http://127.0.0.1:3080/` 已验证“导入本地 Skill”先打开结构说明弹窗，文件选择器没有在第一次点击时触发。
+- 弹窗完整说明 `SKILL.md` 与 ZIP 两类输入、`name` / `description` Frontmatter、根目录 `SKILL.md`、可选 `scripts/`、`references/`、`assets/`、禁止凭证和个人安装范围。
+- 本轮未选择文件、未导入或更新任何 Skill；正式 Product Acceptance 仍以共享测试环境为准。
 
 ## 2026-08-20 Local Pre-Acceptance
 

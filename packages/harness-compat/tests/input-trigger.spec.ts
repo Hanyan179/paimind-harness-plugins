@@ -89,9 +89,10 @@ function setupBridge() {
 }
 
 describe('RC8 native InputTrigger bridge', () => {
-  it('pauses only reference discovery, preserves its codec/identity/order and restores byte-for-byte behavior', async () => {
-    const { bridge, controller, inputTriggers, originalCandidates, reference, sources } = setupBridge()
+  it('assigns @ to Agent / Skill, pauses native reference and / Skill discovery, then restores both byte-for-byte', async () => {
+    const { bridge, controller, inputTriggers, originalCandidates, reference, skill: nativeSkill, skillCandidates, sources } = setupBridge()
     const descriptor = Object.getOwnPropertyDescriptor(reference, 'candidates')
+    const skillDescriptor = Object.getOwnPropertyDescriptor(nativeSkill, 'candidates')
     const agent: HarnessInputTriggerSource = {
       trigger: '@', name: 'paimind-agent', order: -20, showGroupTitle: false,
       candidates: async () => [{ name: 'Sales Agent', section: 'Agents', value: 'sales' }],
@@ -112,6 +113,15 @@ describe('RC8 native InputTrigger bridge', () => {
       { sessionId: 'session-1' },
       { query: '', position: 'leading', signal: new AbortController().signal },
     )).resolves.toEqual([])
+    await expect(nativeSkill.candidates(
+      { sessionId: 'session-1' },
+      { query: '', position: 'leading', signal: new AbortController().signal },
+    )).resolves.toEqual([])
+    await expect(bridge.nativeSkillCandidates(
+      { sessionId: 'session-1' },
+      { query: '', position: 'leading', signal: new AbortController().signal },
+    )).resolves.toEqual([{ name: 'presentation', description: 'Create slides' }])
+    expect(skillCandidates).toHaveBeenCalledTimes(1)
 
     expect(bridge.toggleContext('session-1', { draft: 'hello', draftRev: 7, phase: 'plain' })).toBe(true)
     await vi.waitFor(() => { expect(originalCandidates).toHaveBeenCalledWith(
@@ -120,10 +130,12 @@ describe('RC8 native InputTrigger bridge', () => {
     expect(controller.toggleSource).toHaveBeenCalledWith('paimind-context', expect.objectContaining({
       span: { start: 5, end: 5, draftRev: 7 },
     }))
+    expect(controller.dismiss).toHaveBeenCalled()
 
     bridge.restore()
     expect(inputTriggers.live.sources).toEqual([expect.objectContaining({ name: 'skill' }), reference])
     expect(Object.getOwnPropertyDescriptor(reference, 'candidates')).toEqual(descriptor)
+    expect(Object.getOwnPropertyDescriptor(nativeSkill, 'candidates')).toEqual(skillDescriptor)
     await expect(reference.candidates(
       { sessionId: 'session-1' },
       { query: '', position: 'leading', signal: new AbortController().signal },

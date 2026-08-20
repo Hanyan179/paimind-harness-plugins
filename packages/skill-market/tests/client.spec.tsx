@@ -132,6 +132,26 @@ describe('Skill Market business UI', () => {
     await waitFor(() => expect(host.installUpload).toHaveBeenCalled())
   })
 
+  it('explains the local Skill package contract before opening the file picker', async () => {
+    const native = runtime(); const host = installer()
+    render(<SkillMarketSection close={() => {}} api={api()} installer={host as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />)
+    await screen.findByRole('button', { name: 'Import local Skill' })
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]')!
+    const openPicker = vi.spyOn(input, 'click').mockImplementation(() => {})
+    fireEvent.click(screen.getByRole('button', { name: 'Import local Skill' }))
+    const dialog = screen.getByRole('dialog', { name: 'Choose a recognizable Skill package' })
+    expect(dialog).toHaveTextContent('YAML frontmatter')
+    expect(dialog).toHaveTextContent('SKILL.md')
+    expect(dialog).toHaveTextContent('scripts/')
+    expect(dialog).toHaveTextContent('personal Skill scope')
+    expect(host.inspectUpload).not.toHaveBeenCalled()
+    const choose = screen.getByRole('button', { name: 'Choose Skill package' })
+    await waitFor(() => expect(choose).toHaveFocus())
+    fireEvent.click(choose)
+    expect(openPicker).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('dialog', { name: 'Choose a recognizable Skill package' })).toBeNull()
+  })
+
   it('does not offer a redundant catalog update when package digests match', async () => {
     const native = runtime()
     const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
