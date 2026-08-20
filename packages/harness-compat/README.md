@@ -14,13 +14,13 @@ Role: **Shared support package**. It has no independent Harness lifecycle or pro
 |---|---|---|
 | `.` | `./lib/types/index.d.ts`, `./lib/index.js` | Public package export. |
 | `./host` | `./lib/types/host.d.ts`, `./lib/host.js` | Public package export. |
-| `./client-icons` | `./lib/types/client-icons.d.ts`, `./lib/client-icons.js` | RC6-native semantic icon facade for PAIMind client surfaces. |
+| `./client-icons` | `./lib/types/client-icons.d.ts`, `./lib/client-icons.js` | RC8-native semantic icon facade for PAIMind client surfaces. |
 | `./client-surface` | `./lib/types/client-surface.d.ts`, `./lib/client-surface.js` | Client-only full-page surface coordination and focus lifecycle. |
 
 ## Dependencies
 
 - Internal runtime dependencies: `@paimind/contracts` (`workspace:^`).
-- External runtime or peer dependencies: `@deepseek-ai/cordis` (`^4.0.1`), `@deepseek-ai/dsh-client-ui-primitives` (`0.1.0-rc.6`), `@deepseek-ai/dsh-agent` (`^0.1.0-rc.6`), `@deepseek-ai/dsh-llm` (`^0.1.0-rc.6`), `@deepseek-ai/dsh-schedule` (`^0.1.0-rc.6`), `@deepseek-ai/dsh-storage-domain` (`^0.1.0-rc.6`), `@deepseek-ai/dsh-settings` (`^0.1.0-rc.6`), `@deepseek-ai/dsh-tools` (`^0.1.0-rc.6`), `@deepseek-ai/dsh-typert-protocol` (`^0.1.0-rc.6`), `@deepseek-ai/schemastery` (`^3.18.1`).
+- External runtime or peer dependencies: `@deepseek-ai/cordis` (`^4.0.1`), `@deepseek-ai/dsh-client-ui-primitives` (`0.1.0-rc.8`), `@deepseek-ai/dsh-agent` (`^0.1.0-rc.8`), `@deepseek-ai/dsh-llm` (`^0.1.0-rc.8`), `@deepseek-ai/dsh-schedule` (`^0.1.0-rc.8`), `@deepseek-ai/dsh-storage-domain` (`^0.1.0-rc.8`), `@deepseek-ai/dsh-settings` (`^0.1.0-rc.8`), `@deepseek-ai/dsh-tools` (`^0.1.0-rc.8`), `@deepseek-ai/dsh-typert-protocol` (`^0.1.0-rc.8`), `@deepseek-ai/schemastery` (`^3.18.1`).
 - Client service injection: None.
 
 The manifest is authoritative for dependency direction and version selection.

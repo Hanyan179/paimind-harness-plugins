@@ -137,6 +137,64 @@ describe('headless Agent profile workflow', () => {
     await expect(readFile(join(source, '.paimind-agent.json'), 'utf8')).resolves.toContain('"productKind": "business"')
   })
 
+  it('binds a native Session, plans a version migration, and records a verified real first turn', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-agent-lifecycle-'))
+    roots.push(base)
+    const presetRoot = join(base, '.agent-presets')
+    const source = join(presetRoot, 'delivery-agent')
+    await mkdir(source, { recursive: true })
+    await writeFile(join(source, 'agent.cordis.yml'), "- id: persona\n  name: '@deepseek-ai/dsh-persona'\n  config:\n    text: old\n")
+    await writeFile(join(source, 'preset.yml'), 'name: Delivery Agent\n')
+    const sessions = new Map<string, { header?: { agentPreset?: string }; events?: readonly unknown[] }>()
+    let clock = 100
+    const context = {
+      reflect: { provide: () => {} }, effect(install: () => void) { install() }, get: () => undefined,
+      sessions: { get: (id: string) => sessions.get(id) },
+    }
+    const service = new PaimindAgentProfileService(context as never, {
+      presetRoot, stateRoot: join(base, '.state'), now: () => { clock += 1; return clock },
+    })
+    const first = await service.saveProfile({
+      agentId: 'delivery-agent', presetId: 'delivery-agent', name: 'Delivery Agent', description: 'Ships verified results',
+      basePresetId: 'minimal', role: 'Delivery owner', goal: 'Ship a verified result', behavior: 'Use real evidence',
+      preferredSkillNames: [], instructions: '',
+    })
+    await service.bindSession({
+      sessionId: 'session-source', agentId: first.agentId, presetId: first.presetId, configVersion: first.configVersion,
+    })
+    sessions.set('session-source', { events: [
+      { type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Finish the delivery' }] } },
+      { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: 'I will verify it.' }] } } },
+    ] })
+    const second = await service.saveProfile({
+      agentId: 'delivery-agent', presetId: 'delivery-agent', name: 'Delivery Agent', description: 'Ships verified results',
+      basePresetId: 'minimal', role: 'Delivery owner', goal: 'Ship a verified result', behavior: 'Verify before reporting',
+      preferredSkillNames: [], instructions: '', expectedVersion: first.configVersion,
+    })
+
+    const plan = await service.migrationPlan({ sourceSessionId: 'session-source' })
+    expect(plan).toMatchObject({
+      sourceSessionId: 'session-source', agentId: 'delivery-agent', presetId: 'delivery-agent',
+      fromVersion: first.configVersion, toVersion: second.configVersion,
+    })
+    expect(plan?.summary).toContain('Finish the delivery')
+    await service.recordMigration({ ...plan!, targetSessionId: 'session-target' })
+    sessions.set('session-target', {
+      header: { agentPreset: 'minimal' },
+      events: [
+        { type: 'agent-preset/selected', data: { agentPreset: 'delivery-agent' } },
+        { type: 'user/message', seq: 20, data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Continue' }] } },
+        { type: 'assistant/message', seq: 21, data: { message: { content: [{ type: 'text', text: 'Verified delivery complete.' }] } } },
+      ],
+    })
+    const verification = await service.verifySession({ sessionId: 'session-target' })
+    expect(verification).toMatchObject({ result: 'passed', firstTurnId: 'event:21', configVersion: second.configVersion })
+    await expect(service.listAudit()).resolves.toMatchObject({
+      migrations: [expect.objectContaining({ sourceSessionId: 'session-source', targetSessionId: 'session-target' })],
+      verifications: [expect.objectContaining({ sessionId: 'session-target', result: 'passed' })],
+    })
+  })
+
   it('builds migration summaries from visible human and assistant messages only', () => {
     const summary = summarizeConversationEvents([
       { type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Need a plan' }] } },

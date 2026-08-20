@@ -21,7 +21,7 @@ Role: **Client plugin**. It owns the product projection described above; Harness
 
 - Internal runtime dependencies: `@paimind/harness-compat` (`workspace:^`).
 - External runtime or peer dependencies: `react` (`>=18.0.0 <20.0.0`), `react-dom` (`>=18.0.0 <20.0.0`).
-- Client service injection: `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-ui-slots`, `@deepseek-ai/dsh-client-ui-layout`.
+- Client service injection: `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-ui-conversation`, `@deepseek-ai/dsh-client-ui-slots`, `@deepseek-ai/dsh-client-ui-layout`, `@deepseek-ai/dsh-client-ui-sidebar`.
 
 The manifest is authoritative for dependency direction and version selection.
 

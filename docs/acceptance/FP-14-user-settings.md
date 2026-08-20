@@ -2,7 +2,7 @@
 
 ## Current status
 
-`Technically Verified; Local Browser Pre-acceptance Passed; Product Model E2E Pending`.
+`Development Complete; Local Product Model E2E Verified; Shared Environment Product Acceptance Pending`.
 
 The accepted product is a Codex-inspired Personalization section in native Harness Settings. It does not own Notifications, reduced motion, Memory, Language, Appearance, Model, Permission, Agent Preset or Composer behavior.
 
@@ -52,15 +52,16 @@ The accepted product is a Codex-inspired Personalization section in native Harne
 
 ## Compatibility note
 
-Harness `0.1.0-rc.6` has a static `WEB_SETTINGS_NAMESPACES` allowlist and does not expose plugin-owned settings namespaces through native client `settings.describe`. FP14 therefore keeps the narrow PAIMind Typert Remote for `describe`/`mutate`, while the Host still uses the official Settings lifecycle, canonical Settings document, schema validation and native revision/CAS. This is a version-isolated transport adapter, not a second settings store.
+The verified Harness `0.1.0-rc.8` combination still does not expose the plugin-owned namespace through native client `settings.describe`. FP14 therefore keeps the narrow PAIMind Typert Remote for `describe`/`mutate`, while the Host still uses the official Settings lifecycle, canonical Settings document, schema validation and native revision/CAS. This is a version-isolated transport adapter, not a second settings store.
 
 ## Completed local verification
 
-- 73 test files / 224 tests, Type Check, Production Build, framework verification and documentation checks passed.
-- The real `3080` Settings dialog showed `个性化`, all three Personality options, About You, Custom Instructions, exact injection preview and no Notification or reduced-motion control.
-- Save, disable/re-enable, full Harness restart recovery, legacy raw-key cleanup and `560×800` responsive behavior passed.
-- The final local profile was reset to enabled + None + empty text, which renders no context.
-- A real model response and its visible `paimind:personalization` conversation snapshot remain required before restoring Product E2E Verified.
+- The current real `3080` Settings dialog shows `个性化`, all three Personality options, the enabled switch, About You, Custom Instructions and the exact injection preview. The persisted local profile recovers as enabled + Pragmatic with both user-authored fields intact after the Harness restart.
+- Session `session-14626082-f054-4c84-aae4-5e683b2ea1f9` records the exact `paimind:personalization` user-role context at sequence 9, then a real DeepSeek response follows the selected practical, Chinese-first, evidence-led style.
+- Session `session-8c0dea2c-9841-49f5-91b2-87fb18951493` proves the precedence boundary with current-turn constraints: exact six-page limits, required Tool order and explicit prohibited routes remain authoritative; personalization does not widen or replace them.
+- Save, disable/re-enable, clear/recover, native revision/CAS, legacy raw-key cleanup, Chinese/Dark, English/Light and narrow responsive behavior passed in the existing browser and automated evidence.
+- The 2026-08-20 completion audit reopened the live Settings surface and injection preview without changing the saved profile or sending a new model turn. Current-run screenshot evidence is stored outside the repository under `../codex-output/design-audit/2026-08-20-goal-completion-audit/`.
+- Full local development verification is complete. Installation, rollback and product review in the shared test environment remain the formal acceptance gate.
 
 ## Explicit non-features
 

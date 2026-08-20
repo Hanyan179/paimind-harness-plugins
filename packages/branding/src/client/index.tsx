@@ -30,10 +30,14 @@ const STYLE = `
 [data-paimind-brand-seat]{position:relative}
 [data-paimind-paramont-brand]{box-sizing:border-box;display:inline-flex;align-items:center;pointer-events:none;color:inherit}
 [data-paimind-paramont-brand='wordmark']{width:182px;height:24px;gap:7px;white-space:nowrap}
+[data-paimind-paramont-brand='name']{flex:0 1 158px;min-width:0;max-width:100%;height:24px;gap:6px;overflow:visible;white-space:nowrap}
+[data-paimind-paramont-brand='name'] [data-paimind-paramont-wordmark]{flex:1 1 103px;min-width:92px}
 [data-paimind-paramont-brand='compact']{width:24px;height:24px;justify-content:center}
 [data-paimind-paramont-mark]{display:block;flex:none;width:24px;height:24px;color:inherit}
+[data-paimind-paramont-slot-mark]{display:inline-flex;align-items:center;justify-content:center;overflow:visible;color:inherit}
+[data-paimind-paramont-slot-mark] [data-paimind-paramont-mark]{width:100%;height:100%}
 [data-paimind-paramont-wordmark]{display:block;flex:none;width:103px;height:14px;color:inherit}
-[data-paimind-paramont-harness]{margin-left:-3px;font:500 9px/1 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.12em;opacity:.62}
+[data-paimind-paramont-harness]{flex:none;margin-left:-3px;font:500 9px/1 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.12em;opacity:.62}
 [data-paimind-paramont-hero-mark]{display:inline-flex;align-items:center;justify-content:center;order:-2;width:42px;height:34px;color:inherit}
 [data-paimind-paramont-hero-mark] [data-paimind-paramont-mark]{width:42px;height:24px}
 [data-paimind-paramont-hero-headline]{order:-1}
@@ -68,6 +72,22 @@ function ParamontWordmark(): JSX.Element {
   </span>
 }
 
+function ParamontSidebarName(): JSX.Element {
+  return <span data-paimind-paramont-brand="name" aria-label={PRODUCT_NAME}>
+    <ParamontOfficialWordmark />
+    <span data-paimind-paramont-harness>HARNESS</span>
+  </span>
+}
+
+function ParamontBrandMark({ size = 24, className }: { readonly size?: number; readonly className?: string }): JSX.Element {
+  return <span
+    data-paimind-paramont-slot-mark
+    className={className}
+    aria-label={PRODUCT_NAME}
+    style={{ width: size, height: size }}
+  ><ParamontMark /></span>
+}
+
 function ParamontCompactMark(): JSX.Element {
   return <span data-paimind-paramont-brand="compact" aria-label={PRODUCT_NAME}><ParamontMark /></span>
 }
@@ -85,11 +105,10 @@ function sameSeat(left: HarnessBrandSeat | null, right: HarnessBrandSeat | null)
 }
 
 function sameSeats(left: HarnessBrandSeats, right: HarnessBrandSeats): boolean {
-  return sameSeat(left.wordmark, right.wordmark)
-    && sameSeat(left.compact, right.compact)
-    && left.hero?.host === right.hero?.host
+  return left.hero?.host === right.hero?.host
     && left.hero?.nativeIcon === right.hero?.nativeIcon
     && left.hero?.nativeHeadline === right.hero?.nativeHeadline
+    && left.hero?.nativePreview === right.hero?.nativePreview
     && left.hero?.locale === right.hero?.locale
 }
 
@@ -126,23 +145,21 @@ function useHeroSeatMarker(seat: HarnessHeroBrandSeat | null): void {
     seat.host.dataset.paimindHeroBrandSeat = 'hero'
     seat.nativeIcon.dataset.paimindNativeHeroBrand = 'icon'
     seat.nativeHeadline.dataset.paimindNativeHeroBrand = 'headline'
+    seat.nativePreview.dataset.paimindNativeHeroPreview = 'preview'
     return () => {
       delete seat.host.dataset.paimindHeroBrandSeat
       delete seat.nativeIcon.dataset.paimindNativeHeroBrand
       delete seat.nativeHeadline.dataset.paimindNativeHeroBrand
+      delete seat.nativePreview.dataset.paimindNativeHeroPreview
     }
   }, [seat])
 }
 
 export function BrandingPortal(): JSX.Element | null {
   const seats = useHarnessBrandSeats()
-  useSeatMarker(seats.wordmark, 'wordmark')
-  useSeatMarker(seats.compact, 'compact')
   useHeroSeatMarker(seats.hero)
-  if (seats.wordmark === null && seats.compact === null && seats.hero === null) return null
+  if (seats.hero === null) return null
   return <>
-    {seats.wordmark === null ? null : createPortal(<ParamontWordmark />, seats.wordmark.host)}
-    {seats.compact === null ? null : createPortal(<ParamontCompactMark />, seats.compact.host)}
     {seats.hero === null ? null : createPortal(<ParamontHero locale={seats.hero.locale} />, seats.hero.host)}
   </>
 }
@@ -176,6 +193,18 @@ export function apply(ctx: PaimindClientContext): void {
     faviconHref: FAVICON_HREF,
     manifestHref: MANIFEST_HREF,
   }), 'paimind-branding: document identity')
+  ctx.slots.inject('sidebar.brand.mark', () => ctx.slots.register({
+    name: 'sidebar.brand.mark',
+    priority: -100,
+  }, ParamontBrandMark))
+  ctx.slots.inject('sidebar.brand.name', () => ctx.slots.register({
+    name: 'sidebar.brand.name',
+    priority: -100,
+  }, ParamontSidebarName))
+  ctx.slots.inject('conversation.hero.brand.mark', () => ctx.slots.register({
+    name: 'conversation.hero.brand.mark',
+    priority: -100,
+  }, ParamontBrandMark))
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay',
     id: 'paimind-branding',

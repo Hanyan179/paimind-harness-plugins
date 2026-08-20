@@ -1,9 +1,11 @@
 import { readFile, readdir, rm } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { build } from 'esbuild'
 
 const root = resolve('.')
+const require = createRequire(import.meta.url)
 const packagesRoot = resolve(root, 'packages')
 const buildPackages = []
 const clientPlatformExternals = [
@@ -42,7 +44,8 @@ for (const entry of await readdir(packagesRoot, { withFileTypes: true })) {
   buildPackages.push({ packageRoot, manifest, spec })
 }
 
-const types = spawnSync('pnpm', ['exec', 'tsc', '-b', '--force', '--pretty', 'false'], {
+const typescriptCli = require.resolve('typescript/bin/tsc')
+const types = spawnSync(process.execPath, [typescriptCli, '-b', '--force', '--pretty', 'false'], {
   cwd: root,
   encoding: 'utf8',
 })
@@ -84,6 +87,7 @@ for (const { packageRoot, manifest, spec } of buildPackages) {
       platform: 'browser',
       target: 'es2022',
       jsx: 'automatic',
+      loader: { '.webp': 'dataurl' },
       plugins: [rawImportPlugin],
       // Harness seeds these shared browser modules into its client module
       // table. Keeping the official primitive/icon package external avoids a

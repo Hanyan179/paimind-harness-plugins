@@ -2,17 +2,17 @@
 
 ## 当前状态
 
-`Product E2E Verified`，验收日期为 2026-08-15。当前规范为 [`../product/RQ-105-skill-market-prd.md`](../product/RQ-105-skill-market-prd.md)。历史只读目录验收已被可安装技能市场替代。
+历史版本为 `Product E2E Verified`，验收日期为 2026-08-15。2026-08-20 Skill Center 升级已完成 `Local Pre-Acceptance`；共享测试环境重新验收仍单列为待办。当前规范为 [`../product/RQ-105-skill-market-prd.md`](../product/RQ-105-skill-market-prd.md)。历史只读目录验收已被可安装技能市场替代。
 
 ## 验收入口
 
 - URL：`http://127.0.0.1:3080/`
-- 入口：`设置 → 技能市场`
+- 入口：Shell 侧栏底部 `Skill Center`
 - 真实调用：当前 Harness 对话中的 `/${name}`
 
 ## 必须通过
 
-1. 页面分为“推荐技能”和“已安装”；推荐目录不依赖当前对话，当前对话可用性只作为状态标记。
+1. 页面使用唯一的 `Catalog / Installed / Favorites` Scope，不保留重复 Tab；目录不依赖当前对话，当前对话可用性只作为 Harness Runtime 状态投影。
 2. 推荐技能和本地导入共用内容检查、风险确认、临时目录、原子安装、回滚与卸载链路。
 3. 大文件通过原始字节流上传，不使用 `contentBase64`，不设置虚假固定大小或文件数上限。
 4. 路径穿越、绝对路径、符号链接越界、加密包和异常压缩比被拒绝；脚本只提示不执行。
@@ -20,6 +20,18 @@
 6. 安装后无需重启即可由 Harness 原生文件系统发现，并在真实会话调用。
 7. 页面不显示内部运行 ID、磁盘路径、摘要哈希和不可用版本占位。
 8. 通过类型检查、构建、插件隔离以及桌面/受限宽度浏览器检查。
+
+## 2026-08-20 Local Pre-Acceptance
+
+- 真实 `.dsh-home` 完成 `paimind-skill-center-e2e` 的 V1 `SKILL.md` 流式导入与安装；不重启 Harness，Skill Center 已显示 `Available now`。
+- 点击“Use in conversation”后，当前 Composer 真实写入 `/paimind-skill-center-e2e `；未建立 PAIMind 执行入口。
+- 同名 V2 更新被识别为 `update`，使用新的 Digest 完成原子替换；V1 内容保存在 `.dsh-home/.paimind-skill-installer/backups/paimind-skill-center-e2e-*`。
+- 定向 Installer 测试覆盖真实流式安装、同名原子更新、摘要校验和可恢复卸载；本轮真实可恢复卸载后活动安装投影从 9 项回到 8 项，V1/V2 证据均保留在备份区。
+- Installer UI 明确展示文件数、解压大小、运行环境风险、原子更新回退说明；卸载 UI 明确说明 Harness 发现目录、备份位置语义和对话历史不删除。
+- Keyboard QA 覆盖单一 Scope 的 Roving Tab、Modal 初始焦点、Tab Focus Trap、Escape 关闭、可见 `focus-visible`；移动端触控目标不小于 44px。
+- 浏览器完成 Light、Dark、System、1512×982、1280×720、900×720、390×844、安装/更新确认、已安装详情、Slash Draft、卸载确认和 Console 检查；四种宽度均无页面级横向溢出。截图保存在 `/Users/hansen/.codex/visualizations/2026/08/20/01a01f0b-1734-7710-806a-259295d9a495/skill-center-audit/`。
+- `@paimind/skill-market` 定向类型检查与 22 项测试通过；最终串行 Shared Gates 完成全仓 `78` 个测试文件 / `309` 项测试、Build、Package、33 项 Pack、Strict Publint、`101` 项 NodeNext Export、Examples、Framework、`91` 个 Markdown 文档、Agent/Skill Center 隔离和真实 Harness Composition，全部通过。聚合 `check:api` 已验证 `33` 个 Package Contract；API Snapshot SHA-256 为 `b0afe007e09700ad2bdb7d582aa1d7b9d6c7dba44d53b34a7be76150027b168a`，Shared Build Hash 为 `81dfea4f527e21e30feda5f8b74982325e31f30e8378e031aca9ba37a666179d`。本节仍保持 `Local Pre-Acceptance`，不替代共享测试环境的 Product Acceptance。
+- 共享测试环境仍需按本节流程重新执行，只有共享环境结果可升级为新的 Product Acceptance。
 
 ## 真实验收证据
 

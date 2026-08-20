@@ -16,6 +16,13 @@
       name: '@paimind/branding/invariant'
       inject: [invariants]
 
+    - id: paimind-visual-experience
+      name: '@paimind/visual-experience'
+
+    - id: paimind-visual-experience-invariant
+      name: '@paimind/visual-experience/invariant'
+      inject: [invariants]
+
     - id: paimind-runtime-orbs
       name: '@paimind/runtime-orbs'
 

@@ -8,11 +8,11 @@ evidence, not in a second active matrix.
 ```json
 {
   "schemaVersion": 1,
-  "lastVerified": "2026-08-16",
-  "officialHarnessDocsCommit": "47f943859bef60e4160492346772ded9b24f765a",
+  "lastVerified": "2026-08-20",
+  "officialHarnessDocsCommit": "141eb6fef83422698aef7a981029e843e8161534",
   "runtime": {
     "package": "@deepseek-ai/dsh",
-    "version": "0.1.0-rc.6"
+    "version": "0.1.0-rc.8"
   },
   "cordis": [
     { "package": "@deepseek-ai/cordis", "version": "4.0.1", "purpose": "Harness runtime" },
@@ -28,6 +28,7 @@ evidence, not in a second active matrix.
   },
   "verification": {
     "fastGate": "passed",
+    "freshInstallAgeGate": "pending-24h",
     "releaseComposition": "passed",
     "browser3080": "passed",
     "upstreamDelta": "zero"
@@ -51,8 +52,11 @@ provider upgrade.
 
 ## Current verification
 
-On 2026-08-16 the selected combination passed `pnpm check`, a disposable real
-Harness profile with full install, boot, removal and restoration, isolated
-feature-removal probes, live `127.0.0.1:3080` browser checks and upstream source
-sentinels. Reproducible details are in
-[`../acceptance/baseline-remediation/2026-08-16-final.md`](../acceptance/baseline-remediation/2026-08-16-final.md).
+On 2026-08-20 the selected combination passed the full functional gate under a
+one-shot release-age override, a disposable real Harness profile with full
+install, boot, removal and restoration, isolated feature-removal probes, live
+`127.0.0.1:3080` browser checks and upstream source sentinels. The persistent
+24-hour package-age policy is restored and intentionally time-gates a fresh
+install until the new rc.8 package set ages through that window. Reproducible
+details are in
+[`../acceptance/R9-harness-0.1.0-rc.8.md`](../acceptance/R9-harness-0.1.0-rc.8.md).

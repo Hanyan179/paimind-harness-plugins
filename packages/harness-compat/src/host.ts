@@ -15,8 +15,9 @@ import {
   foldScheduleEvents,
   scheduleView,
 } from '@deepseek-ai/dsh-schedule'
+import { resolveHarnessSettingsNamespace } from './index.js'
 
-/** Host Remote base kept behind the rc.6 compatibility boundary. */
+/** Host Remote base kept behind the rc.8 compatibility boundary. */
 export abstract class PaimindHostRemoteService extends TypertRemoteService {
   protected constructor(ctx: object, serviceKey: string) {
     super(ctx as Context, serviceKey)
@@ -135,7 +136,7 @@ export function describePaimindHostSettings(
   settings: PaimindHostSettingsFacility,
   namespace: string,
 ): { readonly value: unknown; readonly user?: unknown; readonly revision: number; readonly writable: boolean } | undefined {
-  const branded = settingsNamespace(namespace)
+  const branded = settingsNamespace(resolveHarnessSettingsNamespace(namespace))
   const descriptor = settings.describe({ redactSecrets: true })
     .find(candidate => String(candidate.ns) === String(branded))
   return descriptor === undefined ? undefined : {
@@ -151,7 +152,7 @@ export function describePaimindHostSettingsUserLayer(
   settings: PaimindHostSettingsFacility,
   namespace: string,
 ): { readonly user?: unknown; readonly revision: number } | undefined {
-  const branded = settingsNamespace(namespace)
+  const branded = settingsNamespace(resolveHarnessSettingsNamespace(namespace))
   const descriptor = settings.describe()
     .find(candidate => String(candidate.ns) === String(branded))
   return descriptor === undefined ? undefined : {
@@ -171,7 +172,7 @@ export async function mutatePaimindHostSettingsOperations(
   operations: readonly PaimindHostSettingsMutationOperation[],
   expectedRevision: number,
 ): Promise<void> {
-  await settings.mutate(settingsNamespace(namespace), operations, expectedRevision)
+  await settings.mutate(settingsNamespace(resolveHarnessSettingsNamespace(namespace)), operations, expectedRevision)
 }
 
 /** CAS-protected single-field mutation inside the canonical Host Settings document. */
@@ -211,7 +212,7 @@ export function registerPaimindHostSettings<T extends object>(
     shape[field] = spec.description === undefined ? schema : schema.description(spec.description)
   }
   return settings.register(
-    settingsNamespace(namespace),
+    settingsNamespace(resolveHarnessSettingsNamespace(namespace)),
     Schema.object(shape),
     options,
   ) as unknown as PaimindHostSettingsScope<T>
@@ -247,7 +248,7 @@ export function installPaimindHostSettings<T extends object>(
   }
   installSettingsSection(
     ctx as Context,
-    settingsNamespace(namespace),
+    settingsNamespace(resolveHarnessSettingsNamespace(namespace)),
     Schema.object(shape),
     entry,
     hooks as never,

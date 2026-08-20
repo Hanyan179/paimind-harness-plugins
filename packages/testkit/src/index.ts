@@ -42,9 +42,9 @@ export function createClientContextFixture(): {
     },
     register(options, component) {
       let disposed = false
-      const injectedName = currentInjection
+      const injectedName = currentInjection || (typeof options.name === 'string' ? options.name : '')
       const entry = {
-        injectedName: currentInjection,
+        injectedName,
         options,
         component,
         ...(typeof options.inject === 'function' ? { inject: options.inject as () => unknown } : {}),

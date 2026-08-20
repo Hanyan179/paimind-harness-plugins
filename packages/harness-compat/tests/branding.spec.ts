@@ -7,11 +7,11 @@ import {
 } from '../src/index.js'
 
 describe('Harness branding compatibility boundary', () => {
-  it('locates RC6 expanded and compact native brand seats', () => {
+  it('locates RC8 expanded and compact native brand seats', () => {
     document.body.innerHTML = `
       <button id="expanded"><svg viewBox="0 0 182 24"></svg></button>
       <button id="compact"><span><svg viewBox="0 0 23.16 17.04"></svg></span></button>
-      <div id="hero"><span id="fish"><svg viewBox="0 0 20 20"></svg></span><span id="headline">探索未至之境</span><span>预览版</span></div>
+      <div id="hero"><span id="fish"><svg viewBox="0 0 20 20"></svg></span><span id="headline">探索未至之境</span><span id="preview">预览版</span></div>
     `
     const seats = locateHarnessBrandSeats(document)
     expect(seats.wordmark?.host.id).toBe('expanded')
@@ -20,6 +20,7 @@ describe('Harness branding compatibility boundary', () => {
     expect(seats.hero?.host.id).toBe('hero')
     expect(seats.hero?.nativeIcon.id).toBe('fish')
     expect(seats.hero?.nativeHeadline.id).toBe('headline')
+    expect(seats.hero?.nativePreview.id).toBe('preview')
     expect(seats.hero?.locale).toBe('zh')
   })
 

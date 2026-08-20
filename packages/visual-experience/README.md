@@ -1,0 +1,45 @@
+# `@paimind/visual-experience`
+
+Reversible PAIMind visual and interaction experience layer for DeepSeek Harness.
+
+Package rules: [Plugin Authoring Standard](../../docs/standards/plugin-authoring.md).
+
+## Responsibility
+
+Role: **Client plugin**. It owns theme overrides, PAIMind design tokens, semantic experience markers, welcome presentation, Quick Agents, compact Agent Preset presentation and focus/workbench density. `@paimind/branding` remains the owner of product identity; Harness remains the canonical owner of Agent Presets, Sessions, Settings and runtime state.
+
+## Public entry points
+
+| Export | Target | Contract |
+|---|---|---|
+| `.` | `./lib/types/index.d.ts`, `./lib/index.js` | Host Settings namespace registration. |
+| `./settings` | `./lib/types/settings.d.ts`, `./lib/settings.js` | Experience-mode contract and decoder. |
+| `./invariant` | `./lib/types/invariant.d.ts`, `./lib/invariant.js` | Package ownership invariant. |
+| `./client` | `./lib/types/client/index.d.ts`, `./lib/client.js` | Browser experience contribution. |
+| `./package.json` | `./package.json` | Harness client discovery export. |
+
+## Dependencies
+
+- Internal runtime dependencies: `@paimind/branding`, `@paimind/harness-compat` (`workspace:^`).
+- Host Settings dependencies: `@deepseek-ai/cordis`, `@deepseek-ai/dsh-settings`, `@deepseek-ai/schemastery`.
+- External peer dependencies: `react`, `react-dom` (`>=18.0.0 <20.0.0`).
+- Client injection: native connection, locale, runtime, Agent Preset, conversation, layout, primitives, Settings, slots, theme and workspace services.
+
+The manifest is authoritative for dependency direction and version selection.
+
+## Lifecycle and failure
+
+The default mode is `paimind`; `native` disposes theme overrides and the single-slot Preset replacement while retaining only the Settings row and package description. Roster or native-seat discovery failures leave `conversation.hero.agentPreset` untouched. Unload removes styles, theme layers, observers, events, portals, slots and semantic markers; persisted Settings may remain for reinstall recovery.
+
+## Published files
+
+The manifest allowlist contains built JavaScript, declarations, source maps, optimized WebP assets and their provenance documents. Source PNGs, generation evidence, tests, local Harness homes, screenshots and credentials are excluded.
+
+## Verification
+
+- `pnpm exec tsc -b packages/visual-experience/tsconfig.json --pretty false`
+- `pnpm exec vitest run packages/visual-experience/tests packages/harness-compat/tests/experience.spec.ts`
+- `pnpm run check:packages`
+- `pnpm run check:packs`
+- `pnpm run check:api`
+- Harness `0.1.0-rc.8` + Better Sidebar `0.12.2` browser matrix and reversible install/uninstall rehearsal
