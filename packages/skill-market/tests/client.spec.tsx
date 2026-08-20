@@ -41,7 +41,8 @@ function installer(items: readonly unknown[] = []) {
       name: 'openai-docs', description: 'Find official documentation', fileCount: 3, compressedBytes: 10, expandedBytes: 30, operation: 'install', warnings: [],
       runtimeRequirements: [],
     } }),
-    inspectUpload: vi.fn(), installUpload: vi.fn().mockResolvedValue({ ok: true, value: { operation: 'installed', record: {} } }), uninstall: vi.fn(),
+    inspectUpload: vi.fn(), installUpload: vi.fn().mockResolvedValue({ ok: true, value: { operation: 'installed', record: { skillId: 'openai-docs' } } }),
+    uninstall: vi.fn().mockResolvedValue({ ok: true, value: { skillId: 'openai-docs', removedAt: 1, recoverable: true } }),
   }
 }
 
@@ -80,15 +81,26 @@ describe('Skill Market business UI', () => {
     expect(document.head.contains(style)).toBe(false)
   })
 
-  it('separates Recommended and Installed, and does not depend on the current Session catalog', async () => {
+  it('uses one catalog, installed, and favorites scope without depending on the current Session catalog', async () => {
     const native = runtime()
     render(<SkillMarketSection close={() => {}} api={api()} installer={installer() as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'View: openai-docs' })).toBeInTheDocument())
-    expect(screen.getByRole('tab', { name: 'Recommended' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Catalog' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tab', { name: 'Installed' })).toBeInTheDocument()
     expect(screen.queryByText(/runtime id|host path|not exposed|hash/i)).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: 'Installed' }))
-    expect(screen.getByText('No personal Skills installed.')).toBeInTheDocument()
+    expect(screen.getByText(/No personal Skills installed/)).toBeInTheDocument()
+  })
+
+  it('supports roving keyboard navigation across the single scope tablist', async () => {
+    const native = runtime()
+    render(<SkillMarketSection close={() => {}} api={api()} installer={installer() as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />)
+    await screen.findByRole('button', { name: 'View: openai-docs' })
+    const catalog = screen.getByRole('tab', { name: 'Catalog' })
+    catalog.focus()
+    fireEvent.keyDown(catalog, { key: 'ArrowRight' })
+    expect(screen.getByRole('tab', { name: 'Installed' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Installed' })).toHaveFocus()
   })
 
   it('uses the native slash invocation without a second runtime registry', async () => {
@@ -107,10 +119,38 @@ describe('Skill Market business UI', () => {
     render(<SkillMarketSection close={() => {}} api={api()} installer={host as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Review and install' })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: 'Review and install' }))
-    await waitFor(() => expect(screen.getByRole('region', { name: 'Install confirmation' })).toBeInTheDocument())
+    const dialog = await screen.findByRole('dialog', { name: 'Install openai-docs' })
     expect(host.inspectCatalog).toHaveBeenCalledWith({ catalogId: 'openai-docs', version: '1.0.0' })
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+    const confirm = screen.getByRole('button', { name: 'Confirm install' })
+    const cancel = screen.getByRole('button', { name: 'Cancel' })
+    await waitFor(() => expect(confirm).toHaveFocus())
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true })
+    expect(cancel).toHaveFocus()
+    fireEvent.keyDown(dialog, { key: 'Tab' })
+    expect(confirm).toHaveFocus()
+    fireEvent.click(confirm)
     await waitFor(() => expect(host.installUpload).toHaveBeenCalled())
+  })
+
+  it('does not offer a redundant catalog update when package digests match', async () => {
+    const native = runtime()
+    const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
+    render(<SkillMarketSection close={() => {}} api={api()} installer={installer(installed) as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />)
+    await screen.findByRole('button', { name: 'View: openai-docs' })
+    const current = screen.getByRole('button', { name: 'Catalog version is current' })
+    expect(current).toBeDisabled()
+  })
+
+  it('requires an explicit recoverable-uninstall confirmation', async () => {
+    const native = runtime(); const host = installer([{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }])
+    render(<SkillMarketSection close={() => {}} api={api()} installer={host as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />)
+    await screen.findByRole('button', { name: 'View: openai-docs' })
+    fireEvent.click(screen.getByRole('tab', { name: 'Installed' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Uninstall' }))
+    expect(screen.getByRole('dialog', { name: 'Uninstall openai-docs' })).toBeInTheDocument()
+    expect(host.uninstall).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Uninstall with backup' }))
+    await waitFor(() => expect(host.uninstall).toHaveBeenCalledWith({ skillId: 'openai-docs', version: `sha256:${'a'.repeat(64)}` }))
   })
 
   it('declares the Remote and business surface dependencies', () => {

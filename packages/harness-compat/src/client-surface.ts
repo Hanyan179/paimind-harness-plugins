@@ -1,3 +1,11 @@
+import type {
+  HarnessAgentChoice,
+  HarnessAgentChoiceBridge,
+  HarnessAgentChoiceSnapshot,
+  HarnessAgentPresetApi,
+  HarnessAgentPresetSeatControl,
+} from './index.js'
+
 /** Shared product-surface ids; Harness still owns shell routing and history. */
 export const PAIMIND_PRODUCT_SURFACE_IDS = ['agent-center', 'skill-center'] as const
 
@@ -112,6 +120,207 @@ export class PaimindProductSurfaceController {
   }
 }
 
+export type PaimindExperienceMode = 'paimind' | 'native'
+export type PaimindExperienceDensity = 'calm' | 'focus' | 'workbench'
+
+const EXPERIENCE_MARKERS = [
+  'data-paimind-shell',
+  'data-paimind-hero',
+  'data-paimind-composer',
+  'data-paimind-conversation',
+  'data-paimind-sidebar',
+] as const
+
+/**
+ * Reversible semantic marker controller over RC8's public data attributes.
+ * It never replaces a Harness root; it only annotates existing shell regions.
+ */
+export class HarnessExperienceMarkers {
+  private mode: PaimindExperienceMode = 'native'
+  private disposed = false
+  private queued = false
+  private readonly observer: MutationObserver
+
+  constructor(private readonly doc: Document = document) {
+    this.observer = new MutationObserver(() => { this.schedule() })
+    this.observer.observe(doc.body, {
+      attributes: true,
+      attributeFilter: ['data-phase', 'data-dsh-sidebar-collapsed', 'data-sidebar-collapsed', 'data-details-collapsed'],
+      childList: true,
+      subtree: true,
+    })
+    this.apply()
+  }
+
+  setMode(mode: PaimindExperienceMode): void {
+    if (this.disposed || this.mode === mode) return
+    this.mode = mode
+    this.apply()
+  }
+
+  getMode(): PaimindExperienceMode { return this.mode }
+
+  dispose(): void {
+    if (this.disposed) return
+    this.disposed = true
+    this.observer.disconnect()
+    const body = this.doc.body
+    body.removeAttribute('data-paimind-experience')
+    body.removeAttribute('data-paimind-density')
+    for (const marker of EXPERIENCE_MARKERS) {
+      for (const element of this.doc.querySelectorAll<HTMLElement>(`[${marker}]`)) element.removeAttribute(marker)
+    }
+  }
+
+  private schedule(): void {
+    if (this.queued || this.disposed) return
+    this.queued = true
+    queueMicrotask(() => {
+      this.queued = false
+      this.apply()
+    })
+  }
+
+  private apply(): void {
+    if (this.disposed) return
+    const body = this.doc.body
+    body.dataset.paimindExperience = this.mode
+    const phase = this.doc.querySelector<HTMLElement>('[data-phase="active"], [data-phase="hero"], [data-phase="settling"]')
+    const betterSidebar = this.doc.querySelector<HTMLElement>('[data-dsh-better-sidebar]')
+    const betterSidebarOpen = betterSidebar !== null
+      && !body.hasAttribute('data-dsh-sidebar-collapsed')
+      && betterSidebar.getAttribute('aria-hidden') !== 'true'
+    const density: PaimindExperienceDensity = this.mode === 'native'
+      ? 'calm'
+      : betterSidebarOpen ? 'workbench' : phase?.dataset.phase === 'active' ? 'focus' : 'calm'
+    body.dataset.paimindDensity = density
+
+    this.markOne(body, 'data-paimind-shell')
+    this.markOne(phase, 'data-paimind-conversation')
+    this.markOne(this.doc.querySelector<HTMLElement>('[data-phase="hero"]'), 'data-paimind-hero')
+    this.markOne(this.doc.querySelector<HTMLElement>('[data-composer-card]'), 'data-paimind-composer')
+    this.markOne(this.doc.querySelector<HTMLElement>('[data-slot="sidebar"]'), 'data-paimind-sidebar')
+  }
+
+  private markOne(element: HTMLElement | null, marker: typeof EXPERIENCE_MARKERS[number]): void {
+    for (const previous of this.doc.querySelectorAll<HTMLElement>(`[${marker}]`)) {
+      if (this.mode === 'native' || previous !== element) previous.removeAttribute(marker)
+    }
+    if (element !== null && this.mode === 'paimind') element.setAttribute(marker, '')
+  }
+}
+
+const PLATFORM_MODE_IDS = new Set(['standard', 'ptc', 'code', 'minimal', 'cordis'])
+
+function agentChoiceName(id: string, name: string | undefined): string {
+  const normalized = name?.trim()
+  return normalized === undefined || normalized === '' ? id : normalized
+}
+
+function agentChoiceDescription(description: string | undefined): string {
+  const normalized = description?.trim()
+  return normalized === undefined || normalized === '' ? '由 Harness 原生 Agent Preset 提供。' : normalized
+}
+
+/** Native implementation of the FP17 Agent choice bridge. */
+export class NativeHarnessAgentChoiceBridge implements HarnessAgentChoiceBridge {
+  private snapshot: HarnessAgentChoiceSnapshot
+  private readonly listeners = new Set<() => void>()
+  private disposed = false
+  private generation = 0
+
+  constructor(
+    private readonly api: HarnessAgentPresetApi,
+    private readonly nativeSeat: HarnessAgentPresetSeatControl,
+  ) {
+    const seat = nativeSeat.getSnapshot()
+    this.snapshot = Object.freeze({
+      status: 'loading', choices: Object.freeze([]), current: seat.current,
+      busy: seat.busy, error: seat.error,
+    })
+  }
+
+  getSnapshot(): HarnessAgentChoiceSnapshot { return this.snapshot }
+
+  subscribe(listener: () => void): () => void {
+    if (this.disposed) return () => {}
+    this.listeners.add(listener)
+    return () => { this.listeners.delete(listener) }
+  }
+
+  async load(): Promise<boolean> {
+    const generation = ++this.generation
+    this.publish({ ...this.snapshot, status: 'loading', error: null })
+    try {
+      await this.nativeSeat.load()
+      const response = await this.api.list({})
+      if (this.disposed || generation !== this.generation) return false
+      if (!response.result.ok) {
+        this.publish({ ...this.snapshot, status: 'unavailable', choices: Object.freeze([]), error: response.result.error.message })
+        return false
+      }
+      const choices = response.result.value.presets
+        .filter(preset => preset.broken === undefined)
+        .map((preset): HarnessAgentChoice => Object.freeze({
+          id: preset.id,
+          name: agentChoiceName(preset.id, preset.name),
+          description: agentChoiceDescription(preset.description),
+          trust: preset.trust,
+          category: PLATFORM_MODE_IDS.has(preset.id) ? 'platform-mode' : 'recommended',
+        }))
+      const seat = this.nativeSeat.getSnapshot()
+      if (choices.length === 0 || !choices.some(choice => choice.id === seat.current)) {
+        this.publish({ ...this.snapshot, status: 'unavailable', choices: Object.freeze([]), current: seat.current, busy: seat.busy, error: seat.error })
+        return false
+      }
+      this.publish({
+        status: 'ready', choices: Object.freeze(choices), current: seat.current,
+        busy: seat.busy, error: seat.error,
+      })
+      return true
+    } catch (error) {
+      if (this.disposed || generation !== this.generation) return false
+      this.publish({
+        ...this.snapshot, status: 'unavailable', choices: Object.freeze([]),
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return false
+    }
+  }
+
+  async select(id: string): Promise<void> {
+    if (this.disposed || this.snapshot.status !== 'ready' || !this.snapshot.choices.some(choice => choice.id === id)) return
+    this.publish({ ...this.snapshot, busy: true, error: null })
+    try {
+      await this.nativeSeat.select(id)
+      if (this.disposed) return
+      const seat = this.nativeSeat.getSnapshot()
+      this.publish({ ...this.snapshot, current: seat.current || id, busy: seat.busy, error: seat.error })
+    } catch (error) {
+      if (this.disposed) return
+      this.publish({ ...this.snapshot, busy: false, error: error instanceof Error ? error.message : String(error) })
+    }
+  }
+
+  restore(): void {
+    if (this.disposed) return
+    const seat = this.nativeSeat.getSnapshot()
+    this.publish({ ...this.snapshot, current: seat.current, busy: seat.busy, error: seat.error })
+  }
+
+  dispose(): void {
+    if (this.disposed) return
+    this.disposed = true
+    this.generation += 1
+    this.listeners.clear()
+  }
+
+  private publish(snapshot: HarnessAgentChoiceSnapshot): void {
+    this.snapshot = Object.freeze(snapshot)
+    for (const listener of [...this.listeners]) listener()
+  }
+}
+
 function focusableElements(root: HTMLElement): HTMLElement[] {
   const selector = [
     'button:not(:disabled)',
@@ -214,7 +423,7 @@ function clockMarker(doc: Document): HTMLSpanElement {
 }
 
 /**
- * RC6 presentation adapter for the native Session tree. It marks a row only
+ * RC8 presentation adapter for the native Session tree. It marks a row only
  * when its visible title maps entirely to scheduled canonical Session ids.
  * Ambiguous mixed scheduled/ordinary duplicate titles fail closed.
  */

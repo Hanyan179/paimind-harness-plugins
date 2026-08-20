@@ -31,6 +31,7 @@ const bundleRoot = resolve(repositoryRoot, 'packages/harness-bundle')
 const extensionCenterRoot = resolve(repositoryRoot, 'packages/extension-center')
 const runtimeOrbsRoot = resolve(repositoryRoot, 'packages/runtime-orbs')
 const brandingRoot = resolve(repositoryRoot, 'packages/branding')
+const visualExperienceRoot = resolve(repositoryRoot, 'packages/visual-experience')
 const workspaceProjectRoot = resolve(repositoryRoot, 'packages/workspace-project')
 const sidebarAdapterRoot = resolve(repositoryRoot, 'packages/better-sidebar-adapter')
 const taskMonitorRoot = resolve(repositoryRoot, 'packages/task-monitor')
@@ -72,6 +73,7 @@ const withoutSchedulerBundleRoot = resolve(dshHome, 'without-scheduler-bundle')
 const withoutUserSettingsBundleRoot = resolve(dshHome, 'without-user-settings-bundle')
 const withoutDeveloperResourcesBundleRoot = resolve(dshHome, 'without-developer-resources-bundle')
 const stagedFullBundleRoot = resolve(dshHome, 'full-paimind-bundle')
+const visualExperienceBundleRoot = resolve(dshHome, 'visual-experience-bundle')
 
 function run(command, args, label) {
   console.log(`start: ${label}`)
@@ -486,11 +488,32 @@ try {
     dependencies: {},
   }, null, 2))
   await writeFile(resolve(stagedFullBundleRoot, 'cordis.patch.yml'), fullPatch)
-  const withoutSchedulerPatch = fullPatch.replace(
+  await mkdir(visualExperienceBundleRoot, { recursive: true })
+  await writeFile(resolve(visualExperienceBundleRoot, 'package.json'), JSON.stringify({
+    name: '@paimind/test-visual-experience-bundle',
+    version: '0.0.0',
+    private: true,
+    type: 'module',
+    files: ['cordis.patch.yml'],
+    dsh: { bundle: { patch: './cordis.patch.yml' } },
+    dependencies: {},
+  }, null, 2))
+  await writeFile(resolve(visualExperienceBundleRoot, 'cordis.patch.yml'), `- insert:
+    - id: paimind-branding
+      name: '@paimind/branding'
+    - id: paimind-visual-experience
+      name: '@paimind/visual-experience'
+`)
+  const isolationPatch = fullPatch.replace(
+    /\n    - id: paimind-visual-experience\n      name: '@paimind\/visual-experience'\n?/,
+    '\n',
+  )
+  if (isolationPatch === fullPatch) throw new Error('failed to derive legacy feature-isolation patch without Visual Experience')
+  const withoutSchedulerPatch = isolationPatch.replace(
     /\n    - id: paimind-platform-scheduler\n      name: '@paimind\/platform-scheduler'[\s\S]*?    - id: paimind-scheduler-adapter-feishu-bot-invariant\n      name: '@paimind\/scheduler-adapter-feishu-bot\/invariant'\n      inject: \[invariants\]\n?/,
     '\n',
   )
-  if (withoutSchedulerPatch === fullPatch) throw new Error('failed to derive Scheduler isolation patch')
+  if (withoutSchedulerPatch === isolationPatch) throw new Error('failed to derive Scheduler isolation patch')
   await writeFile(resolve(withoutSchedulerBundleRoot, 'cordis.patch.yml'), withoutSchedulerPatch)
   await mkdir(withoutUserSettingsBundleRoot, { recursive: true })
   await writeFile(resolve(withoutUserSettingsBundleRoot, 'package.json'), JSON.stringify({
@@ -502,11 +525,11 @@ try {
     dsh: { bundle: { patch: './cordis.patch.yml' } },
     dependencies: {},
   }, null, 2))
-  const withoutUserSettingsPatch = fullPatch.replace(
+  const withoutUserSettingsPatch = isolationPatch.replace(
     /\n    - id: paimind-user-settings\n      name: '@paimind\/user-settings'\n?/,
     '\n',
   )
-  if (withoutUserSettingsPatch === fullPatch) throw new Error('failed to derive User Settings isolation patch')
+  if (withoutUserSettingsPatch === isolationPatch) throw new Error('failed to derive User Settings isolation patch')
   await writeFile(resolve(withoutUserSettingsBundleRoot, 'cordis.patch.yml'), withoutUserSettingsPatch)
   await mkdir(withoutDeveloperResourcesBundleRoot, { recursive: true })
   await writeFile(resolve(withoutDeveloperResourcesBundleRoot, 'package.json'), JSON.stringify({
@@ -518,11 +541,11 @@ try {
     dsh: { bundle: { patch: './cordis.patch.yml' } },
     dependencies: {},
   }, null, 2))
-  const withoutDeveloperResourcesPatch = fullPatch.replace(
+  const withoutDeveloperResourcesPatch = isolationPatch.replace(
     /\n    - id: paimind-developer-resources\n      name: '@paimind\/developer-resources'\n?/,
     '\n',
   )
-  if (withoutDeveloperResourcesPatch === fullPatch) throw new Error('failed to derive Developer Resources isolation patch')
+  if (withoutDeveloperResourcesPatch === isolationPatch) throw new Error('failed to derive Developer Resources isolation patch')
   await writeFile(resolve(withoutDeveloperResourcesBundleRoot, 'cordis.patch.yml'), withoutDeveloperResourcesPatch)
   dsh([
     'plugin', '--profile', 'web', 'add', providerRoot,
@@ -534,6 +557,7 @@ try {
     extensionCenterRoot,
     runtimeOrbsRoot,
     brandingRoot,
+    visualExperienceRoot,
     workspaceProjectRoot,
     sidebarAdapterRoot,
     taskMonitorRoot,
@@ -565,6 +589,7 @@ try {
     'paimind-extension-center', '@paimind/extension-center',
     'paimind-runtime-orbs', '@paimind/runtime-orbs',
     'paimind-branding', '@paimind/branding',
+    'paimind-visual-experience', '@paimind/visual-experience',
     'paimind-workspace-project', '@paimind/workspace-project',
     'paimind-better-sidebar-adapter', '@paimind/better-sidebar-adapter',
     'paimind-task-monitor', '@paimind/task-monitor',
@@ -615,6 +640,7 @@ try {
     '@paimind/extension-center',
     '@paimind/runtime-orbs',
     '@paimind/branding',
+    '@paimind/visual-experience',
     '@paimind/workspace-project',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
@@ -645,6 +671,7 @@ try {
     '@paimind/extension-center',
     '@paimind/runtime-orbs',
     '@paimind/branding',
+    '@paimind/visual-experience',
     '@paimind/workspace-project',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
@@ -675,6 +702,7 @@ try {
   if (removed.includes('paimind-extension-center')
     || removed.includes('paimind-runtime-orbs')
     || removed.includes('paimind-branding')
+    || removed.includes('paimind-visual-experience')
     || removed.includes('paimind-workspace-project')
     || removed.includes('paimind-better-sidebar-adapter')
     || removed.includes('paimind-task-monitor')
@@ -700,6 +728,27 @@ try {
     || removed.includes("name: '@deepseek-ai/dsh-time-context'")
     || removed.includes('dsh-better-sidebar')) {
     throw new Error(`PAIMind feature row remained after bundle removal\n${removed}`)
+  }
+
+  dsh([
+    'plugin', '--profile', 'web', 'add', visualExperienceBundleRoot, brandingRoot, visualExperienceRoot,
+  ], 'install Visual Experience as an independent plugin')
+  await bootAndProbe([
+    '@paimind/branding', '@paimind/visual-experience',
+  ])
+  dsh([
+    'plugin', '--profile', 'web', 'remove',
+    '@paimind/test-visual-experience-bundle', '@paimind/visual-experience',
+  ], 'remove Visual Experience independently')
+  await bootAndProbe([], ['@paimind/visual-experience'])
+  dsh([
+    'plugin', '--profile', 'web', 'remove', '@paimind/branding',
+  ], 'remove Visual Experience companion branding')
+  const visualExperienceRemoved = dsh(['--profile', 'web', '--dump-config'], 'confirm Visual Experience cleanup')
+  if (visualExperienceRemoved.includes('paimind-visual-experience')
+    || visualExperienceRemoved.includes('@paimind/visual-experience')
+    || visualExperienceRemoved.includes('paimind-branding')) {
+    throw new Error('Visual Experience or its companion branding remained after independent removal')
   }
 
   dsh([
@@ -1437,7 +1486,7 @@ try {
   if (afterStatus !== beforeStatus) {
     throw new Error(`Harness worktree changed\nbefore:\n${beforeStatus}\nafter:\n${afterStatus}`)
   }
-  console.log(`real Harness composition passed: Harness ${runtimeVersion}, Better Sidebar ${providerManifest.version}, Office Viewer ${officeProviderManifest.version}, full install/boot/remove/restore, independent features without Extension Center, independent product compositions without Task Monitor, Agent Market, Agent Builder, Skill Market, Notification Center, PAIMind Scheduler, PAIMind User Settings or PAIMind Developer Resources, no legacy native Session-reminder rows, cleanup, zero upstream worktree delta`)
+  console.log(`real Harness composition passed: Harness ${runtimeVersion}, Better Sidebar ${providerManifest.version}, Office Viewer ${officeProviderManifest.version}, full install/boot/remove/restore, independent Visual Experience install/remove, independent features without Extension Center, independent product compositions without Task Monitor, Agent Market, Agent Builder, Skill Market, Notification Center, PAIMind Scheduler, PAIMind User Settings or PAIMind Developer Resources, no legacy native Session-reminder rows, cleanup, zero upstream worktree delta`)
 } finally {
   await rm(dshHome, { recursive: true, force: true })
 }

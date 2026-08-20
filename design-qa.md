@@ -30,6 +30,88 @@ final result: passed
 
 ---
 
+# FP-17 PAIMind Visual Experience Design QA
+
+## Comparison input
+
+- Source prototype: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-3ba83237-9a85-4520-b7f4-5ea41e5c9af7.png` (`1611 x 781`, clean PAIMind new-conversation reference).
+- Live Harness implementation: `/Users/hansen/Documents/PAIMind-workspace/codex-output/design-audit/2026-08-20-fp17-completion-audit/02-welcome-light-1512x982.png` (`1512 x 982`, System resolving to Light).
+- Same-canvas comparison: `/Users/hansen/Documents/PAIMind-workspace/codex-output/design-audit/2026-08-20-visual-experience-plugin-plan/implementation/reference-implementation-comparison.png` (`2560 x 720`; the source was proportionally normalized and centered on a `1280 x 720` canvas before comparison).
+- Dark theme: `/Users/hansen/Documents/PAIMind-workspace/codex-output/design-audit/2026-08-20-fp17-completion-audit/07-welcome-dark-1280x720.png`.
+- Native rollback and PAIMind restoration: `/Users/hansen/Documents/PAIMind-workspace/codex-output/design-audit/2026-08-20-fp17-completion-audit/08-native-mode-persisted-after-refresh.png` and `/Users/hansen/Documents/PAIMind-workspace/codex-output/design-audit/2026-08-20-fp17-completion-audit/09-paimind-restored-after-refresh.png`.
+- Workbench density: `/Users/hansen/Documents/PAIMind-workspace/codex-output/design-audit/2026-08-20-fp17-completion-audit/10-workbench-density-better-sidebar.png`.
+- Focus density, Task Monitor and real approval: `/Users/hansen/Documents/PAIMind-workspace/codex-output/design-audit/2026-08-20-fp17-completion-audit/18-focus-density-approval-rejection.png`, `19-task-monitor-themed-long-run.png` and `20-real-approval-card.png`.
+- Responsive new conversation and picker: `/Users/hansen/Documents/PAIMind-workspace/codex-output/design-audit/2026-08-20-fp17-completion-audit/23-welcome-light-900x720.png`, `04-welcome-light-390x844.png` and `05-agent-picker-bottom-sheet-390x844.png`.
+- Source annotation for the sidebar brand and Composer `@` follow-up: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-0fcdd648-6e9e-4e9e-a471-72e0b514be20.png` (`4506 x 2562`).
+- Browser-rendered `@` state: `/Users/hansen/Documents/PAIMind-workspace/codex-output/design-audit/2026-08-20-fp17-composer-feedback/01-composer-at-1280x720.png` (`1280 x 720` CSS viewport and pixels, Light, expanded sidebar) and `/Users/hansen/Documents/PAIMind-workspace/codex-output/design-audit/2026-08-20-fp17-composer-feedback/02-composer-at-390x844.png` (`390 x 844` CSS viewport and pixels, mobile rail).
+- Restored expanded brand: `/Users/hansen/Documents/PAIMind-workspace/codex-output/design-audit/2026-08-20-fp17-composer-feedback/03-expanded-brand-restored-1280x720.png`.
+- Full-view follow-up comparison: `/Users/hansen/Documents/PAIMind-workspace/codex-output/design-audit/2026-08-20-fp17-composer-feedback/04-reference-implementation-comparison.png` (`2560 x 720`; the annotated source was proportionally normalized to `1280 x 720` beside the `1280 x 720` implementation).
+
+The prototype and live implementation were compared in the same new-conversation state. The reference image was normalized to the live `1280 x 720` canvas without changing its content hierarchy; the implementation intentionally retains Harness workspace, permission and model controls rather than reproducing prototype mock data.
+
+The follow-up annotation describes a desired interaction region rather than a rendered open-menu target, so a separate pixel-fidelity crop would create false precision. The full-view comparison preserves every annotation, while browser measurements verify the focused Composer and brand geometry directly.
+
+## Iterations
+
+1. Corrected Better Sidebar detection so an empty `data-dsh-sidebar-collapsed` attribute means collapsed rather than open.
+2. Made the Agent bridge await the canonical native seat load before reading the roster, preserving the native selector on failure.
+3. Replaced trust-based Quick Agent filtering with the native non-broken recommended roster because installed PAIMind official Presets can retain Harness `user` trust provenance.
+4. Moved Quick Agents below the main Composer to match the source hierarchy and suppressed them in active conversations.
+5. Rechecked the combined reference/implementation image after each layout change.
+6. Limited Focus Density to semantically collapsed Think, Tool and Context rows; expanded content, errors and approvals remain full-size.
+7. Fixed the `390px` hero selector row so the Agent trigger ends at `372px` instead of overflowing the viewport.
+8. Mapped the logical `paimind.visual-experience` namespace to Harness rc.8's native `paimind-visual-experience` key so Native / PAIMind mode survives refresh.
+9. Re-anchored the native Harness input overlay above the Composer without replacing its candidate data, draft state, highlight, keyboard behavior or selection route; its height uses measured room above the Composer and restores Quick Agents after dismissal.
+10. Added border-box sizing after the first live pass showed the menu's padding extending five pixels past the `866px` viewport; the revised `1280 x 720` and `390 x 844` captures keep the complete menu inside the viewport.
+11. Made the expanded Paramont wordmark flex within the native brand seat and verified the mark, official wordmark and `HARNESS` suffix all remain inside the `216 x 24px` host button.
+12. Added 96×96 WebP portraits from the frozen prototype and one Paramont brand avatar. The same canonical-Preset resolver now drives `@` Agent candidates, Quick Agents and the visible Preset picker; valid unknown ids receive a deterministic visual projection without creating identity metadata.
+13. P2 observed: the first `390 x 844` avatar captures were covered by Better Sidebar, and the first narrow `@` capture exposed native fixed row height that caused name/description overlap. The desktop listbox also allowed the welcome heading to remain visible through the material.
+14. P2 fix: closed the right panel before capture, changed narrow candidate rows to auto-height two-row layout with a two-line description clamp, and raised Light/System and Dark listbox backgrounds to solid theme-derived surfaces while retaining blur and shadow.
+15. P2 post-fix: `30` proves the unobscured 390px new-conversation Quick Agent and Preset trigger; `31` proves the 390px `@` menu; `32`, `33` and `34` prove System, Light and Dark desktop listbox opacity. All eight visible mobile Agent rows measured `66px`, name-to-description gap `2px`, row/list horizontal overflow `0`, and 96×96 decoded images in 32px circular slots.
+16. Release-blocker follow-up: the shared fresh in-app `1280 x 720` matrix found `@` settling with eight Agents and zero Skills, the Settings Native radio not changing its checked or persisted state, and Agent Center managed cards exposing no portrait images.
+17. Source-level fix: PAIMind `@ Skill` now delegates candidates and picks to rc.8's resident native `skill` source instead of owning a second `skills.list` Promise cache; the runtime manifest adds the native Skill package as a load-order dependency. The Settings radio owns its complete hit target and the mode controller always reconciles with the committed native Settings snapshot. The avatar presenter consumes Agent Center's semantic `[data-paimind-agent-avatar-seat][data-paimind-agent-id]` contract, defers to any native image, and removes only its own projection on Native or Dispose.
+18. Post-fix browser verification is pending because viewport-override tab creation caused the shared in-app Browser control channel to time out and reset for both the owner and Root. Existing `3080` tabs received the new HMR revision, but this infrastructure limitation is not counted as interaction evidence.
+19. Post-restart browser verification recovered in fresh in-app tab `14` at `1280 x 720`. The default `Paramont 助手` correctly showed eight Agents and zero Skills because that canonical Preset had no packaged Session Skills. Switching through Quick Agents to `官方技能验证助手` exposed the same `@` listbox with 11 options: eight Agents plus the three native Session Skills `openai-docs`, `skill-creator` and `skill-installer`. Picking `openai-docs` wrote the exact executable draft `/openai-docs `. This verifies native capability-scoped delegation; it does not imply a fixed Skill count for every Agent.
+20. Settings rollback passed after the controlled Harness process restart (`PID 72183`). Clicking the real Native radio changed its checked state and `data-paimind-experience` to `native`; Quick Agents, PAIMind avatars, the hero and Composer marker all dropped to zero. Native `@` restored 70 File, Folder and Session reference candidates. Fresh tab `15` persisted Native with every PAIMind surface still absent, and clicking PAIMind restored the experience marker, Quick Agents, avatars, hero and Composer treatment.
+21. Agent Center managed-card avatar coverage passed in the same live browser run: My Agents exposed three semantic seats for `agent-center-4e4319`, `genui-163d65` and `my-agent-80ef93`; the resolver projected three distinct assets (`content-expression`, `project-progress`, `technical-expert`), each decoded at its natural `96 x 96` size and reported `ready=true`. Platform Mode cards exposed zero portrait seats and zero injected portrait images, preserving their native mode icons. The post-fix screenshot was visually inspected with no broken image or layout regression.
+
+## Findings
+
+- P0: none after fresh capability-scoped `@` Agent + Skill composition, Settings persistence/rollback and Agent Center managed-card portraits passed in the post-restart browser run.
+- P1: none.
+- P2: none.
+- P3: the implementation keeps a 56px collapsed Harness navigation rail and the canonical workspace / permission / model controls. These are deliberate runtime affordances, not prototype mismatches.
+- P3: unknown but valid canonical Presets receive a deterministic portrait from the six-file prototype pool. This is intentionally a visual projection rather than identity metadata; future Harness native avatar metadata has higher priority. Mobile keeps a two-line description clamp instead of removing the explanation.
+
+## Verified behavior
+
+- `1280 x 720` new conversation uses Calm density, has zero document overflow, places Quick Agents 16px below the Composer and shows three current non-broken recommended Presets.
+- The desktop Agent picker is grouped into Recommended Agent and Platform Mode, measures `333px` high (below the `360px` limit), updates its explanation on focus and hover, and returns focus to its trigger after Escape.
+- Quick Agent selection changed the canonical native Preset to `Paramont 助手`; selecting `极简模式` in the custom picker restored the native staged selection.
+- `1512 x 982`, `1280 x 720`, `900 x 720` and `390 x 844` all have zero horizontal overflow. Visible Quick Agents reduce from three to two to one. Mobile uses a bottom-aligned `390 x 483px` Bottom Sheet with a scrim and `22px` top corners.
+- Workbench density hides the mountain environment and subtitle, limits Quick Agents to two and does not change the user's Better Sidebar preference. Focus density hides Quick Agents and leaves the collapsed Think row at `24px` while preserving full message content.
+- Expanded and compact native navigation both render the Paramont identity; no visible DeepSeek brand remains outside the selected model name.
+- Light, Dark and System controls were exercised. System resolved to Light under the current macOS preference; Dark used the optimized dark ridge asset.
+- `PAIMind -> Native -> PAIMind` removed and restored the title, theme projection, Quick Agents and custom picker while keeping the settings row. Both Native rollback and restored PAIMind mode persisted after refresh.
+- In PAIMind mode the `@` list is anchored above the Composer. At `390 x 844` it occupies `x=83..355`, `y=9..422`; each Agent row is `66px`, retains a clamped two-line explanation and has zero horizontal overflow. The final `1280 x 720` Light/System and Dark captures likewise place the solid theme-derived listbox above the Composer with no welcome-heading bleed-through.
+- Post-fix browser result: PAIMind `@` retains the native controller route and scopes `paimind-skill` candidates to the selected canonical Preset's packaged Session Skills. `Paramont 助手` truthfully returned zero Skills; `官方技能验证助手` returned `openai-docs`, `skill-creator` and `skill-installer` alongside eight Agents, and selecting `openai-docs` produced the exact executable draft `/openai-docs `. No fixed Skill count is asserted across Agents.
+- Expanded brand geometry is fully visible: mark `x=16..40`, wordmark group `x=48..205.7`, inside the native button `x=16..232`. The follow-up browser console contained zero Error entries.
+- Prior FP17 baseline: the earlier follow-up Type Check passed through the direct local TypeScript binary with five focused test files / eight tests. The current Composer/avatar package-local result is recorded separately below; the `pnpm` command wrapper remains blocked by its time-based minimum-release-age policy for the expected Harness rc.8 lockfile entries, not by product code.
+- Agent-avatar post-fix evidence: `/Users/hansen/.codex/visualizations/2026/08/20/01a01f49-e994-75f1-ba8d-a00ccf6dd2fb/fp17-composer-audit/30-postfix-avatar-quick-preset-system-390x844.jpg`, `31-postfix-avatar-at-menu-system-390x844.jpg`, `32-postfix-avatar-at-menu-system-1280x720.jpg`, `33-postfix-avatar-at-menu-light-1280x720.jpg`, and `34-postfix-avatar-at-menu-dark-1280x720.jpg`.
+- At 390px the document and Composer listbox each had zero horizontal overflow; one Quick Agent, the official Paramont Preset avatar and the `@` Agent portrait set were visible with no broken image or bitmap upscaling. The mobile menu remained inside `x=83..355`, `y=9..422`.
+- Post-fix Native rollback: the Settings radio became checked, every PAIMind-only surface and presenter image dropped to zero, and Native `@` restored 70 untouched File/Folder/Session reference candidates. Fresh tab `15` persisted Native; selecting PAIMind restored the experience marker, Quick Agents, avatars, hero and Composer treatment.
+- Post-fix Agent Center avatar coverage: three managed-card semantic seats resolved to three distinct 96×96 prototype portraits with `ready=true`; platform Mode cards retained their native mode icons and received no portrait seats or images.
+- Current release-blocker package-local gate: 10 package-local files / 40 tests passed; direct local `tsc -b packages/harness-compat/tsconfig.json packages/visual-experience/tsconfig.json` passed; both packages completed isolated esbuild output. Dry pack produced `@paimind/harness-compat` at 89,422 bytes / 22 entries and `@paimind/visual-experience` at 137,690 bytes / 31 entries, including seven 96×96 avatar WebPs totaling 12,908 bytes plus `assets/ASSETS.md`. The `pnpm exec` wrapper remains blocked before test execution by the time-based minimum-release-age policy for the expected rc.8 lockfile entries; the direct installed Vitest runner passed.
+- A real out-of-workspace write produced the Harness approval card; rejection restored the conversation without creating the requested Desktop file.
+- Final browser log contained zero error entries. The only warnings were expected connection retries from deliberate Harness restarts; GenUI reported its existing informational DOM-channel fallback.
+- Final Root-coordinated `pnpm run check:fast` passed: forced Type Check and the single final Root Build passed; full Vitest passed `78` files / `309` tests. Package compliance, all `33` dry packs, strict publint, `101` NodeNext exports, examples, `91` Markdown documents, framework verification and `git diff --check` all passed. The protected API snapshot passed `33` package contracts with SHA-256 `b0afe007e09700ad2bdb7d582aa1d7b9d6c7dba44d53b34a7be76150027b168a`; the shared Build hash is `81dfea4f527e21e30feda5f8b74982325e31f30e8378e031aca9ba37a666179d`. This owner independently reran the read-only API snapshot check after the Ready Signal and received the same protected-baseline pass.
+- Exact Harness `0.1.0-rc.8` verification passed Agent Center and Skill Center together, each center independently absent, Native restore and zero upstream source delta. Exact Harness `0.1.0-rc.8` + Better Sidebar `0.12.2` + Office Viewer `0.1.0` composition passed full install/start/remove/restore, independent Visual Experience install/remove and cleanup, Extension Center absence and each key product-plugin absence. The read-only upstream status remains only the pre-existing untracked `ppt-output/` directory.
+- Final post-restart `1280 x 720` PAIMind new-conversation check, performed without another viewport override, retained Calm density, the hero, four Quick Agents, four natural `96 x 96` portraits and zero horizontal overflow. The session was returned to `Paramont 助手` with an empty Composer; the earlier `@` Agent/Skill, executable Skill draft, Native persistence/rollback and Agent Center portrait evidence remained valid.
+
+final result: passed — Development Complete after final Root-coordinated shared gates; Product Accepted remains gated by the shared test environment
+
+---
+
 # Agent Center and Skill Center Full-page Design QA
 
 ## Comparison input

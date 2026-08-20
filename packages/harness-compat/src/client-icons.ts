@@ -1,5 +1,5 @@
 /**
- * RC6-native client icon facade for PAIMind product surfaces.
+ * RC8-native client icon facade for PAIMind product surfaces.
  *
  * Feature packages import these semantic aliases instead of depending on the
  * versioned Harness primitive package directly.  This keeps upstream icon

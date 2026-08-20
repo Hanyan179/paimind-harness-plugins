@@ -21,7 +21,7 @@ Role: **Headless plugin**. It owns its service or adapter boundary and exposes n
 ## Dependencies
 
 - Internal runtime dependencies: `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`).
-- External runtime or peer dependencies: `@deepseek-ai/dsh-home-paths` (`0.1.0-rc.6`), `zod` (`^4.4.3`).
+- External runtime or peer dependencies: `@deepseek-ai/dsh-home-paths` (`0.1.0-rc.8`), `zod` (`^4.4.3`).
 - Client service injection: None.
 
 The manifest is authoritative for dependency direction and version selection.

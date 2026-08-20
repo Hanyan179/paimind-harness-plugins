@@ -10,7 +10,7 @@ afterEach(() => {
 })
 
 describe('Paramont branding client contribution', () => {
-  it('registers a shell contribution and replaces both native brand seats reversibly', async () => {
+  it('registers stable brand slots and replaces the native hero reversibly', async () => {
     document.head.innerHTML = `
       <title>Planning — DeepSeek Harness</title>
       <link rel="icon" href="/favicon.svg">
@@ -27,16 +27,31 @@ describe('Paramont branding client contribution', () => {
     expect(shell?.options).toMatchObject({ id: 'paimind-branding', order: -100 })
     expect(fixture.slots.find(entry => entry.injectedName === 'paimind.extension')?.options)
       .toMatchObject({ id: 'paimind:branding' })
+    expect(fixture.slots.find(entry => entry.injectedName === 'sidebar.brand.mark')?.options)
+      .toMatchObject({ name: 'sidebar.brand.mark' })
+    expect(fixture.slots.find(entry => entry.injectedName === 'sidebar.brand.name')?.options)
+      .toMatchObject({ name: 'sidebar.brand.name' })
+    expect(fixture.slots.find(entry => entry.injectedName === 'conversation.hero.brand.mark')?.options)
+      .toMatchObject({ name: 'conversation.hero.brand.mark' })
 
     const Branding = shell?.component as ComponentType
+    const SidebarMark = fixture.slots.find(entry => entry.injectedName === 'sidebar.brand.mark')?.component as ComponentType
+    const SidebarName = fixture.slots.find(entry => entry.injectedName === 'sidebar.brand.name')?.component as ComponentType
+    const HeroMark = fixture.slots.find(entry => entry.injectedName === 'conversation.hero.brand.mark')?.component as ComponentType
     const view = render(<Branding />)
-    await waitFor(() => expect(screen.getAllByLabelText('Paramont Harness')).toHaveLength(2))
+    const stableView = render(<><SidebarMark /><SidebarName /><HeroMark /></>)
+    await waitFor(() => expect(screen.getAllByLabelText('Paramont Harness')).toHaveLength(3))
     expect(document.querySelector('[data-paimind-paramont-mark] path')?.getAttribute('d')).toContain('M302.1 0 89.4 174.4')
     expect(document.querySelectorAll('[data-paimind-paramont-wordmark] path')).toHaveLength(8)
-    expect(document.querySelector('#expanded')).toHaveAttribute('data-paimind-brand-seat', 'wordmark')
-    expect(document.querySelector('#compact')).toHaveAttribute('data-paimind-brand-seat', 'compact')
-    expect(document.querySelectorAll('[data-paimind-native-brand-art]')).toHaveLength(2)
+    const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@paimind/branding"]')?.textContent ?? ''
+    expect(style).toContain("[data-paimind-paramont-brand='name']{flex:0 1 158px;min-width:0;max-width:100%")
+    expect(style).toContain("[data-paimind-paramont-brand='name'] [data-paimind-paramont-wordmark]{flex:1 1 103px;min-width:92px}")
+    expect(style).toContain('[data-paimind-paramont-slot-mark]{display:inline-flex;align-items:center;justify-content:center;overflow:visible')
+    expect(document.querySelector('#expanded')).not.toHaveAttribute('data-paimind-brand-seat')
+    expect(document.querySelector('#compact')).not.toHaveAttribute('data-paimind-brand-seat')
+    expect(document.querySelectorAll('[data-paimind-native-brand-art]')).toHaveLength(0)
     expect(document.querySelectorAll('[data-paimind-native-hero-brand]')).toHaveLength(2)
+    expect(document.querySelector('#preview')).toHaveAttribute('data-paimind-native-hero-preview', 'preview')
     expect(screen.getByText('共攀高山之巅')).toBeInTheDocument()
     expect(screen.getByText('预览版')).toBeInTheDocument()
     expect(document.querySelector('[data-paimind-paramont-hero-mark] path')?.getAttribute('d')).toContain('M302.1 0 89.4 174.4')
@@ -52,10 +67,12 @@ describe('Paramont branding client contribution', () => {
     expect(screen.getByText('Preview')).toBeInTheDocument()
 
     view.unmount()
+    stableView.unmount()
     fixture.disposeEffects()
     expect(document.querySelector('[data-paimind-brand-seat]')).toBeNull()
     expect(document.querySelector('[data-paimind-native-brand-art]')).toBeNull()
     expect(document.querySelector('[data-paimind-native-hero-brand]')).toBeNull()
+    expect(document.querySelector('[data-paimind-native-hero-preview]')).toBeNull()
     expect(document.querySelector('[data-paimind-hero-brand-seat]')).toBeNull()
     expect(document.title).toBe('Planning — DeepSeek Harness')
     expect(document.querySelector<HTMLLinkElement>('link[rel~="icon"]')?.getAttribute('href')).toBe('/favicon.svg')

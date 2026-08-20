@@ -16,7 +16,7 @@
   },
   "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "dependencies": {
-    "@deepseek-ai/dsh-home-paths": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-home-paths": "0.1.0-rc.8",
     "@paimind/contracts": "workspace:^",
     "@paimind/harness-compat": "workspace:^",
     "zod": "^4.4.3"

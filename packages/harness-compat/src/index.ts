@@ -14,17 +14,18 @@ export const RUNTIME_ORB_STATES = [
 /** One concrete orb animation state. */
 export type RuntimeOrbState = typeof RUNTIME_ORB_STATES[number]
 
-/** RC6-native brand artwork isolated from PAIMind feature packages. */
+/** RC8-native brand artwork isolated from PAIMind feature packages. */
 export interface HarnessBrandSeat {
   readonly host: HTMLElement
   readonly nativeArt: SVGElement
 }
 
-/** RC6 new-session hero copy and artwork isolated from the branding package. */
+/** RC8 new-session hero copy and artwork isolated from the branding package. */
 export interface HarnessHeroBrandSeat {
   readonly host: HTMLElement
   readonly nativeIcon: HTMLElement
   readonly nativeHeadline: HTMLElement
+  readonly nativePreview: HTMLElement
   readonly locale: 'zh' | 'en'
 }
 
@@ -69,13 +70,13 @@ const heroBrandSeat = (root: ParentNode): HarnessHeroBrandSeat | null => {
     const nativeIcon = siblings.find(element => element !== nativeHeadline && element.querySelector('svg') !== null)
     const preview = siblings.find(element => element.textContent?.trim() === copy.preview)
     if (nativeIcon === undefined || preview === undefined) continue
-    return { host, nativeIcon, nativeHeadline, locale: copy.locale }
+    return { host, nativeIcon, nativeHeadline, nativePreview: preview, locale: copy.locale }
   }
   return null
 }
 
 /**
- * Locate the native expanded and collapsed brand seats without exposing RC6
+ * Locate the native expanded and collapsed brand seats without exposing RC8
  * artwork selectors to the independently installable branding package.
  */
 export function locateHarnessBrandSeats(root: ParentNode): HarnessBrandSeats {
@@ -622,6 +623,7 @@ export interface HarnessAgentPresetSeatSnapshot {
 /** Version-isolated control face for the native new-conversation Preset selector. */
 export interface HarnessAgentPresetSeatControl {
   getSnapshot(): HarnessAgentPresetSeatSnapshot
+  load(): Promise<void>
   select(agentPreset: string): Promise<void>
 }
 
@@ -641,10 +643,11 @@ export function resolveHarnessAgentPresetSeatControl(
       readonly hooks?: {
         readonly agentPresetSeat?: HarnessObservableSnapshot<unknown>
       }
+      readonly load?: () => Promise<void>
       readonly select?: (id: string) => Promise<void>
     } | undefined
     const store = injected?.hooks?.agentPresetSeat
-    if (store === undefined || typeof injected?.select !== 'function') return null
+    if (store === undefined || typeof injected?.load !== 'function' || typeof injected?.select !== 'function') return null
     const snapshot = (): HarnessAgentPresetSeatSnapshot | null => {
       const value = store.getSnapshot()
       if (typeof value !== 'object' || value === null) return null
@@ -660,6 +663,7 @@ export function resolveHarnessAgentPresetSeatControl(
         if (current === null) throw new Error('Harness Agent Preset selector returned an invalid snapshot')
         return current
       },
+      async load(): Promise<void> { await injected.load!() },
       async select(agentPreset: string): Promise<void> { await injected.select!(agentPreset) },
     })
   } catch { return null }
@@ -668,6 +672,55 @@ export function resolveHarnessAgentPresetSeatControl(
 /** Narrow connection handle; Harness version details remain behind compat. */
 export interface HarnessAgentPresetConnection {
   readonly api: { readonly agentPresets: HarnessAgentPresetApi }
+}
+
+/** One token override accepted by the native Harness theme stack. */
+export interface PaimindThemeTokenModes {
+  readonly light: string
+  readonly dark: string
+}
+
+/** Theme override dictionary kept behind the Harness compatibility boundary. */
+export type PaimindThemeTokenOverrides = Readonly<Record<string, PaimindThemeTokenModes>>
+
+/** Stable subset of the native Harness theme service used by FP17. */
+export interface PaimindThemeService {
+  overrideTokens(source: string, tokens: PaimindThemeTokenOverrides): () => void
+}
+
+/** Product category projected from one canonical native Agent Preset. */
+export type HarnessAgentChoiceCategory = 'recommended' | 'platform-mode'
+
+/** Read-only choice row; the Preset id remains the canonical Harness identity. */
+export interface HarnessAgentChoice {
+  readonly id: string
+  readonly name: string
+  readonly description: string
+  readonly trust: HarnessAgentPresetEntry['trust']
+  readonly category: HarnessAgentChoiceCategory
+}
+
+/** Observable roster and selection state used by the visual Preset surface. */
+export interface HarnessAgentChoiceSnapshot {
+  readonly status: 'loading' | 'ready' | 'unavailable'
+  readonly choices: readonly HarnessAgentChoice[]
+  readonly current: string
+  readonly busy: boolean
+  readonly error: string | null
+}
+
+/**
+ * Stable native-Preset bridge for compact product presentation. Selection is
+ * delegated to the shipped hero control so staging and blank-Session binding
+ * remain Harness-owned; restore only resynchronizes presentation state.
+ */
+export interface HarnessAgentChoiceBridge {
+  getSnapshot(): HarnessAgentChoiceSnapshot
+  subscribe(listener: () => void): () => void
+  load(): Promise<boolean>
+  select(id: string): Promise<void>
+  restore(): void
+  dispose(): void
 }
 
 /** Native Session-scoped Skill row exposed by `skill.list`. */
@@ -738,7 +791,7 @@ export interface HarnessSettingsSectionOwnerProps {
   readonly close: () => void
 }
 
-/** Reversible RC6 bridge for consolidating the native Preset page under Agent Center. */
+/** Reversible RC8 bridge for consolidating the native Preset page under Agent Center. */
 export interface HarnessAgentPresetSettingsNavigation {
   /** Open Settings when needed, then activate the native Agent Presets page. */
   open(): boolean
@@ -770,7 +823,7 @@ function resolveHarnessSettingsTrigger(doc: Document): HTMLButtonElement | null 
 
 /**
  * Hide only the exact native `agent-presets` navigation row while retaining its
- * registered page. RC6 keeps active-section state inside the Settings shell and
+ * registered page. RC8 keeps active-section state inside the Settings shell and
  * exposes no public navigation controller, so the DOM lookup is isolated here,
  * exact-label matched, reversible, and deliberately fail-open on markup drift.
  */
@@ -970,6 +1023,19 @@ export interface PaimindSettingsScopeBinder {
   }): PaimindSettingsScope<T>
 }
 
+/**
+ * Translate a PAIMind product namespace into RC8's lowercase kebab-case
+ * Settings key. Product contracts may keep dotted ownership names while the
+ * Harness storage adapter remains compliant with its native namespace grammar.
+ */
+export function resolveHarnessSettingsNamespace(namespace: string): string {
+  const resolved = namespace.replaceAll('.', '-')
+  if (!/^[a-z][a-z0-9-]*$/.test(resolved)) {
+    throw new TypeError(`PAIMind Settings namespace "${namespace}" cannot be represented by Harness`)
+  }
+  return resolved
+}
+
 /** Scoped services used by a PAIMind Settings section contribution. */
 export interface PaimindUserSettingsScope extends PaimindClientContext {
   readonly settingsScope: PaimindSettingsScopeBinder
@@ -1099,3 +1165,4 @@ export interface PaimindBentoHostContext {
   readonly webServer: PaimindHostWebServer
   readonly sessions: PaimindHostSessionService
 }
+export * from './client-input-trigger.js'

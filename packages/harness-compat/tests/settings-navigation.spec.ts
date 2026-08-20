@@ -79,7 +79,7 @@ describe('Harness native Agent Preset selector control', () => {
     const registry: HarnessInspectableSlotRegistry = {
       entries: name => name === 'conversation.hero.agentPreset' ? [{
         options: {},
-        inject: () => ({ hooks: { agentPresetSeat: { getSnapshot: () => current, subscribe: () => () => {} } }, select }),
+        inject: () => ({ hooks: { agentPresetSeat: { getSnapshot: () => current, subscribe: () => () => {} } }, load: async () => {}, select }),
       }] : [],
       subscribe: () => () => {}, getVersion: () => 1, inject: () => {}, register: () => () => {},
     }

@@ -68,6 +68,29 @@ describe('Agent Center business UI', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'My Agents' }))
     expect(screen.getByRole('heading', { name: 'Research Agent' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Create Personal Agent' })).toBeInTheDocument()
+    expect(screen.getAllByRole('tab')).toHaveLength(3)
+  })
+
+  it('exposes canonical avatar seats for managed Agents while platform modes keep native icons', async () => {
+    const fixture = services()
+    render(<AgentCenterSection close={() => {}} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
+    const platformHeading = await screen.findByRole('heading', { name: 'Standard' })
+    const platformCard = platformHeading.closest('[data-paimind-agent-card]')
+    expect(platformCard).not.toBeNull()
+    expect(platformCard).not.toHaveAttribute('data-paimind-agent-id')
+    expect(platformCard?.querySelector('[data-paimind-agent-avatar-seat]')).toBeNull()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'My Agents' }))
+    const personalHeading = screen.getByRole('heading', { name: 'Research Agent' })
+    const personalCard = personalHeading.closest('[data-paimind-agent-card]')
+    expect(personalCard).toHaveAttribute('data-paimind-agent-id', 'mine')
+    expect(personalCard).toHaveAttribute('data-product-kind', 'personal')
+    const avatarSeat = within(personalCard as HTMLElement).getByRole('img', { name: 'Research Agent avatar' })
+    expect(avatarSeat).toHaveAttribute('data-paimind-agent-avatar-seat')
+    expect(avatarSeat).toHaveAttribute('data-paimind-agent-id', 'mine')
+    expect(avatarSeat).toHaveAttribute('data-paimind-agent-avatar-kind', 'personal')
+    expect(avatarSeat.querySelector('[data-paimind-agent-avatar-fallback] svg')).not.toBeNull()
+    expect(avatarSeat.querySelector('[data-paimind-agent-avatar]')).toBeNull()
   })
 
   it('starts a real runtime conversation from a personal Agent', async () => {
@@ -118,6 +141,45 @@ describe('Agent Center business UI', () => {
     runtime.dispose()
   })
 
+  it('fails clearly without a selector seat and creates no shadow binding', async () => {
+    const row = { id: 'session-blank', blank: true, agentPreset: 'ptc' }
+    const noteAgentPreset = vi.fn((sessionId: string, presetId: string) => {
+      if (sessionId === row.id) row.agentPreset = presetId
+    })
+    const sessions = {
+      list: {
+        getSnapshot: () => ({ current: row.id, byId: { [row.id]: row } }),
+        subscribe: () => () => {},
+      },
+      noteAgentPreset,
+      binding: () => ({ ctx: {}, session: { getSnapshot: () => ({ running: false, chat: null }) } }),
+      open: vi.fn(),
+    }
+    const presetApi = api()
+    const setDraft = vi.fn()
+    const bindSession = vi.fn()
+    const remote = {
+      listAudit: vi.fn().mockResolvedValue({ ok: true, value: { migrations: [], verifications: [] } }),
+      migrationPlan: vi.fn().mockResolvedValue({ ok: true, value: null }),
+      bindSession,
+    }
+    const runtime = new AgentCenterRuntime(
+      null,
+      remote as never,
+      sessions as never,
+      { startSession: vi.fn() } as never,
+      { input: { for: () => ({ setDraft }) } } as never,
+    )
+
+    await expect(runtime.start('standard', profile)).rejects.toThrow('当前 Harness 版本未提供可用的智能体选择器')
+    expect(presetApi.select).not.toHaveBeenCalled()
+    expect(noteAgentPreset).not.toHaveBeenCalled()
+    expect(bindSession).not.toHaveBeenCalled()
+    expect(row.agentPreset).toBe('ptc')
+    expect(setDraft).not.toHaveBeenCalled()
+    runtime.dispose()
+  })
+
   it('opens native advanced configuration and prevents Skill selection for Minimal', async () => {
     const fixture = services(); const openAdvanced = vi.fn(() => true)
     render(<AgentCenterSection close={() => {}} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={openAdvanced} />)
@@ -140,12 +202,12 @@ describe('Agent Center business UI', () => {
     expect(screen.queryByText(/General, PDM, and AIM are business categories/)).toBeNull()
     expect(screen.queryByText(/Category is not mode/)).toBeNull()
     fireEvent.click(screen.getByRole('tab', { name: 'Business Agents' }))
-    expect(screen.getByText('No Business Agents yet.')).toBeInTheDocument()
+    expect(screen.getByText('No Business Agents yet')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: 'Platform modes' }))
     fireEvent.click(screen.getAllByRole('button', { name: 'Copy and edit' })[0]!)
     expect(screen.getByRole('heading', { name: 'Copy and edit' })).toBeInTheDocument()
     expect(screen.getByLabelText('Runtime mode')).toHaveValue('standard')
-    expect(screen.getByText(/official original will not be changed/)).toBeInTheDocument()
+    expect(screen.getByText(/official original stays unchanged/)).toBeInTheDocument()
   })
 
   it('persists an edited official copy through the native Preset copy and personal profile services', async () => {
@@ -169,7 +231,7 @@ describe('Agent Center business UI', () => {
     fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Product analyst' } })
     fireEvent.change(screen.getByLabelText('Goal'), { target: { value: 'Deliver validated product analysis' } })
     fireEvent.change(screen.getByLabelText('Behavior'), { target: { value: 'Use evidence and state uncertainty' } })
-    expect(screen.getByText(/Other installed Skills remain discoverable in Skill Center but are not injected/)).toBeInTheDocument()
+    expect(screen.getByText(/Other installed Skills remain in Skill Center/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Data 1' })).toBeInTheDocument()
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search session Skills' }), { target: { value: 'Excel' } })
     expect(screen.getByRole('checkbox', { name: /spreadsheet-inspector/ })).toBeInTheDocument()
@@ -216,7 +278,7 @@ describe('Agent Center business UI', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Business Agents' }))
     expect(screen.getAllByRole('button', { name: 'Create Business Agent' })).toHaveLength(2)
     fireEvent.click(screen.getAllByRole('button', { name: 'Create Business Agent' })[1]!)
-    expect(screen.getByRole('complementary', { name: 'Create Business Agent' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Create Business Agent' })).toHaveAttribute('aria-modal', 'true')
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'PDM Assistant' } })
     fireEvent.change(screen.getByLabelText('Business category'), { target: { value: 'Product & PDM' } })
     fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'PDM analyst' } })
@@ -230,9 +292,14 @@ describe('Agent Center business UI', () => {
     }))
     expect(await screen.findByRole('heading', { name: 'PDM Assistant' })).toBeInTheDocument()
     expect(screen.getByText('Business Agent · Locally managed')).toBeInTheDocument()
+    const businessCard = screen.getByRole('heading', { name: 'PDM Assistant' }).closest('[data-paimind-agent-card]')
+    expect(businessCard).toHaveAttribute('data-paimind-agent-id', copiedPresetId)
+    const businessAvatarSeat = within(businessCard as HTMLElement).getByRole('img', { name: 'PDM Assistant avatar' })
+    expect(businessAvatarSeat).toHaveAttribute('data-paimind-agent-id', copiedPresetId)
+    expect(businessAvatarSeat).toHaveAttribute('data-paimind-agent-avatar-kind', 'business')
     expect(screen.getByRole('combobox', { name: 'Business category' })).toHaveValue('all')
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
-    const builder = screen.getByRole('complementary', { name: 'Edit Business Agent' })
+    const builder = screen.getByRole('dialog', { name: 'Edit Business Agent' })
     expect(builder).toBeInTheDocument()
     expect(within(builder).getByRole('combobox', { name: 'Business category' })).toHaveValue('Product & PDM')
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
@@ -262,6 +329,30 @@ describe('Agent Center business UI', () => {
     await waitFor(() => expect(document.activeElement).toBe(trigger))
     expect(screen.queryByRole('dialog', { name: 'Agent Center' })).toBeNull()
     controller.dispose()
+  })
+
+  it('keeps Builder keyboard focus contained and restores the opening control on Escape', async () => {
+    const fixture = services()
+    render(<AgentCenterSection close={() => {}} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
+    await screen.findByRole('tab', { name: 'My Agents' })
+    fireEvent.click(screen.getByRole('tab', { name: 'My Agents' }))
+    const trigger = screen.getByRole('button', { name: 'Create Personal Agent' })
+    trigger.focus()
+    fireEvent.click(trigger)
+    const builder = screen.getByRole('dialog', { name: 'Create Personal Agent' })
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveFocus())
+    fireEvent.keyDown(builder, { key: 'Escape' })
+    await waitFor(() => expect(trigger).toHaveFocus())
+    expect(screen.queryByRole('dialog', { name: 'Create Personal Agent' })).toBeNull()
+  })
+
+  it('uses PAIMind tokens and includes responsive and reduced-motion treatments', () => {
+    expect(AGENT_CENTER_STYLE).toContain('--paimind-canvas')
+    expect(AGENT_CENTER_STYLE).toContain('--paimind-glass-strong')
+    expect(AGENT_CENTER_STYLE).toContain('@media(max-width:680px)')
+    expect(AGENT_CENTER_STYLE).toContain('@media(prefers-reduced-motion:reduce)')
+    expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-avatar-seat]')
+    expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-avatar]')
   })
 
   it('registers only the native sidebar and shell overlay product surfaces', async () => {
@@ -295,6 +386,8 @@ describe('Agent Center business UI', () => {
     const dispose = await apply(context as never)
     expect(registered).toEqual(['paimind.extension', 'sidebar.footer.action', 'shell.overlay'])
     expect(registered).not.toContain('settings.section')
+    expect(document.getElementById('@paimind/agent-market')).not.toBeNull()
     await dispose()
+    expect(document.getElementById('@paimind/agent-market')).toBeNull()
   })
 })
