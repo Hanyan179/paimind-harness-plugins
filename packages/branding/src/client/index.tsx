@@ -30,14 +30,14 @@ const STYLE = `
 [data-paimind-brand-seat]{position:relative}
 [data-paimind-paramont-brand]{box-sizing:border-box;display:inline-flex;align-items:center;pointer-events:none;color:inherit}
 [data-paimind-paramont-brand='wordmark']{width:182px;height:24px;gap:7px;white-space:nowrap}
-[data-paimind-paramont-brand='name']{flex:0 1 158px;min-width:0;max-width:100%;height:24px;gap:6px;overflow:visible;white-space:nowrap}
-[data-paimind-paramont-brand='name'] [data-paimind-paramont-wordmark]{flex:1 1 103px;min-width:92px}
+[data-paimind-paramont-brand='name']{flex:1 1 158px;width:158px;min-width:0;max-width:100%;height:24px;gap:6px;overflow:hidden;white-space:nowrap}
+[data-paimind-paramont-brand='name'] [data-paimind-paramont-wordmark]{flex:1 1 103px;min-width:0;max-width:103px}
 [data-paimind-paramont-brand='compact']{width:24px;height:24px;justify-content:center}
 [data-paimind-paramont-mark]{display:block;flex:none;width:24px;height:24px;color:inherit}
 [data-paimind-paramont-slot-mark]{display:inline-flex;align-items:center;justify-content:center;overflow:visible;color:inherit}
 [data-paimind-paramont-slot-mark] [data-paimind-paramont-mark]{width:100%;height:100%}
 [data-paimind-paramont-wordmark]{display:block;flex:none;width:103px;height:14px;color:inherit}
-[data-paimind-paramont-harness]{flex:none;margin-left:-3px;font:500 9px/1 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.12em;opacity:.62}
+[data-paimind-paramont-harness]{flex:0 0 auto;min-width:max-content;margin-left:-3px;white-space:nowrap;font:500 9px/1 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.1em;opacity:.7}
 [data-paimind-paramont-hero-mark]{display:inline-flex;align-items:center;justify-content:center;order:-2;width:42px;height:34px;color:inherit}
 [data-paimind-paramont-hero-mark] [data-paimind-paramont-mark]{width:42px;height:24px}
 [data-paimind-paramont-hero-headline]{order:-1}

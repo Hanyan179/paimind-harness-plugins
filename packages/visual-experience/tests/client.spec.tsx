@@ -46,6 +46,7 @@ function successfulApi(): HarnessAgentPresetApi {
       hasDocument: true,
       presets: [
         { id: 'standard', trust: 'system' as const, isDefault: true, name: '标准模式', description: '完整的编码 Agent。' },
+        { id: 'cordis', trust: 'system' as const, isDefault: false, name: 'Creator', description: 'Advanced preset editor.' },
         { id: 'paimind', trust: 'system' as const, isDefault: false, name: 'Paramont 助手', description: '面向业务材料与协作。' },
         { id: 'personal', trust: 'user' as const, isDefault: false, name: '我的 Agent', description: '个人智能体。' },
       ],
@@ -280,6 +281,26 @@ describe('PAIMind visual experience client', () => {
       span: { start: 0, end: 1, draftRev: 2 },
     })).toEqual({ text: '' })
     await waitFor(() => expect(nativeSelect).toHaveBeenCalledWith('paimind'))
+
+    const builderRequest = vi.fn()
+    window.addEventListener('paimind:agent-builder:request', builderRequest, { once: true })
+    const creators = await agent.candidates(
+      { sessionId: 'session-1' },
+      { query: '创建助手', position: 'leading', signal: new AbortController().signal },
+    )
+    expect(creators).toEqual([expect.objectContaining({
+      name: '个人智能体创建助手',
+      description: '使用 Harness 原生创造模式创建和配置个人智能体。',
+      value: 'cordis',
+    })])
+    expect(agent.onPick({
+      candidate: creators[0]!, session: { sessionId: 'session-1' }, position: 'leading', via: 'menu',
+      span: { start: 0, end: 1, draftRev: 3 },
+    })).toEqual({ text: '' })
+    await waitFor(() => expect(nativeSelect).toHaveBeenCalledWith('cordis'))
+    expect(builderRequest).toHaveBeenCalledWith(expect.objectContaining({
+      detail: { productKind: 'personal' },
+    }))
 
     const skill = triggerSources.find(source => source.name === 'paimind-skill')!
     const skills = await skill.candidates(

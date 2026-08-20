@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  AGENT_PROFILE_FILE,
   AGENT_SKILL_SCOPE_DIRECTORY,
   PaimindAgentProfileService,
   effectivePresetForFirstTurn,
@@ -36,6 +37,57 @@ describe('headless Agent profile workflow', () => {
     const input = { ...profile, ...businessPlacement }
     expect(inputSchema?.parse(input)).toMatchObject(businessPlacement)
     expect(resultSchema?.parse(input)).toMatchObject(businessPlacement)
+  })
+
+  it('rejects a new Profile whose Agent and Preset identities differ', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-agent-identity-'))
+    roots.push(base)
+    const presetRoot = join(base, '.agent-presets')
+    const source = join(presetRoot, 'identity-agent')
+    await mkdir(source, { recursive: true })
+    await writeFile(join(source, 'agent.cordis.yml'), "- id: persona\n  name: '@deepseek-ai/dsh-persona'\n  config:\n    text: old\n")
+    const context = { reflect: { provide: () => {} }, effect(install: () => void) { install() }, get: () => undefined }
+    const service = new PaimindAgentProfileService(context as never, { presetRoot, stateRoot: join(base, '.state') })
+
+    await expect(service.saveProfile({
+      agentId: 'different-agent', presetId: 'identity-agent', name: 'Identity Agent', description: '',
+      basePresetId: 'minimal', role: 'Identity owner', goal: 'Keep one identity', behavior: 'Stay consistent',
+      preferredSkillNames: [], instructions: '',
+    })).rejects.toThrow('智能体标识必须与预设标识一致')
+    await expect(stat(join(source, AGENT_PROFILE_FILE))).rejects.toThrow()
+  })
+
+  it('keeps one identity through create and edit, and rejects base Preset drift', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-agent-stable-identity-'))
+    roots.push(base)
+    const presetRoot = join(base, '.agent-presets')
+    const source = join(presetRoot, 'stable-agent')
+    await mkdir(source, { recursive: true })
+    await writeFile(join(source, 'agent.cordis.yml'), "- id: persona\n  name: '@deepseek-ai/dsh-persona'\n  config:\n    text: old\n")
+    const context = { reflect: { provide: () => {} }, effect(install: () => void) { install() }, get: () => undefined }
+    const service = new PaimindAgentProfileService(context as never, { presetRoot, stateRoot: join(base, '.state'), now: () => 42 })
+    const input = {
+      agentId: 'stable-agent', presetId: 'stable-agent', name: 'Stable Agent', description: '',
+      basePresetId: 'minimal', role: 'Stable owner', goal: 'Keep one identity', behavior: 'Use the original base',
+      preferredSkillNames: [], instructions: '',
+    } as const
+
+    const created = await service.saveProfile(input)
+    expect(created).toMatchObject({ agentId: 'stable-agent', presetId: 'stable-agent', basePresetId: 'minimal', revision: 1 })
+    await expect(service.saveProfile({
+      ...input, basePresetId: 'standard', expectedVersion: created.configVersion,
+    })).rejects.toThrow('基础能力模板不可修改')
+
+    const edited = await service.saveProfile({
+      ...input, behavior: 'Keep the original base and accept valid edits', expectedVersion: created.configVersion,
+    })
+    expect(edited).toMatchObject({
+      agentId: 'stable-agent', presetId: 'stable-agent', basePresetId: 'minimal', revision: 2,
+      behavior: 'Keep the original base and accept valid edits',
+    })
+    await expect(service.saveProfile({
+      ...input, behavior: 'Overwrite from a stale edit', expectedVersion: created.configVersion,
+    })).rejects.toThrow('智能体已更新，请刷新后重试')
   })
 
   it('replaces only the native persona row and embeds business behavior and preferred Skills', () => {

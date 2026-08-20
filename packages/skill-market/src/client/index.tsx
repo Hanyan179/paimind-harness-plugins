@@ -1,6 +1,7 @@
 import {
   Component,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -21,7 +22,6 @@ import {
   type PaimindLocaleSource,
 } from '@paimind/harness-compat'
 import {
-  PaimindAgentIcon,
   PaimindCheckIcon,
   PaimindCloseIcon,
   PaimindFavoriteFillIcon,
@@ -35,10 +35,10 @@ import {
   PaimindWarningIcon,
 } from '@paimind/harness-compat/client-icons'
 import {
+  installPaimindProductCenterHost,
   PaimindProductSurfaceController,
-  installPaimindProductSurfaceInteraction,
-  isPaimindProductSurfaceAvailable,
-  requestPaimindProductSurface,
+  resolvePaimindProductCenterHost,
+  type PaimindProductCenterHost,
 } from '@paimind/harness-compat/client-surface'
 import {
   PAIMIND_SKILL_UPLOAD_PATH,
@@ -366,7 +366,7 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
 
   return <section data-paimind-skill-market aria-label={zh ? '技能中心' : 'Skill Center'}>
     <header data-paimind-skill-hero>
-      <div><p data-paimind-skill-eyebrow><PaimindSkillIcon size={16} />{zh ? '个人能力 · Harness 原生执行' : 'Personal capability · Harness-native execution'}</p><h1 id="paimind-skill-center-title" tabIndex={-1} data-paimind-product-initial-focus>{zh ? '技能中心' : 'Skill Center'}</h1><p data-paimind-skill-intro>{zh ? '发现真实来源，安装前检查风险，并直接在当前对话调用。PAIMind 管理目录与安装投影，Harness 始终负责发现和执行。' : 'Find verified sources, review risk before install, and invoke Skills in this conversation. PAIMind projects the catalog and installer; Harness always owns discovery and execution.'}</p></div>
+      <div><p data-paimind-skill-eyebrow><PaimindSkillIcon size={16} />{zh ? '个人能力 · Harness 原生执行' : 'Personal capability · Harness-native execution'}</p><h1 id="paimind-skill-center-title">{zh ? '技能中心' : 'Skill Center'}</h1><p data-paimind-skill-intro>{zh ? '发现真实来源，安装前检查风险，并直接在当前对话调用。PAIMind 管理目录与安装投影，Harness 始终负责发现和执行。' : 'Find verified sources, review risk before install, and invoke Skills in this conversation. PAIMind projects the catalog and installer; Harness always owns discovery and execution.'}</p></div>
       <div data-paimind-skill-head-actions><button type="button" data-paimind-skill-button data-primary="true" onClick={chooseUpload} disabled={busy}><PaimindUploadIcon size={15} />{zh ? '导入本地 Skill' : 'Import local Skill'}</button></div>
     </header>
     <input ref={uploadRef} hidden type="file" accept=".zip,.md" aria-label={zh ? '选择技能包' : 'Choose Skill package'} onChange={event => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file !== undefined) void inspectFile(file) }} />
@@ -433,6 +433,7 @@ export function SkillCenterTrigger(props: {
     data-paimind-product-trigger="skill-center"
     data-wide={props.wide}
     aria-expanded={snapshot.open}
+    aria-current={snapshot.open ? 'page' : undefined}
     aria-label={zh ? '打开技能中心' : 'Open Skill Center'}
     onClick={event => { props.controller.toggle(event.currentTarget) }}
   >
@@ -447,31 +448,35 @@ export interface SkillCenterSurfaceProps extends Omit<SkillMarketSectionProps, '
 
 export function SkillCenterSurface(props: SkillCenterSurfaceProps): ReactNode {
   const snapshot = useSyncExternalStore(props.controller.subscribe, props.controller.getSnapshot, props.controller.getSnapshot)
-  const locale = useSyncExternalStore(props.locale.subscribe.bind(props.locale), () => props.locale.getLocale().active, () => props.locale.getLocale().active)
-  const root = useRef<HTMLDivElement>(null)
-  const zh = locale.startsWith('zh')
-  const agentAvailable = snapshot.open && isPaimindProductSurfaceAvailable('agent-center')
-
-  useEffect(() => {
-    if (!snapshot.open || root.current === null) return
-    return installPaimindProductSurfaceInteraction(root.current, props.controller)
-  }, [props.controller, snapshot.open])
-
   if (!snapshot.open) return null
-  return createPortal(<div ref={root} data-paimind-product-surface="skill-center" role="dialog" aria-modal="true" aria-labelledby="paimind-skill-center-title">
-    <header data-paimind-product-bar>
-      <div data-paimind-product-brand><span data-paimind-product-brand-icon><PaimindSkillIcon size={18} /></span><span>PAIMind</span></div>
-      <nav data-paimind-product-switcher aria-label={zh ? 'PAIMind 产品中心' : 'PAIMind product centers'}>
-        <button type="button" data-paimind-product-switch disabled={!agentAvailable} onClick={() => { requestPaimindProductSurface('agent-center') }}><PaimindAgentIcon size={15} /><span>{zh ? '智能体中心' : 'Agent Center'}</span></button>
-        <button type="button" data-paimind-product-switch aria-current="page"><PaimindSkillIcon size={15} /><span>{zh ? '技能中心' : 'Skill Center'}</span></button>
-      </nav>
-      <div data-paimind-product-bar-actions>
-        <button type="button" data-paimind-product-return onClick={() => { props.controller.close() }}><PaimindNewConversationIcon size={15} /><span>{zh ? '返回对话' : 'Back to conversation'}</span></button>
-        <button type="button" data-paimind-product-close aria-label={zh ? '关闭技能中心' : 'Close Skill Center'} onClick={() => { props.controller.close() }}><PaimindCloseIcon size={16} /></button>
-      </div>
-    </header>
-    <main data-paimind-product-body><SkillMarketSection {...props} close={() => { props.controller.close() }} /></main>
-  </div>, document.body)
+  return <MountedSkillCenterSurface {...props} />
+}
+
+function MountedSkillCenterSurface(props: SkillCenterSurfaceProps): ReactNode {
+  const [host, setHost] = useState<Readonly<PaimindProductCenterHost> | null>(null)
+
+  useLayoutEffect(() => {
+    const target = resolvePaimindProductCenterHost()
+    if (target === null) {
+      props.controller.close(false)
+      return
+    }
+    const release = installPaimindProductCenterHost(target)
+    if (release === null) {
+      props.controller.close(false)
+      return
+    }
+    setHost(target)
+    return release
+  }, [props.controller])
+
+  if (host === null) return null
+  return createPortal(<main
+    data-paimind-product-surface="skill-center"
+    aria-labelledby="paimind-skill-center-title"
+  >
+    <SkillMarketSection {...props} close={() => { props.controller.close() }} />
+  </main>, host.mount)
 }
 
 class SkillMarketBoundary extends Component<{ readonly children: ReactNode }, { readonly failed: boolean }> {

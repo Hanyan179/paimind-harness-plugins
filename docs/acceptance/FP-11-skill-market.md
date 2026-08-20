@@ -21,6 +21,28 @@
 7. 页面不显示内部运行 ID、磁盘路径、摘要哈希和不可用版本占位。
 8. 通过类型检查、构建、插件隔离以及桌面/受限宽度浏览器检查。
 9. 点击“导入本地 Skill”必须先展示导入说明，不直接打开文件选择器；说明覆盖可选 `SKILL.md` / ZIP、必需 YAML Frontmatter、ZIP 根目录结构、可选资源目录、凭证风险、个人范围和 Harness 原生发现与执行边界。用户再次点击“选择 Skill 包”后才打开文件选择器。
+10. Skill Center 只占用 Harness 原生对话中央列；Sidebar 保持可见，不出现产品自有顶栏、右上角返回按钮或整页模态遮罩。
+11. Skill 名称、说明和分类采用渐进式披露；列表先保证名称与状态可识别，长内容可以继续查看，不把省略号作为唯一信息出口。
+12. Sidebar 展开、收起及受限宽度下，Skill Center 跟随宿主中央列布局，不遮挡侧栏且不产生页面级横向溢出。
+
+## 2026-08-21 原生 Shell 与渐进式披露 Local Pre-Acceptance
+
+### 已完成的 Implementation Review（实现检查）
+
+- 当前工作树通过共享 Harness Compatibility Surface（兼容界面）把 Skill Center 安装到原生对话中央列；与智能体中心使用同一 Non-modal Shell Contract（非模态外壳契约）。
+- 导入本地 Skill 仍保留“两步导入”：首击说明，二次选择文件；Skill 的发现与执行继续由 Harness 原生 Runtime（运行时）负责。
+- 以下 Implementation Review（实现检查）与 Browser E2E 分别记录代码契约和本地运行事实；两者都不替代共享测试环境 Product Acceptance（产品验收）。
+
+### Browser E2E（浏览器端到端）已完成
+
+- [x] Sidebar 展开与收起：Skill Center 只占中央列，Logo 完整，左右边界对称，无产品自有返回栏。
+- [x] 渐进式披露：`@` 候选和 Builder Skill 面板完整显示 8 个真实 Skill 名称；目录名称、说明、来源、状态与详情均可继续读取，不以省略号作为唯一出口。
+- [x] 本地导入：第一次点击只打开结构说明，明确 `SKILL.md`、ZIP、Frontmatter、可选目录、凭证风险与个人范围；尚未触发文件选择，第二次“选择 Skill 包”才进入文件步骤。
+- [x] 桌面、`900×720`、`390×844`、键盘焦点及 Console（控制台）检查通过；未发现本轮新增运行错误。
+
+### Shared Environment（共享测试环境）待办
+
+- [ ] 在共享测试环境重跑上述流程；只有共享环境证据可以把本轮状态升级为 Product Acceptance。
 
 ## 2026-08-21 导入说明 Local Pre-Acceptance
 

@@ -15,7 +15,7 @@ Role: **Shared support package**. It has no independent Harness lifecycle or pro
 | `.` | `./lib/types/index.d.ts`, `./lib/index.js` | Public package export. |
 | `./host` | `./lib/types/host.d.ts`, `./lib/host.js` | Public package export. |
 | `./client-icons` | `./lib/types/client-icons.d.ts`, `./lib/client-icons.js` | RC8-native semantic icon facade for PAIMind client surfaces. |
-| `./client-surface` | `./lib/types/client-surface.d.ts`, `./lib/client-surface.js` | Client-only full-page surface coordination and focus lifecycle. |
+| `./client-surface` | `./lib/types/client-surface.d.ts`, `./lib/client-surface.js` | Client-only Center host, surface coordination and focus lifecycle. |
 
 ## Dependencies
 
@@ -27,7 +27,7 @@ The manifest is authoritative for dependency direction and version selection.
 
 ## Lifecycle and failure
 
-Consumers import the public exports. The package registers no UI or services; the client-surface controller owns only document listeners and removes them on disposal. Incompatible imports fail through the exports or type boundary.
+Consumers import the public exports. The package registers no UI or services. `resolvePaimindProductCenterHost()` fails closed unless one live native `conversation` Slot anchor resolves to a non-body parent; `installPaimindProductCenterHost()` then leases that parent as the Portal host, makes only the native conversation subtree inert and accessibility-hidden, and restores every prior attribute when the final lease ends. The non-modal Center interaction moves focus into the opened page once and closes it on Escape without locking document scroll or trapping Tab navigation, so the native sidebar remains operable. The client-surface controller owns only document listeners and removes them on disposal. Incompatible imports fail through the exports or type boundary.
 
 ## Published files
 

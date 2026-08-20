@@ -637,36 +637,39 @@ export function resolveHarnessAgentPresetSeatControl(
 ): HarnessAgentPresetSeatControl | null {
   const entries = slots.entries('conversation.hero.agentPreset')
     .filter(entry => typeof entry.inject === 'function')
-  if (entries.length !== 1) return null
-  try {
-    const injected = entries[0]!.inject?.() as {
+  const controls: HarnessAgentPresetSeatControl[] = []
+  for (const entry of entries) {
+    try {
+      const injected = entry.inject?.() as {
       readonly hooks?: {
         readonly agentPresetSeat?: HarnessObservableSnapshot<unknown>
       }
       readonly load?: () => Promise<void>
       readonly select?: (id: string) => Promise<void>
     } | undefined
-    const store = injected?.hooks?.agentPresetSeat
-    if (store === undefined || typeof injected?.load !== 'function' || typeof injected?.select !== 'function') return null
-    const snapshot = (): HarnessAgentPresetSeatSnapshot | null => {
-      const value = store.getSnapshot()
-      if (typeof value !== 'object' || value === null) return null
-      const candidate = value as { readonly current?: unknown; readonly busy?: unknown; readonly error?: unknown }
-      if (typeof candidate.current !== 'string' || typeof candidate.busy !== 'boolean'
-        || (candidate.error !== null && typeof candidate.error !== 'string')) return null
-      return Object.freeze({ current: candidate.current, busy: candidate.busy, error: candidate.error })
-    }
-    if (snapshot() === null) return null
-    return Object.freeze({
-      getSnapshot(): HarnessAgentPresetSeatSnapshot {
-        const current = snapshot()
-        if (current === null) throw new Error('Harness Agent Preset selector returned an invalid snapshot')
-        return current
-      },
-      async load(): Promise<void> { await injected.load!() },
-      async select(agentPreset: string): Promise<void> { await injected.select!(agentPreset) },
-    })
-  } catch { return null }
+      const store = injected?.hooks?.agentPresetSeat
+      if (store === undefined || typeof injected?.load !== 'function' || typeof injected?.select !== 'function') continue
+      const snapshot = (): HarnessAgentPresetSeatSnapshot | null => {
+        const value = store.getSnapshot()
+        if (typeof value !== 'object' || value === null) return null
+        const candidate = value as { readonly current?: unknown; readonly busy?: unknown; readonly error?: unknown }
+        if (typeof candidate.current !== 'string' || typeof candidate.busy !== 'boolean'
+          || (candidate.error !== null && typeof candidate.error !== 'string')) return null
+        return Object.freeze({ current: candidate.current, busy: candidate.busy, error: candidate.error })
+      }
+      if (snapshot() === null) continue
+      controls.push(Object.freeze({
+        getSnapshot(): HarnessAgentPresetSeatSnapshot {
+          const current = snapshot()
+          if (current === null) throw new Error('Harness Agent Preset selector returned an invalid snapshot')
+          return current
+        },
+        async load(): Promise<void> { await injected.load!() },
+        async select(agentPreset: string): Promise<void> { await injected.select!(agentPreset) },
+      }))
+    } catch { /* Ignore unrelated or temporarily unavailable presentation contributions. */ }
+  }
+  return controls.length === 1 ? controls[0]! : null
 }
 
 /** Narrow connection handle; Harness version details remain behind compat. */

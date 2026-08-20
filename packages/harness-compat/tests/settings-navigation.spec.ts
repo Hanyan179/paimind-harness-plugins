@@ -91,6 +91,45 @@ describe('Harness native Agent Preset selector control', () => {
     expect(control?.getSnapshot().current).toBe('standard')
   })
 
+  it('ignores presentation-only contributions and resolves the one native selector control', async () => {
+    let current = { current: 'standard', busy: false, error: null as string | null }
+    const select = vi.fn(async (agentPreset: string) => { current = { ...current, current: agentPreset } })
+    const registry: HarnessInspectableSlotRegistry = {
+      entries: name => name === 'conversation.hero.agentPreset' ? [
+        { options: { id: 'native-agent-preset' }, inject: () => ({
+          hooks: { agentPresetSeat: { getSnapshot: () => current, subscribe: () => () => {} } },
+          load: async () => {},
+          select,
+        }) },
+        { options: { id: 'paimind-visual-agent-choice' }, inject: () => ({ bridge: {}, mode: {}, locale: {} }) },
+      ] : [],
+      subscribe: () => () => {}, getVersion: () => 2, inject: () => {}, register: () => () => {},
+    }
+
+    const control = resolveHarnessAgentPresetSeatControl(registry)
+    expect(control?.getSnapshot().current).toBe('standard')
+    await control?.select('cordis')
+    expect(select).toHaveBeenCalledWith('cordis')
+    expect(control?.getSnapshot().current).toBe('cordis')
+  })
+
+  it('fails closed when more than one native selector control matches', () => {
+    const injected = () => ({
+      hooks: { agentPresetSeat: { getSnapshot: () => ({ current: 'standard', busy: false, error: null }), subscribe: () => () => {} } },
+      load: async () => {},
+      select: async () => {},
+    })
+    const registry: HarnessInspectableSlotRegistry = {
+      entries: name => name === 'conversation.hero.agentPreset' ? [
+        { options: { id: 'native-a' }, inject: injected },
+        { options: { id: 'native-b' }, inject: injected },
+      ] : [],
+      subscribe: () => () => {}, getVersion: () => 2, inject: () => {}, register: () => () => {},
+    }
+
+    expect(resolveHarnessAgentPresetSeatControl(registry)).toBeNull()
+  })
+
   it('fails closed when the native selector Slot shape is unavailable', () => {
     expect(resolveHarnessAgentPresetSeatControl(slots('Agent 预设'))).toBeNull()
   })

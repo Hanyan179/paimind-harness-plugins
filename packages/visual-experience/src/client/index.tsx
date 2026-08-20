@@ -29,6 +29,7 @@ import {
   HarnessExperienceMarkers,
   NativeHarnessAgentChoiceBridge,
   isPaimindProductSurfaceAvailable,
+  requestPaimindAgentBuilder,
   requestPaimindProductSurface,
 } from '@paimind/harness-compat/client-surface'
 import {
@@ -1026,6 +1027,13 @@ function installAgentExperience(
         async candidates(session, request) {
           if (!inputBridge.isBlankSession(session.sessionId) || request.signal.aborted) return []
           return candidate.getSnapshot().choices
+            .map(choice => choice.id === 'cordis' ? {
+              ...choice,
+              name: language() ? '个人智能体创建助手' : 'Personal Agent creation assistant',
+              description: language()
+                ? '使用 Harness 原生创造模式创建和配置个人智能体。'
+                : 'Use the native Harness Creator mode to create and configure a personal Agent.',
+            } : choice)
             .filter(choice => includes(`${choice.name} ${choice.description}`, request.query))
             .map(choice => ({
               name: choice.name,
@@ -1039,6 +1047,7 @@ function installAgentExperience(
           const id = choice.value
           if (id === undefined || !inputBridge.isBlankSession(session.sessionId)) return 'handled'
           void candidate.select(id)
+          if (id === 'cordis') requestPaimindAgentBuilder({ productKind: 'personal' })
           return { text: '' }
         },
       }

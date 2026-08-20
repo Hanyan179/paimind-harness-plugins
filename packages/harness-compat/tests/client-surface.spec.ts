@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  PaimindAgentBuilderRequestController,
   PaimindProductSurfaceController,
+  installPaimindProductCenterHost,
   installPaimindProductSurfaceInteraction,
+  resolvePaimindProductCenterHost,
+  requestPaimindAgentBuilder,
 } from '../src/client-surface.js'
 
 afterEach(() => {
@@ -40,10 +44,136 @@ describe('PAIMind product surface controller', () => {
     expect(document.activeElement).toBe(trigger)
     controller.dispose()
   })
+
+  it('routes a creation-assistant request into the existing Agent Center without creating a domain entity', () => {
+    const surface = new PaimindProductSurfaceController('agent-center', window, document)
+    const builder = new PaimindAgentBuilderRequestController(surface, window)
+    const listener = vi.fn()
+    const unsubscribe = builder.subscribe(listener)
+
+    requestPaimindAgentBuilder({ productKind: 'business', brief: '  Build a PDM review Agent  ' }, window)
+
+    expect(surface.getSnapshot().open).toBe(true)
+    expect(builder.getSnapshot()).toEqual({
+      revision: 1,
+      productKind: 'business',
+      brief: 'Build a PDM review Agent',
+    })
+    expect(listener).toHaveBeenCalledTimes(1)
+
+    unsubscribe()
+    builder.dispose()
+    requestPaimindAgentBuilder({ productKind: 'personal' }, window)
+    expect(builder.getSnapshot().revision).toBe(1)
+    surface.dispose()
+  })
+})
+
+describe('PAIMind product Center host adapter', () => {
+  function harnessShell(): { readonly center: HTMLElement; readonly conversation: HTMLElement } {
+    document.body.innerHTML = `
+      <div data-slot="root">
+        <div data-harness-frame>
+          <aside data-harness-sidebar></aside>
+          <main data-harness-center>
+            <div data-slot="conversation" style="display: contents">
+              <section data-native-conversation></section>
+            </div>
+          </main>
+          <aside data-harness-details></aside>
+          <div data-shell-overlay></div>
+        </div>
+      </div>
+    `
+    return {
+      center: document.querySelector<HTMLElement>('[data-harness-center]')!,
+      conversation: document.querySelector<HTMLElement>('[data-slot="conversation"]')!,
+    }
+  }
+
+  it('resolves the native conversation parent as the only portal mount', () => {
+    const fixture = harnessShell()
+    const target = resolvePaimindProductCenterHost(document)
+
+    expect(target).toEqual({ mount: fixture.center, nativeConversation: fixture.conversation })
+    expect(target?.mount).not.toBe(document.body)
+  })
+
+  it('fails closed for absent, ambiguous, detached, or body-level anchors', () => {
+    expect(resolvePaimindProductCenterHost(document)).toBeNull()
+
+    document.body.innerHTML = '<main><div data-slot="conversation"></div><div data-slot="conversation"></div></main>'
+    expect(resolvePaimindProductCenterHost(document)).toBeNull()
+
+    document.body.innerHTML = '<div data-slot="conversation"></div>'
+    expect(resolvePaimindProductCenterHost(document)).toBeNull()
+
+    const detached = document.createElement('main')
+    const anchor = document.createElement('div')
+    anchor.dataset.slot = 'conversation'
+    detached.append(anchor)
+    expect(installPaimindProductCenterHost({ mount: detached, nativeConversation: anchor })).toBeNull()
+  })
+
+  it('isolates the native conversation and restores an unmodified host exactly', () => {
+    const fixture = harnessShell()
+    const target = resolvePaimindProductCenterHost(document)!
+
+    const dispose = installPaimindProductCenterHost(target)
+    expect(dispose).not.toBeNull()
+    expect(fixture.conversation).toHaveAttribute('inert')
+    expect(fixture.conversation).toHaveAttribute('aria-hidden', 'true')
+    expect(fixture.center).toHaveAttribute('data-paimind-product-center-host', '')
+    expect(fixture.center.style.position).toBe('relative')
+
+    dispose?.()
+    expect(fixture.conversation).not.toHaveAttribute('inert')
+    expect(fixture.conversation).not.toHaveAttribute('aria-hidden')
+    expect(fixture.center).not.toHaveAttribute('data-paimind-product-center-host')
+    expect(fixture.center).not.toHaveAttribute('style')
+  })
+
+  it('restores pre-existing attributes, marker, and positioning byte-for-byte', () => {
+    const fixture = harnessShell()
+    fixture.conversation.setAttribute('inert', 'inert')
+    fixture.conversation.setAttribute('aria-hidden', 'false')
+    fixture.center.setAttribute('data-paimind-product-center-host', 'native-owner')
+    fixture.center.setAttribute('style', 'position: absolute; color: red;')
+    const beforeConversation = fixture.conversation.outerHTML
+    const beforeStyle = fixture.center.getAttribute('style')
+
+    const target = resolvePaimindProductCenterHost(document)!
+    const dispose = installPaimindProductCenterHost(target)
+    expect(fixture.conversation).toHaveAttribute('aria-hidden', 'true')
+    expect(fixture.center.style.position).toBe('absolute')
+
+    dispose?.()
+    expect(fixture.conversation.outerHTML).toBe(beforeConversation)
+    expect(fixture.center).toHaveAttribute('data-paimind-product-center-host', 'native-owner')
+    expect(fixture.center.getAttribute('style')).toBe(beforeStyle)
+  })
+
+  it('keeps isolation active across overlapping Agent and Skill leases', () => {
+    const fixture = harnessShell()
+    const firstTarget = resolvePaimindProductCenterHost(document)!
+    const first = installPaimindProductCenterHost(firstTarget)!
+    const second = installPaimindProductCenterHost({ ...firstTarget })!
+
+    first()
+    first()
+    expect(fixture.conversation).toHaveAttribute('inert')
+    expect(fixture.conversation).toHaveAttribute('aria-hidden', 'true')
+    expect(fixture.center).toHaveAttribute('data-paimind-product-center-host')
+
+    second()
+    expect(fixture.conversation).not.toHaveAttribute('inert')
+    expect(fixture.conversation).not.toHaveAttribute('aria-hidden')
+    expect(fixture.center).not.toHaveAttribute('data-paimind-product-center-host')
+  })
 })
 
 describe('PAIMind product surface interaction', () => {
-  it('isolates scroll, contains focus, handles Escape, and cleans up', () => {
+  it('focuses the Center, leaves page scroll and Tab native, handles Escape, and cleans up', () => {
     vi.useFakeTimers()
     document.body.style.overflow = 'auto'
     const trigger = document.createElement('button')
@@ -58,20 +188,27 @@ describe('PAIMind product surface interaction', () => {
     controller.open(trigger)
 
     const dispose = installPaimindProductSurfaceInteraction(root, controller, document)
-    expect(document.body.style.overflow).toBe('hidden')
+    expect(document.body.style.overflow).toBe('auto')
     expect(document.activeElement).toBe(first)
 
     last.focus()
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
-    expect(document.activeElement).toBe(first)
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })
+    document.dispatchEvent(tab)
+    expect(tab.defaultPrevented).toBe(false)
+    expect(document.activeElement).toBe(last)
 
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    document.dispatchEvent(escape)
+    expect(escape.defaultPrevented).toBe(true)
     vi.runAllTimers()
     expect(controller.getSnapshot().open).toBe(false)
     expect(document.activeElement).toBe(trigger)
 
     dispose()
     expect(document.body.style.overflow).toBe('auto')
+    controller.open(trigger)
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(controller.getSnapshot().open).toBe(true)
     controller.dispose()
   })
 })

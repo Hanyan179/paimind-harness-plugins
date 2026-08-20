@@ -44,8 +44,19 @@ describe('Paramont branding client contribution', () => {
     expect(document.querySelector('[data-paimind-paramont-mark] path')?.getAttribute('d')).toContain('M302.1 0 89.4 174.4')
     expect(document.querySelectorAll('[data-paimind-paramont-wordmark] path')).toHaveLength(8)
     const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@paimind/branding"]')?.textContent ?? ''
-    expect(style).toContain("[data-paimind-paramont-brand='name']{flex:0 1 158px;min-width:0;max-width:100%")
-    expect(style).toContain("[data-paimind-paramont-brand='name'] [data-paimind-paramont-wordmark]{flex:1 1 103px;min-width:92px}")
+    expect(style).toContain("[data-paimind-paramont-brand='name']{flex:1 1 158px;width:158px;min-width:0;max-width:100%")
+    expect(style).toContain("[data-paimind-paramont-brand='name'] [data-paimind-paramont-wordmark]{flex:1 1 103px;min-width:0;max-width:103px}")
+    expect(style).not.toContain('min-width:92px')
+    expect(style).toContain('[data-paimind-paramont-harness]{flex:0 0 auto;min-width:max-content')
+    const sidebarName = screen.getAllByLabelText('Paramont Harness')[1]!
+    const sidebarWordmark = sidebarName.querySelector<SVGElement>('[data-paimind-paramont-wordmark]')!
+    const harnessSuffix = sidebarName.querySelector<HTMLElement>('[data-paimind-paramont-harness]')!
+    expect(getComputedStyle(sidebarName).minWidth).toBe('0px')
+    expect(getComputedStyle(sidebarName).overflow).toBe('hidden')
+    expect(getComputedStyle(sidebarWordmark).minWidth).toBe('0px')
+    expect(getComputedStyle(sidebarWordmark).flexShrink).toBe('1')
+    expect(getComputedStyle(harnessSuffix).flexShrink).toBe('0')
+    expect(getComputedStyle(harnessSuffix).whiteSpace).toBe('nowrap')
     expect(style).toContain('[data-paimind-paramont-slot-mark]{display:inline-flex;align-items:center;justify-content:center;overflow:visible')
     expect(document.querySelector('#expanded')).not.toHaveAttribute('data-paimind-brand-seat')
     expect(document.querySelector('#compact')).not.toHaveAttribute('data-paimind-brand-seat')

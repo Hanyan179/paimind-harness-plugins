@@ -1,6 +1,6 @@
 # `@paimind/skill-market`
 
-PAIMind full-page Skill Center, catalog adapter, and recoverable installer product layer over native Harness Session skills.
+PAIMind center-column Skill Center, catalog adapter, and recoverable installer product layer over native Harness Session skills.
 
 Package rules: [Plugin Authoring Standard](../../docs/standards/plugin-authoring.md).
 
@@ -41,7 +41,7 @@ The manifest is authoritative for dependency direction and version selection.
 
 ## Lifecycle and failure
 
-Harness discovers `./client` through `dsh.client`. Cordis waits for declared injected services before activation. The full-page surface uses the native sidebar and overlay Slots and owns no route or domain state. UI, listeners and registrations are scoped so hot reload or uninstall removes them without affecting the native shell.
+Harness discovers `./client` through `dsh.client`. Cordis waits for declared injected services before activation. The non-modal Center keeps the native sidebar visible and uses `@paimind/harness-compat` to portal only into the native conversation column; while open, only that column's native conversation occupant is inert and accessibility-hidden. A missing or ambiguous native anchor fails closed with no `document.body` fallback. The overlay Slot owns no route or domain state, and UI, listeners and registrations are scoped so hot reload or uninstall restores the native shell exactly.
 
 ## Published files
 

@@ -26,10 +26,12 @@ interface SkillInstaller {
 
 后台服务提供 `listProfiles`、`saveProfile`、`setDefault`、`bindSession`、`migrationPlan`、`recordMigration`、`verifySession` 和 `listAudit`。业务 UI 创建 Preset 时必须先调用 Harness `agentPreset.copy`；开始对话必须调用 `agentPreset.select`，不得构造模拟会话。
 
+创建和编辑共用同一个 Builder（构建器）与 Profile Contract（配置契约）。Harness 原生 `cordis` 可以作为个人智能体创建助手解析自然语言并生成待确认草稿，但不得被包装成第二个 Agent 实体、第二套 Preset 文档或独立权限系统。主对话 `@` 入口与智能体中心入口只负责发出同一种 Builder Request（构建器请求）。
+
 ## 一致性
 
 - Preset 保存使用目录级 staging/backup/rename；写入失败恢复原目录。
 - `expectedVersion` 作为编辑冲突保护。
 - 会话绑定同时记录 `sessionId + presetId + configVersion`。
 - 验证只有在真实 Session header、绑定版本、首轮用户消息和首轮助手消息同时存在时通过。
-
+- Builder 的测试对话只能运行已保存配置，并必须选择该 Profile 对应的同一个 `presetId + configVersion`；未保存草稿不得复制临时 Preset 或伪造测试 Agent。

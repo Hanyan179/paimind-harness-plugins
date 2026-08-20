@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-`Product E2E Verified`，最近验收日期为 2026-08-17。当前规范为 [`../product/RQ-106-agent-center-prd.md`](../product/RQ-106-agent-center-prd.md)。历史只读目录验收已被“平台智能体 + 我的智能体 + 真实会话验证”替代。
+历史主链路为 `Product E2E Verified`，最近验收日期为 2026-08-17。2026-08-21 原生 Shell 与统一 Builder 重构已完成 Source Review（源码检查）、定向自动化验证和本地 Browser E2E（浏览器端到端）；共享测试环境验收仍单列为待办。当前规范为 [`../product/RQ-106-agent-center-prd.md`](../product/RQ-106-agent-center-prd.md)。历史只读目录验收已被“平台智能体 + 我的智能体 + 真实会话验证”替代。
 
 ## 验收入口
 
@@ -25,9 +25,39 @@
 11. 技能中心可发现全部真实已安装 Skill；个人智能体新会话只注入已封装 Skill，未选择技能不进入 `skill-catalog`。
 12. 通过类型检查、构建、插件隔离以及桌面/受限宽度浏览器检查。
 13. 新建业务智能体必须先复制真实 Harness Preset，再把产品归属与分类写入同一 Preset 的 PAIMind Profile；保存后出现在业务目录，并可编辑、删除、设为默认和开始真实对话。
-14. 创建个人智能体先打开紧凑草稿弹窗，只收集名称和基础运行模式；继续后进入完整 Builder，并可通过右侧自然语言对话同步角色、目标、行为规范、补充要求和已安装会话技能。只有最终保存才创建真实 Harness Preset。
+14. 创建个人智能体先打开 Purpose-first（用途优先）的紧凑草稿弹窗，用户描述用途并可确认名称与基础运行模式；继续后进入完整 Builder，并可通过右侧自然语言对话同步角色、目标、行为规范、补充要求和已安装会话技能。只有最终保存才创建真实 Harness Preset。
+15. 智能体中心和 Builder 只占用 Harness 原生对话中央列；Sidebar 保持可见，不出现产品自有顶栏、独立返回栏或整页模态遮罩，Sidebar 内不重复展示“助手”目录。
+16. 创建与编辑复用同一 Builder；配置对话产生的变更可确认或撤回，会话技能默认折叠并按需披露搜索、分类、只看已选和完整列表。
+17. 测试对话只运行已保存配置。未保存草稿必须提示先保存；保存后测试使用同一真实 Agent Preset 与配置版本，不创建临时 Agent 或 Preset 副本。
+18. Harness 原生 `cordis` 只承担“个人智能体创建助手”能力。智能体中心入口和主对话 `@` 入口汇入同一 Builder，不新增 PAIMind Agent 实体、ID、存储、运行时或权限模型。
 
-## 2026-08-21 两阶段创建 Local Pre-Acceptance
+## 2026-08-21 原生 Shell 与统一 Builder Local Pre-Acceptance
+
+### 已完成的 Implementation Review（实现检查）
+
+- 当前工作树通过 `@paimind/harness-compat` 将智能体中心安装到 Harness 原生对话中央列；中心交互为 Non-modal（非模态），关闭后精确恢复宿主内容。
+- 创建、编辑和主对话 `@cordis` 请求汇入同一 Builder；Builder 包含智能体说明书、配置对话、折叠式会话技能和测试对话。
+- Host Contract（宿主契约）拒绝 `agentId`、`presetId` 或基础 Preset 身份漂移；测试对话创建或复用真实空白 Session，并选择同一保存 Preset。
+- 以下 Implementation Review（实现检查）与 Browser E2E 分别记录代码契约和本地运行事实；两者都不替代共享测试环境 Product Acceptance（产品验收）。
+
+### Browser E2E（浏览器端到端）已完成
+
+- [x] Sidebar 展开与收起：智能体中心/Builder 均只占中央列，Logo 完整，左右边界对称，无产品自有返回栏。
+- [x] 创建与编辑：两条入口进入同一 Builder；配置对话完成字段同步、撤回和确认；Skill 展开后 8 个真实名称与说明完整可读。
+- [x] 未保存门禁：新建和编辑产生未保存变更时，测试对话显示“请先保存智能体配置”，未产生临时 Preset。
+- [x] 同 Preset 测试：`presetId=0821-074942`、`configVersion=v1-a07a37d8a3d77343`、`sessionId=session-62fc6434-c28f-401f-b18b-7e47d138fc73`；Session 事件记录 `agent-preset/selected=0821-074942`，完整 Harness 对话展示真实首轮回复并显示“真实首轮验证通过”。
+- [x] `@` 入口：主对话同时展示 Agent 与 Skill；选择“个人智能体创建助手”后原生模式变为 `cordis` 的“创造模式”，并自然展开同一用途优先 Builder，未创建第二套实体。
+- [x] 响应式与可访问性：`1486×1059`、`900×720`、`390×844` 检查通过；窄屏先显示配置/测试对话再显示说明书，焦点未再滚动外层 Center，Console 仅有重启期间既有连接信息，无本轮新增运行错误。
+
+视觉与响应式对照详见 [`agent-center-design-qa-2026-08-21.md`](agent-center-design-qa-2026-08-21.md)。本节是本地 Pre-Acceptance（预验收），不替代共享测试环境 Product Acceptance（产品验收）。
+
+### Shared Environment（共享测试环境）待办
+
+- [ ] 在共享测试环境按上述 Browser E2E 清单重跑；只有共享环境证据可以把本轮状态升级为 Product Acceptance。
+
+## 2026-08-21 两阶段创建 Local Pre-Acceptance（历史交互）
+
+本节保留本轮原生 Shell 重构前的浏览器事实，不代表当前统一 Builder 的验收结论；当前交互以“原生 Shell 与统一 Builder Local Pre-Acceptance”待回填清单为准。
 
 - 真实 `http://127.0.0.1:3080/` 已验证“创建个人智能体”先打开名称与基础运行模式弹窗，继续后进入左侧可编辑配置、右侧配置对话的 Builder。
 - 输入“角色是产品交互验收助手，目标是检查交互并输出证据，专业且有证据，并使用 openai-docs。”后，角色、目标、描述、行为规范、补充要求和 `openai-docs` 会话技能同步到左侧，并展示字段回执。

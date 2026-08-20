@@ -16,9 +16,15 @@ export interface PaimindProductSurfaceSnapshot {
 }
 
 const OPEN_EVENT = 'paimind:product-surface:open'
+const AGENT_BUILDER_REQUEST_EVENT = 'paimind:agent-builder:request'
 
 interface PaimindProductSurfaceEventDetail {
   readonly id: PaimindProductSurfaceId
+}
+
+export interface PaimindAgentBuilderRequest {
+  readonly productKind: 'personal' | 'business'
+  readonly brief?: string
 }
 
 const closedSnapshot: PaimindProductSurfaceSnapshot = Object.freeze({ open: false })
@@ -41,12 +47,163 @@ export function requestPaimindProductSurface(
   win.dispatchEvent(event)
 }
 
+/**
+ * Open the Agent Center's existing Preset-authoring workflow. This is a UI
+ * navigation request only: it creates no Agent, Profile, Preset, or Session.
+ */
+export function requestPaimindAgentBuilder(
+  request: PaimindAgentBuilderRequest = { productKind: 'personal' },
+  win: Window = window,
+): void {
+  requestPaimindProductSurface('agent-center', win)
+  const event = win.document.createEvent('CustomEvent')
+  event.initCustomEvent(AGENT_BUILDER_REQUEST_EVENT, false, false, {
+    productKind: request.productKind,
+    ...(request.brief === undefined || request.brief.trim() === '' ? {} : { brief: request.brief.trim() }),
+  } satisfies PaimindAgentBuilderRequest)
+  win.dispatchEvent(event)
+}
+
 /** A switch is offered only while the target plugin has a live sidebar entry. */
 export function isPaimindProductSurfaceAvailable(
   id: PaimindProductSurfaceId,
   doc: Document = document,
 ): boolean {
   return productSurfaceTrigger(doc, id) !== null
+}
+
+/**
+ * RC8's stable conversation Slot anchor and the native center column that owns
+ * it. Product Centers portal into `mount`; they never portal into `body` or
+ * replace Harness's single `conversation` Slot occupant.
+ */
+export interface PaimindProductCenterHost {
+  readonly mount: HTMLElement
+  readonly nativeConversation: HTMLElement
+}
+
+interface SavedAttribute {
+  readonly present: boolean
+  readonly value: string | null
+}
+
+interface ProductCenterHostState {
+  readonly target: PaimindProductCenterHost
+  readonly inert: SavedAttribute
+  readonly ariaHidden: SavedAttribute
+  readonly hostMarker: SavedAttribute
+  readonly hostPosition: string
+  readonly hostPositionPriority: string
+  readonly hostHadStyle: boolean
+  readonly positioned: boolean
+  references: number
+}
+
+const PRODUCT_CENTER_HOST_MARKER = 'data-paimind-product-center-host'
+const productCenterHosts = new WeakMap<HTMLElement, ProductCenterHostState>()
+
+function savedAttribute(element: HTMLElement, name: string): SavedAttribute {
+  return Object.freeze({ present: element.hasAttribute(name), value: element.getAttribute(name) })
+}
+
+function restoreAttribute(element: HTMLElement, name: string, saved: SavedAttribute): void {
+  if (!saved.present) element.removeAttribute(name)
+  else element.setAttribute(name, saved.value ?? '')
+}
+
+/**
+ * Resolve exactly one native conversation anchor and its owning center column.
+ * Ambiguous, detached, or body-level anchors fail closed.
+ */
+export function resolvePaimindProductCenterHost(
+  doc: Document = document,
+): Readonly<PaimindProductCenterHost> | null {
+  const anchors = [...doc.querySelectorAll<HTMLElement>('[data-slot="conversation"]')]
+  if (anchors.length !== 1) return null
+  const nativeConversation = anchors[0]!
+  const mount = nativeConversation.parentElement
+  if (mount === null || mount === doc.body || mount === doc.documentElement || !mount.isConnected) return null
+  return Object.freeze({ mount, nativeConversation })
+}
+
+function validProductCenterHost(target: PaimindProductCenterHost): boolean {
+  const { mount, nativeConversation } = target
+  const doc = nativeConversation.ownerDocument
+  return mount.ownerDocument === doc
+    && nativeConversation.isConnected
+    && mount.isConnected
+    && nativeConversation.matches('[data-slot="conversation"]')
+    && nativeConversation.parentElement === mount
+    && mount !== doc.body
+    && mount !== doc.documentElement
+}
+
+/**
+ * Activate a resolved Center host. The native conversation remains mounted so
+ * Harness keeps its state, but it is removed from pointer, keyboard, and
+ * accessibility navigation until the final disposer restores the exact prior
+ * attributes. Concurrent Agent/Skill hand-offs share one reversible lease.
+ *
+ * Returns null when the resolved DOM seam is no longer valid; callers must
+ * render no Center rather than falling back to `document.body`.
+ */
+export function installPaimindProductCenterHost(
+  target: PaimindProductCenterHost,
+): (() => void) | null {
+  if (!validProductCenterHost(target)) return null
+  const existing = productCenterHosts.get(target.nativeConversation)
+  if (existing !== undefined) {
+    if (existing.target.mount !== target.mount) return null
+    existing.references += 1
+    let disposed = false
+    return () => {
+      if (disposed) return
+      disposed = true
+      releaseProductCenterHost(existing)
+    }
+  }
+
+  const { mount, nativeConversation } = target
+  const doc = nativeConversation.ownerDocument
+  const computedPosition = doc.defaultView?.getComputedStyle(mount).position ?? ''
+  const positioned = computedPosition === '' || computedPosition === 'static'
+  const state: ProductCenterHostState = {
+    target: Object.freeze({ mount, nativeConversation }),
+    inert: savedAttribute(nativeConversation, 'inert'),
+    ariaHidden: savedAttribute(nativeConversation, 'aria-hidden'),
+    hostMarker: savedAttribute(mount, PRODUCT_CENTER_HOST_MARKER),
+    hostPosition: mount.style.getPropertyValue('position'),
+    hostPositionPriority: mount.style.getPropertyPriority('position'),
+    hostHadStyle: mount.hasAttribute('style'),
+    positioned,
+    references: 1,
+  }
+  productCenterHosts.set(nativeConversation, state)
+  nativeConversation.setAttribute('inert', '')
+  nativeConversation.setAttribute('aria-hidden', 'true')
+  mount.setAttribute(PRODUCT_CENTER_HOST_MARKER, '')
+  if (positioned) mount.style.setProperty('position', 'relative')
+
+  let disposed = false
+  return () => {
+    if (disposed) return
+    disposed = true
+    releaseProductCenterHost(state)
+  }
+}
+
+function releaseProductCenterHost(state: ProductCenterHostState): void {
+  state.references -= 1
+  if (state.references > 0) return
+  const { mount, nativeConversation } = state.target
+  productCenterHosts.delete(nativeConversation)
+  restoreAttribute(nativeConversation, 'inert', state.inert)
+  restoreAttribute(nativeConversation, 'aria-hidden', state.ariaHidden)
+  restoreAttribute(mount, PRODUCT_CENTER_HOST_MARKER, state.hostMarker)
+  if (!state.positioned) return
+  if (state.hostPosition === '') mount.style.removeProperty('position')
+  else mount.style.setProperty('position', state.hostPosition, state.hostPositionPriority)
+  if (!state.hostHadStyle && mount.getAttribute('style') === '') mount.removeAttribute('style')
 }
 
 /**
@@ -116,6 +273,62 @@ export class PaimindProductSurfaceController {
   private publish(snapshot: PaimindProductSurfaceSnapshot): void {
     if (this.snapshot === snapshot) return
     this.snapshot = snapshot
+    for (const listener of [...this.listeners]) listener()
+  }
+}
+
+export interface PaimindAgentBuilderRequestSnapshot extends PaimindAgentBuilderRequest {
+  readonly revision: number
+}
+
+const idleAgentBuilderRequest: PaimindAgentBuilderRequestSnapshot = Object.freeze({
+  revision: 0,
+  productKind: 'personal',
+})
+
+/**
+ * Lossless receiver installed with Agent Center, so an `@` pick can request
+ * authoring before the Center React tree has mounted. Preset authoring itself
+ * remains owned by the native Agent Preset API and PAIMind Profile sidecar.
+ */
+export class PaimindAgentBuilderRequestController {
+  private snapshot: PaimindAgentBuilderRequestSnapshot = idleAgentBuilderRequest
+  private readonly listeners = new Set<() => void>()
+  private disposed = false
+
+  constructor(
+    private readonly surface: PaimindProductSurfaceController,
+    private readonly win: Window = window,
+  ) {
+    this.win.addEventListener(AGENT_BUILDER_REQUEST_EVENT, this.onRequest as EventListener)
+  }
+
+  getSnapshot = (): PaimindAgentBuilderRequestSnapshot => this.snapshot
+
+  subscribe = (listener: () => void): (() => void) => {
+    if (this.disposed) return () => {}
+    this.listeners.add(listener)
+    return () => { this.listeners.delete(listener) }
+  }
+
+  dispose(): void {
+    if (this.disposed) return
+    this.disposed = true
+    this.win.removeEventListener(AGENT_BUILDER_REQUEST_EVENT, this.onRequest as EventListener)
+    this.listeners.clear()
+  }
+
+  private readonly onRequest = (event: CustomEvent<PaimindAgentBuilderRequest>): void => {
+    if (this.disposed) return
+    const productKind = event.detail?.productKind
+    if (productKind !== 'personal' && productKind !== 'business') return
+    const brief = typeof event.detail?.brief === 'string' ? event.detail.brief.trim() : ''
+    this.snapshot = Object.freeze({
+      revision: this.snapshot.revision + 1,
+      productKind,
+      ...(brief === '' ? {} : { brief }),
+    })
+    this.surface.open()
     for (const listener of [...this.listeners]) listener()
   }
 }
@@ -334,40 +547,27 @@ function focusableElements(root: HTMLElement): HTMLElement[] {
     .filter(element => !element.hidden && element.getAttribute('aria-hidden') !== 'true')
 }
 
-/** Install Escape, focus containment, initial focus, and scroll isolation. */
+/**
+ * Install the non-modal Center-page interaction lifecycle: move focus into the
+ * opened surface once and let Escape close it. Native document scrolling and
+ * Tab navigation remain untouched because the Harness sidebar stays usable.
+ */
 export function installPaimindProductSurfaceInteraction(
   root: HTMLElement,
   controller: PaimindProductSurfaceController,
   doc: Document = document,
 ): () => void {
-  const previousOverflow = doc.body.style.overflow
-  doc.body.style.overflow = 'hidden'
   const first = root.querySelector<HTMLElement>('[data-paimind-product-initial-focus]')
     ?? focusableElements(root)[0]
   first?.focus()
 
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      controller.close()
-      return
-    }
-    if (event.key !== 'Tab') return
-    const focusable = focusableElements(root)
-    if (focusable.length === 0) { event.preventDefault(); return }
-    const firstElement = focusable[0]!
-    const lastElement = focusable.at(-1)!
-    if (event.shiftKey && doc.activeElement === firstElement) {
-      event.preventDefault(); lastElement.focus()
-    } else if (!event.shiftKey && doc.activeElement === lastElement) {
-      event.preventDefault(); firstElement.focus()
-    }
+    if (event.key !== 'Escape') return
+    event.preventDefault()
+    controller.close()
   }
   doc.addEventListener('keydown', onKeyDown)
-  return () => {
-    doc.removeEventListener('keydown', onKeyDown)
-    doc.body.style.overflow = previousOverflow
-  }
+  return () => { doc.removeEventListener('keydown', onKeyDown) }
 }
 
 export interface HarnessScheduledSessionMarkerSnapshot {

@@ -321,12 +321,17 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService {
   }
 
   async saveProfile(input: AgentBusinessProfileInput): Promise<Readonly<AgentBusinessProfile>> {
+    const agentId = validateId(input.agentId, '智能体标识')
     const presetId = validateId(input.presetId, '预设标识')
+    const basePresetId = validateId(input.basePresetId, '基础能力模板')
+    if (agentId !== presetId) throw new Error('智能体标识必须与预设标识一致')
     const source = join(this.presetRoot, presetId)
     const sourceStat = await stat(source).catch(() => undefined)
     if (sourceStat?.isDirectory() !== true) throw new Error('请先通过 Harness 创建个人预设')
     const previous = await this.readProfile(source)
     if (input.expectedVersion !== undefined && previous?.configVersion !== input.expectedVersion) throw new Error('智能体已更新，请刷新后重试')
+    if (previous !== undefined && (previous.agentId !== agentId || previous.presetId !== presetId)) throw new Error('智能体标识和预设标识不可修改')
+    if (previous !== undefined && previous.basePresetId !== basePresetId) throw new Error('基础能力模板不可修改')
     const profile = stableProfile(input, (previous?.revision ?? 0) + 1, this.now())
     const staging = join(this.stateRoot, 'staging', `${presetId}-${randomUUID()}`)
     const backup = join(this.stateRoot, 'backups', `${presetId}-${this.now()}-${randomUUID()}`)

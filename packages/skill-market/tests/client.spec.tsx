@@ -64,8 +64,17 @@ afterEach(() => { cleanup(); document.head.querySelectorAll('style[data-paimind-
 
 describe('Skill Market business UI', () => {
   it('stacks the shared footer actions in expanded and collapsed sidebars', () => {
-    expect(SKILL_CENTER_STYLE).toContain("button[data-paimind-product-trigger][data-wide='true']){width:100%!important;height:auto!important;flex-direction:column!important")
-    expect(SKILL_CENTER_STYLE).toContain("button[data-paimind-product-trigger][data-wide='false']){width:36px!important;height:auto!important;flex-direction:column!important")
+    expect(SKILL_CENTER_STYLE).toContain("button[data-paimind-product-trigger='skill-center'][data-wide='true']){width:100%!important;height:auto!important;flex-direction:column!important")
+    expect(SKILL_CENTER_STYLE).toContain("button[data-paimind-product-trigger='skill-center'][data-wide='false']){width:36px!important;height:auto!important;flex-direction:column!important")
+  })
+
+  it('scopes the Center CSS and confines responsive detail to its native column', () => {
+    expect(SKILL_CENTER_STYLE).toContain("[data-paimind-product-surface='skill-center']{")
+    expect(SKILL_CENTER_STYLE).toContain('position:absolute;inset:0')
+    expect(SKILL_CENTER_STYLE).toContain("@scope ([data-paimind-product-surface='skill-center'])")
+    expect(SKILL_CENTER_STYLE).toContain('[data-paimind-skill-detail]{position:absolute;inset:0')
+    expect(SKILL_CENTER_STYLE).not.toContain('[data-paimind-skill-detail]{position:fixed')
+    expect(SKILL_CENTER_STYLE).not.toContain('[data-paimind-product-bar]')
   })
 
   it('keeps its stylesheet while overlapping plugin lifecycles hand over ownership', () => {
@@ -201,19 +210,49 @@ describe('Skill Market business UI', () => {
     expect(use).toHaveAttribute('title', 'Open a conversation to check')
   })
 
-  it('opens from the native sidebar action as a full-page surface', async () => {
+  it('opens from the native sidebar action inside the native center column', async () => {
     const native = runtime()
     const controller = new PaimindProductSurfaceController('skill-center', window, document)
     render(<>
       <SkillCenterTrigger wide={false} controller={controller} locale={locale()} />
+      <div data-testid="harness-center"><section data-slot="conversation">Native conversation</section></div>
       <SkillCenterSurface controller={controller} api={api()} installer={installer() as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />
     </>)
     const trigger = screen.getByRole('button', { name: 'Open Skill Center' })
     expect(trigger.querySelector('svg')).not.toBeNull()
     fireEvent.click(trigger)
-    expect(await screen.findByRole('dialog', { name: 'Skill Center' })).toBeInTheDocument()
+    const surface = await screen.findByRole('main', { name: 'Skill Center' })
+    const center = screen.getByTestId('harness-center')
+    const conversation = screen.getByText('Native conversation')
+    expect(surface.parentElement).toBe(center)
+    expect(conversation).toHaveAttribute('inert')
+    expect(conversation).toHaveAttribute('aria-hidden', 'true')
+    expect(trigger).toHaveAttribute('aria-current', 'page')
+    expect(surface.querySelector('[data-paimind-product-bar]')).toBeNull()
+    expect(surface.querySelector('[data-paimind-product-return]')).toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'Skill Center' })).toBeNull()
     fireEvent.keyDown(document, { key: 'Escape' })
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Skill Center' })).toBeNull())
+    expect(screen.getByRole('main', { name: 'Skill Center' })).toBeInTheDocument()
+    fireEvent.click(trigger)
+    await waitFor(() => expect(screen.queryByRole('main', { name: 'Skill Center' })).toBeNull())
+    expect(conversation).not.toHaveAttribute('inert')
+    expect(conversation).not.toHaveAttribute('aria-hidden')
+    expect(trigger).not.toHaveAttribute('aria-current')
+    controller.dispose()
+  })
+
+  it('fails closed without a unique native conversation host', async () => {
+    const native = runtime()
+    const controller = new PaimindProductSurfaceController('skill-center', window, document)
+    render(<>
+      <SkillCenterTrigger wide controller={controller} locale={locale()} />
+      <SkillCenterSurface controller={controller} api={api()} installer={installer() as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />
+    </>)
+    const trigger = screen.getByRole('button', { name: 'Open Skill Center' })
+    fireEvent.click(trigger)
+    await waitFor(() => expect(trigger).not.toHaveAttribute('aria-current'))
+    expect(screen.queryByRole('main', { name: 'Skill Center' })).toBeNull()
+    expect(document.body.querySelector('[data-paimind-product-surface="skill-center"]')).toBeNull()
     controller.dispose()
   })
 
