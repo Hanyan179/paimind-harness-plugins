@@ -439,6 +439,7 @@ function agentChoiceDescription(description: string | undefined): string {
 export class NativeHarnessAgentChoiceBridge implements HarnessAgentChoiceBridge {
   private snapshot: HarnessAgentChoiceSnapshot
   private readonly listeners = new Set<() => void>()
+  private readonly stopNativeSeat: () => void
   private disposed = false
   private generation = 0
 
@@ -451,6 +452,7 @@ export class NativeHarnessAgentChoiceBridge implements HarnessAgentChoiceBridge 
       status: 'loading', choices: Object.freeze([]), current: seat.current,
       busy: seat.busy, error: seat.error,
     })
+    this.stopNativeSeat = nativeSeat.subscribe?.(() => { this.syncFromNativeSeat() }) ?? (() => {})
   }
 
   getSnapshot(): HarnessAgentChoiceSnapshot { return this.snapshot }
@@ -525,7 +527,14 @@ export class NativeHarnessAgentChoiceBridge implements HarnessAgentChoiceBridge 
     if (this.disposed) return
     this.disposed = true
     this.generation += 1
+    this.stopNativeSeat()
     this.listeners.clear()
+  }
+
+  private syncFromNativeSeat(): void {
+    if (this.disposed) return
+    const seat = this.nativeSeat.getSnapshot()
+    this.publish({ ...this.snapshot, current: seat.current, busy: seat.busy, error: seat.error })
   }
 
   private publish(snapshot: HarnessAgentChoiceSnapshot): void {

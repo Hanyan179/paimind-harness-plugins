@@ -81,18 +81,44 @@ describe('Agent Center business UI', () => {
   it('is the only business entry, splits Platform and My Agents, and hides internal ids and hashes', async () => {
     const fixture = services()
     render(<AgentCenterSection close={() => {}} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Standard' })).toBeInTheDocument())
-    expect(screen.getByRole('heading', { name: 'Personal Agent creation assistant' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Research Agent' })).toBeInTheDocument())
+    expect(screen.getByRole('tab', { name: 'My Agents' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.queryByText(/preset id|hash|file path|config version/i)).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('tab', { name: 'My Agents' }))
-    expect(screen.getByRole('heading', { name: 'Research Agent' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Create Personal Agent' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Platform modes' }))
+    expect(screen.getByRole('heading', { name: 'Standard' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Personal Agent creation assistant' })).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Create Personal Agent' })).toHaveLength(2)
     expect(screen.getAllByRole('tab')).toHaveLength(3)
+  })
+
+  it('uses a compact task-first library instead of repeated dashboard cards', async () => {
+    const fixture = services()
+    render(<AgentCenterSection close={() => {}} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
+
+    const heading = await screen.findByRole('heading', { name: 'Research Agent' })
+    const card = heading.closest('[data-paimind-agent-card]') as HTMLElement
+    expect(screen.getByRole('heading', { name: 'My Agents' })).toHaveAttribute('data-paimind-agent-visually-hidden')
+    expect(within(card).queryByText('Personal', { selector: '[data-paimind-agent-badge]' })).not.toBeInTheDocument()
+    expect(within(card).queryByText('Native Harness Preset')).not.toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Set Research Agent as default' })).toHaveAttribute('data-icon-only', 'true')
+    expect(AGENT_CENTER_STYLE).toContain("container: paimind-agent-center / inline-size")
+    expect(AGENT_CENTER_STYLE).toContain("grid-template-areas:\n    'identity badges actions'\n    'description context actions'")
+    expect(AGENT_CENTER_STYLE).toContain('@container paimind-agent-center (max-width:620px)')
+  })
+
+  it('returns from the Center through a visible conversation action', async () => {
+    const fixture = services(); const close = vi.fn()
+    render(<AgentCenterSection close={close} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
+    await screen.findByRole('heading', { name: 'Research Agent' })
+    fireEvent.click(screen.getByRole('button', { name: 'Back to conversation' }))
+    expect(close).toHaveBeenCalledOnce()
   })
 
   it('presents native cordis as the creation assistant and routes its primary action into the existing builder', async () => {
     const fixture = services(); const openAdvanced = vi.fn(() => true)
     render(<AgentCenterSection close={() => {}} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={openAdvanced} />)
+    await screen.findByRole('heading', { name: 'Research Agent' })
+    fireEvent.click(screen.getByRole('tab', { name: 'Platform modes' }))
     const heading = await screen.findByRole('heading', { name: 'Personal Agent creation assistant' })
     const card = heading.closest('[data-paimind-agent-card]') as HTMLElement
     expect(card).toHaveAttribute('data-paimind-agent-preset-id', 'cordis')
@@ -109,7 +135,7 @@ describe('Agent Center business UI', () => {
   it('resets the Center scroll position when the unified Builder opens', async () => {
     const fixture = services()
     const { container } = render(<AgentCenterSection close={() => {}} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
-    await screen.findByRole('heading', { name: 'Personal Agent creation assistant' })
+    await screen.findByRole('heading', { name: 'Research Agent' })
     const center = container.querySelector<HTMLElement>('[data-paimind-agent-center]')!
     center.scrollTop = 240
 
@@ -124,14 +150,7 @@ describe('Agent Center business UI', () => {
   it('exposes canonical avatar seats for managed Agents while platform modes keep native icons', async () => {
     const fixture = services()
     render(<AgentCenterSection close={() => {}} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
-    const platformHeading = await screen.findByRole('heading', { name: 'Standard' })
-    const platformCard = platformHeading.closest('[data-paimind-agent-card]')
-    expect(platformCard).not.toBeNull()
-    expect(platformCard).not.toHaveAttribute('data-paimind-agent-id')
-    expect(platformCard?.querySelector('[data-paimind-agent-avatar-seat]')).toBeNull()
-
-    fireEvent.click(screen.getByRole('tab', { name: 'My Agents' }))
-    const personalHeading = screen.getByRole('heading', { name: 'Research Agent' })
+    const personalHeading = await screen.findByRole('heading', { name: 'Research Agent' })
     const personalCard = personalHeading.closest('[data-paimind-agent-card]')
     expect(personalCard).toHaveAttribute('data-paimind-agent-id', 'mine')
     expect(personalCard).toHaveAttribute('data-product-kind', 'personal')
@@ -141,6 +160,13 @@ describe('Agent Center business UI', () => {
     expect(avatarSeat).toHaveAttribute('data-paimind-agent-avatar-kind', 'personal')
     expect(avatarSeat.querySelector('[data-paimind-agent-avatar-fallback] svg')).not.toBeNull()
     expect(avatarSeat.querySelector('[data-paimind-agent-avatar]')).toBeNull()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Platform modes' }))
+    const platformHeading = screen.getByRole('heading', { name: 'Standard' })
+    const platformCard = platformHeading.closest('[data-paimind-agent-card]')
+    expect(platformCard).not.toBeNull()
+    expect(platformCard).not.toHaveAttribute('data-paimind-agent-id')
+    expect(platformCard?.querySelector('[data-paimind-agent-avatar-seat]')).toBeNull()
   })
 
   it('starts a real runtime conversation from a personal Agent', async () => {
@@ -294,7 +320,9 @@ describe('Agent Center business UI', () => {
   it('shows platform modes and business Agents without explanatory category copy', async () => {
     const fixture = services()
     render(<AgentCenterSection close={() => {}} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Standard' })).toBeInTheDocument())
+    await screen.findByRole('heading', { name: 'Research Agent' })
+    fireEvent.click(screen.getByRole('tab', { name: 'Platform modes' }))
+    expect(screen.getByRole('heading', { name: 'Standard' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Platform modes' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tab', { name: 'Business Agents' })).toHaveAttribute('aria-selected', 'false')
     expect(screen.queryByText(/General, PDM, and AIM are business categories/)).toBeNull()
@@ -324,7 +352,9 @@ describe('Agent Center business UI', () => {
       ...input, revision: 1, configVersion: 'v1-test', updatedAt: 1, health: 'healthy' as const,
     } }))
     render(<AgentCenterSection close={() => {}} api={presetApi} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
-    await screen.findByRole('heading', { name: 'Standard' })
+    await screen.findByRole('heading', { name: 'Research Agent' })
+    fireEvent.click(screen.getByRole('tab', { name: 'Platform modes' }))
+    expect(screen.getByRole('heading', { name: 'Standard' })).toBeInTheDocument()
     fireEvent.click(screen.getAllByRole('button', { name: 'Copy and edit' })[0]!)
     fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Product analyst' } })
     fireEvent.change(screen.getByLabelText('Goal'), { target: { value: 'Deliver validated product analysis' } })
@@ -374,7 +404,7 @@ describe('Agent Center business UI', () => {
     })
 
     render(<AgentCenterSection close={() => {}} api={presetApi} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
-    await screen.findByRole('heading', { name: 'Standard' })
+    await screen.findByRole('heading', { name: 'Research Agent' })
     fireEvent.click(screen.getByRole('tab', { name: 'Business Agents' }))
     expect(screen.getAllByRole('button', { name: 'Create Business Agent' })).toHaveLength(2)
     fireEvent.click(screen.getAllByRole('button', { name: 'Create Business Agent' })[1]!)
@@ -431,7 +461,7 @@ describe('Agent Center business UI', () => {
       openAdvanced={() => true}
       builderRequests={builderRequests}
     />)
-    await screen.findByRole('heading', { name: 'Standard' })
+    await screen.findByRole('heading', { name: 'Research Agent' })
 
     requestPaimindAgentBuilder({ productKind: 'personal', brief: 'Review contracts and list business risks' }, window)
 

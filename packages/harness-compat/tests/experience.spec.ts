@@ -87,6 +87,47 @@ describe('native Harness Agent choice bridge', () => {
     bridge.dispose()
   })
 
+  it('tracks a native selector change initiated outside the visual bridge', async () => {
+    let current = 'standard'
+    const listeners = new Set<() => void>()
+    const nativeSeat: HarnessAgentPresetSeatControl = {
+      getSnapshot: () => ({ current, busy: false, error: null }),
+      subscribe: listener => { listeners.add(listener); return () => { listeners.delete(listener) } },
+      load: vi.fn(async () => {}),
+      select: vi.fn(async id => {
+        current = id
+        listeners.forEach(listener => { listener() })
+      }),
+    }
+    const api = {
+      list: vi.fn(async () => ({ result: { ok: true as const, value: {
+        authorable: true,
+        hasDocument: true,
+        presets: [
+          { id: 'standard', trust: 'system' as const, isDefault: true, name: '标准模式' },
+          { id: 'personal-agent', trust: 'user' as const, isDefault: false, name: '个人智能体' },
+        ],
+      } } })),
+    } as unknown as HarnessAgentPresetApi
+    const bridge = new NativeHarnessAgentChoiceBridge(api, nativeSeat)
+
+    await expect(bridge.load()).resolves.toBe(true)
+    current = 'personal-agent'
+    listeners.forEach(listener => { listener() })
+
+    expect(bridge.getSnapshot()).toMatchObject({
+      status: 'ready',
+      current: 'personal-agent',
+      busy: false,
+      error: null,
+    })
+
+    bridge.dispose()
+    current = 'standard'
+    listeners.forEach(listener => { listener() })
+    expect(bridge.getSnapshot().current).toBe('personal-agent')
+  })
+
   it('fails open when the roster is unavailable or cannot preserve the native current choice', async () => {
     const nativeSeat: HarnessAgentPresetSeatControl = {
       getSnapshot: () => ({ current: 'standard', busy: false, error: null }),

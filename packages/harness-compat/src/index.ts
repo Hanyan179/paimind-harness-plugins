@@ -623,6 +623,8 @@ export interface HarnessAgentPresetSeatSnapshot {
 /** Version-isolated control face for the native new-conversation Preset selector. */
 export interface HarnessAgentPresetSeatControl {
   getSnapshot(): HarnessAgentPresetSeatSnapshot
+  /** Observe native selector changes initiated by another product surface. */
+  subscribe?(listener: () => void): () => void
   load(): Promise<void>
   select(agentPreset: string): Promise<void>
 }
@@ -664,6 +666,7 @@ export function resolveHarnessAgentPresetSeatControl(
           if (current === null) throw new Error('Harness Agent Preset selector returned an invalid snapshot')
           return current
         },
+        subscribe(listener: () => void): () => void { return store.subscribe(listener) },
         async load(): Promise<void> { await injected.load!() },
         async select(agentPreset: string): Promise<void> { await injected.select!(agentPreset) },
       }))
