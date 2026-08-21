@@ -45,6 +45,7 @@ const rendererBentoRoot = resolve(repositoryRoot, 'packages/renderer-bento')
 const rendererPdfRoot = resolve(repositoryRoot, 'packages/renderer-pdf')
 const artifactsRoot = resolve(repositoryRoot, 'packages/artifacts')
 const presentationTraceRoot = resolve(repositoryRoot, 'packages/presentation-trace')
+const proposalExperienceRoot = resolve(repositoryRoot, 'packages/proposal-experience')
 const walmartProposalAdapterRoot = resolve(repositoryRoot, 'packages/walmart-proposal-adapter')
 const agentMarketRoot = resolve(repositoryRoot, 'packages/agent-market')
 const agentBuilderRoot = resolve(repositoryRoot, 'packages/agent-builder')
@@ -506,11 +507,16 @@ try {
     - id: paimind-visual-experience
       name: '@paimind/visual-experience'
 `)
-  const isolationPatch = fullPatch.replace(
+  const isolationPatchWithoutVisualExperience = fullPatch.replace(
     /\n    - id: paimind-visual-experience\n      name: '@paimind\/visual-experience'\n?/,
     '\n',
   )
-  if (isolationPatch === fullPatch) throw new Error('failed to derive legacy feature-isolation patch without Visual Experience')
+  if (isolationPatchWithoutVisualExperience === fullPatch) throw new Error('failed to derive legacy feature-isolation patch without Visual Experience')
+  const isolationPatch = isolationPatchWithoutVisualExperience.replace(
+    /\n    - id: paimind-proposal-experience\n      name: '@paimind\/proposal-experience'\n\n    - id: paimind-proposal-experience-invariant\n      name: '@paimind\/proposal-experience\/invariant'\n      inject: \[invariants\]\n?/,
+    '\n',
+  )
+  if (isolationPatch === isolationPatchWithoutVisualExperience) throw new Error('failed to derive legacy feature-isolation patch without Proposal Experience')
   const withoutSchedulerPatch = isolationPatch.replace(
     /\n    - id: paimind-platform-scheduler\n      name: '@paimind\/platform-scheduler'[\s\S]*?    - id: paimind-scheduler-adapter-feishu-bot-invariant\n      name: '@paimind\/scheduler-adapter-feishu-bot\/invariant'\n      inject: \[invariants\]\n?/,
     '\n',
@@ -573,6 +579,7 @@ try {
     rendererPdfRoot,
     artifactsRoot,
     presentationTraceRoot,
+    proposalExperienceRoot,
     walmartProposalAdapterRoot,
     agentMarketRoot,
     agentBuilderRoot,
@@ -607,6 +614,7 @@ try {
     'paimind-renderer-pdf', '@paimind/renderer-pdf',
     'paimind-artifacts', '@paimind/artifacts',
     'paimind-presentation-trace', '@paimind/presentation-trace',
+    'paimind-proposal-experience', '@paimind/proposal-experience',
     'paimind-walmart-proposal-adapter', '@paimind/walmart-proposal-adapter',
     'paimind-agent-market', '@paimind/agent-market',
     'paimind-agent-builder', '@paimind/agent-builder',
@@ -657,6 +665,7 @@ try {
     '@paimind/renderer-pdf',
     '@paimind/artifacts',
     '@paimind/presentation-trace',
+    '@paimind/proposal-experience',
     '@paimind/agent-market',
     '@paimind/skill-market',
     '@paimind/notifications',
@@ -689,6 +698,7 @@ try {
     '@paimind/renderer-pdf',
     '@paimind/artifacts',
     '@paimind/presentation-trace',
+    '@paimind/proposal-experience',
     '@paimind/walmart-proposal-adapter',
     '@paimind/agent-market',
     '@paimind/agent-builder',
@@ -720,6 +730,7 @@ try {
     || removed.includes('paimind-renderer-pdf')
     || removed.includes('paimind-artifacts')
     || removed.includes('paimind-presentation-trace')
+    || removed.includes('paimind-proposal-experience')
     || removed.includes('paimind-walmart-proposal-adapter')
     || removed.includes('paimind-agent-market')
     || removed.includes('paimind-agent-builder')
