@@ -68,7 +68,11 @@ function props(language: PaimindLocaleSource): TaskMonitorActionProps {
     },
     useSession: selector => selector({
       openState: 'open', composerPhase: 'active', running: false, runningCalls: [], pending: [], partial: null,
-      nodes: [], queue: [],
+      nodes: [{
+        kind: 'tool-result', callId: 'read-1', time: 10,
+        call: { name: 'read_file', argsRaw: '{}' }, isError: false,
+        callView: { card: 'generic', title: 'Read', kind: 'read', locations: [{ path: '/work/input.xlsx', line: 12 }] },
+      }], queue: [],
       views: { get: (key: string) => key === 'trajectory' ? { requests: [{ prompt: { config: { provider: 'deepseek-official', model: 'deepseek-v4-flash' }, tools: [{ name: 'mcp__unused__search' }] } }] } : undefined },
     }),
   }
@@ -96,24 +100,33 @@ describe('Task Monitor client', () => {
     expect(screen.getByRole('tooltip', { name: 'Task Monitor' })).toBeInTheDocument()
     await waitFor(() => { expect(history).toHaveBeenCalledTimes(1) })
     fireEvent.click(trigger)
-    expect(screen.getByRole('region', { name: 'Task Monitor' })).toBeInTheDocument()
+    const panel = screen.getByRole('region', { name: 'Task Monitor' })
+    expect(panel).toBeInTheDocument()
     expect(screen.queryByText(/Refresh preserves process-local Jobs/)).toBeNull()
     expect(screen.getByRole('heading', { name: 'Task Summary' })).toBeInTheDocument()
     expect(screen.getAllByRole('heading', { level: 3 }).map(node => node.textContent)).toEqual([
-      'Task Progress', 'Agent, Skill & MCP', 'Outputs & Artifacts',
+      'Task Progress', 'Agent, Skill & MCP', 'Input Files', 'Outputs & Artifacts',
     ])
     const subagentSummary = screen.getByRole('button', { name: 'View 1 Subagents' })
     expect(subagentSummary).toHaveTextContent('1Subagents')
     expect(subagentSummary.querySelector('svg')).not.toBeNull()
-    fireEvent.click(subagentSummary)
     const agentGroup = document.querySelector('[data-paimind-task-agent-group]')
     const subagentAnchor = agentGroup?.querySelector('[data-paimind-task-agent-children]')
+    const panelHeader = panel.querySelector<HTMLElement>('[data-paimind-task-panel-header]')
+    const scrollTo = vi.fn()
+    Object.defineProperty(panel, 'scrollTop', { configurable: true, value: 24 })
+    Object.defineProperty(panel, 'scrollTo', { configurable: true, value: scrollTo })
+    vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue({ top: 100 } as DOMRect)
+    vi.spyOn(panelHeader!, 'getBoundingClientRect').mockReturnValue({ height: 50 } as DOMRect)
+    vi.spyOn(subagentAnchor!, 'getBoundingClientRect').mockReturnValue({ top: 500 } as DOMRect)
+    fireEvent.click(subagentSummary)
+    expect(scrollTo).toHaveBeenCalledWith({ top: 362, behavior: 'smooth' })
     expect(subagentAnchor).toHaveFocus()
     expect(screen.getByRole('heading', { name: 'Task Progress' }).parentElement?.querySelector('[data-paimind-task-subagent]')).toBeNull()
     expect(agentGroup?.querySelector('[data-paimind-task-subagent]')).not.toBeNull()
     await waitFor(() => {
-      expect(screen.getByText('bento-ppt')).toHaveAttribute('data-kind', 'skill-used')
-      expect(screen.getByText('feishu')).toHaveAttribute('data-kind', 'mcp-used')
+      expect(screen.getByText('bento-ppt').closest('[data-paimind-task-capability-row]')).toHaveAttribute('data-kind', 'skill')
+      expect(screen.getByText('feishu').closest('[data-paimind-task-capability-row]')).toHaveAttribute('data-kind', 'mcp')
     })
     expect(history).toHaveBeenCalledTimes(1)
     expect(screen.queryByText('unused')).toBeNull()
@@ -122,15 +135,32 @@ describe('Task Monitor client', () => {
     expect(screen.getByText('Previous checklist 1 · 1/1')).toBeInTheDocument()
     expect(screen.getAllByText('Read source')).toHaveLength(2)
     expect(screen.getAllByText('Quarterly Report').length).toBeGreaterThan(0)
+    expect(screen.getByText('input.xlsx')).toBeInTheDocument()
+    expect(screen.queryByText('Generated artifact')).toBeNull()
+    expect(screen.queryByText('Deliverable')).toBeNull()
+    expect(screen.queryByText('Input file')).toBeNull()
+    expect(screen.queryByText('available')).toBeNull()
+    expect(screen.queryByText('r2')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Quarterly Report' }).querySelector('[data-paimind-task-row-icon]')).toBeNull()
     const mainAgent = document.querySelector('[data-paimind-task-main-agent]')
-    expect(screen.getByText('Analyst · Main Agent').closest('[data-paimind-task-resource-row]')?.querySelector('svg')).not.toBeNull()
-    expect([...document.querySelectorAll('[data-paimind-task-chip]')].every(chip => !chip.textContent?.includes('deepseek-v4-flash'))).toBe(true)
-    expect(mainAgent?.querySelector('[data-paimind-task-model-tooltip]')).toHaveTextContent('deepseek-official · deepseek-v4-flash')
-    expect(mainAgent).toHaveAttribute('tabindex', '0')
+    expect(mainAgent).toHaveTextContent('Main AgentAnalystLead')
+    expect(mainAgent?.querySelector('svg')).not.toBeNull()
+    expect(document.querySelector('[data-paimind-task-chip]')).toBeNull()
+    expect(mainAgent?.querySelector('[data-paimind-task-model-tooltip]')).toBeNull()
+    expect(mainAgent).not.toHaveAttribute('tabindex')
+    const details = screen.getByText('Details & Log').closest('details')
+    expect(details).not.toHaveAttribute('open')
+    fireEvent.click(screen.getByText('Details & Log'))
+    expect(details).toHaveAttribute('open')
+    expect(screen.getByText('Provider').nextElementSibling).toHaveTextContent('deepseek-official')
+    expect(screen.getByText('Model').nextElementSibling).toHaveTextContent('deepseek-v4-flash')
     fireEvent.click(screen.getByRole('button', { name: 'Download Session Log' }))
     expect(value.sessionLog?.download).toHaveBeenCalledWith('session-1')
     fireEvent.click(screen.getByRole('button', { name: 'Quarterly Report' }))
     expect(value.workspaces.openPath).toHaveBeenCalledWith('/work/report.bento.html')
+    expect(screen.queryByText('/work/report.bento.html')).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Task Monitor' })).toBeNull()
+    fireEvent.click(trigger)
     const subagent = screen.getByRole('button', { name: 'Open Subagent: Researcher' })
     expect(subagent).toHaveAttribute('data-paimind-task-subagent')
     expect(subagent.querySelector('[data-paimind-task-agent-tooltip]')).toHaveTextContent('Researcher')
@@ -168,6 +198,7 @@ describe('Task Monitor client', () => {
       sessionId: 'sparse-session',
       sessions: {
         ...value.sessions,
+        binding: undefined,
         list: {
           getSnapshot: () => sparseSnapshot,
           subscribe: () => () => {},
@@ -190,6 +221,8 @@ describe('Task Monitor client', () => {
     expect(screen.queryByText('Plan mode')).toBeNull()
     expect(document.querySelector('[data-paimind-task-summary-stat="subagents"]')).toBeNull()
     expect(document.querySelector('[data-paimind-task-summary-stat="outputs"]')).toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('No task content yet')
+    expect(screen.getByText('Details').closest('details')).not.toHaveAttribute('open')
   })
 
   it('shows four Subagent rows first and folds the remaining rows behind an explicit disclosure', () => {
