@@ -230,6 +230,40 @@ describe('PAIMind visual experience client', () => {
     second.fixture.disposeEffects()
   })
 
+  it('scrolls the Agent picker with a mouse wheel from either desktop column', async () => {
+    const { fixture } = setup()
+    await waitFor(() => expect(fixture.slots.some(entry => entry.options.id === 'paimind-visual-agent-choice')).toBe(true))
+    const visualSeat = fixture.slots.find(entry => entry.options.id === 'paimind-visual-agent-choice')!
+    const Seat = visualSeat.component as ComponentType
+    const view = render(<Seat {...visualSeat.inject?.() as never} />)
+    const trigger = await screen.findByRole('button', { name: /标准模式/ })
+    fireEvent.click(trigger)
+
+    const dialog = await screen.findByRole('dialog', { name: '选择 Agent 或平台模式' })
+    const list = dialog.querySelector<HTMLElement>('[data-paimind-agent-picker-list]')
+    const detail = dialog.querySelector<HTMLElement>('[data-paimind-agent-picker-detail]')
+    if (list === null || detail === null) throw new Error('Agent picker columns are missing')
+    Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 720 })
+    Object.defineProperty(list, 'clientHeight', { configurable: true, value: 320 })
+
+    const detailWheel = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 96 })
+    detail.dispatchEvent(detailWheel)
+    expect(detailWheel.defaultPrevented).toBe(true)
+    expect(list.scrollTop).toBe(96)
+
+    const listWheel = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 48 })
+    list.dispatchEvent(listWheel)
+    expect(listWheel.defaultPrevented).toBe(false)
+    expect(list.scrollTop).toBe(96)
+
+    const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@paimind/visual-experience"]')?.textContent ?? ''
+    expect(style).toContain('grid-template-rows:minmax(0,1fr) auto;height:min(360px,calc(100vh - 24px))')
+    expect(style).toContain('min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable')
+
+    view.unmount()
+    fixture.disposeEffects()
+  })
+
   it('commits direct Settings radio clicks and reverses PAIMind semantics in both directions', async () => {
     const current = setup(successfulApi(), 'paimind')
     await waitFor(() => expect(current.triggerSources.some(source => source.name === 'paimind-agent')).toBe(true))

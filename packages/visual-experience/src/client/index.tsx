@@ -259,8 +259,8 @@ body[data-paimind-experience='paimind'][data-paimind-composer-overlay='open'] [d
 [data-paimind-agent-picker-trigger]:hover,[data-paimind-agent-picker-trigger]:focus-visible{border-color:var(--paimind-line);background:color-mix(in srgb,var(--paimind-ink) 8%,transparent);outline:none}
 [data-paimind-agent-picker-layer]{position:fixed;inset:0;z-index:1200;pointer-events:none}
 [data-paimind-agent-picker-scrim]{display:none}
-[data-paimind-agent-picker]{position:fixed;display:grid;grid-template-columns:minmax(190px,42%) minmax(240px,1fr);overflow:hidden;max-height:360px;border:1px solid var(--paimind-line);border-radius:18px;background:var(--paimind-glass-strong);box-shadow:0 24px 72px rgba(17,39,63,.2);backdrop-filter:blur(24px) saturate(1.12);-webkit-backdrop-filter:blur(24px) saturate(1.12);pointer-events:auto;animation:paimind-pop-in .18s ease-out}
-[data-paimind-agent-picker-list]{min-width:0;overflow:auto;padding:8px;border-right:1px solid var(--paimind-line)}
+[data-paimind-agent-picker]{position:fixed;display:grid;grid-template-columns:minmax(190px,42%) minmax(240px,1fr);grid-template-rows:minmax(0,1fr) auto;height:min(360px,calc(100vh - 24px));max-height:360px;overflow:hidden;border:1px solid var(--paimind-line);border-radius:18px;background:var(--paimind-glass-strong);box-shadow:0 24px 72px rgba(17,39,63,.2);backdrop-filter:blur(24px) saturate(1.12);-webkit-backdrop-filter:blur(24px) saturate(1.12);pointer-events:auto;animation:paimind-pop-in .18s ease-out}
+[data-paimind-agent-picker-list]{min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:8px;border-right:1px solid var(--paimind-line)}
 [data-paimind-agent-picker-group]+[data-paimind-agent-picker-group]{margin-top:8px;padding-top:8px;border-top:1px solid var(--paimind-line)}
 [data-paimind-agent-picker-group] h3{margin:0;padding:4px 8px;color:var(--paimind-muted);font-size:10px;font-weight:700;line-height:15px;letter-spacing:.08em;text-transform:uppercase}
 [data-paimind-agent-choice]{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:36px;padding:7px 8px;border:0;border-radius:10px;color:var(--paimind-ink);background:transparent;font:inherit;font-size:12px;line-height:18px;text-align:left;cursor:pointer}
@@ -320,7 +320,7 @@ body[data-paimind-experience='paimind'] [data-paimind-agent-center],body[data-pa
   body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure]{max-height:150px;padding:13px 15px}
   [data-paimind-context-launcher] span{display:none}
   [data-paimind-agent-picker-scrim]{display:block;position:absolute;inset:0;background:rgba(4,11,20,.42);pointer-events:auto}
-  [data-paimind-agent-picker]{right:0!important;bottom:0!important;left:0!important;top:auto!important;grid-template-columns:1fr;width:auto!important;max-height:min(76vh,620px);border-width:1px 0 0;border-radius:22px 22px 0 0;animation:paimind-sheet-in .2s ease-out}
+  [data-paimind-agent-picker]{right:0!important;bottom:0!important;left:0!important;top:auto!important;grid-template-columns:1fr;grid-template-rows:auto auto;width:auto!important;height:auto;max-height:min(76vh,620px);border-width:1px 0 0;border-radius:22px 22px 0 0;animation:paimind-sheet-in .2s ease-out}
   [data-paimind-agent-picker-list]{max-height:44vh;border-right:0;border-bottom:1px solid var(--paimind-line)}
   [data-paimind-agent-picker-detail]{padding:16px 18px 22px}
   [data-paimind-experience-setting]{grid-template-columns:1fr;gap:10px}
@@ -817,6 +817,7 @@ export function AgentChoiceSeat({ bridge, mode, locale }: {
   const [style, setStyle] = useState<CSSProperties>({})
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
   const choiceRefs = useRef(new Map<string, HTMLButtonElement>())
   const current = snapshot.choices.find(choice => choice.id === snapshot.current)
   const focused = snapshot.choices.find(choice => choice.id === focusedId) ?? current
@@ -824,22 +825,37 @@ export function AgentChoiceSeat({ bridge, mode, locale }: {
   useEffect(() => { if (!open) setFocusedId(snapshot.current) }, [open, snapshot.current])
   useEffect(() => {
     if (!open || triggerRef.current === null) return
+    const panel = panelRef.current
     const update = (): void => { if (triggerRef.current !== null) setStyle(pickerPosition(triggerRef.current)) }
     const closeOutside = (event: MouseEvent): void => {
       const node = event.target
       if (!(node instanceof Node) || triggerRef.current?.contains(node) === true || panelRef.current?.contains(node) === true) return
       setOpen(false)
     }
+    const routeDetailWheel = (event: WheelEvent): void => {
+      const list = listRef.current
+      const node = event.target
+      if (list === null || !(node instanceof Node) || list.contains(node) || event.deltaY === 0) return
+      const maxScrollTop = list.scrollHeight - list.clientHeight
+      if (maxScrollTop <= 0) return
+      const multiplier = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? 16
+        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? list.clientHeight : 1
+      event.preventDefault()
+      list.scrollTop = Math.max(0, Math.min(maxScrollTop, list.scrollTop + event.deltaY * multiplier))
+    }
     update()
     window.addEventListener('resize', update)
     window.addEventListener('scroll', update, true)
     document.addEventListener('mousedown', closeOutside)
+    panel?.addEventListener('wheel', routeDetailWheel, { passive: false })
     const timer = window.setTimeout(() => { choiceRefs.current.get(focusedId)?.focus() }, 0)
     return () => {
       window.clearTimeout(timer)
       window.removeEventListener('resize', update)
       window.removeEventListener('scroll', update, true)
       document.removeEventListener('mousedown', closeOutside)
+      panel?.removeEventListener('wheel', routeDetailWheel)
     }
   }, [open, focusedId])
 
@@ -877,7 +893,7 @@ export function AgentChoiceSeat({ bridge, mode, locale }: {
         else if (event.key === 'End') { event.preventDefault(); const last = ordered.at(-1); if (last !== undefined) { setFocusedId(last.id); choiceRefs.current.get(last.id)?.focus() } }
       }}
     >
-      <div data-paimind-agent-picker-list>
+      <div ref={listRef} data-paimind-agent-picker-list>
         {groups.map(group => <section key={group.category} data-paimind-agent-picker-group>
           <h3>{categoryLabel(group.category, zh)}</h3>
           {group.choices.map(choice => <button
