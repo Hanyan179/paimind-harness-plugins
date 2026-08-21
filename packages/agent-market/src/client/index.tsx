@@ -588,6 +588,25 @@ async function selectPresetInNativeSeat(
   throw new Error('智能体已选择，但会话绑定或顶部显示未同步')
 }
 
+const authoringTurnBusySessions = new WeakMap<object, Set<string>>()
+const authoringContextQueues = new WeakMap<object, Map<string, Promise<void>>>()
+
+function busyAuthoringSessions(runtime: object): Set<string> {
+  const existing = authoringTurnBusySessions.get(runtime)
+  if (existing !== undefined) return existing
+  const created = new Set<string>()
+  authoringTurnBusySessions.set(runtime, created)
+  return created
+}
+
+function queuedAuthoringContexts(runtime: object): Map<string, Promise<void>> {
+  const existing = authoringContextQueues.get(runtime)
+  if (existing !== undefined) return existing
+  const created = new Map<string, Promise<void>>()
+  authoringContextQueues.set(runtime, created)
+  return created
+}
+
 export class AgentCenterRuntime {
   private disposed = false
   private authoringTurnBusy = false
@@ -686,7 +705,12 @@ export class AgentCenterRuntime {
     }
     const prepared = remoteValue(await boundedAuthoringPromise(
       '准备 Harness 创建上下文', deadline, 10_000,
-      async () => await this.remote.prepareAuthoringTurn({ sessionId, ...input }),
+      async () => await this.remote.prepareAuthoringTurn({
+        sessionId,
+        draft: input.draft,
+        skills: input.skills,
+        locale: input.locale,
+      }),
     ))
     if (prepared.sessionId !== sessionId || !prepared.prepared) throw new Error('Harness cordis 创建上下文未就绪')
     const prefix = input.locale.startsWith('zh') ? '智能体配置' : 'Agent authoring'
@@ -714,8 +738,6 @@ export class AgentCenterRuntime {
     readonly onSessionInvalidated?: () => void
     readonly onProgress?: (visibleText: string) => void
   }): Promise<Readonly<AgentAuthoringTurnResult>> {
-    if (this.authoringTurnBusy) throw new Error('Harness cordis 创建助手仍在处理上一条消息')
-    this.authoringTurnBusy = true
     let disposeProgress: () => void = () => {}
     const api = this.authoringApi
     const deadline = Date.now() + 180_000
@@ -732,6 +754,17 @@ export class AgentCenterRuntime {
     let sessionContaminated = false
     let progressAttached = false
     let publishProgress = (): void => {}
+    let busySessionId: string | null = null
+    const busySessions = busyAuthoringSessions(this)
+    const acquireSession = (candidate: string): void => {
+      if (busySessions.has(candidate)) {
+        throw new Error('这个 Harness cordis 创建会话仍在处理上一条消息')
+      }
+      busySessions.add(candidate)
+      this.authoringTurnBusy = true
+      busySessionId = candidate
+    }
+    if (sessionId !== null) acquireSession(sessionId)
     const requireSessionId = (): string => {
       if (sessionId === null) throw new Error('Harness cordis 创建会话尚未就绪')
       return sessionId
@@ -862,6 +895,8 @@ export class AgentCenterRuntime {
             async () => { await selectPresetInNativeSeat(this.seatControl(), this.sessions, requireSessionId(), 'cordis') },
           )
         }
+        acquireSession(requireSessionId())
+        input.onSessionCreated?.(requireSessionId())
       }
       const sealed = remoteValue(await boundedAuthoringPromise(
         '封锁 Harness 创建会话工具', deadline, 10_000,
@@ -878,7 +913,6 @@ export class AgentCenterRuntime {
       ))
       if (prepared.sessionId !== sessionId || !prepared.prepared) throw new Error('Harness cordis 创建上下文未就绪')
       if (input.sessionId === null) {
-        input.onSessionCreated?.(requireSessionId())
         const prefix = input.locale.startsWith('zh') ? '智能体配置' : 'Agent authoring'
         const subject = input.draft.name.trim() || input.draft.description.trim() || (input.locale.startsWith('zh') ? '新智能体' : 'New Agent')
         await boundedAuthoringRpc('命名 Harness 创建会话', deadline, 5_000, async signal => (
@@ -954,7 +988,8 @@ export class AgentCenterRuntime {
       throw error
     } finally {
       disposeProgress()
-      this.authoringTurnBusy = false
+      if (busySessionId !== null) busySessions.delete(busySessionId)
+      this.authoringTurnBusy = busySessions.size > 0
     }
   }
 
@@ -964,12 +999,21 @@ export class AgentCenterRuntime {
     readonly skills: readonly { readonly name: string; readonly description: string }[]
     readonly locale: string
   }): Promise<void> {
-    const queued = this.authoringContextQueue.then(async () => {
+    const queues = queuedAuthoringContexts(this)
+    const previous = queues.get(input.sessionId) ?? Promise.resolve()
+    const queued = previous.then(async () => {
       const prepared = remoteValue(await this.remote.prepareAuthoringTurn(input))
       if (prepared.sessionId !== input.sessionId || !prepared.prepared) throw new Error('Harness cordis 创建上下文未就绪')
     })
-    this.authoringContextQueue = queued.catch(() => undefined)
-    await queued
+    const tail = queued.catch(() => undefined)
+    queues.set(input.sessionId, tail)
+    this.authoringContextQueue = tail
+    try {
+      await queued
+    } finally {
+      if (queues.get(input.sessionId) === tail) queues.delete(input.sessionId)
+      if (this.authoringContextQueue === tail) this.authoringContextQueue = Promise.resolve()
+    }
   }
 
   /**
@@ -1117,7 +1161,15 @@ export class AgentCenterRuntime {
     return stopWaiting
   }
 
-  dispose(): void { this.disposed = true; this.offSessions(); this.listeners.clear() }
+  dispose(): void {
+    this.disposed = true
+    authoringTurnBusySessions.delete(this)
+    authoringContextQueues.delete(this)
+    this.authoringTurnBusy = false
+    this.authoringContextQueue = Promise.resolve()
+    this.offSessions()
+    this.listeners.clear()
+  }
 
   private async inspectCurrentSession(): Promise<void> {
     if (this.disposed) return
@@ -1519,6 +1571,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     setAuthoringStatus('running')
     setAuthoringContextReady(false)
     setBusy(true)
+    let retainedSessionId = sessionId
     try {
       const result = await props.runtime.author({
         sessionId,
@@ -1527,10 +1580,12 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
         skills: installedSkills.map(skill => ({ name: skill.name, description: skill.description })),
         locale: activeLocale,
         onSessionCreated: createdSessionId => {
+          retainedSessionId = createdSessionId
           setAuthoringSessionId(createdSessionId)
-          setAuthoringContextReady(true)
+          setAuthoringContextReady(false)
         },
         onSessionInvalidated: () => {
+          retainedSessionId = null
           setAuthoringSessionId(null)
           setAuthoringCursor(null)
           setAuthoringContextReady(false)
@@ -1558,7 +1613,9 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     } catch (cause) {
       setAuthoringStatus('error')
       setAuthoringContextReady(false)
-      setError(zh ? `真实创建助手调用失败：${messageOf(cause)}` : `Real creation assistant failed: ${messageOf(cause)}`)
+      setError(zh
+        ? `真实创建助手调用失败：${messageOf(cause)}${retainedSessionId === null ? '' : '。已创建的 Harness 会话仍显示在右侧，草稿没有丢失。'}`
+        : `Real creation assistant failed: ${messageOf(cause)}${retainedSessionId === null ? '' : '. The created Harness Session remains visible on the right and the draft is preserved.'}`)
     } finally { busyRef.current = false; setBusy(false) }
   }
   const continueStarter = (): void => {
@@ -1681,6 +1738,16 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     setError(null)
     setAuthoringStatus('running')
     setAuthoringContextReady(false)
+    const previousSessionId = props.runtime.currentSessionId()
+    let projectedSession = false
+    const stopProjectingSession = props.runtime.subscribeSessions(() => {
+      if (!active || projectedSession) return
+      const currentSessionId = props.runtime.currentSessionId()
+      if (currentSessionId === null || currentSessionId === previousSessionId
+        || !currentSessionId.startsWith(AGENT_AUTHORING_SESSION_PREFIX)) return
+      projectedSession = true
+      setAuthoringSessionId(currentSessionId)
+    })
     void props.runtime.beginAuthoring({
       draft: authoringDraftContext(sourceDraft),
       skills: installedSkills.map(skill => ({ name: skill.name, description: skill.description })),
@@ -1704,8 +1771,8 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
       busyRef.current = false
       setBusy(false)
     })
-    return () => { active = false }
-  }, [activeLocale, authoringSessionId, builderOpen, builderTab, installedSkills, props.runtime, zh])
+    return () => { active = false; stopProjectingSession() }
+  }, [activeLocale, builderOpen, builderTab, installedSkills, props.runtime, zh])
 
   useEffect(() => {
     if (!builderOpen || builderTab !== 'configure' || authoringSessionId === null || authoringCursor === null) return
@@ -1722,6 +1789,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
           }
           busyRef.current = true
           setBusy(true)
+          setError(null)
           setAuthoringStatus('running')
           setAuthoringContextReady(false)
         },

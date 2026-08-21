@@ -464,14 +464,21 @@ describe('Agent Center business UI', () => {
       }),
       cancel: vi.fn().mockResolvedValue({ result: { ok: true, value: { accepted: true } } }),
     }
+    let releaseFirstSeal!: () => void
+    let firstSealPending = true
+    const firstSealGate = new Promise<void>(resolve => { releaseFirstSeal = resolve })
     const runtime = new AgentCenterRuntime(
       null,
       {
         listAudit: vi.fn().mockResolvedValue({ ok: true, value: { migrations: [], verifications: [] } }),
         migrationPlan: vi.fn().mockResolvedValue({ ok: true, value: null }),
-        sealAuthoringSession: vi.fn().mockImplementation(async ({ sessionId }: { readonly sessionId: string }) => ({
-          ok: true, value: { sessionId, agentPreset: 'cordis', sealed: true },
-        })),
+        sealAuthoringSession: vi.fn().mockImplementation(async ({ sessionId }: { readonly sessionId: string }) => {
+          if (firstSealPending) {
+            firstSealPending = false
+            await firstSealGate
+          }
+          return { ok: true, value: { sessionId, agentPreset: 'cordis', sealed: true } }
+        }),
         prepareAuthoringTurn: vi.fn().mockImplementation(async ({ sessionId }: { readonly sessionId: string }) => ({
           ok: true, value: { sessionId, prepared: true },
         })),
@@ -498,7 +505,11 @@ describe('Agent Center business UI', () => {
 
     const onSessionCreated = vi.fn()
     const onProgress = vi.fn()
-    const first = await runtime.author({ sessionId: null, draft, prompt: '根据天气和预算安排周末玩法', skills: [{ name: 'web-research', description: 'Search current facts' }], locale: 'zh-CN', onSessionCreated, onProgress })
+    const firstTurn = runtime.author({ sessionId: null, draft, prompt: '根据天气和预算安排周末玩法', skills: [{ name: 'web-research', description: 'Search current facts' }], locale: 'zh-CN', onSessionCreated, onProgress })
+    await waitFor(() => expect(onSessionCreated).toHaveBeenCalledWith(expect.stringMatching(/^paimind-authoring-/)))
+    expect(authoringApi.prompt).not.toHaveBeenCalled()
+    releaseFirstSeal()
+    const first = await firstTurn
     expect(authoringApi.create).toHaveBeenCalledWith(expect.objectContaining({
       sessionId: expect.stringMatching(/^paimind-authoring-/), agentPreset: 'cordis', workspaceId: 'workspace-recent',
     }), expect.any(AbortSignal))
@@ -563,6 +574,116 @@ describe('Agent Center business UI', () => {
     runtime.dispose()
   })
 
+  it('serializes only the same authoring Session while allowing different Harness Sessions to run concurrently', async () => {
+    const promptReleases = new Map<string, (value: unknown) => void>()
+    const authoringApi = {
+      history: vi.fn().mockResolvedValue({ result: { ok: true, value: { events: [], hasMore: false } } }),
+      prompt: vi.fn().mockImplementation(async ({ sessionId }: { readonly sessionId: string }) => (
+        await new Promise(resolve => { promptReleases.set(sessionId, resolve) })
+      )),
+      cancel: vi.fn().mockResolvedValue({ result: { ok: true, value: { accepted: true } } }),
+      rename: vi.fn(),
+    }
+    const remote = {
+      listAudit: vi.fn().mockResolvedValue({ ok: true, value: { migrations: [], verifications: [] } }),
+      migrationPlan: vi.fn().mockResolvedValue({ ok: true, value: null }),
+      sealAuthoringSession: vi.fn().mockImplementation(async ({ sessionId }: { readonly sessionId: string }) => ({
+        ok: true, value: { sessionId, agentPreset: 'cordis', sealed: true },
+      })),
+      prepareAuthoringTurn: vi.fn().mockImplementation(async ({ sessionId }: { readonly sessionId: string }) => ({
+        ok: true, value: { sessionId, prepared: true },
+      })),
+    }
+    const runtime = new AgentCenterRuntime(
+      null,
+      remote as never,
+      { list: { getSnapshot: () => ({ current: undefined, byId: {} }), subscribe: () => () => {} } } as never,
+      { list: { getSnapshot: () => ({ items: [], recentWorkspaceId: undefined }), subscribe: () => () => {} }, startSession: vi.fn() } as never,
+      { input: { for: () => ({ setDraft: vi.fn() }) } } as never,
+      authoringApi as never,
+    )
+    const draft = {
+      productKind: 'personal' as const, businessCategory: '', name: 'Concurrent Agent', description: 'Prove Session concurrency',
+      basePresetId: 'standard', role: '', goal: '', behavior: '', instructions: '', preferredSkillNames: [],
+    }
+    const first = runtime.author({ sessionId: 'session-authoring-a', draft, prompt: 'first', skills: [], locale: 'en-US' })
+    await waitFor(() => expect(authoringApi.prompt).toHaveBeenCalledTimes(1))
+    await expect(runtime.author({ sessionId: 'session-authoring-a', draft, prompt: 'duplicate', skills: [], locale: 'en-US' }))
+      .rejects.toThrow('这个 Harness cordis 创建会话仍在处理上一条消息')
+
+    const second = runtime.author({ sessionId: 'session-authoring-b', draft, prompt: 'second', skills: [], locale: 'en-US' })
+    await waitFor(() => expect(authoringApi.prompt).toHaveBeenCalledTimes(2))
+    expect(authoringApi.prompt).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 'session-authoring-a' }), expect.any(AbortSignal))
+    expect(authoringApi.prompt).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 'session-authoring-b' }), expect.any(AbortSignal))
+
+    promptReleases.get('session-authoring-a')?.({ rpcId: 'rpc-a', result: { ok: true, value: { accepted: false } } })
+    promptReleases.get('session-authoring-b')?.({ rpcId: 'rpc-b', result: { ok: true, value: { accepted: false } } })
+    await expect(first).rejects.toThrow('真实创建会话未接受配置消息')
+    await expect(second).rejects.toThrow('真实创建会话未接受配置消息')
+    expect(authoringApi.cancel).toHaveBeenCalledTimes(2)
+    runtime.dispose()
+  })
+
+  it('prepares edit Sessions without leaking UI callbacks into the strict authoring wire input', async () => {
+    const sessionListeners = new Set<() => void>()
+    let currentSessionId: string | undefined
+    let selectedPreset: string | null = null
+    const rows: Record<string, { readonly id: string; agentPreset?: string; blank: boolean }> = {}
+    const prepareAuthoringTurn = vi.fn().mockImplementation(async (input: Readonly<Record<string, unknown>>) => {
+      expect(Object.keys(input).sort()).toEqual(['draft', 'locale', 'sessionId', 'skills'])
+      return { ok: true, value: { sessionId: input.sessionId, prepared: true } }
+    })
+    const runtime = new AgentCenterRuntime(
+      () => ({
+        getSnapshot: () => ({ status: 'ready', current: selectedPreset, busy: false, error: null, choices: [] }),
+        select: vi.fn().mockImplementation(async (presetId: string) => {
+          selectedPreset = presetId
+          if (currentSessionId !== undefined) rows[currentSessionId]!.agentPreset = presetId
+          sessionListeners.forEach(listener => { listener() })
+        }),
+      }),
+      {
+        listAudit: vi.fn().mockResolvedValue({ ok: true, value: { migrations: [], verifications: [] } }),
+        migrationPlan: vi.fn().mockResolvedValue({ ok: true, value: null }),
+        sealAuthoringSession: vi.fn().mockImplementation(async ({ sessionId }: { readonly sessionId: string }) => ({
+          ok: true, value: { sessionId, agentPreset: 'cordis', sealed: true },
+        })),
+        prepareAuthoringTurn,
+      } as never,
+      {
+        list: {
+          getSnapshot: () => ({ current: currentSessionId, byId: rows }),
+          subscribe: (listener: () => void) => { sessionListeners.add(listener); return () => { sessionListeners.delete(listener) } },
+        },
+        create: vi.fn().mockImplementation(async ({ sessionId }: { readonly sessionId: string }) => {
+          rows[sessionId] = { id: sessionId, blank: true }
+          currentSessionId = sessionId
+          sessionListeners.forEach(listener => { listener() })
+          return sessionId
+        }),
+        open: vi.fn().mockImplementation((sessionId: string) => { currentSessionId = sessionId }),
+      } as never,
+      { list: { getSnapshot: () => ({ items: [], recentWorkspaceId: undefined }), subscribe: () => () => {} }, startSession: vi.fn() } as never,
+      { input: { for: () => ({ setDraft: vi.fn() }) } } as never,
+      {
+        rename: vi.fn().mockResolvedValue({ result: { ok: true, value: { title: 'Agent authoring', seq: 1 } } }),
+        history: vi.fn().mockResolvedValue({ result: { ok: true, value: { events: [], hasMore: false } } }),
+      } as never,
+    )
+    const result = await runtime.beginAuthoring({
+      draft: {
+        productKind: 'personal', businessCategory: '', name: 'Editable Agent', description: 'Edit with a native Session',
+        basePresetId: 'standard', role: '', goal: '', behavior: '', instructions: '', preferredSkillNames: [],
+      },
+      skills: [],
+      locale: 'en-US',
+    })
+    expect(result.sessionId).toMatch(/^paimind-authoring-/)
+    expect(currentSessionId).toBe(result.sessionId)
+    expect(prepareAuthoringTurn).toHaveBeenCalledOnce()
+    runtime.dispose()
+  })
+
   it('opens native advanced configuration and prevents Skill selection for Minimal', async () => {
     const fixture = services(); const openAdvanced = vi.fn(() => true)
     render(<AgentCenterSection close={() => {}} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={openAdvanced} />)
@@ -580,6 +701,118 @@ describe('Agent Center business UI', () => {
     fireEvent.click(screen.getByRole('button', { name: /Session Skills \(optional\)/ }))
     expect(screen.getByText(/Minimal mode does not enable Session Skills/)).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Session-injected Skills' })).toBeDisabled()
+  })
+
+  it('projects the native authoring Session into the joined Builder workbench before the first turn finishes', async () => {
+    const fixture = services()
+    const onNativeConversationChange = vi.fn()
+    let finishAuthoring!: (result: AuthoringWatchResult) => void
+    fixture.runtime.author.mockImplementation((input: { readonly onSessionCreated?: (sessionId: string) => void }) => {
+      input.onSessionCreated?.('session-authoring-live')
+      return new Promise(resolve => { finishAuthoring = resolve })
+    })
+    render(<AgentCenterSection
+      close={() => {}}
+      api={api()}
+      profiles={fixture.profiles as never}
+      skills={fixture.skills as never}
+      runtime={fixture.runtime as never}
+      locale={locale()}
+      openAdvanced={() => true}
+      onNativeConversationChange={onNativeConversationChange}
+    />)
+    await screen.findByRole('heading', { name: 'Research Agent' })
+    fireEvent.click(screen.getByRole('button', { name: 'Create Personal Agent' }))
+    fireEvent.change(screen.getByLabelText('Describe what it should accomplish'), { target: { value: 'Review launch readiness' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Agent brief' }))
+
+    expect(screen.getByRole('region', { name: 'Create Agent' })).toBeInTheDocument()
+    await waitFor(() => expect(onNativeConversationChange).toHaveBeenCalledWith({
+      sessionId: 'session-authoring-live', interactive: false,
+    }))
+    expect(screen.getByText('Connecting the native Harness configuration conversation')).toBeInTheDocument()
+
+    await act(async () => {
+      finishAuthoring({
+        sessionId: 'session-authoring-live', turn: 1, endSeq: 5,
+        text: 'The native configuration turn completed.', proposal: null,
+      })
+    })
+    await waitFor(() => expect(onNativeConversationChange).toHaveBeenCalledWith({
+      sessionId: 'session-authoring-live', interactive: true,
+    }))
+    expect(screen.getByText('Harness native configuration conversation is on the right')).toBeInTheDocument()
+  })
+
+  it('keeps edit-session initialization alive after projecting the native Session early', async () => {
+    const fixture = services()
+    const onNativeConversationChange = vi.fn()
+    let finishInitialization!: (result: { readonly sessionId: string; readonly endSeq: number }) => void
+    let currentSessionId = 'session-original'
+    let sessionListener: (() => void) | null = null
+    fixture.runtime.currentSessionId.mockImplementation(() => currentSessionId)
+    fixture.runtime.subscribeSessions.mockImplementation(listener => {
+      sessionListener = listener
+      return () => { if (sessionListener === listener) sessionListener = null }
+    })
+    fixture.runtime.beginAuthoring.mockImplementation(() => {
+      currentSessionId = 'paimind-authoring-edit-live'
+      sessionListener?.()
+      return new Promise(resolve => { finishInitialization = resolve })
+    })
+    render(<AgentCenterSection
+      close={() => {}}
+      api={api()}
+      profiles={fixture.profiles as never}
+      skills={fixture.skills as never}
+      runtime={fixture.runtime as never}
+      locale={locale()}
+      openAdvanced={() => true}
+      onNativeConversationChange={onNativeConversationChange}
+    />)
+    await screen.findByRole('heading', { name: 'Research Agent' })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    await waitFor(() => expect(onNativeConversationChange).toHaveBeenCalledWith({
+      sessionId: 'paimind-authoring-edit-live', interactive: false,
+    }))
+
+    await act(async () => { finishInitialization({ sessionId: 'paimind-authoring-edit-live', endSeq: -1 }) })
+    await waitFor(() => expect(onNativeConversationChange).toHaveBeenCalledWith({
+      sessionId: 'paimind-authoring-edit-live', interactive: true,
+    }))
+    expect(screen.getByText('Harness native configuration conversation is on the right')).toBeInTheDocument()
+  })
+
+  it('keeps the projected native Session visible when the opening authoring turn fails', async () => {
+    const fixture = services()
+    const onNativeConversationChange = vi.fn()
+    fixture.runtime.author.mockImplementation(async (input: { readonly onSessionCreated?: (sessionId: string) => void }) => {
+      input.onSessionCreated?.('session-authoring-recovery')
+      throw new Error('simulated native turn failure')
+    })
+    render(<AgentCenterSection
+      close={() => {}}
+      api={api()}
+      profiles={fixture.profiles as never}
+      skills={fixture.skills as never}
+      runtime={fixture.runtime as never}
+      locale={locale()}
+      openAdvanced={() => true}
+      onNativeConversationChange={onNativeConversationChange}
+    />)
+    await screen.findByRole('heading', { name: 'Research Agent' })
+    fireEvent.click(screen.getByRole('button', { name: 'Create Personal Agent' }))
+    fireEvent.change(screen.getByLabelText('Describe what it should accomplish'), { target: { value: 'Recover a failed opening turn' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Agent brief' }))
+
+    const alerts = await screen.findAllByRole('alert')
+    expect(alerts).not.toHaveLength(0)
+    expect(alerts.every(alert => alert.textContent?.includes('The created Harness Session remains visible on the right and the draft is preserved.'))).toBe(true)
+    await waitFor(() => expect(onNativeConversationChange).toHaveBeenLastCalledWith({
+      sessionId: 'session-authoring-recovery', interactive: false,
+    }))
+    expect(screen.getByRole('region', { name: 'Create Agent' })).toBeInTheDocument()
+    expect(screen.getByText('Native configuration conversation failed')).toBeInTheDocument()
   })
 
   it('shows platform modes and business Agents without explanatory category copy', async () => {
