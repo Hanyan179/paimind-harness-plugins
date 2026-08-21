@@ -892,6 +892,8 @@ describe('Agent Center business UI', () => {
     }))
     expect(screen.getByRole('button', { name: 'Saved' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: 'Back to Center' }))
+    expect(fixture.runtime.beginAgentCenterBrowse).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('alert')).toBeNull()
     expect(await screen.findByRole('heading', { name: 'PDM Assistant' })).toBeInTheDocument()
     expect(screen.getByText('Business Agent · Locally managed')).toBeInTheDocument()
     const businessCard = screen.getByRole('heading', { name: 'PDM Assistant' }).closest('[data-paimind-agent-card]')
@@ -1020,8 +1022,15 @@ describe('Agent Center business UI', () => {
     controller.dispose()
   })
 
-  it('releases the Center surface when native Shell navigation is activated', async () => {
+  it('keeps a selected authoring history Session inside the Center workbench', async () => {
     const fixture = services()
+    let browsing = false
+    vi.mocked(fixture.runtime.beginAgentCenterBrowse).mockImplementation(() => { browsing = true })
+    vi.mocked(fixture.runtime.resumeSelectedAuthoringSession).mockImplementation(() => { browsing = false })
+    vi.mocked(fixture.runtime.currentAuthoringSessionId).mockImplementation(() => (
+      browsing ? null : fixture.runtime.currentSessionId()
+    ))
+    fixture.runtime.openSession('paimind-authoring-selected')
     const controller = new PaimindProductSurfaceController('agent-center', window, document)
     const center = document.createElement('main')
     const nativeConversation = document.createElement('div')
@@ -1029,26 +1038,74 @@ describe('Agent Center business UI', () => {
     nativeConversation.append(document.createElement('section'))
     center.append(nativeConversation)
     document.body.append(center)
-    const navigate = vi.fn()
     render(<>
-      <button type="button" onClick={navigate}>Dollar General workspace</button>
+      <div role="treeitem" aria-selected="true">Selected authoring Session</div>
+      <AgentCenterTrigger wide controller={controller} locale={locale()} onBrowse={fixture.runtime.beginAgentCenterBrowse} />
+      <AgentCenterSurface controller={controller} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />
+    </>)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Agent Center' }))
+    await screen.findByRole('main', { name: 'Agent Center' })
+    expect(browsing).toBe(true)
+    fireEvent.click(screen.getByRole('treeitem', { name: 'Selected authoring Session' }))
+    await waitFor(() => expect(fixture.runtime.resumeSelectedAuthoringSession).toHaveBeenCalledOnce())
+    expect(browsing).toBe(false)
+    expect(screen.getByRole('main', { name: 'Agent Center' })).toBeInTheDocument()
+    controller.dispose()
+  })
+
+  it('keeps the native question card interactive while an authoring Turn is waiting', async () => {
+    const fixture = services()
+    vi.mocked(fixture.runtime.currentAuthoringSessionId).mockImplementation(() => (
+      fixture.runtime.currentSessionId() === 'session-authoring' ? 'session-authoring' : null
+    ))
+    let finishAuthoring: ((result: Readonly<{
+      sessionId: string
+      turn: number
+      endSeq: number
+      text: string
+      proposal: null
+    }>) => void) | null = null
+    vi.mocked(fixture.runtime.author).mockImplementation(({ onSessionCreated }) => {
+      fixture.runtime.openSession('session-authoring')
+      onSessionCreated?.('session-authoring')
+      return new Promise(resolve => { finishAuthoring = resolve })
+    })
+    const controller = new PaimindProductSurfaceController('agent-center', window, document)
+    const center = document.createElement('main')
+    const nativeConversation = document.createElement('div')
+    nativeConversation.dataset.slot = 'conversation'
+    const nativeContent = document.createElement('section')
+    const answer = document.createElement('button')
+    answer.type = 'button'
+    answer.setAttribute('role', 'radio')
+    answer.setAttribute('aria-label', 'B2B sales follow-up')
+    const choose = vi.fn()
+    answer.addEventListener('click', choose)
+    nativeContent.append(answer)
+    nativeConversation.append(nativeContent)
+    center.append(nativeConversation)
+    document.body.append(center)
+    render(<>
       <AgentCenterTrigger wide controller={controller} locale={locale()} />
       <AgentCenterSurface controller={controller} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />
     </>)
 
     fireEvent.click(screen.getByRole('button', { name: 'Open Agent Center' }))
     await screen.findByRole('main', { name: 'Agent Center' })
-    expect(nativeConversation).toHaveAttribute('inert')
+    fireEvent.click(screen.getByRole('button', { name: 'Create Personal Agent' }))
+    fireEvent.change(screen.getByLabelText('What Agent do you want to create?'), { target: { value: 'Create a customer follow-up Agent' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
 
-    const workspace = screen.getByRole('button', { name: 'Dollar General workspace' })
-    workspace.focus()
-    fireEvent.click(workspace)
+    await screen.findByText('Creation assistant is working in the native conversation')
+    await waitFor(() => expect(nativeConversation).not.toHaveAttribute('inert'))
+    fireEvent.click(screen.getByRole('radio', { name: 'B2B sales follow-up' }))
+    expect(choose).toHaveBeenCalledOnce()
+    expect(screen.getByRole('main', { name: 'Agent Center' })).toBeInTheDocument()
 
-    await waitFor(() => expect(screen.queryByRole('main', { name: 'Agent Center' })).toBeNull())
-    expect(navigate).toHaveBeenCalledOnce()
-    expect(workspace).toHaveFocus()
-    expect(nativeConversation).not.toHaveAttribute('inert')
-    expect(nativeConversation).not.toHaveAttribute('aria-hidden')
+    await act(async () => {
+      finishAuthoring?.({ sessionId: 'session-authoring', turn: 1, endSeq: 3, text: 'Draft ready', proposal: null })
+    })
     controller.dispose()
   })
 
@@ -1209,8 +1266,10 @@ describe('Agent Center business UI', () => {
     const backToCenter = within(secondBuilder).getByRole('button', { name: 'Back to Center' })
     await waitFor(() => expect(backToCenter).toBeEnabled())
     vi.mocked(fixture.runtime.openSession).mockClear()
+    vi.mocked(fixture.runtime.beginAgentCenterBrowse).mockClear()
     fireEvent.click(backToCenter)
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Create Agent' })).toBeNull())
+    expect(fixture.runtime.beginAgentCenterBrowse).toHaveBeenCalledOnce()
     expect(fixture.runtime.currentSessionId()).toBe('session-second-origin')
     expect(fixture.runtime.openSession).not.toHaveBeenCalledWith('session-origin')
     controller.dispose()

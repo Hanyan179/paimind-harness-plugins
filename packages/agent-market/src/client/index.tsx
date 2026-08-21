@@ -533,7 +533,7 @@ export class AgentCenterRuntime {
   subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
 
   async start(presetId: string, profile?: AgentBusinessProfile): Promise<string> {
-    this.error = null; this.publish()
+    this.notice = null; this.error = null; this.publish()
     const sessionId = await waitForBlankSession(this.sessions, this.workspaces)
     await selectPresetInNativeSeat(this.seatControl(), this.sessions, sessionId, presetId)
     if (profile !== undefined) {
@@ -559,7 +559,7 @@ export class AgentCenterRuntime {
 
   /** Prepare a saved Preset in a native blank Session; its native composer owns every test turn. */
   async beginTest(presetId: string, profile: AgentBusinessProfile): Promise<string> {
-    this.error = null; this.publish()
+    this.notice = null; this.error = null; this.publish()
     const sessionId = await waitForBlankSession(this.sessions, this.workspaces)
     await selectPresetInNativeSeat(this.seatControl(), this.sessions, sessionId, presetId)
     remoteValue(await this.remote.bindSession({
@@ -850,9 +850,12 @@ export class AgentCenterRuntime {
    * persisted Session still backs Harness's unsaved New Session surface.
    */
   beginAgentCenterBrowse(): void {
-    if (this.agentCenterBrowseActive) return
+    const browseChanged = !this.agentCenterBrowseActive
     this.agentCenterBrowseActive = true
-    for (const listener of this.sessionListeners) listener()
+    const noticeChanged = this.notice !== null
+    this.notice = null
+    if (noticeChanged) this.publish()
+    if (browseChanged) for (const listener of this.sessionListeners) listener()
   }
 
   /** Release browse suppression when the user explicitly selects a history row. */
@@ -1756,13 +1759,19 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
         event.preventDefault()
         event.stopPropagation()
         dismissedAuthoringSessionId.current = authoringSessionId
+        // Returning from the Builder is a browse intent. The product surface
+        // may now restore the Session that was active before the Center
+        // opened; if that Session is an older cordis history row, suppress its
+        // automatic Builder resume until the user explicitly selects it.
+        props.runtime.beginAgentCenterBrowse()
+        setError(null)
         setDraft(null)
         window.setTimeout(() => { builderTriggerRef.current?.focus() }, 0)
       }
     }
     builder.addEventListener('keydown', onKeyDown)
     return () => { builder.removeEventListener('keydown', onKeyDown) }
-  }, [builderOpen, busy])
+  }, [authoringSessionId, builderOpen, busy, props.runtime])
 
   const openBuilder = (nextDraft: Draft, preserveTrigger = false): void => {
     if (!preserveTrigger) builderTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -1809,6 +1818,11 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
         onSessionCreated: createdSessionId => {
           setAuthoringSessionId(createdSessionId)
           setAuthoringContextReady(false)
+          // Creating from the Center is now an explicit authoring intent. End
+          // browse suppression immediately so the native question card,
+          // message projection, and history row stay attached to this exact
+          // Harness Session while its first Turn is still running.
+          props.runtime.resumeSelectedAuthoringSession()
         },
         onSessionInvalidated: () => {
           setAuthoringSessionId(null)
@@ -1857,6 +1871,8 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   const closeBuilder = (): void => {
     if (busyRef.current) return
     dismissedAuthoringSessionId.current = authoringSessionId
+    props.runtime.beginAgentCenterBrowse()
+    setError(null)
     setDraft(null)
     setPendingUpdate(null)
     window.setTimeout(() => { builderTriggerRef.current?.focus() }, 0)
@@ -2064,7 +2080,10 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     if (builderTab === 'configure') {
       props.onNativeConversationChange?.({
         sessionId: authoringSessionId,
-        interactive: authoringSessionId !== null && authoringStatus === 'idle' && pendingUpdate === null && authoringContextReady,
+        // Harness may render its required question card while the authoring
+        // Turn is running. Inerting the whole native conversation also inerts
+        // that answer control, so Harness must own its interaction state here.
+        interactive: authoringSessionId !== null && pendingUpdate === null,
       })
       return
     }
@@ -2204,9 +2223,11 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   const nativeConversationStatus = builderTab === 'configure'
     ? authoringStatus === 'error'
       ? { tone: 'error', title: zh ? '原生配置对话连接失败' : 'Native configuration conversation failed', detail: zh ? '说明书草稿仍保留；返回中心后重新进入即可重试。' : 'The brief is preserved. Return to the Center and reopen it to retry.' }
-      : authoringSessionId === null || authoringStatus === 'running'
+      : authoringSessionId === null
         ? { tone: 'busy', title: zh ? '正在连接 Harness 原生配置对话' : 'Connecting the native Harness configuration conversation', detail: zh ? '主对话的消息、流式回复和输入区会显示在右侧。' : 'The native message timeline, streaming replies, and composer appear on the right.' }
-        : pendingUpdate !== null
+        : authoringStatus === 'running'
+          ? { tone: 'busy', title: zh ? '创建助手正在原生对话中处理' : 'Creation assistant is working in the native conversation', detail: zh ? '如出现原生提问卡，请直接回答；Harness 会在同一轮继续创建。' : 'Answer any native question card directly; Harness will continue the same Turn.' }
+          : pendingUpdate !== null
           ? { tone: 'warning', title: zh ? '请先确认本轮建议' : 'Confirm this proposal first', detail: zh ? '保留或撤销说明书更新后，原生输入区会继续可用。' : 'Keep or undo the brief update to re-enable the native composer.' }
           : !authoringContextReady
             ? { tone: 'busy', title: zh ? '正在同步说明书上下文' : 'Syncing the brief context', detail: zh ? '同步完成后可直接在主对话继续调整。' : 'Continue in the native conversation after synchronization completes.' }
@@ -2393,12 +2414,12 @@ function installAgentCenterSurfaceInteraction(
     const trigger = element?.closest<HTMLElement>('[data-paimind-product-trigger]')
     if (trigger?.dataset.paimindProductTrigger === controller.id) return
     const sessionRow = element?.closest<HTMLElement>('[role="treeitem"][aria-selected]')
-    const explicitSessionNavigation = sessionRow?.getAttribute('aria-selected') === 'false'
-    if (explicitSessionNavigation) onSessionNavigationIntent()
+    const sessionNavigationIntent = sessionRow !== null
+    if (sessionNavigationIntent) onSessionNavigationIntent()
     const previousSessionId = currentSessionId()
     view.queueMicrotask(() => {
       const nextSessionId = currentSessionId()
-      if ((nextSessionId !== previousSessionId || explicitSessionNavigation)
+      if ((nextSessionId !== previousSessionId || sessionNavigationIntent)
         && currentAuthoringSessionId() === nextSessionId) return
       onOutsideNavigation()
       controller.close(false)
