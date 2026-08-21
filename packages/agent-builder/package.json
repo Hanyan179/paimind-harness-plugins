@@ -12,6 +12,7 @@
     "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
     "./remote": { "types": "./lib/types/remote.d.ts", "default": "./lib/remote.js" },
     "./typert": { "types": "./lib/types/typert.d.ts", "default": "./lib/typert.js" },
+    "./client-contract": { "types": "./lib/types/client-contract.d.ts", "default": "./lib/client-contract.js" },
     "./package.json": "./package.json"
   },
   "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
@@ -26,7 +27,7 @@
     "@testing-library/react": "^16.3.2"
   },
   "paimindBuild": {
-    "node": ["src/index.ts", "src/invariant.ts", "src/remote.ts", "src/typert.ts"]
+    "node": ["src/index.ts", "src/invariant.ts", "src/remote.ts", "src/typert.ts", "src/client-contract.ts"]
   },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }

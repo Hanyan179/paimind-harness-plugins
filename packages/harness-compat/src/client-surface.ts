@@ -89,9 +89,16 @@ interface SavedAttribute {
 
 interface ProductCenterHostState {
   readonly target: PaimindProductCenterHost
+  nativeConversationContent: HTMLElement
+  readonly nativeConversationContentLeases: Array<Readonly<{
+    element: HTMLElement
+    marker: SavedAttribute
+  }>>
   readonly inert: SavedAttribute
   readonly ariaHidden: SavedAttribute
   readonly hostMarker: SavedAttribute
+  readonly nativeConversationMarker: SavedAttribute
+  readonly nativeConversationDisabledMarker: SavedAttribute
   readonly hostPosition: string
   readonly hostPositionPriority: string
   readonly hostHadStyle: boolean
@@ -100,6 +107,9 @@ interface ProductCenterHostState {
 }
 
 const PRODUCT_CENTER_HOST_MARKER = 'data-paimind-product-center-host'
+const PRODUCT_CENTER_NATIVE_CONVERSATION_MARKER = 'data-paimind-product-center-native-conversation'
+const PRODUCT_CENTER_NATIVE_CONVERSATION_DISABLED_MARKER = 'data-paimind-product-center-native-conversation-disabled'
+const PRODUCT_CENTER_NATIVE_CONVERSATION_CONTENT_MARKER = 'data-paimind-product-center-native-conversation-content'
 const productCenterHosts = new WeakMap<HTMLElement, ProductCenterHostState>()
 
 function savedAttribute(element: HTMLElement, name: string): SavedAttribute {
@@ -109,6 +119,21 @@ function savedAttribute(element: HTMLElement, name: string): SavedAttribute {
 function restoreAttribute(element: HTMLElement, name: string, saved: SavedAttribute): void {
   if (!saved.present) element.removeAttribute(name)
   else element.setAttribute(name, saved.value ?? '')
+}
+
+/**
+ * RC8 renders one native Conversation content root directly inside its Slot.
+ * Keep this version-specific seam private to the compatibility package and
+ * fail closed rather than exposing the Slot's child structure to consumers.
+ */
+function resolveNativeConversationContent(nativeConversation: HTMLElement): HTMLElement | null {
+  if (!nativeConversation.isConnected || nativeConversation.children.length !== 1) return null
+  const content = nativeConversation.firstElementChild
+  if (content === null) return null
+  const view = nativeConversation.ownerDocument.defaultView
+  const isHtmlElement = view === null ? content instanceof HTMLElement : content instanceof view.HTMLElement
+  if (!isHtmlElement || content.parentElement !== nativeConversation || !content.isConnected) return null
+  return content as HTMLElement
 }
 
 /**
@@ -123,19 +148,41 @@ export function resolvePaimindProductCenterHost(
   const nativeConversation = anchors[0]!
   const mount = nativeConversation.parentElement
   if (mount === null || mount === doc.body || mount === doc.documentElement || !mount.isConnected) return null
+  if (resolveNativeConversationContent(nativeConversation) === null) return null
   return Object.freeze({ mount, nativeConversation })
 }
 
-function validProductCenterHost(target: PaimindProductCenterHost): boolean {
+function validProductCenterHost(target: PaimindProductCenterHost): HTMLElement | null {
   const { mount, nativeConversation } = target
   const doc = nativeConversation.ownerDocument
-  return mount.ownerDocument === doc
+  if (!(mount.ownerDocument === doc
     && nativeConversation.isConnected
     && mount.isConnected
     && nativeConversation.matches('[data-slot="conversation"]')
     && nativeConversation.parentElement === mount
     && mount !== doc.body
-    && mount !== doc.documentElement
+    && mount !== doc.documentElement)) return null
+  return resolveNativeConversationContent(nativeConversation)
+}
+
+/**
+ * Follow Harness's legitimate Session-to-Session content-root replacement
+ * without ever changing the leased Slot anchor or its owning center column.
+ * A still-connected old root or a pre-marked replacement is ambiguous and
+ * therefore remains fail-closed.
+ */
+function reconcileNativeConversationContent(
+  state: ProductCenterHostState,
+  next: HTMLElement,
+): boolean {
+  const current = state.nativeConversationContent
+  if (current === next) return next.getAttribute(PRODUCT_CENTER_NATIVE_CONVERSATION_CONTENT_MARKER) === ''
+  if (current.isConnected || next.hasAttribute(PRODUCT_CENTER_NATIVE_CONVERSATION_CONTENT_MARKER)) return false
+  const marker = savedAttribute(next, PRODUCT_CENTER_NATIVE_CONVERSATION_CONTENT_MARKER)
+  next.setAttribute(PRODUCT_CENTER_NATIVE_CONVERSATION_CONTENT_MARKER, '')
+  state.nativeConversationContent = next
+  state.nativeConversationContentLeases.push(Object.freeze({ element: next, marker }))
+  return true
 }
 
 /**
@@ -150,10 +197,14 @@ function validProductCenterHost(target: PaimindProductCenterHost): boolean {
 export function installPaimindProductCenterHost(
   target: PaimindProductCenterHost,
 ): (() => void) | null {
-  if (!validProductCenterHost(target)) return null
+  const nativeConversationContent = validProductCenterHost(target)
+  if (nativeConversationContent === null) return null
   const existing = productCenterHosts.get(target.nativeConversation)
   if (existing !== undefined) {
-    if (existing.target.mount !== target.mount) return null
+    if (
+      existing.target.mount !== target.mount
+      || !reconcileNativeConversationContent(existing, nativeConversationContent)
+    ) return null
     existing.references += 1
     let disposed = false
     return () => {
@@ -169,9 +220,16 @@ export function installPaimindProductCenterHost(
   const positioned = computedPosition === '' || computedPosition === 'static'
   const state: ProductCenterHostState = {
     target: Object.freeze({ mount, nativeConversation }),
+    nativeConversationContent,
+    nativeConversationContentLeases: [{
+      element: nativeConversationContent,
+      marker: savedAttribute(nativeConversationContent, PRODUCT_CENTER_NATIVE_CONVERSATION_CONTENT_MARKER),
+    }],
     inert: savedAttribute(nativeConversation, 'inert'),
     ariaHidden: savedAttribute(nativeConversation, 'aria-hidden'),
     hostMarker: savedAttribute(mount, PRODUCT_CENTER_HOST_MARKER),
+    nativeConversationMarker: savedAttribute(mount, PRODUCT_CENTER_NATIVE_CONVERSATION_MARKER),
+    nativeConversationDisabledMarker: savedAttribute(mount, PRODUCT_CENTER_NATIVE_CONVERSATION_DISABLED_MARKER),
     hostPosition: mount.style.getPropertyValue('position'),
     hostPositionPriority: mount.style.getPropertyPriority('position'),
     hostHadStyle: mount.hasAttribute('style'),
@@ -182,6 +240,9 @@ export function installPaimindProductCenterHost(
   nativeConversation.setAttribute('inert', '')
   nativeConversation.setAttribute('aria-hidden', 'true')
   mount.setAttribute(PRODUCT_CENTER_HOST_MARKER, '')
+  mount.removeAttribute(PRODUCT_CENTER_NATIVE_CONVERSATION_MARKER)
+  mount.removeAttribute(PRODUCT_CENTER_NATIVE_CONVERSATION_DISABLED_MARKER)
+  nativeConversationContent.setAttribute(PRODUCT_CENTER_NATIVE_CONVERSATION_CONTENT_MARKER, '')
   if (positioned) mount.style.setProperty('position', 'relative')
 
   let disposed = false
@@ -192,6 +253,40 @@ export function installPaimindProductCenterHost(
   }
 }
 
+/**
+ * Reveal the one already-mounted native Conversation while a Product Center
+ * uses a split authoring layout. This never creates, reparents, or renders a
+ * second conversation tree; it only toggles the reversible host lease.
+ */
+export function setPaimindProductCenterNativeConversation(
+  target: PaimindProductCenterHost,
+  visible: boolean,
+  interactive = true,
+): boolean {
+  const state = productCenterHosts.get(target.nativeConversation)
+  const nativeConversationContent = validProductCenterHost(target)
+  if (
+    state === undefined
+    || state.target.mount !== target.mount
+    || nativeConversationContent === null
+    || !reconcileNativeConversationContent(state, nativeConversationContent)
+  ) return false
+  if (visible) {
+    if (interactive) restoreAttribute(target.nativeConversation, 'inert', state.inert)
+    else target.nativeConversation.setAttribute('inert', '')
+    restoreAttribute(target.nativeConversation, 'aria-hidden', state.ariaHidden)
+    target.mount.setAttribute(PRODUCT_CENTER_NATIVE_CONVERSATION_MARKER, '')
+    if (interactive) target.mount.removeAttribute(PRODUCT_CENTER_NATIVE_CONVERSATION_DISABLED_MARKER)
+    else target.mount.setAttribute(PRODUCT_CENTER_NATIVE_CONVERSATION_DISABLED_MARKER, '')
+  } else {
+    target.nativeConversation.setAttribute('inert', '')
+    target.nativeConversation.setAttribute('aria-hidden', 'true')
+    target.mount.removeAttribute(PRODUCT_CENTER_NATIVE_CONVERSATION_MARKER)
+    target.mount.removeAttribute(PRODUCT_CENTER_NATIVE_CONVERSATION_DISABLED_MARKER)
+  }
+  return true
+}
+
 function releaseProductCenterHost(state: ProductCenterHostState): void {
   state.references -= 1
   if (state.references > 0) return
@@ -200,6 +295,11 @@ function releaseProductCenterHost(state: ProductCenterHostState): void {
   restoreAttribute(nativeConversation, 'inert', state.inert)
   restoreAttribute(nativeConversation, 'aria-hidden', state.ariaHidden)
   restoreAttribute(mount, PRODUCT_CENTER_HOST_MARKER, state.hostMarker)
+  restoreAttribute(mount, PRODUCT_CENTER_NATIVE_CONVERSATION_MARKER, state.nativeConversationMarker)
+  restoreAttribute(mount, PRODUCT_CENTER_NATIVE_CONVERSATION_DISABLED_MARKER, state.nativeConversationDisabledMarker)
+  for (const lease of state.nativeConversationContentLeases) {
+    restoreAttribute(lease.element, PRODUCT_CENTER_NATIVE_CONVERSATION_CONTENT_MARKER, lease.marker)
+  }
   if (!state.positioned) return
   if (state.hostPosition === '') mount.style.removeProperty('position')
   else mount.style.setProperty('position', state.hostPosition, state.hostPositionPriority)
@@ -572,6 +672,7 @@ export function installPaimindProductSurfaceInteraction(
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== 'Escape') return
+    if (root.querySelector('[data-paimind-product-escape-scope]') !== null) return
     event.preventDefault()
     controller.close()
   }

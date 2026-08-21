@@ -215,7 +215,7 @@ describe('Skill Market business UI', () => {
     const controller = new PaimindProductSurfaceController('skill-center', window, document)
     render(<>
       <SkillCenterTrigger wide={false} controller={controller} locale={locale()} />
-      <div data-testid="harness-center"><section data-slot="conversation">Native conversation</section></div>
+      <div data-testid="harness-center"><section data-slot="conversation"><div>Native conversation</div></section></div>
       <SkillCenterSurface controller={controller} api={api()} installer={installer() as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />
     </>)
     const trigger = screen.getByRole('button', { name: 'Open Skill Center' })
@@ -223,8 +223,10 @@ describe('Skill Market business UI', () => {
     fireEvent.click(trigger)
     const surface = await screen.findByRole('main', { name: 'Skill Center' })
     const center = screen.getByTestId('harness-center')
-    const conversation = screen.getByText('Native conversation')
+    const conversationContent = screen.getByText('Native conversation')
+    const conversation = conversationContent.closest<HTMLElement>('[data-slot="conversation"]')!
     expect(surface.parentElement).toBe(center)
+    expect(conversationContent).toHaveAttribute('data-paimind-product-center-native-conversation-content')
     expect(conversation).toHaveAttribute('inert')
     expect(conversation).toHaveAttribute('aria-hidden', 'true')
     expect(trigger).toHaveAttribute('aria-current', 'page')
@@ -237,6 +239,7 @@ describe('Skill Market business UI', () => {
     await waitFor(() => expect(screen.queryByRole('main', { name: 'Skill Center' })).toBeNull())
     expect(conversation).not.toHaveAttribute('inert')
     expect(conversation).not.toHaveAttribute('aria-hidden')
+    expect(conversationContent).not.toHaveAttribute('data-paimind-product-center-native-conversation-content')
     expect(trigger).not.toHaveAttribute('aria-current')
     controller.dispose()
   })

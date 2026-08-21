@@ -2,11 +2,12 @@
 
 ## 当前状态
 
-历史主链路为 `Product E2E Verified`，最近验收日期为 2026-08-17。2026-08-21 原生 Shell 与统一 Builder 重构已完成 Source Review（源码检查）、定向自动化验证和本地 Browser E2E（浏览器端到端）；共享测试环境验收仍单列为待办。当前规范为 [`../product/RQ-106-agent-center-prd.md`](../product/RQ-106-agent-center-prd.md)。历史只读目录验收已被“平台智能体 + 我的智能体 + 真实会话验证”替代。
+历史主链路为 `Product E2E Verified`，最近共享环境验收日期为 2026-08-17。2026-08-21 原生 Shell、统一 Builder 和真实 AI 创建链路已在独立 Worktree（工作树）、临时 `DSH_HOME`、动态端口和独立 Chrome Context（浏览器上下文）完成 Local Pre-Acceptance（本地预验收）。此前把前端本地规则造成的字段同步当作“创建助手真实 AI”的错误结论仍保持撤回；当前实现只使用 Harness 原生 `cordis` Session（会话）与原生 Conversation（对话）：Builder 只投影说明书和待确认提案，不拥有第二套聊天记录或消息运行时。共享测试环境验收继续单列为待办。当前规范为 [`../product/RQ-106-agent-center-prd.md`](../product/RQ-106-agent-center-prd.md)。
 
 ## 验收入口
 
-- URL：`http://127.0.0.1:3080/`
+- 本轮隔离验收 URL：`http://127.0.0.1:65519/`；`DSH_HOME=/tmp/paimind-agent-final-dsh.qCmbfz`，Harness `0.1.0-rc.8`。该临时运行状态在取证后停止并清理，截图和脱敏事件摘要保存在仓库外证据目录。
+- 历史本地 URL：`http://127.0.0.1:3080/` 仅对应下方 2026-08-16 至 2026-08-21 的旧证据，不代表当前端口、当前构建或本次验收结果。
 - 入口：`侧边栏 → 智能体中心`
 - 高级入口：`智能体中心 → 高级配置` 打开 Harness 原生 `Agent Presets`
 
@@ -25,28 +26,66 @@
 11. 技能中心可发现全部真实已安装 Skill；个人智能体新会话只注入已封装 Skill，未选择技能不进入 `skill-catalog`。
 12. 通过类型检查、构建、插件隔离以及桌面/受限宽度浏览器检查。
 13. 新建业务智能体必须先复制真实 Harness Preset，再把产品归属与分类写入同一 Preset 的 PAIMind Profile；保存后出现在业务目录，并可编辑、删除、设为默认和开始真实对话。
-14. 创建个人智能体先打开 Purpose-first（用途优先）的紧凑草稿弹窗，用户描述用途并可确认名称与基础运行模式；继续后进入完整 Builder，并可通过右侧自然语言对话同步角色、目标、行为规范、补充要求和已安装会话技能。只有最终保存才创建真实 Harness Preset。
-15. 智能体中心和 Builder 只占用 Harness 原生对话中央列；Sidebar 保持可见，不出现产品自有顶栏、独立返回栏或整页模态遮罩，Sidebar 内不重复展示“助手”目录。
-16. 创建与编辑复用同一 Builder；配置对话产生的变更可确认或撤回，会话技能默认折叠并按需披露搜索、分类、只看已选和完整列表。
-17. 测试对话只运行已保存配置。未保存草稿必须提示先保存；保存后测试使用同一真实 Agent Preset 与配置版本，不创建临时 Agent 或 Preset 副本。
+14. 创建个人智能体先打开 Purpose-first（用途优先）的紧凑草稿弹窗，用户描述用途并可确认名称与基础运行模式；继续后必须创建 Harness 原生 `cordis` Session，并通过 `sessions.open(sessionId)` 切换到 Harness 唯一原生 Conversation。用户消息只包含用户实际输入；当前说明书、已安装 Skill 与语言通过 Host 侧隐藏动态 System Context（系统上下文）注入，不得序列化进用户消息或原生对话历史。不得用前端正则、固定模板或字符串拼接冒充创建助手。只有最终保存才创建真实 Harness Preset。
+15. 智能体中心和 Builder 只占用 Harness 原生对话中央列；Sidebar 保持可见，不出现产品自有顶栏、独立返回栏或整页模态遮罩，Sidebar 内不重复展示“助手”目录。Builder 中的“配置对话”只表示当前原生 Session 的受控入口和说明书投影，不得实现第二套 Composer（输入框）、Transcript（消息历史）或聊天前端。
+16. 创建与编辑复用同一 Builder；同一次配置过程的全部轮次复用同一个 `cordis` Session，并由 Harness 原生 Conversation 保存和展示历史。只有正常完成且包含可见助手回复的模型轮次才可以生成 Proposal（提案）；提案进入待确认状态后，用户必须选择 Keep（保留更新）或 Undo（撤销），未处理前不能继续发送或保存。会话技能默认折叠并按需披露搜索、分类、只看已选和完整列表。
+17. 测试只运行已保存配置。未保存草稿必须提示先保存；保存后每次测试创建一个新的 Harness 原生 Session，选择刚保存的同一 Agent Preset 与配置版本，再通过 `sessions.open(testSessionId)` 进入原生 Conversation。不得复用创建助手 Session，也不得创建临时 Agent 或 Preset 副本。
 18. Harness 原生 `cordis` 只承担“个人智能体创建助手”能力。智能体中心入口和主对话 `@` 入口汇入同一 Builder，不新增 PAIMind Agent 实体、ID、存储、运行时或权限模型。
+19. Harness 原生 Conversation 必须显示真实模型的等待、思考和可见流式文本；Builder 只监听同一原生 Session 的完成事件并把结构化提案投影到说明书，不另存或重绘第二份消息历史。模型失败、取消、超时、无可用模型或非 `completed` 结束时不得生成提案，也不得回退成本地规则结果。
+20. 真实 AI 验收必须能通过创建参数、创建结果或原生 Session Header（会话头）核对该创建会话使用 `agentPreset=cordis`，并在原生记录中核对用户输入、带模型路由的请求、可见助手回复和 `turn/end reason=completed`；字段变化、页面截图、模拟测试返回值或另一个已保存智能体的模型回复均不能单独证明创建助手接入 AI。
+
+## 2026-08-21 创建助手 AI 缺陷更正
+
+### 已撤回的错误证据
+
+- 旧实现的“生成智能体说明书”和“配置对话”直接运行前端本地规则，对自然语言做正则匹配、固定角色/目标/行为模板拼接和补充要求追加；它没有创建 `cordis` Session，也没有调用模型。
+- 因此，下方历史 Browser E2E 中“字段同步、撤回和确认”的观察只能证明界面状态变化，不能证明真实 AI。此前将其列为创建助手 AI 通过项的结论已经撤回。
+- `session-62fc6434-c28f-401f-b18b-7e47d138fc73` 仍是保存后同 Preset 测试对话的真实模型证据，但它不属于 `cordis` 创建会话，不能移作创建助手证据。
+
+### 当前工作树 Implementation Review（实现检查）
+
+- 首轮用途提交通过 Harness 原生 Session API 创建 `agentPreset=cordis` 的真实 Session；后续调整复用同一个创建 Session，不复制 `cordis`，也不把它作为最终个人或业务智能体的运行底座。
+- 每轮提交前，Client 只把当前说明书、真实已安装 Skill 清单与语言交给 Host Remote `prepareAuthoringTurn`；Host 在 live `cordis` Agent 的内存中更新隐藏的 Complete System Prompt（完整系统提示）。原生 `user/message` 只包含用户本轮自然语言，不包含 `CURRENT_DRAFT`、`INSTALLED_SKILLS` 或其他内部 JSON。
+- live `cordis` Agent Scope（智能体作用域）只暴露原生 `paimind_propose_agent_draft`，继承工具被 `allow: []` 屏蔽，其他工具再由 Monotonic Guard（单调守卫）拒绝；Tool Body（工具主体）只校验白名单提案，不创建 Preset、不保存 Profile。
+- `sessions.open(sessionId)` 负责把创建 Session 切换为 Harness 当前唯一原生 Conversation；后续轮次继续使用同一个 `sessionId`。Builder 不拥有第二个 Composer 或 Transcript，只监听原生事件，把完成后的白名单 Proposal（提案）同步到说明书。
+- 可见等待、思考和流式文本由 Harness 原生 Conversation 展示；专属 Tool View（工具视图）只显示紧凑业务状态，绝不读取或输出 `argsRaw`、Tool Result Content（工具结果内容）与隐藏推理。
+- Runtime（运行时）只读取本轮基线序号之后的原生事件；仅当出现 `turn/end` 且 `reason.kind=completed`、同轮 Proposal Tool Call / Result（提案工具调用／结果）能通过 `turn + callId` 唯一关联且成功、结果之后存在非空 `assistant/message` 时，才接纳本轮回复。失败、重复提案、未知工具、非正常结束和超时都进入真实错误状态。
+- 提案只允许业务分类、名称、用途、角色、目标、行为规范、补充要求和会话技能字段；未知字段不会进入草稿，技能名称会再次限制为真实已安装清单，基础 Preset、产品类型、身份、版本、存储和权限不能由模型改变。
+- 提案可以在说明书中预览，但进入 Pending Confirmation（待确认）状态后，用户必须选择 Keep（保留更新）或 Undo（撤销）；处理前原生 Conversation 发送能力与保存按钮均不可用。运行配置只在最终保存时写入，模型回复本身不复制 Preset、不保存 Profile。
+- 自动化测试对原生 Session 创建、多轮复用、`completed` 门禁、失败关闭和提案字段过滤使用模拟事件，属于代码契约证据；下节另列本轮真实模型 Browser E2E。
+
+### 本轮真实模型 Browser E2E（浏览器端到端）已完成
+
+- [x] 首轮用途提交创建原生 `cordis` Session `paimind-authoring-073d72a1-3c9a-4a83-95da-e07b9e49a84c`；原生事件记录 3 个完成轮次、3 组 `paimind_propose_agent_draft` Call / Result（调用／结果）和 3 条可见助手回复，页面模型路由为 `deepseek-v4-flash-0731`。
+- [x] 创建后通过 `sessions.open` 切换到该 Session；Harness 原生 Conversation、Session Header 与 Builder 引用同一个 `sessionId`，页面仅有一个原生 Composer 和一份 Transcript。
+- [x] 三个原生 `user/message` 逐字对应用户实际输入；事件与可见历史均未出现 `CURRENT_DRAFT`、`INSTALLED_SKILLS`、Skill 清单 JSON、提案 JSON 或系统协议。
+- [x] 使用“实时天气、180 元预算、半天时间、室内外备选路线”这一组合业务描述完成首轮真实生成；页面先显示 Harness 原生 Thinking（思考）与 Streaming（流式生成），完成后才出现待确认提案。
+- [x] 在同一创建 Session 连续追加两轮要求；第二、三轮提案均基于上一轮说明书与对话上下文，不是字符串机械追加。
+- [x] 实际验证 Keep（保留更新）与 Undo（撤销）；待确认时原生 Conversation 为 `inert`、真实鼠标键盘不能聚焦或修改输入框，保存按钮禁用，撤销后恢复快照。
+- [x] 保存得到真实 Harness Preset `my-agent-0a1e8f`、配置版本 `v1-92a27718629cc67b`；编辑重新进入同一 Builder，并创建新的原生 `cordis` 配置 Session `paimind-authoring-6a7cb142-1168-4c05-9b8c-701d4177c42a`。
+- [x] 保存后测试另建原生 Session `session-67a1ff16-2dfb-43fe-904b-53910e659876`，原生 `agent-preset/selected` 选择 `my-agent-0a1e8f`。模型先通过 `ask_user_question` 澄清地点与偏好；在实时搜索返回 `Insufficient Balance` 后明确说明数据边界，没有伪造天气，并给出预算内室内优先与室外备选路线。
+- [x] `@` 在空白会话同时披露 Agent 与 Skill，非空会话只披露 Skill；`/` 保留 Harness 原生 Plan / Goal 等模式；`Add context` 复用同一 720px 渐进披露列表。桌面和 `390×844` 均无页面横向溢出，Logo 与右侧边界对称。
+- [x] Skill Center 保留 Harness Sidebar；“导入本地 Skill”先展示 `SKILL.md` / ZIP 结构、凭证警告和个人范围，再由用户选择包，没有首击直接打开文件夹。
+- [x] 变基到最新主线后再次运行真实模型 Smoke E2E（冒烟端到端）：Session `paimind-authoring-d4275b02-b427-4fd2-bb37-5529ab59a927` 通过原生选择事件切到 `cordis`，`deepseek-v4-flash-0731` 完成一轮 `paimind_propose_agent_draft` Call / Result 与自然语言回复；待确认时 Conversation 为 `inert`、保存禁用、无提案协议泄漏，随后选择 Undo 且没有保存测试 Agent。
+
+严格失败关闭、超时、未知工具、重复提案与非 `completed` 终态由自动化测试覆盖；本轮没有伪造浏览器模型故障来替代该契约证据。以上均为本地 Pre-Acceptance，不等于共享测试环境 Product Acceptance。
 
 ## 2026-08-21 原生 Shell 与统一 Builder Local Pre-Acceptance
 
 ### 已完成的 Implementation Review（实现检查）
 
 - 当前工作树通过 `@paimind/harness-compat` 将智能体中心安装到 Harness 原生对话中央列；中心交互为 Non-modal（非模态），关闭后精确恢复宿主内容。
-- 创建、编辑和主对话 `@cordis` 请求汇入同一 Builder；Builder 包含智能体说明书、配置对话、折叠式会话技能和测试对话。
-- Host Contract（宿主契约）拒绝 `agentId`、`presetId` 或基础 Preset 身份漂移；测试对话创建或复用真实空白 Session，并选择同一保存 Preset。
+- 创建、编辑和主对话 `@cordis` 请求汇入同一 Builder；Builder 包含智能体说明书、折叠式会话技能、原生配置 Session 入口和保存后测试入口。两种入口都通过 `sessions.open` 切换 Harness 原生 Conversation，不维护第二份聊天历史。
+- Host Contract（宿主契约）拒绝 `agentId`、`presetId` 或基础 Preset 身份漂移；保存后测试必须新建真实 Session，并选择同一保存 Preset。此前“创建或复用空白 Session”的实现记录不再作为当前测试契约。
 - 以下 Implementation Review（实现检查）与 Browser E2E 分别记录代码契约和本地运行事实；两者都不替代共享测试环境 Product Acceptance（产品验收）。
 
-### Browser E2E（浏览器端到端）已完成
+### 历史 Shell 与界面 Browser E2E（浏览器端到端）
 
 - [x] Sidebar 展开与收起：智能体中心/Builder 均只占中央列，Logo 完整，左右边界对称，无产品自有返回栏。
-- [x] 创建与编辑：两条入口进入同一 Builder；配置对话完成字段同步、撤回和确认；Skill 展开后 8 个真实名称与说明完整可读。
+- [撤回 AI 结论] 创建与编辑两条入口进入同一 Builder、字段同步、撤回和确认曾在浏览器中出现，但字段同步来自旧前端本地规则，不是模型生成。Skill 展开后 8 个真实名称与说明完整可读的界面事实仍保留。
 - [x] 未保存门禁：新建和编辑产生未保存变更时，测试对话显示“请先保存智能体配置”，未产生临时 Preset。
 - [x] 同 Preset 测试：`presetId=0821-074942`、`configVersion=v1-a07a37d8a3d77343`、`sessionId=session-62fc6434-c28f-401f-b18b-7e47d138fc73`；Session 事件记录 `agent-preset/selected=0821-074942`，完整 Harness 对话展示真实首轮回复并显示“真实首轮验证通过”。
-- [x] `@` 入口：主对话同时展示 Agent 与 Skill；选择“个人智能体创建助手”后原生模式变为 `cordis` 的“创造模式”，并自然展开同一用途优先 Builder，未创建第二套实体。
+- [x] `@` 入口界面：主对话同时展示 Agent 与 Skill；选择“个人智能体创建助手”后原生模式变为 `cordis` 的“创造模式”，并自然展开同一用途优先 Builder，未创建第二套实体。本项只证明入口与模式切换，不证明 Builder 已发起模型请求。
 - [x] 响应式与可访问性：`1486×1059`、`900×720`、`390×844` 检查通过；窄屏先显示配置/测试对话再显示说明书，焦点未再滚动外层 Center，Console 仅有重启期间既有连接信息，无本轮新增运行错误。
 
 视觉与响应式对照详见 [`agent-center-design-qa-2026-08-21.md`](agent-center-design-qa-2026-08-21.md)。本节是本地 Pre-Acceptance（预验收），不替代共享测试环境 Product Acceptance（产品验收）。
@@ -59,11 +98,13 @@
 
 本节保留本轮原生 Shell 重构前的浏览器事实，不代表当前统一 Builder 的验收结论；当前交互以“原生 Shell 与统一 Builder Local Pre-Acceptance”待回填清单为准。
 
-- 真实 `http://127.0.0.1:3080/` 已验证“创建个人智能体”先打开名称与基础运行模式弹窗，继续后进入左侧可编辑配置、右侧配置对话的 Builder。
-- 输入“角色是产品交互验收助手，目标是检查交互并输出证据，专业且有证据，并使用 openai-docs。”后，角色、目标、描述、行为规范、补充要求和 `openai-docs` 会话技能同步到左侧，并展示字段回执。
+- 历史 `http://127.0.0.1:3080/` 曾验证“创建个人智能体”先打开名称与基础运行模式弹窗，继续后进入当时的左右分栏 Builder；该记录不代表当前原生 Conversation 交互，也不是本次动态端口验证。
+- 输入“角色是产品交互验收助手，目标是检查交互并输出证据，专业且有证据，并使用 openai-docs。”后，角色、目标、描述、行为规范、补充要求和 `openai-docs` 会话技能曾同步到左侧并展示字段回执；该同步由当时的前端本地规则完成，不是模型生成，仅作为历史交互观察保留，已从真实 AI 证据中撤回。
 - 本轮浏览器检查只使用临时草稿并取消，没有保存新的 Harness Preset；正式 Product Acceptance 仍以共享测试环境为准。
 
-## 真实验收证据
+## 历史真实验收证据（非本次动态端口验证）
+
+以下证据来自 2026-08-16 至 2026-08-17 的既有本地运行，不得解释为本次隔离工作树、当前动态端口或新原生 Conversation 链路已经完成 Browser E2E。
 
 - 创建个人智能体“验收助手”，Harness Preset 为 `my-agent-1a0cca`；业务页面未展示该内部标识。
 - 第一版配置 `v1-b0bbd374ea9c770b` 在真实 Session `session-4ce99918-2181-4a74-8e4c-73b38178ef19` 中完成模型回复，回复遵循 `AGENT_ACCEPTED` 前缀和两行结构。
@@ -92,7 +133,7 @@
 - 同一 Session 持久化记录中，`bento-ppt`、`ppt-master`、`fineline-investment-analysis`、`white-space-analysis`、`build-walmart-buyer-proposal-outline` 均为 `0` 次，证明其虽可在技能中心发现，但未泄漏进该会话。
 - 定向测试为 `3` 个文件、`21` 项全部通过；全仓测试为 `73` 个文件、`274` 项全部通过，目标包 Type Check、Production Build、Framework Gate、Package Pack、Publint、NodeNext Consumer、Examples 和文档检查均通过。
 - Disposable Harness Home 组合验证覆盖双中心同时安装、仅技能中心、仅智能体中心、全部卸载后原生启动，结果为 Harness `0.1.0-rc.6`、零上游源码差异。
-- `check:release` 已执行并在 API Snapshot 阶段停止；本次三个目标包已无接口快照漂移，剩余 `27` 项均来自当前 Dirty Worktree 的其他包，未在本任务中批量覆盖。
+- 2026-08-17 当次 `check:release` 曾在 API Snapshot 阶段停止；该历史结果不代表 2026-08-21 当前独立工作树的门禁状态。
 
 ## 2026-08-17 平台目录扩展性验收
 
@@ -103,12 +144,11 @@
 - `640 × 900` 视口下，全页 `clientWidth = scrollWidth = 640px`，目录区域 `clientWidth = scrollWidth = 582px`，无横向溢出。
 - 全仓 `73` 个测试文件、`276` 项测试通过；Production Build、Framework Gate 与 Harness `0.1.0-rc.6` 独立安装/卸载组合验证通过。
 
-## 2026-08-17 业务智能体创建链路验收
+## 2026-08-17 业务智能体创建链路验收（历史）
 
 - “业务智能体”目录的页面主操作和目录标题区均提供“创建业务智能体”；“我的智能体”使用独立的“创建个人智能体”，不会再把两类对象写入同一默认目录。
 - 创建面板显示必填业务分类，支持选择已存在分类或直接输入新分类；分类和产品归属通过 Agent Builder 的严格 Remote Contract 跨进程传输，并写入同一真实 Harness Preset 目录的 `.paimind-agent.json`。
-- 真实 `http://localhost:3080/` 中创建“E2E 业务智能体验证”后，业务目录计数由 `0` 变为 `1`，分类筛选出现 `PDM 验证 · 1`，卡片显示“业务智能体 · 本地维护”；编辑面板重新读取相同名称、分类、角色和目标。
+- 历史 `http://localhost:3080/` 中创建“E2E 业务智能体验证”后，业务目录计数由 `0` 变为 `1`，分类筛选出现 `PDM 验证 · 1`，卡片显示“业务智能体 · 本地维护”；编辑面板重新读取相同名称、分类、角色和目标。该地址与结果不作为本次动态端口验证。
 - 验收发现并修复了 Remote Schema 未声明新字段导致 `productKind` 被剥离的问题；新增严格序列化测试防止该问题回归。
 - 浏览器中通过真实删除操作移除验收智能体，随后清理其隔离备份；最终业务目录恢复为 `0`，用户原有个人智能体保持不变。
 - 定向测试为 `3` 个文件、`25` 项通过；全仓测试为 `73` 个文件、`279` 项通过；全仓 Type Check、Production Build、Package Compliance、Pack Audit、Publint、NodeNext Consumer、Examples、Framework、Docs 与 Harness `0.1.0-rc.6` 安装/卸载组合验证通过。
-- Agent Builder 与 Agent Market 的 API Snapshot 已同步到本次真实公共契约；全仓 `check:api` 剩余 `27` 项均为 Dirty Worktree 中其他包的既有差异，未越界批量覆盖。

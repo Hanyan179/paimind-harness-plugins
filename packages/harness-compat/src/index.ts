@@ -215,7 +215,11 @@ export interface HarnessChatNode {
 
 /** Small public subset of a Harness assistant partial used by FP01. */
 export interface HarnessPartialAssistant {
-  readonly blocks: readonly { readonly kind: string }[]
+  /** Native Turn/Step ownership; consumers must fail closed when correlating embedded flows. */
+  readonly turn?: number
+  readonly step?: number
+  /** Visible text is optional; reasoning and tool blocks remain structural only. */
+  readonly blocks: readonly { readonly kind: string; readonly text?: string }[]
 }
 
 /** Version-isolated snapshot fields consumed by PAIMind runtime presentation. */
@@ -243,7 +247,12 @@ export interface HarnessConversationSnapshot {
   /** Terminal Agent failure for the current Session, when present. */
   readonly lastAgentError?: string | null
   /** Current inbox snapshot; presence is enough for technical detail counts. */
-  readonly queue?: readonly { readonly placement?: string }[]
+  readonly queue?: readonly {
+    readonly id?: string
+    readonly messageId?: string
+    readonly placement?: string
+    readonly text?: string | null
+  }[]
 }
 
 /** Version-isolated public Turn data reader; values stay owned by their native plugin. */
@@ -543,6 +552,8 @@ export interface HarnessWorkspaceService {
 /** Native Session list service used by the PAIMind Project bridge. */
 export interface HarnessSessionService {
   readonly list: HarnessObservableSnapshot<HarnessSessionListSnapshot>
+  /** Create through Harness SessionRuntime so list projection and bindings are addressable immediately. */
+  create?(opts?: { readonly workspaceId?: string; readonly cwd?: string; readonly sessionId?: string }): Promise<string>
   /** Select a canonical Harness Session as current; this owns no navigation state. */
   open(id: string): void
   /** Navigate to one exact catalog-derived child address without inventing lineage. */
@@ -563,6 +574,14 @@ export interface HarnessSessionService {
       prompt?(
         content: readonly { readonly type: 'text'; readonly text: string }[],
         mode: 'queue' | 'steer',
+      ): Promise<
+        | { readonly ok: true; readonly value: { readonly accepted: true } }
+        | { readonly ok: false; readonly error: { readonly code: string; readonly message: string } }
+      >
+      /** Remove an authoring prompt that is still in the native next-turn inbox. */
+      updateQueue?(
+        itemId: string,
+        action: { readonly kind: 'remove' },
       ): Promise<
         | { readonly ok: true; readonly value: { readonly accepted: true } }
         | { readonly ok: false; readonly error: { readonly code: string; readonly message: string } }
@@ -1164,6 +1183,28 @@ export interface HarnessSessionHistoryApi {
     readonly events: readonly { readonly event: HarnessSessionHistoryEvent }[]
     readonly hasMore: boolean
   }>>
+}
+
+/** Native Session verbs used by an embedded, model-backed authoring conversation. */
+export interface HarnessSessionAuthoringApi extends HarnessSessionHistoryApi {
+  create(payload: {
+    readonly workspaceId?: string
+    readonly cwd?: string
+    readonly sessionId?: string
+    readonly agentPreset?: string
+  }, signal?: AbortSignal): Promise<HarnessRpcResponse<{ readonly sessionId: string; readonly agentPreset?: string }>>
+  prompt(payload: {
+    readonly sessionId: string
+    readonly mode: 'queue' | 'steer'
+    readonly content: readonly { readonly type: 'text'; readonly text: string }[]
+  }, signal?: AbortSignal): Promise<HarnessRpcResponse<{ readonly accepted: true; readonly command?: { readonly kind: 'success'; readonly text?: string } }> & { readonly rpcId: string }>
+  rename(payload: {
+    readonly sessionId: string
+    readonly title: string
+  }, signal?: AbortSignal): Promise<HarnessRpcResponse<{ readonly title: string; readonly seq: number }>>
+  cancel(payload: {
+    readonly sessionId: string
+  }, signal?: AbortSignal): Promise<HarnessRpcResponse<{ readonly accepted: true }>>
 }
 
 /** Host services required by the isolated Bento renderer package. */

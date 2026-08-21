@@ -1,6 +1,8 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { createElement, type ComponentType } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { HarnessAgentPresetApi, PaimindLocaleSource } from '@paimind/harness-compat'
+import { AGENT_AUTHORING_PROPOSAL_TOOL } from '@paimind/agent-builder/client-contract'
 import {
   PaimindAgentBuilderRequestController,
   PaimindProductSurfaceController,
@@ -13,6 +15,7 @@ import {
   AgentCenterTrigger,
   apply,
   inject,
+  starterPromptForProfile,
 } from '../src/client/index.js'
 import { AGENT_CENTER_STYLE } from '../src/client/styles.js'
 
@@ -39,12 +42,28 @@ const profile = {
   revision: 1, configVersion: 'v1-a', updatedAt: 1, health: 'healthy' as const,
 }
 
+type AuthoringWatchResult = Readonly<{
+  sessionId: string
+  turn: number
+  endSeq: number
+  text: string
+  proposal: Readonly<Record<string, unknown>> | null
+}>
+
+type AuthoringWatchHandlers = Readonly<{
+  onRunning: () => void
+  onTurn: (result: AuthoringWatchResult) => void
+  onIdle: () => void
+  onError: (error: Error) => void
+}>
+
 function services() {
   const runtimeSnapshot = { notice: null, error: null }
+  let authoringWatch: AuthoringWatchHandlers | null = null
   return {
     profiles: {
       listProfiles: vi.fn().mockResolvedValue({ ok: true, value: { profiles: [profile] } }),
-      saveProfile: vi.fn(), setDefault: vi.fn(), bindSession: vi.fn(), migrationPlan: vi.fn(), recordMigration: vi.fn(), verifySession: vi.fn(), listAudit: vi.fn(),
+      saveProfile: vi.fn(), setDefault: vi.fn(), sealAuthoringSession: vi.fn(), bindSession: vi.fn(), migrationPlan: vi.fn(), recordMigration: vi.fn(), verifySession: vi.fn(), listAudit: vi.fn(),
     },
     skills: { listInstalled: vi.fn().mockResolvedValue({ ok: true, value: { items: [
       { name: 'web-research', description: 'Search official documentation and cite sources' },
@@ -55,10 +74,36 @@ function services() {
       subscribe: () => () => {},
       getSnapshot: () => runtimeSnapshot,
       start: vi.fn().mockResolvedValue('session-new'),
+      author: vi.fn().mockImplementation(async ({ sessionId }: { readonly sessionId: string | null }) => ({
+        sessionId: sessionId ?? 'session-authoring',
+        turn: 1,
+        endSeq: 3,
+        text: 'Native authoring turn completed.',
+        proposal: null,
+      })),
+      beginAuthoring: vi.fn().mockResolvedValue({ sessionId: 'session-authoring', endSeq: -1 }),
+      prepareAuthoringContext: vi.fn().mockResolvedValue(undefined),
+      watchAuthoringSession: vi.fn((
+        _sessionId: string,
+        _cursor: number,
+        _skills: readonly Readonly<{ name: string }>[],
+        handlers: AuthoringWatchHandlers,
+      ) => {
+        authoringWatch = handlers
+        return () => { if (authoringWatch === handlers) authoringWatch = null }
+      }),
+      beginTest: vi.fn().mockResolvedValue('session-test'),
       test: vi.fn().mockResolvedValue('session-test'),
       sessionState: vi.fn(() => ({ running: true, completed: false, error: null })),
       subscribeSessions: vi.fn(() => () => {}),
-      openSession: vi.fn(),
+      currentSessionId: vi.fn(() => 'session-original'),
+      openSession: vi.fn(() => () => {}),
+    },
+    emitAuthoringTurn(result: AuthoringWatchResult): void {
+      if (authoringWatch === null) throw new Error('Native authoring watcher is not ready')
+      authoringWatch.onRunning()
+      authoringWatch.onTurn(result)
+      authoringWatch.onIdle()
     },
   }
 }
@@ -169,14 +214,15 @@ describe('Agent Center business UI', () => {
     expect(platformCard?.querySelector('[data-paimind-agent-avatar-seat]')).toBeNull()
   })
 
-  it('starts a real runtime conversation from a personal Agent', async () => {
+  it('delegates a personal Agent launch to the runtime adapter', async () => {
     const fixture = services(); const close = vi.fn()
     render(<AgentCenterSection close={close} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
     await waitFor(() => expect(screen.getByRole('tab', { name: 'My Agents' })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('tab', { name: 'My Agents' }))
     fireEvent.click(screen.getByRole('button', { name: 'Start conversation' }))
     await waitFor(() => expect(fixture.runtime.start).toHaveBeenCalledWith('mine', profile))
-    expect(close).toHaveBeenCalledTimes(1)
+    expect(close).toHaveBeenCalledOnce()
+    expect(close).toHaveBeenCalledWith(false)
   })
 
   it('reuses the current blank conversation and keeps the native selector on the chosen Agent', async () => {
@@ -213,8 +259,87 @@ describe('Agent Center business UI', () => {
     expect(seat.select).toHaveBeenCalledWith('standard')
     expect(row.agentPreset).toBe('standard')
     expect(selected).toBe('standard')
-    expect(setDraft).toHaveBeenCalledWith('请介绍一下你可以如何帮助我，并给出一个简短示例。')
+    expect(setDraft).toHaveBeenCalledWith('')
     runtime.dispose()
+  })
+
+  it('creates the native Test Session inside the current authoring workspace', async () => {
+    const rows: Record<string, { id: string; blank: boolean; agentPreset: string }> = {
+      'session-authoring': { id: 'session-authoring', blank: false, agentPreset: 'cordis' },
+    }
+    let current = 'session-authoring'
+    const listeners = new Set<() => void>()
+    const sessions = {
+      list: {
+        getSnapshot: () => ({ current, byId: rows }),
+        subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } },
+      },
+      create: vi.fn(async (opts: { readonly workspaceId?: string }) => {
+        expect(opts).toEqual({ workspaceId: 'workspace-authoring' })
+        rows['session-test'] = { id: 'session-test', blank: true, agentPreset: 'standard' }
+        current = 'session-test'
+        listeners.forEach(listener => { listener() })
+        return 'session-test'
+      }),
+      binding: (sessionId: string) => sessionId === 'session-test' ? {
+        ctx: {},
+        session: {
+          getSnapshot: () => ({ running: false, chat: { timeline: { turnOrder: [] } } }),
+          subscribe: () => () => {},
+        },
+      } : undefined,
+      open: vi.fn(),
+    }
+    let selected = 'cordis'
+    const seat = {
+      getSnapshot: () => ({ options: [], current: selected, error: null, busy: false, introduce: false }),
+      select: vi.fn(async (presetId: string) => {
+        selected = presetId
+        rows['session-test']!.agentPreset = presetId
+        listeners.forEach(listener => { listener() })
+      }),
+    }
+    const startSession = vi.fn()
+    const workspaces = {
+      list: { getSnapshot: () => ({
+        items: [{ workspaceId: 'workspace-authoring', path: '/tmp/project', title: 'Project', sessionIds: ['session-authoring'] }],
+        recentWorkspaceId: 'workspace-recent',
+      }) },
+      startSession,
+    }
+    const bindSession = vi.fn().mockResolvedValue({ ok: true, value: {
+      sessionId: 'session-test', agentId: profile.agentId, presetId: profile.presetId,
+      configVersion: profile.configVersion, boundAt: 1,
+    } })
+    const remote = {
+      bindSession,
+      listAudit: vi.fn().mockResolvedValue({ ok: true, value: { migrations: [], verifications: [] } }),
+      migrationPlan: vi.fn().mockResolvedValue({ ok: true, value: null }),
+    }
+    const runtime = new AgentCenterRuntime(
+      seat as never,
+      remote as never,
+      sessions as never,
+      workspaces as never,
+      { input: { for: () => ({ setDraft: vi.fn() }) } } as never,
+    )
+
+    await expect(runtime.beginTest('mine', profile)).resolves.toBe('session-test')
+    expect(sessions.create).toHaveBeenCalledWith({ workspaceId: 'workspace-authoring' })
+    expect(startSession).not.toHaveBeenCalled()
+    expect(seat.select).toHaveBeenCalledWith('mine')
+    expect(bindSession).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: 'session-test', presetId: 'mine', configVersion: profile.configVersion,
+    }))
+    runtime.dispose()
+  })
+
+  it('prefills the explicit saved trigger instead of an unrelated generic example', () => {
+    expect(starterPromptForProfile({
+      ...profile,
+      instructions: 'When the user says “Start a new proposal.”, run the guided intake.',
+    })).toBe('Start a new proposal.')
+    expect(starterPromptForProfile(profile)).toBe('')
   })
 
   it('fails clearly without a selector seat and creates no shadow binding', async () => {
@@ -298,6 +423,146 @@ describe('Agent Center business UI', () => {
     runtime.dispose()
   })
 
+  it('adapts configuration turns to the native cordis Session API contract and parses only the model proposal', async () => {
+    const events: Array<{ readonly event: { readonly type: string; readonly seq: number; readonly data?: unknown } }> = []
+    const sessionListeners = new Set<() => void>()
+    let sessionSnapshot: { readonly lastAgentError: string | null; readonly partial: null | { readonly turn: number; readonly blocks: readonly { readonly kind: string; readonly text?: string }[] } } = { lastAgentError: null, partial: null }
+    let turn = 0
+    const authoringApi = {
+      create: vi.fn().mockImplementation(async (payload: { readonly sessionId?: string }) => ({
+        result: { ok: true, value: { sessionId: payload.sessionId, agentPreset: 'cordis' } },
+      })),
+      rename: vi.fn().mockResolvedValue({ result: { ok: true, value: { title: 'Agent authoring', seq: 1 } } }),
+      history: vi.fn().mockImplementation(async () => ({ result: { ok: true, value: { events, hasMore: false } } })),
+      prompt: vi.fn().mockImplementation(async () => {
+        turn += 1
+        const rpcId = `rpc-authoring-${turn}`
+        sessionSnapshot = { lastAgentError: sessionSnapshot.lastAgentError, partial: { turn, blocks: [
+          { kind: 'reasoning', text: 'hidden chain of thought' },
+          { kind: 'text', text: '模型正在整理上下文。' },
+        ] } }
+        sessionListeners.forEach(listener => { listener() })
+        const text = turn === 1
+          ? '我分析了真实需求，并将重点放在可执行的周末探索上。'
+          : '我保留原有目标，并把 300 元预算作为硬约束。'
+        const proposal = turn === 1
+          ? { name: '周末探索搭子', role: '根据天气、预算和兴趣规划城市探索的生活方式顾问', goal: '给出可当天执行且有室内备选的路线', behavior: '先确认城市和日期，再核对天气与预算；输出时间线、费用和备选方案。', preferredSkillNames: ['web-research'] }
+          : { instructions: '总预算不超过 300 元，雨天优先室内路线。' }
+        const callId = `proposal-${turn}`
+        events.push(
+          { event: { type: 'turn/start', seq: turn * 10, data: { turn } } },
+          { event: { type: 'user/message', seq: turn * 10 + 1, data: { id: `message-${turn}`, source: { kind: 'user', rpcId }, content: [{ type: 'text', text: 'authoring prompt' }] } } },
+          { event: { type: 'tool/call', seq: turn * 10 + 2, data: { turn, step: 1, callId, name: AGENT_AUTHORING_PROPOSAL_TOOL, arguments: JSON.stringify(proposal) } } },
+          { event: { type: 'tool/result', seq: turn * 10 + 3, data: { turn, step: 1, message: {
+            source: { kind: 'tool', callId },
+            content: [{ type: 'tool-result', toolCallId: callId, content: [{ type: 'text', text: 'Proposal accepted.' }], isError: false }],
+          } } } },
+          { event: { type: 'assistant/message', seq: turn * 10 + 4, data: { turn, step: 2, message: { content: [{ type: 'text', text }] } } } },
+          { event: { type: 'turn/end', seq: turn * 10 + 5, data: { turn, reason: { kind: 'completed' } } } },
+        )
+        return { rpcId, result: { ok: true, value: { accepted: true } } }
+      }),
+      cancel: vi.fn().mockResolvedValue({ result: { ok: true, value: { accepted: true } } }),
+    }
+    const runtime = new AgentCenterRuntime(
+      null,
+      {
+        listAudit: vi.fn().mockResolvedValue({ ok: true, value: { migrations: [], verifications: [] } }),
+        migrationPlan: vi.fn().mockResolvedValue({ ok: true, value: null }),
+        sealAuthoringSession: vi.fn().mockImplementation(async ({ sessionId }: { readonly sessionId: string }) => ({
+          ok: true, value: { sessionId, agentPreset: 'cordis', sealed: true },
+        })),
+        prepareAuthoringTurn: vi.fn().mockImplementation(async ({ sessionId }: { readonly sessionId: string }) => ({
+          ok: true, value: { sessionId, prepared: true },
+        })),
+      } as never,
+      {
+        list: { getSnapshot: () => ({ current: undefined, byId: {} }), subscribe: () => () => {} },
+        binding: () => ({ session: {
+          getSnapshot: () => sessionSnapshot,
+          subscribe: (listener: () => void) => { sessionListeners.add(listener); return () => { sessionListeners.delete(listener) } },
+        } }),
+        open: vi.fn(),
+      } as never,
+      {
+        list: { getSnapshot: () => ({ items: [], recentWorkspaceId: 'workspace-recent' }), subscribe: () => () => {} },
+        startSession: vi.fn(),
+      } as never,
+      { input: { for: () => ({ setDraft: vi.fn() }) } } as never,
+      authoringApi as never,
+    )
+    const draft = {
+      productKind: 'personal' as const, businessCategory: '', name: '', description: '周末随机探索城市',
+      basePresetId: 'standard', role: '', goal: '', behavior: '', instructions: '', preferredSkillNames: [],
+    }
+
+    const onSessionCreated = vi.fn()
+    const onProgress = vi.fn()
+    const first = await runtime.author({ sessionId: null, draft, prompt: '根据天气和预算安排周末玩法', skills: [{ name: 'web-research', description: 'Search current facts' }], locale: 'zh-CN', onSessionCreated, onProgress })
+    expect(authoringApi.create).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: expect.stringMatching(/^paimind-authoring-/), agentPreset: 'cordis', workspaceId: 'workspace-recent',
+    }), expect.any(AbortSignal))
+    expect(onSessionCreated).toHaveBeenCalledWith(first.sessionId)
+    expect(onProgress).toHaveBeenCalledWith('模型正在整理上下文。')
+    expect(onProgress).not.toHaveBeenCalledWith(expect.stringContaining('hidden chain of thought'))
+    expect(onProgress).not.toHaveBeenCalledWith(expect.stringContaining('secret'))
+    expect(authoringApi.prompt).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: first.sessionId, mode: 'queue',
+      content: [{ type: 'text', text: '根据天气和预算安排周末玩法' }],
+    }), expect.any(AbortSignal))
+    expect(first).toMatchObject({
+      sessionId: first.sessionId,
+      text: '我分析了真实需求，并将重点放在可执行的周末探索上。',
+      proposal: {
+        name: '周末探索搭子',
+        preferredSkillNames: ['web-research'],
+      },
+    })
+    expect(first.text).not.toContain('PAIMIND_AGENT_DRAFT')
+    expect(first.text).not.toContain('{"name"')
+    expect(first.proposal).not.toHaveProperty('basePresetId')
+
+    sessionSnapshot = { ...sessionSnapshot, lastAgentError: 'stale failure from a previous turn' }
+    const second = await runtime.author({ sessionId: first.sessionId, draft: { ...draft, ...first.proposal }, prompt: '总预算控制在 300 元以内', skills: [{ name: 'web-research', description: 'Search current facts' }], locale: 'zh-CN' })
+    expect(authoringApi.create).toHaveBeenCalledTimes(1)
+    expect(second).toMatchObject({ sessionId: first.sessionId, proposal: { instructions: '总预算不超过 300 元，雨天优先室内路线。' } })
+    expect(authoringApi.prompt).toHaveBeenCalledTimes(2)
+
+    vi.mocked(authoringApi.prompt).mockImplementationOnce(async () => {
+      turn += 1
+      const rpcId = `rpc-authoring-${turn}`
+      const callId = `proposal-${turn}`
+      events.push(
+        { event: { type: 'turn/start', seq: turn * 10, data: { turn } } },
+        { event: { type: 'user/message', seq: turn * 10 + 1, data: { id: `message-${turn}`, source: { kind: 'user', rpcId }, content: [{ type: 'text', text: 'invalid proposal' }] } } },
+        { event: { type: 'tool/call', seq: turn * 10 + 2, data: { turn, step: 1, callId, name: AGENT_AUTHORING_PROPOSAL_TOOL, arguments: '{"basePresetId":"minimal"}' } } },
+        { event: { type: 'tool/result', seq: turn * 10 + 3, data: { turn, step: 1, error: { name: 'ToolArgsError', code: 'INVALID_TOOL_ARGS' }, message: {
+          source: { kind: 'tool', callId },
+          content: [{ type: 'tool-result', toolCallId: callId, content: [{ type: 'text', text: 'Error: rejected' }], isError: true }],
+        } } } },
+        { event: { type: 'assistant/message', seq: turn * 10 + 4, data: { turn, step: 2, message: { content: [{ type: 'text', text: 'This must not be applied.' }] } } } },
+        { event: { type: 'turn/end', seq: turn * 10 + 5, data: { turn, reason: { kind: 'completed' } } } },
+      )
+      return { rpcId, result: { ok: true, value: { accepted: true } } }
+    })
+    await expect(runtime.author({ sessionId: first.sessionId, draft, prompt: '尝试修改基础模式', skills: [], locale: 'zh-CN' }))
+      .rejects.toThrow('原生说明书提案未被 Host 接受')
+
+    vi.mocked(authoringApi.prompt).mockImplementationOnce(async () => {
+      turn += 1
+      const rpcId = `rpc-authoring-${turn}`
+      events.push(
+        { event: { type: 'turn/start', seq: turn * 10, data: { turn } } },
+        { event: { type: 'user/message', seq: turn * 10 + 1, data: { id: `message-${turn}`, source: { kind: 'user', rpcId }, content: [{ type: 'text', text: 'aborted prompt' }] } } },
+        { event: { type: 'turn/end', seq: turn * 10 + 2, data: { turn, reason: { kind: 'aborted' } } } },
+      )
+      return { rpcId, result: { ok: true, value: { accepted: true } } }
+    })
+    await expect(runtime.author({ sessionId: first.sessionId, draft, prompt: '这轮会被中止', skills: [], locale: 'zh-CN' }))
+      .rejects.toThrow('未正常完成：aborted')
+    runtime.dispose()
+  })
+
   it('opens native advanced configuration and prevents Skill selection for Minimal', async () => {
     const fixture = services(); const openAdvanced = vi.fn(() => true)
     render(<AgentCenterSection close={() => {}} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={openAdvanced} />)
@@ -322,7 +587,7 @@ describe('Agent Center business UI', () => {
     render(<AgentCenterSection close={() => {}} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
     await screen.findByRole('heading', { name: 'Research Agent' })
     fireEvent.click(screen.getByRole('tab', { name: 'Platform modes' }))
-    expect(screen.getByRole('heading', { name: 'Standard' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Standard' })).toBeInTheDocument())
     expect(screen.getByRole('tab', { name: 'Platform modes' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tab', { name: 'Business Agents' })).toHaveAttribute('aria-selected', 'false')
     expect(screen.queryByText(/General, PDM, and AIM are business categories/)).toBeNull()
@@ -339,6 +604,7 @@ describe('Agent Center business UI', () => {
   it('persists an edited official copy through the native Preset copy and personal profile services', async () => {
     const fixture = services()
     const presetApi = api()
+    const onNativeConversationChange = vi.fn()
     let copiedPresetId = ''
     vi.mocked(presetApi.copy).mockImplementation(async payload => {
       copiedPresetId = payload.agentPreset
@@ -348,14 +614,31 @@ describe('Agent Center business UI', () => {
       ...roster,
       presets: copiedPresetId === '' ? roster.presets : [...roster.presets, { id: copiedPresetId, trust: 'user' as const, isDefault: false, name: 'Standard · My version' }],
     } } }))
-    fixture.profiles.saveProfile.mockImplementation(async input => ({ ok: true, value: {
+    let releaseSave!: () => void
+    const saveGate = new Promise<void>(resolve => { releaseSave = resolve })
+    fixture.profiles.saveProfile.mockImplementation(async input => { await saveGate; return { ok: true, value: {
       ...input, revision: 1, configVersion: 'v1-test', updatedAt: 1, health: 'healthy' as const,
-    } }))
-    render(<AgentCenterSection close={() => {}} api={presetApi} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
+    } } })
+    render(<AgentCenterSection
+      close={() => {}}
+      api={presetApi}
+      profiles={fixture.profiles as never}
+      skills={fixture.skills as never}
+      runtime={fixture.runtime as never}
+      locale={locale()}
+      openAdvanced={() => true}
+      onNativeConversationChange={onNativeConversationChange}
+    />)
     await screen.findByRole('heading', { name: 'Research Agent' })
     fireEvent.click(screen.getByRole('tab', { name: 'Platform modes' }))
-    expect(screen.getByRole('heading', { name: 'Standard' })).toBeInTheDocument()
+    await screen.findByRole('heading', { name: 'Standard' })
     fireEvent.click(screen.getAllByRole('button', { name: 'Copy and edit' })[0]!)
+    await waitFor(() => expect(fixture.runtime.beginAuthoring).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(onNativeConversationChange).toHaveBeenCalledWith({
+      sessionId: 'session-authoring', interactive: true,
+    }))
+    expect(screen.getByText('Harness native configuration conversation is on the right')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Configuration chat' })).toHaveAttribute('aria-selected', 'true')
     fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Product analyst' } })
     fireEvent.change(screen.getByLabelText('Goal'), { target: { value: 'Deliver validated product analysis' } })
     fireEvent.change(screen.getByLabelText('Behavior'), { target: { value: 'Use evidence and state uncertainty' } })
@@ -369,7 +652,17 @@ describe('Agent Center business UI', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /spreadsheet-inspector/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Selected 1' }))
     expect(screen.getByRole('checkbox', { name: /spreadsheet-inspector/ })).toBeChecked()
-    fireEvent.click(screen.getByRole('button', { name: 'Save Personal Agent' }))
+    const saveButton = await screen.findByRole('button', { name: 'Save Personal Agent' })
+    expect(saveButton).toBeEnabled()
+    fireEvent.click(saveButton)
+    fireEvent.click(saveButton)
+    await waitFor(() => expect(fixture.profiles.saveProfile).toHaveBeenCalledOnce())
+    expect(presetApi.copy).toHaveBeenCalledOnce()
+    expect(screen.getByLabelText('Role')).toBeDisabled()
+    expect(onNativeConversationChange).toHaveBeenLastCalledWith({
+      sessionId: 'session-authoring', interactive: false,
+    })
+    releaseSave()
     await waitFor(() => expect(presetApi.copy).toHaveBeenCalledWith(expect.objectContaining({ from: 'standard' })))
     expect(fixture.profiles.saveProfile).toHaveBeenCalledWith(expect.objectContaining({
       presetId: copiedPresetId,
@@ -383,6 +676,7 @@ describe('Agent Center business UI', () => {
   it('creates a classified Business Agent through the native Preset and Profile services', async () => {
     const fixture = services()
     const presetApi = api()
+    const onNativeConversationChange = vi.fn()
     let copiedPresetId = ''
     let savedProfile: typeof profile & { productKind: 'business'; businessCategory: string; businessCategoryId: string } | undefined
     vi.mocked(presetApi.copy).mockImplementation(async payload => {
@@ -403,7 +697,16 @@ describe('Agent Center business UI', () => {
       return { ok: true, value: savedProfile }
     })
 
-    render(<AgentCenterSection close={() => {}} api={presetApi} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
+    render(<AgentCenterSection
+      close={() => {}}
+      api={presetApi}
+      profiles={fixture.profiles as never}
+      skills={fixture.skills as never}
+      runtime={fixture.runtime as never}
+      locale={locale()}
+      openAdvanced={() => true}
+      onNativeConversationChange={onNativeConversationChange}
+    />)
     await screen.findByRole('heading', { name: 'Research Agent' })
     fireEvent.click(screen.getByRole('tab', { name: 'Business Agents' }))
     expect(screen.getAllByRole('button', { name: 'Create Business Agent' })).toHaveLength(2)
@@ -413,13 +716,33 @@ describe('Agent Center business UI', () => {
     fireEvent.change(screen.getByLabelText('Agent name (editable later)'), { target: { value: 'PDM Assistant' } })
     fireEvent.click(screen.getByRole('button', { name: 'Generate Agent brief' }))
     expect(screen.getByRole('region', { name: 'Create Agent' })).not.toHaveAttribute('aria-modal')
+    await waitFor(() => expect(fixture.runtime.author).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: null,
+      prompt: 'Maintain product decisions with evidence',
+    })))
+    await waitFor(() => expect(onNativeConversationChange).toHaveBeenCalledWith({
+      sessionId: 'session-authoring', interactive: true,
+    }))
+    expect(screen.getByText('Harness native configuration conversation is on the right')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Business category'), { target: { value: 'Product & PDM' } })
-    fireEvent.change(screen.getByPlaceholderText(/Tell me what to adjust/), { target: { value: 'Role: PDM analyst\nGoal: Maintain product decisions\nBehavior: Use product evidence' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Send configuration message' }))
-    expect(screen.getByLabelText('Role')).toHaveValue('PDM analyst')
+    await waitFor(() => expect(fixture.runtime.watchAuthoringSession).toHaveBeenCalled())
+    await act(async () => {
+      fixture.emitAuthoringTurn({
+        sessionId: 'session-authoring',
+        turn: 2,
+        endSeq: 8,
+        text: 'I reviewed the business context and proposed a focused PDM brief.',
+        proposal: { role: 'PDM analyst', goal: 'Maintain product decisions', behavior: 'Use product evidence' },
+      })
+    })
+    await waitFor(() => expect(screen.getByLabelText('Role')).toHaveValue('PDM analyst'))
     expect(screen.getByLabelText('Goal')).toHaveValue('Maintain product decisions')
     expect(screen.getByLabelText('Behavior')).toHaveValue('Use product evidence')
+    expect(fixture.runtime.author).toHaveBeenCalledTimes(1)
     expect(screen.getByText(/Creation assistant updated: Role, Goal, Behavior/)).toBeInTheDocument()
+    expect(screen.getByText('Confirm this proposal first')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save Business Agent' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Keep changes' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save Business Agent' }))
 
     await waitFor(() => expect(presetApi.copy).toHaveBeenCalledWith(expect.objectContaining({ from: 'standard' })))
@@ -440,7 +763,10 @@ describe('Agent Center business UI', () => {
     const builder = screen.getByRole('region', { name: 'Edit Agent' })
     expect(builder).toBeInTheDocument()
     expect(within(builder).getByRole('combobox', { name: 'Business category' })).toHaveValue('Product & PDM')
-    fireEvent.click(screen.getByRole('button', { name: 'Back to Center' }))
+    const backToCenter = screen.getByRole('button', { name: 'Back to Center' })
+    await waitFor(() => expect(backToCenter).toBeEnabled())
+    fireEvent.click(backToCenter)
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Edit Agent' })).toBeNull())
     fireEvent.click(screen.getByRole('button', { name: 'Start conversation' }))
     await waitFor(() => expect(fixture.runtime.start).toHaveBeenCalledWith(
       copiedPresetId, expect.objectContaining({ productKind: 'business', businessCategory: 'Product & PDM' }),
@@ -472,9 +798,13 @@ describe('Agent Center business UI', () => {
     surface.dispose()
   })
 
-  it('gates Test Chat on saved state and runs the same edited Preset without copying', async () => {
+  it('invalidates a v1 native Test Session after saving v2 and creates a fresh Session for the saved revision', async () => {
     const fixture = services()
     const presetApi = api()
+    const onNativeConversationChange = vi.fn()
+    fixture.runtime.beginTest
+      .mockResolvedValueOnce('session-test-v1')
+      .mockResolvedValueOnce('session-test-v2')
     fixture.profiles.saveProfile.mockImplementation(async input => ({ ok: true, value: {
       ...input,
       revision: 2,
@@ -482,20 +812,42 @@ describe('Agent Center business UI', () => {
       updatedAt: 2,
       health: 'healthy' as const,
     } }))
-    render(<AgentCenterSection close={() => {}} api={presetApi} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
+    render(<AgentCenterSection
+      close={() => {}}
+      api={presetApi}
+      profiles={fixture.profiles as never}
+      skills={fixture.skills as never}
+      runtime={fixture.runtime as never}
+      locale={locale()}
+      openAdvanced={() => true}
+      onNativeConversationChange={onNativeConversationChange}
+    />)
     await screen.findByRole('tab', { name: 'My Agents' })
     fireEvent.click(screen.getByRole('tab', { name: 'My Agents' }))
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    await waitFor(() => expect(fixture.runtime.beginAuthoring).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(onNativeConversationChange).toHaveBeenCalledWith({
+      sessionId: 'session-authoring', interactive: true,
+    }))
+    expect(screen.getByText('Harness native configuration conversation is on the right')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Test chat' }))
-    expect(screen.queryByText('Save the Agent configuration first')).toBeNull()
-    expect(screen.getByPlaceholderText('Enter a test question…')).toBeInTheDocument()
+    const testTab = screen.getByRole('tab', { name: 'Test chat' })
+    await waitFor(() => expect(testTab).not.toBeDisabled())
+    fireEvent.click(testTab)
+    await waitFor(() => expect(fixture.runtime.beginTest).toHaveBeenNthCalledWith(1,
+      'mine', expect.objectContaining({ presetId: 'mine', configVersion: 'v1-a' }),
+    ))
+    await waitFor(() => expect(onNativeConversationChange).toHaveBeenCalledWith({
+      sessionId: 'session-test-v1', interactive: true,
+    }))
+    expect(screen.getByText('Harness native test conversation is on the right')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('tab', { name: 'Configuration chat' }))
     fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Senior research reviewer' } })
-    fireEvent.click(screen.getByRole('tab', { name: 'Test chat' }))
+    fireEvent.click(testTab)
     expect(screen.getByText('Save the Agent configuration first')).toBeInTheDocument()
-    expect(screen.getByText(/same saved Agent Preset/)).toBeInTheDocument()
+    expect(onNativeConversationChange).toHaveBeenCalledWith({ sessionId: null, interactive: false })
+    expect(fixture.runtime.beginTest).toHaveBeenCalledTimes(1)
 
     fireEvent.click(screen.getByRole('tab', { name: 'Configuration chat' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save Personal Agent' }))
@@ -508,26 +860,31 @@ describe('Agent Center business UI', () => {
     expect(presetApi.copy).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('tab', { name: 'Test chat' }))
-    fireEvent.change(screen.getByPlaceholderText('Enter a test question…'), { target: { value: 'Give me a two-step review plan' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Send test message' }))
-    await waitFor(() => expect(fixture.runtime.test).toHaveBeenCalledWith(
-      'mine', expect.objectContaining({ presetId: 'mine', configVersion: 'v2-saved' }), 'Give me a two-step review plan',
+    await waitFor(() => expect(fixture.runtime.beginTest).toHaveBeenNthCalledWith(2,
+      'mine', expect.objectContaining({ presetId: 'mine', configVersion: 'v2-saved' }),
     ))
-    expect(screen.getByRole('button', { name: 'Open full test conversation' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Open full test conversation' }))
-    expect(fixture.runtime.openSession).toHaveBeenCalledWith('session-test')
+    await waitFor(() => expect(onNativeConversationChange).toHaveBeenCalledWith({
+      sessionId: 'session-test-v2', interactive: true,
+    }))
+    expect(screen.getByText('Harness native test conversation is on the right')).toBeInTheDocument()
   })
-
   it('declares one combined Center surface with Remote, Workspace, and conversation dependencies', () => {
     expect(inject).toEqual(['slots', 'locale', 'remote', 'sessions', 'workspaces', 'conversation'])
   })
 
-  it('mounts inside the native center column, keeps the sidebar interactive, and restores the conversation', async () => {
+  it('reuses one native Conversation while switching configuration and test Sessions, then restores the opening Session', async () => {
     const fixture = services()
+    let currentSessionId = 'session-original'
+    fixture.runtime.currentSessionId.mockImplementation(() => currentSessionId)
+    fixture.runtime.openSession.mockImplementation((sessionId: string) => {
+      currentSessionId = sessionId
+      return () => {}
+    })
     const controller = new PaimindProductSurfaceController('agent-center', window, document)
     const center = document.createElement('main')
     const nativeConversation = document.createElement('div')
     nativeConversation.dataset.slot = 'conversation'
+    nativeConversation.append(document.createElement('section'))
     center.append(nativeConversation)
     document.body.append(center)
     render(<>
@@ -544,9 +901,31 @@ describe('Agent Center business UI', () => {
     expect(trigger).not.toHaveAttribute('inert')
     expect(nativeConversation).toHaveAttribute('inert')
     expect(document.body.style.overflow).toBe('')
-    fireEvent.keyDown(document, { key: 'Escape' })
+
+    fireEvent.click(screen.getByRole('tab', { name: 'My Agents' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    await waitFor(() => expect(fixture.runtime.openSession).toHaveBeenCalledWith('session-authoring'))
+    expect(currentSessionId).toBe('session-authoring')
+    expect(center.querySelectorAll(':scope > [data-slot="conversation"]')).toHaveLength(1)
+    expect(surface.querySelector('[data-slot="conversation"]')).toBeNull()
+    expect(center).toHaveAttribute('data-paimind-product-center-native-conversation')
+    expect(nativeConversation).not.toHaveAttribute('inert')
+    expect(nativeConversation).not.toHaveAttribute('aria-hidden')
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Test chat' }))
+    await waitFor(() => expect(fixture.runtime.beginTest).toHaveBeenCalledWith(
+      'mine', expect.objectContaining({ presetId: 'mine', configVersion: 'v1-a' }),
+    ))
+    await waitFor(() => expect(fixture.runtime.openSession).toHaveBeenCalledWith('session-test'))
+    expect(currentSessionId).toBe('session-test')
+    expect(screen.getByText('Harness native test conversation is on the right')).toBeInTheDocument()
+    expect(center.querySelectorAll(':scope > [data-slot="conversation"]')).toHaveLength(1)
+
+    act(() => { controller.close() })
     await waitFor(() => expect(document.activeElement).toBe(trigger))
     expect(screen.queryByRole('main', { name: 'Agent Center' })).toBeNull()
+    expect(fixture.runtime.openSession).toHaveBeenLastCalledWith('session-original')
+    expect(currentSessionId).toBe('session-original')
     expect(nativeConversation).not.toHaveAttribute('inert')
     expect(nativeConversation).not.toHaveAttribute('aria-hidden')
     controller.dispose()
@@ -554,10 +933,17 @@ describe('Agent Center business UI', () => {
 
   it('closes only the starter or Builder on their first Escape inside the combined Center surface', async () => {
     const fixture = services()
+    let currentSessionId = 'session-original'
+    fixture.runtime.currentSessionId.mockImplementation(() => currentSessionId)
+    fixture.runtime.openSession.mockImplementation((sessionId: string) => {
+      currentSessionId = sessionId
+      return () => {}
+    })
     const controller = new PaimindProductSurfaceController('agent-center', window, document)
     const center = document.createElement('main')
     const nativeConversation = document.createElement('div')
     nativeConversation.dataset.slot = 'conversation'
+    nativeConversation.append(document.createElement('section'))
     center.append(nativeConversation)
     document.body.append(center)
     render(<>
@@ -578,9 +964,25 @@ describe('Agent Center business UI', () => {
     fireEvent.change(screen.getByLabelText('Describe what it should accomplish'), { target: { value: 'Review a business workflow' } })
     fireEvent.click(screen.getByRole('button', { name: 'Generate Agent brief' }))
     const builder = screen.getByRole('region', { name: 'Create Agent' })
+    await waitFor(() => expect(fixture.runtime.author).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: 'Review a business workflow',
+    })))
+    await waitFor(() => expect(fixture.runtime.openSession).toHaveBeenCalledWith('session-authoring'))
+    expect(nativeConversation).not.toHaveAttribute('inert')
     fireEvent.keyDown(builder, { key: 'Escape' })
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Create Agent' })).toBeNull())
     expect(screen.getByRole('main', { name: 'Agent Center' })).toBeInTheDocument()
+    await waitFor(() => expect(currentSessionId).toBe('session-original'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    const editBuilder = await screen.findByRole('region', { name: 'Edit Agent' })
+    await waitFor(() => expect(fixture.runtime.beginAuthoring).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(currentSessionId).toBe('session-authoring'))
+    expect(nativeConversation).not.toHaveAttribute('inert')
+    fireEvent.keyDown(nativeConversation, { key: 'Escape' })
+    await waitFor(() => expect(editBuilder).not.toBeInTheDocument())
+    expect(screen.getByRole('main', { name: 'Agent Center' })).toBeInTheDocument()
+    await waitFor(() => expect(currentSessionId).toBe('session-original'))
 
     fireEvent.keyDown(document, { key: 'Escape' })
     await waitFor(() => expect(screen.queryByRole('main', { name: 'Agent Center' })).toBeNull())
@@ -602,7 +1004,10 @@ describe('Agent Center business UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Generate Agent brief' }))
     const builder = screen.getByRole('region', { name: 'Create Agent' })
     expect(builder).not.toHaveAttribute('aria-modal')
-    await waitFor(() => expect(screen.getByPlaceholderText(/Tell me what to adjust/)).toHaveFocus())
+    await waitFor(() => expect(fixture.runtime.author).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: 'Help me focus',
+    })))
+    await waitFor(() => expect(screen.getByText('Harness native configuration conversation is on the right')).toBeInTheDocument())
     fireEvent.keyDown(builder, { key: 'Escape' })
     await waitFor(() => expect(trigger).toHaveFocus())
     expect(screen.queryByRole('region', { name: 'Create Agent' })).toBeNull()
@@ -621,9 +1026,13 @@ describe('Agent Center business UI', () => {
     expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-avatar]')
   })
 
-  it('registers only the native sidebar and shell overlay product surfaces', async () => {
+  it('registers native product surfaces and a compact Proposal Tool row that never renders raw arguments', async () => {
     const fixture = services()
     const registered: string[] = []
+    const registrations: Array<{
+      readonly options: Readonly<Record<string, unknown>>
+      readonly component: ComponentType<Record<string, unknown>>
+    }> = []
     const disposers: Array<() => void | Promise<void>> = []
     const remote = {
       paimindSkillInstaller: fixture.skills,
@@ -635,12 +1044,20 @@ describe('Agent Center business UI', () => {
       sessions: { list: { getSnapshot: () => ({ current: undefined, byId: {}, jobsBySession: {} }), subscribe: () => () => {} }, open: () => {} },
       workspaces: { startSession: () => {} },
       conversation: { input: { for: () => ({ setDraft: () => {} }) } },
-      get: () => ({ api: { agentPresets: api() } }),
+      get: () => ({ api: {
+        agentPresets: api(),
+        sessions: {
+          create: vi.fn(), history: vi.fn(), prompt: vi.fn(), rename: vi.fn(), cancel: vi.fn(),
+        },
+      } }),
       reflect: { provide: () => () => {} },
       slots: {
         entries: () => [], subscribe: () => () => {}, getVersion: () => 0,
         inject(name: string, install: () => unknown) { const disposer = install(); registered.push(name); if (typeof disposer === 'function') disposers.push(disposer as () => void) },
-        register: () => () => {},
+        register(options: Readonly<Record<string, unknown>>, component: ComponentType<Record<string, unknown>>) {
+          registrations.push({ options, component })
+          return () => {}
+        },
       },
       effect(install: () => void | (() => void)) { const disposer = install(); if (typeof disposer === 'function') disposers.push(disposer) },
       inject(_dependencies: readonly string[], install: (scope: unknown) => void) {
@@ -650,8 +1067,23 @@ describe('Agent Center business UI', () => {
     }
 
     const dispose = await apply(context as never)
-    expect(registered).toEqual(['paimind.extension', 'sidebar.footer.action', 'shell.overlay'])
+    expect(registered).toEqual(['paimind.extension', 'tool.call.toolview', 'sidebar.footer.action', 'shell.overlay'])
     expect(registered).not.toContain('settings.section')
+    const proposalRow = registrations.find(entry => entry.options.key === AGENT_AUTHORING_PROPOSAL_TOOL)
+    expect(proposalRow).toBeDefined()
+    const rawArguments = '{"name":"NEVER_RENDER_THIS_SECRET"}'
+    const row = render(createElement(proposalRow!.component, { block: {
+      callId: 'proposal-1', name: AGENT_AUTHORING_PROPOSAL_TOOL, argsRaw: rawArguments,
+    } }))
+    expect(screen.getByRole('status', { name: 'Generating configuration proposal' })).toBeInTheDocument()
+    expect(screen.queryByText(/NEVER_RENDER_THIS_SECRET/)).toBeNull()
+    row.rerender(createElement(proposalRow!.component, { block: {
+      kind: 'tool-result', callId: 'proposal-1', isError: false,
+      call: { name: AGENT_AUTHORING_PROPOSAL_TOOL, argsRaw: rawArguments },
+      content: [{ type: 'text', text: 'NEVER_RENDER_RESULT_SECRET' }],
+    } }))
+    expect(screen.getByRole('status', { name: 'Configuration proposal ready for review' })).toBeInTheDocument()
+    expect(screen.queryByText(/NEVER_RENDER_(THIS|RESULT)_SECRET/)).toBeNull()
     expect(document.getElementById('@paimind/agent-market')).not.toBeNull()
     await dispose()
     expect(document.getElementById('@paimind/agent-market')).toBeNull()

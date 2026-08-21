@@ -152,12 +152,16 @@ describe('PAIMind visual experience client', () => {
     const shell = fixture.slots.find(entry => entry.injectedName === 'shell.overlay' && entry.options.id === 'paimind-visual-experience-hero')!
     const Shell = shell.component as ComponentType<{ mode: PaimindExperienceModeController; locale: unknown }>
     const shellView = render(<Shell {...shell.inject?.() as never} />)
-    expect(await screen.findByRole('heading', { name: '有什么可以帮你完成？' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '今天想完成什么？' })).toBeInTheDocument()
+    expect(screen.queryByText(/用 @ 选择 Agent/)).toBeNull()
 
     const dock = fixture.slots.find(entry => entry.injectedName === 'conversation.input.dock')!
     const Dock = dock.component as ComponentType
     const dockView = render(<Dock {...dock.inject?.() as never} />)
     expect(await screen.findByRole('button', { name: /Paramont 助手/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '全部智能体' })).toBeInTheDocument()
+    const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@paimind/visual-experience"]')?.textContent ?? ''
+    expect(style).toContain('[data-paimind-quick-agents]{display:grid;gap:8px;width:calc(100% - 32px);margin-inline:16px')
     fireEvent.click(screen.getByRole('button', { name: /Paramont 助手/ }))
     await waitFor(() => expect(nativeSelect).toHaveBeenCalledWith('paimind'))
 
@@ -185,7 +189,7 @@ describe('PAIMind visual experience client', () => {
     await waitFor(() => expect(document.body).toHaveAttribute('data-paimind-experience', 'native'))
     expect(removeTheme).toHaveBeenCalledOnce()
     expect(fixture.slots.find(entry => entry.options.id === 'paimind-visual-agent-choice')?.disposed()).toBe(true)
-    expect(screen.queryByRole('heading', { name: '有什么可以帮你完成？' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: '今天想完成什么？' })).toBeNull()
     expect(document.body).not.toHaveAttribute('data-paimind-composer-overlay')
     expect(document.querySelector('#composer-overlay-anchor')).not.toHaveAttribute('data-paimind-composer-overlay-anchor')
 

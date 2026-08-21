@@ -32,6 +32,21 @@ const verificationInput = z.object({
   sessionId, agentId: id, presetId: id, configVersion: z.string(), firstTurnId: z.string(),
   result: z.enum(['passed', 'failed']), message: z.string(),
 }).readonly()
+const authoringSeal = z.object({ sessionId, agentPreset: z.literal('cordis'), sealed: z.literal(true) }).readonly()
+const authoringSkillName = z.string().regex(/^[a-z0-9][a-z0-9-]*$/)
+const authoringDraft = z.object({
+  productKind: z.enum(['personal', 'business']), businessCategory: z.string().max(80),
+  name: z.string().max(80), description: z.string().max(500), basePresetId: id,
+  role: z.string().max(2_000), goal: z.string().max(2_000), behavior: z.string().max(4_000),
+  instructions: z.string().max(4_000), preferredSkillNames: z.array(authoringSkillName).max(40).readonly(),
+}).strict().readonly()
+const authoringTurnInput = z.object({
+  sessionId,
+  draft: authoringDraft,
+  skills: z.array(z.object({ name: authoringSkillName, description: z.string().max(500) }).strict().readonly()).max(40).readonly(),
+  locale: z.string().min(2).max(35).regex(/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i),
+}).strict().readonly()
+const authoringPrepared = z.object({ sessionId, agentPreset: z.literal('cordis'), prepared: z.literal(true) }).strict().readonly()
 
 const direct = (method: string, parameters: readonly unknown[], result: unknown, line: number) => ({
   id: `@paimind/agent-builder#paimindAgentProfiles/${method}`,
@@ -46,6 +61,8 @@ export const PAIMIND_AGENT_PROFILE_REMOTE_DESCRIPTORS = Object.freeze([
   direct('listProfiles', [], z.object({ profiles: z.array(profile).readonly() }).readonly(), 246),
   direct('saveProfile', input(profileInput, '@paimind/agent-builder#AgentBusinessProfileInput'), profile, 260),
   direct('setDefault', input(z.object({ presetId: id }).readonly(), '@paimind/agent-builder#AgentDefaultInput'), z.object({ presetId: id }).readonly(), 300),
+  direct('sealAuthoringSession', input(z.object({ sessionId }).readonly(), '@paimind/agent-builder#AgentAuthoringSealInput'), authoringSeal, 340),
+  direct('prepareAuthoringTurn', input(authoringTurnInput, '@paimind/agent-builder#AgentAuthoringTurnInput'), authoringPrepared, 535),
   direct('bindSession', input(bindingInput, '@paimind/agent-builder#AgentSessionBindingInput'), binding, 311),
   direct('migrationPlan', input(z.object({ sourceSessionId: sessionId }).readonly(), '@paimind/agent-builder#AgentMigrationPlanInput'), plan.nullable(), 321),
   direct('recordMigration', input(migrationInput, '@paimind/agent-builder#AgentMigrationInput'), migration, 336),

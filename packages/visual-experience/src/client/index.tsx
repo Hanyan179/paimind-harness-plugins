@@ -243,7 +243,7 @@ body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [
 [data-paimind-context-launcher]:focus-visible{box-shadow:0 0 0 2px color-mix(in srgb,var(--paimind-accent) 30%,transparent)}
 [data-paimind-context-launcher]:disabled{opacity:.46;cursor:not-allowed}
 body[data-paimind-experience='paimind'][data-paimind-composer-overlay='open'] [data-paimind-quick-agents]{visibility:hidden;opacity:0;pointer-events:none}
-[data-paimind-quick-agents]{display:grid;gap:8px;width:100%;color:var(--paimind-muted)}
+[data-paimind-quick-agents]{display:grid;gap:8px;width:calc(100% - 32px);margin-inline:16px;color:var(--paimind-muted)}
 [data-paimind-quick-agents-label]{display:flex;align-items:center;gap:6px;padding:0 2px;font-size:11px;font-weight:650;line-height:16px;letter-spacing:.02em}
 [data-paimind-quick-agents-list]{display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden}
 [data-paimind-quick-agent],[data-paimind-quick-all]{display:inline-flex;align-items:center;gap:6px;min-width:0;min-height:38px;border:1px solid var(--paimind-line);border-radius:999px;color:var(--paimind-muted);background:color-mix(in srgb,var(--paimind-glass-strong) 82%,transparent);font:inherit;font-size:12px;line-height:18px;white-space:nowrap;cursor:pointer;transition:color .16s ease,border-color .16s ease,background .16s ease,transform .16s ease}
@@ -592,10 +592,7 @@ export function ExperienceHeroPortal({ mode, locale }: {
   if (state.mode !== 'paimind' || target === null) return null
   return createPortal(<>
     <span data-paimind-experience-eyebrow>PARAMONT · PAIMIND</span>
-    <span data-paimind-experience-title role="heading" aria-level={1}>{zh ? '有什么可以帮你完成？' : 'What can we help you accomplish?'}</span>
-    <span data-paimind-experience-subtitle>{zh
-      ? '提问、分析资料、生成内容；用 @ 选择 Agent 或 Skill，用 + 添加文件与会话上下文，用 / 调用原生模式与命令。'
-      : 'Ask, analyze materials, and create content. Use @ for Agents or Skills, + for file and session context, and / for native modes and commands.'}</span>
+    <span data-paimind-experience-title role="heading" aria-level={1}>{zh ? '今天想完成什么？' : 'What would you like to accomplish?'}</span>
   </>, target)
 }
 
@@ -787,7 +784,7 @@ export function QuickAgents({ bridge, mode, locale }: {
         disabled={!centerAvailable}
         title={centerAvailable ? (zh ? '打开 Agent Center' : 'Open Agent Center') : (zh ? 'Agent Center 未安装' : 'Agent Center is not installed')}
         onClick={() => { requestPaimindProductSurface('agent-center') }}
-      >{zh ? '全部' : 'All'}<PaimindChevronRightIcon size={13} /></button>
+      >{zh ? '全部智能体' : 'All Agents'}<PaimindChevronRightIcon size={13} /></button>
     </div>
   </section>
 }

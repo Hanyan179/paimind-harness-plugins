@@ -21,6 +21,7 @@ export default defineConfig({
       '@paimind/scheduler-adapter-harness': packageSource('scheduler-adapter-harness'),
       '@paimind/testkit': packageSource('testkit'),
       '@paimind/agent-builder/remote': packageModule('agent-builder', 'remote'),
+      '@paimind/agent-builder/client-contract': packageModule('agent-builder', 'client-contract'),
       '@paimind/agent-builder': packageSource('agent-builder'),
       '@paimind/skill-market/remote': packageModule('skill-market', 'remote'),
       '@paimind/skill-market/catalog': packageModule('skill-market', 'catalog'),
