@@ -301,7 +301,7 @@ body[data-paimind-experience='paimind'][data-paimind-density='workbench'] [data-
 [data-paimind-experience-mode] input:focus-visible+span{outline:2px solid color-mix(in srgb,var(--paimind-accent,#4f83b8) 42%,transparent);outline-offset:1px}
 [data-paimind-experience-mode] input:disabled+span{opacity:.5;cursor:not-allowed}
 [data-paimind-experience-mode] input:disabled{cursor:not-allowed}
-body[data-paimind-experience='paimind'] [data-paimind-agent-center],body[data-paimind-experience='paimind'] [data-paimind-skill-center],body[data-paimind-experience='paimind'] [data-paimind-extension-center],body[data-paimind-experience='paimind'] [data-paimind-notifications],body[data-paimind-experience='paimind'] [data-paimind-user-settings]{--paimind-surface:var(--paimind-glass-strong);background:color-mix(in srgb,var(--paimind-canvas) 92%,var(--paimind-accent) 8%)}
+body[data-paimind-experience='paimind'] [data-paimind-skill-center],body[data-paimind-experience='paimind'] [data-paimind-extension-center],body[data-paimind-experience='paimind'] [data-paimind-notifications],body[data-paimind-experience='paimind'] [data-paimind-user-settings]{--paimind-surface:var(--paimind-glass-strong);background:color-mix(in srgb,var(--paimind-canvas) 92%,var(--paimind-accent) 8%)}
 @keyframes paimind-pop-in{from{opacity:0;transform:translateY(-4px) scale(.988)}to{opacity:1;transform:none}}
 @keyframes paimind-composer-menu-in{from{opacity:0;transform:translateY(-5px) scale(.992)}to{opacity:1;transform:none}}
 @media(max-width:900px){[data-paimind-experience-title]{font-size:32px}[data-paimind-quick-agent]:nth-of-type(n+3){display:none}}
@@ -1026,6 +1026,9 @@ function installAgentExperience(
     if (bridge !== null) return
     const nativeSeat = resolveHarnessAgentPresetSeatControl(ctx.slots)
     if (nativeSeat === null) return
+    // One bridge owns every Agent selection entry point in PAIMind mode. The
+    // hero picker, Quick Agents and the @ source are different renderers over
+    // the same native Harness Preset seat, never parallel Agent state.
     const candidate = new NativeHarnessAgentChoiceBridge(ctx.get('connection').api.agentPresets, nativeSeat)
     bridge = candidate
     const currentGeneration = ++generation

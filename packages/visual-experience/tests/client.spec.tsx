@@ -295,7 +295,7 @@ describe('PAIMind visual experience client', () => {
     current.fixture.disposeEffects()
   })
 
-  it('routes PAIMind @ to canonical Agent and executable Skill, and migrates native references to + Context', async () => {
+  it('routes the hero picker and PAIMind @ through one canonical Agent Preset seat', async () => {
     const {
       fixture, scope, nativeSelect, reference, referenceCandidates, nativeSkill,
       nativeSkillCandidates, nativeSkillPick, skillsList, triggerController, triggerSources,
@@ -303,6 +303,17 @@ describe('PAIMind visual experience client', () => {
     await waitFor(() => expect(triggerSources.map(source => source.name)).toEqual([
       'skill', 'reference', 'paimind-agent', 'paimind-skill', 'paimind-context',
     ]))
+
+    const visualSeat = fixture.slots.find(entry => entry.options.id === 'paimind-visual-agent-choice')!
+    const Seat = visualSeat.component as ComponentType
+    const seatView = render(<Seat {...visualSeat.inject?.() as never} />)
+    fireEvent.click(await screen.findByRole('button', { name: /标准模式/ }))
+    const picker = await screen.findByRole('dialog', { name: '选择 Agent 或平台模式' })
+    fireEvent.click(picker.querySelector<HTMLButtonElement>("[data-paimind-agent-choice][aria-label='Paramont 助手']")
+      ?? screen.getByRole('button', { name: 'Paramont 助手' }))
+    await waitFor(() => expect(nativeSelect).toHaveBeenLastCalledWith('paimind'))
+    nativeSelect.mockClear()
+
     await expect(reference.candidates(
       { sessionId: 'session-1' },
       { query: '', position: 'leading', signal: new AbortController().signal },
@@ -373,7 +384,7 @@ describe('PAIMind visual experience client', () => {
     await act(async () => { scope.push('native') })
     await waitFor(() => expect(triggerSources).toEqual([nativeSkill, reference]))
     expect(reference.candidates).toBe(referenceCandidates)
-    contextView.unmount()
+    contextView.unmount(); seatView.unmount()
     fixture.disposeEffects()
   })
 
@@ -478,6 +489,8 @@ describe('PAIMind visual experience client', () => {
     expect(style).not.toContain("[data-phase]{background:var(--paimind-canvas)!important}")
     expect(style).toContain("bottom:calc(100% + 8px)!important")
     expect(style).toContain('background:color-mix(in srgb,var(--paimind-canvas) 94%,white 6%)!important')
+    expect(style).not.toContain("body[data-paimind-experience='paimind'] [data-paimind-agent-center]")
+    expect(style).toContain("body[data-paimind-experience='paimind'] [data-paimind-skill-center]")
     expect(style).toContain('[data-paimind-composer-disclosure]')
     expect(style).toContain('grid-template-columns:minmax(250px,42%) minmax(0,1fr)')
     expect(style).toContain('[data-paimind-candidate-description]{display:none!important}')
