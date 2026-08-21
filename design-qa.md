@@ -30,6 +30,56 @@ final result: passed
 
 ---
 
+# Proposal Assistant Rich GenUI Design QA
+
+## Comparison input
+
+- Source visual truth: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-b114e855-bbf7-490a-b35d-8ca470de61c0.png` (`2398 x 1996`).
+- Browser-rendered implementation: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/.tmp/proposal-visual-qa/deck-style-category-final.png` (`2113 x 1478`).
+- Normalized focused source crop: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/.tmp/proposal-visual-qa/reference-component.png` (`1000 x 1000`).
+- Normalized focused implementation crop: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/.tmp/proposal-visual-qa/implementation-component.png` (`1000 x 1000`).
+- Same-input comparison: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/.tmp/proposal-visual-qa/reference-vs-implementation.png` (`2000 x 1000`).
+
+The reference and implementation were compared in the same Light-theme Deck Style state with Category Growth Strategy selected. The live browser image and component crops were kept at `1x`; only the focused crops were proportionally normalized and top-aligned to a common `1000 x 1000` comparison canvas.
+
+The implementation intentionally uses the native conversation transcript for confirmed prior answers instead of recreating the reference's frontend-owned answer-summary cards. This preserves the accepted runtime boundary: the Agent and Harness Session own workflow context; the plugin renders only the current pending AI question.
+
+## Comparison history
+
+1. Pre-fix: every Deck Style reused the Executive Editorial storyboard and the `210px` preview height made the image secondary.
+2. Fix: added distinct `1024 x 1536` Category Intelligence and Assortment Studio storyboard assets, bound each option to its own semantic image and alternative text, widened the desktop component, raised the preview to `330..470px`, and restored the reference's navy / ivory / gold hierarchy.
+3. Post-fix: a real Proposal Assistant Session progressed through Customer, Audience and Horizon before the model emitted the Deck Style question. Executive, Category and Assortment selection states each switched title, description, metadata and storyboard while retaining explicit confirmation.
+4. Post-fix comparison found no actionable P0, P1 or P2 visual difference in the reusable current-question component.
+
+## Findings
+
+- P0: none.
+- P1: none.
+- P2: none.
+- P3: the live Harness transcript remains visible above the current question and replaces the mock's three completed-answer cards. This is an intentional runtime-ownership decision rather than unresolved visual drift.
+
+## Required fidelity surfaces
+
+- Fonts and typography: native UI sans-serif remains the control and body face; the preview title uses the reference's editorial serif treatment. Heading weights, line height and label tracking preserve the visual hierarchy at the narrower live canvas.
+- Spacing and layout rhythm: the card uses the reference's header / progress / two-column workbench structure, larger `22px` radius, stronger section padding, and consistent option gaps. The primary action remains visible without horizontal overflow.
+- Colors and visual tokens: navy, warm white, cool slate and restrained gold match the source while continuing to consume Harness label, border and surface tokens where semantic theming matters.
+- Image quality and asset fidelity: all three visible storyboards are real WebP raster assets, each sourced at `1024 x 1536`, correctly contained without stretching, placeholder art, CSS drawing or broken-image fallback.
+- Copy and content: all user-facing proposal content is English. Labels and descriptions are supplied by the AI tool call; the renderer adds only stable visual guidance and semantic preview metadata.
+
+## Verified behavior
+
+- Agent Center started a native `proposal-assistant` Session; the model, not the frontend, emitted every visible `ask_user_question` call.
+- Customer, multi-select Audience and Horizon answers returned through native Tool Results before the model decided to request Deck Style.
+- Executive Proposal, Category Growth Strategy and Line Review & Assortment each display a distinct image and preview story.
+- Selection stages a choice but does not answer the tool until `Use this deck style` is pressed.
+- Keyboard focus and pointer hover use the same preview state path; the package test verifies hover without answering the tool.
+- Full repository gate passed: `79` test files / `336` tests, TypeScript build, API snapshot, `34` dry package packs, strict publint, `104` NodeNext public exports, examples, `21` client-plugin framework verification and `92` Markdown documents.
+- The only test warning remains the upstream missing `@deepseek-ai/dsh-client-ui-primitives/lib/index.js.map`; it does not fail the suite.
+
+final result: passed
+
+---
+
 # FP-17 PAIMind Visual Experience Design QA
 
 ## Comparison input
