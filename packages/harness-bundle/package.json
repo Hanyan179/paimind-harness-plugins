@@ -17,6 +17,8 @@
     "@paimind/better-sidebar-adapter": "workspace:^",
     "@paimind/task-monitor": "workspace:^",
     "@paimind/artifact-runtime": "workspace:^",
+    "@paimind/category-analysis-adapter": "workspace:^",
+    "@paimind/fact-layer": "workspace:^",
     "@paimind/generator-web": "workspace:^",
     "@paimind/generator-office": "workspace:^",
     "@paimind/generator-bento": "workspace:^",

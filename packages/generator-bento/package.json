@@ -14,7 +14,7 @@
     "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
     "./package.json": "./package.json"
   },
-  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map","runtime/**/*.mjs"],
   "dsh": { "client": { "inject": ["@deepseek-ai/dsh-client-ui-slots"], "platform": "web" } },
   "dependencies": {
     "@paimind/artifact-runtime": "workspace:^",

@@ -1,0 +1,4 @@
+department_id,category_name,gross_margin_pct,avg_price,distribution_gap_pct,velocity_index,opportunity_score,recommended_action
+102,Kids Beauty & Cosmetic Tools,41.2,2.02,8.0,118,74,Build
+140,Party Favors & Balloons,45.8,2.12,34.0,137,88,Expand
+210,Stickers & Creative Crafts,48.5,1.50,56.0,92,81,Develop

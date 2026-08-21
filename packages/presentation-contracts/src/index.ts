@@ -1,4 +1,6 @@
 export const ANALYSIS_SOURCE_MANIFEST_SCHEMA = 'paimind.analysis-source-manifest/v1' as const
+export const ANALYSIS_DATA_RESULT_SCHEMA = 'paimind.data-result/v2' as const
+export const PRESENTATION_FACT_SET_SCHEMA = 'paimind.fact-set/v1' as const
 export const PRESENTATION_OUTLINE_SCHEMA = 'paimind.presentation-outline/v1' as const
 export const PRESENTATION_TRACE_SCHEMA = 'paimind.presentation-trace/v3' as const
 export const PRESENTATION_VALIDATION_SCHEMA = 'paimind.presentation-validation/v1' as const
@@ -11,11 +13,14 @@ export const PRESENTATION_LAYOUTS = [
 ] as const
 export type PresentationLayout = typeof PRESENTATION_LAYOUTS[number]
 
-export const PRESENTATION_TEMPLATE_IDS = ['generic-dark', 'wmt-kids-mod'] as const
+export const PRESENTATION_TEMPLATE_IDS = [
+  'generic-dark', 'wmt-kids-mod', 'strategy-grid', 'paramont-mountain', 'storybook-cutpaper',
+] as const
 export type PresentationTemplateId = typeof PRESENTATION_TEMPLATE_IDS[number]
 export const PRESENTATION_STYLE_PRESETS = [
   'startup-pitch', 'data-intelligence', 'storytelling-with-data',
   'warm-editorial', 'financial-elite', 'wmt-retail',
+  'strategy-consulting', 'paramont-signature', 'playful-storybook',
 ] as const
 export type PresentationStylePreset = typeof PRESENTATION_STYLE_PRESETS[number]
 export const PRESENTATION_DENSITIES = ['airy', 'balanced', 'dense'] as const
@@ -150,6 +155,8 @@ export const PRESENTATION_OUTLINE_TOOL_SCHEMA = {
     schema: { type: 'string', const: PRESENTATION_OUTLINE_SCHEMA, required: true },
     title: REQUIRED_STRING_TOOL_FIELD,
     subtitle: { type: 'string' },
+    factSetArtifactId: { ...STABLE_ID_TOOL_FIELD, description: 'Exact current-Session paimind.fact-set/v1 Artifact ID used as the truth boundary.' },
+    factSetFactsSha256: { ...REQUIRED_STRING_TOOL_FIELD, description: 'Exact factsSha256 from the referenced Fact Set.' },
     design: {
       type: 'object', required: true, additionalProperties: false,
       description: 'HTML presentation specification. The renderer owns all concrete CSS and HTML for the selected registered template and style preset.',
@@ -218,6 +225,27 @@ export interface AnalysisSourceManifestEntry {
 export interface AnalysisSourceManifestV1 {
   readonly schema: typeof ANALYSIS_SOURCE_MANIFEST_SCHEMA
   readonly sources: readonly AnalysisSourceManifestEntry[]
+}
+
+/** Deterministic analysis output whose facts still retain exact frozen-source lineage. */
+export interface AnalysisDataResultV2 {
+  readonly schema: typeof ANALYSIS_DATA_RESULT_SCHEMA
+  readonly analysisKind: string
+  readonly sourceManifest: string
+  readonly sourceManifestSha256: string
+  readonly sources: readonly PresentationSource[]
+  readonly facts: readonly PresentationFact[]
+  readonly payloadSha256: string
+  readonly payload: Readonly<Record<string, unknown>>
+}
+
+/** Reusable immutable truth layer consumed by presentation and other artifact generators. */
+export interface PresentationFactSetV1 {
+  readonly schema: typeof PRESENTATION_FACT_SET_SCHEMA
+  readonly analysisArtifactIds: readonly string[]
+  readonly sources: readonly PresentationSource[]
+  readonly facts: readonly PresentationFact[]
+  readonly factsSha256: string
 }
 
 export interface PresentationSource {
@@ -351,6 +379,8 @@ export interface PresentationOutlineV1 {
   readonly schema: typeof PRESENTATION_OUTLINE_SCHEMA
   readonly title: string
   readonly subtitle?: string
+  readonly factSetArtifactId?: string
+  readonly factSetFactsSha256?: string
   readonly design: PresentationDesignV1
   readonly sources: readonly PresentationSource[]
   readonly facts: readonly PresentationFact[]
@@ -360,6 +390,8 @@ export interface PresentationOutlineV1 {
 export interface PresentationTraceV3 {
   readonly schemaVersion: typeof PRESENTATION_TRACE_SCHEMA
   readonly reviewStatus: 'generated' | 'reviewed' | 'verified'
+  readonly factSetArtifactId?: string
+  readonly factSetFactsSha256?: string
   readonly sources: readonly ({
     readonly id: string
     readonly name: string
@@ -461,6 +493,9 @@ export function definePresentationDesign(value: unknown): Readonly<PresentationD
   if (canvas.width !== 1280 || canvas.height !== 720) throw new Error('outline.design.canvas must be 1280x720')
   if (!DENSITY_SET.has(String(input.density))) throw new Error('outline.design.density is unsupported')
   if (input.stylePreset === 'wmt-retail' && input.templateId !== 'wmt-kids-mod') throw new Error('outline.design wmt-retail requires templateId wmt-kids-mod')
+  if (input.stylePreset === 'strategy-consulting' && input.templateId !== 'strategy-grid') throw new Error('outline.design strategy-consulting requires templateId strategy-grid')
+  if (input.stylePreset === 'paramont-signature' && input.templateId !== 'paramont-mountain') throw new Error('outline.design paramont-signature requires templateId paramont-mountain')
+  if (input.stylePreset === 'playful-storybook' && input.templateId !== 'storybook-cutpaper') throw new Error('outline.design playful-storybook requires templateId storybook-cutpaper')
   return Object.freeze({
     schema: PRESENTATION_DESIGN_SCHEMA,
     templateId: input.templateId as PresentationTemplateId,
@@ -565,6 +600,82 @@ export function defineAnalysisSourceManifest(candidate: unknown): Readonly<Analy
   return Object.freeze({ schema: ANALYSIS_SOURCE_MANIFEST_SCHEMA, sources: Object.freeze(sources) })
 }
 
+function presentationSources(value: unknown, label: string): readonly Readonly<PresentationSource>[] {
+  const sources = array(value, label).map((entry, index) => {
+    const source = record(entry, `${label}[${index}]`)
+    return Object.freeze({
+      sourceId: id(source.sourceId, `${label}[${index}].sourceId`),
+      name: text(source.name, `${label}[${index}].name`),
+      path: relativePath(source.path, `${label}[${index}].path`),
+      sha256: hash(source.sha256, `${label}[${index}].sha256`),
+      format: text(source.format, `${label}[${index}].format`),
+      role: text(source.role, `${label}[${index}].role`),
+      period: text(source.period, `${label}[${index}].period`),
+      summary: text(source.summary, `${label}[${index}].summary`),
+      ...(source.redaction === undefined ? {} : { redaction: text(source.redaction, `${label}[${index}].redaction`) }),
+      ...(source.artifactId === undefined ? {} : { artifactId: id(source.artifactId, `${label}[${index}].artifactId`) }),
+    })
+  })
+  if (sources.length === 0) throw new Error(`${label} must not be empty`)
+  unique(sources.map(source => source.sourceId), label)
+  return Object.freeze(sources)
+}
+
+function presentationFacts(value: unknown, sources: readonly Readonly<PresentationSource>[], label: string): readonly Readonly<PresentationFact>[] {
+  const sourceSet = new Set(sources.map(source => source.sourceId))
+  const facts = array(value, label).map((entry, index) => {
+    const fact = record(entry, `${label}[${index}]`)
+    if (!['source_value', 'derived_metric', 'narrative'].includes(String(fact.valueType))) throw new Error(`${label}[${index}].valueType is unsupported`)
+    if (fact.factValuesChanged !== false) throw new Error(`${label}[${index}].factValuesChanged must be false`)
+    if (typeof fact.rawValue !== 'string' && typeof fact.rawValue !== 'number') throw new Error(`${label}[${index}].rawValue must be a string or number`)
+    const linkedSources = stringList(fact.sourceIds, `${label}[${index}].sourceIds`)
+    if (linkedSources.length === 0 || linkedSources.some(sourceId => !sourceSet.has(sourceId))) throw new Error(`${label}[${index}] references an unknown source`)
+    const factDimensions = dimensions(fact.dimensions, `${label}[${index}].dimensions`)
+    const factMeasures = measures(fact.measures, `${label}[${index}].measures`)
+    const factTechnical = technical(fact.technical, `${label}[${index}].technical`)
+    return Object.freeze({
+      factId: id(fact.factId, `${label}[${index}].factId`), sourceIds: linkedSources,
+      rawValue: fact.rawValue, displayValue: text(fact.displayValue, `${label}[${index}].displayValue`),
+      valueType: fact.valueType as PresentationFact['valueType'], fieldPath: text(fact.fieldPath, `${label}[${index}].fieldPath`),
+      ...(fact.formula === undefined ? {} : { formula: text(fact.formula, `${label}[${index}].formula`) }),
+      method: text(fact.method, `${label}[${index}].method`), definition: text(fact.definition, `${label}[${index}].definition`),
+      period: text(fact.period, `${label}[${index}].period`), filters: stringList(fact.filters, `${label}[${index}].filters`), factValuesChanged: false as const,
+      ...(fact.businessExplanation === undefined ? {} : { businessExplanation: text(fact.businessExplanation, `${label}[${index}].businessExplanation`) }),
+      dimensions: factDimensions, measures: factMeasures, ...(factTechnical === undefined ? {} : { technical: factTechnical }),
+    })
+  })
+  if (facts.length === 0) throw new Error(`${label} must not be empty`)
+  unique(facts.map(fact => fact.factId), label)
+  return Object.freeze(facts)
+}
+
+export function defineAnalysisDataResult(candidate: unknown): Readonly<AnalysisDataResultV2> {
+  const root = record(candidate, 'dataResult')
+  if (root.schema !== ANALYSIS_DATA_RESULT_SCHEMA) throw new Error('unsupported analysis data result schema')
+  const sources = presentationSources(root.sources, 'dataResult.sources')
+  const facts = presentationFacts(root.facts, sources, 'dataResult.facts')
+  return Object.freeze({
+    schema: ANALYSIS_DATA_RESULT_SCHEMA,
+    analysisKind: id(root.analysisKind, 'dataResult.analysisKind'),
+    sourceManifest: relativePath(root.sourceManifest, 'dataResult.sourceManifest'),
+    sourceManifestSha256: hash(root.sourceManifestSha256, 'dataResult.sourceManifestSha256'),
+    sources, facts,
+    payloadSha256: hash(root.payloadSha256, 'dataResult.payloadSha256'),
+    payload: Object.freeze(record(root.payload, 'dataResult.payload')),
+  })
+}
+
+export function definePresentationFactSet(candidate: unknown): Readonly<PresentationFactSetV1> {
+  const root = record(candidate, 'factSet')
+  if (root.schema !== PRESENTATION_FACT_SET_SCHEMA) throw new Error('unsupported presentation fact-set schema')
+  const analysisArtifactIds = stringList(root.analysisArtifactIds, 'factSet.analysisArtifactIds').map((value, index) => id(value, `factSet.analysisArtifactIds[${index}]`))
+  if (analysisArtifactIds.length === 0) throw new Error('factSet.analysisArtifactIds must not be empty')
+  unique(analysisArtifactIds, 'factSet.analysisArtifactIds')
+  const sources = presentationSources(root.sources, 'factSet.sources')
+  const facts = presentationFacts(root.facts, sources, 'factSet.facts')
+  return Object.freeze({ schema: PRESENTATION_FACT_SET_SCHEMA, analysisArtifactIds: Object.freeze(analysisArtifactIds), sources, facts, factsSha256: hash(root.factsSha256, 'factSet.factsSha256') })
+}
+
 function selector(value: unknown, label: string): PresentationSelector {
   const input = record(value, label)
   if (input.kind === 'object') return Object.freeze({ kind: 'object' })
@@ -576,44 +687,13 @@ function selector(value: unknown, label: string): PresentationSelector {
 export function definePresentationOutline(candidate: unknown): Readonly<PresentationOutlineV1> {
   const root = record(candidate, 'outline')
   if (root.schema !== PRESENTATION_OUTLINE_SCHEMA) throw new Error('unsupported presentation outline schema')
+  const factSetArtifactId = root.factSetArtifactId === undefined ? undefined : id(root.factSetArtifactId, 'outline.factSetArtifactId')
+  const factSetFactsSha256 = root.factSetFactsSha256 === undefined ? undefined : hash(root.factSetFactsSha256, 'outline.factSetFactsSha256')
+  if ((factSetArtifactId === undefined) !== (factSetFactsSha256 === undefined)) throw new Error('outline Fact Set Artifact ID and hash must be provided together')
   const design = definePresentationDesign(root.design)
-  const sources = array(root.sources, 'outline.sources').map((value, index) => {
-    const source = record(value, `outline.sources[${index}]`)
-    return Object.freeze({
-      sourceId: id(source.sourceId, `outline.sources[${index}].sourceId`), name: text(source.name, `outline.sources[${index}].name`),
-      path: relativePath(source.path, `outline.sources[${index}].path`), sha256: hash(source.sha256, `outline.sources[${index}].sha256`),
-      format: text(source.format, `outline.sources[${index}].format`), role: text(source.role, `outline.sources[${index}].role`),
-      period: text(source.period, `outline.sources[${index}].period`), summary: text(source.summary, `outline.sources[${index}].summary`),
-      ...(source.redaction === undefined ? {} : { redaction: text(source.redaction, `outline.sources[${index}].redaction`) }),
-      ...(source.artifactId === undefined ? {} : { artifactId: id(source.artifactId, `outline.sources[${index}].artifactId`) }),
-    })
-  })
-  const sourceIds = sources.map(source => source.sourceId); unique(sourceIds, 'outline.sources')
-  if (sources.length === 0) throw new Error('outline.sources must not be empty')
-  const sourceSet = new Set(sourceIds)
-  const facts = array(root.facts, 'outline.facts').map((value, index) => {
-    const fact = record(value, `outline.facts[${index}]`)
-    if (!['source_value', 'derived_metric', 'narrative'].includes(String(fact.valueType))) throw new Error(`outline.facts[${index}].valueType is unsupported`)
-    if (fact.factValuesChanged !== false) throw new Error(`outline.facts[${index}].factValuesChanged must be false`)
-    if (typeof fact.rawValue !== 'string' && typeof fact.rawValue !== 'number') throw new Error(`outline.facts[${index}].rawValue must be a string or number`)
-    const linkedSources = stringList(fact.sourceIds, `outline.facts[${index}].sourceIds`)
-    if (linkedSources.length === 0 || linkedSources.some(sourceId => !sourceSet.has(sourceId))) throw new Error(`outline.facts[${index}] references an unknown source`)
-    const factDimensions = dimensions(fact.dimensions, `outline.facts[${index}].dimensions`)
-    const factMeasures = measures(fact.measures, `outline.facts[${index}].measures`)
-    const factTechnical = technical(fact.technical, `outline.facts[${index}].technical`)
-    return Object.freeze({
-      factId: id(fact.factId, `outline.facts[${index}].factId`), sourceIds: linkedSources,
-      rawValue: fact.rawValue, displayValue: text(fact.displayValue, `outline.facts[${index}].displayValue`),
-      valueType: fact.valueType as PresentationFact['valueType'], fieldPath: text(fact.fieldPath, `outline.facts[${index}].fieldPath`),
-      ...(fact.formula === undefined ? {} : { formula: text(fact.formula, `outline.facts[${index}].formula`) }),
-      method: text(fact.method, `outline.facts[${index}].method`), definition: text(fact.definition, `outline.facts[${index}].definition`),
-      period: text(fact.period, `outline.facts[${index}].period`), filters: stringList(fact.filters, `outline.facts[${index}].filters`), factValuesChanged: false as const,
-      ...(fact.businessExplanation === undefined ? {} : { businessExplanation: text(fact.businessExplanation, `outline.facts[${index}].businessExplanation`) }),
-      dimensions: factDimensions, measures: factMeasures, ...(factTechnical === undefined ? {} : { technical: factTechnical }),
-    })
-  })
-  const factIds = facts.map(fact => fact.factId); unique(factIds, 'outline.facts')
-  if (facts.length === 0) throw new Error('outline.facts must not be empty')
+  const sources = presentationSources(root.sources, 'outline.sources')
+  const facts = presentationFacts(root.facts, sources, 'outline.facts')
+  const factIds = facts.map(fact => fact.factId)
   const factSet = new Set(factIds)
   const slides = array(root.slides, 'outline.slides').map((value, slideIndex) => {
     const slide = record(value, `outline.slides[${slideIndex}]`)
@@ -710,7 +790,7 @@ export function definePresentationOutline(candidate: unknown): Readonly<Presenta
   })
   unique(slides.map(slide => slide.slideId), 'outline.slides')
   if (slides.length === 0 || slides.length > MAX_PRESENTATION_SLIDES) throw new Error(`outline.slides must contain 1-${MAX_PRESENTATION_SLIDES} slides`)
-  return Object.freeze({ schema: PRESENTATION_OUTLINE_SCHEMA, title: text(root.title, 'outline.title'), ...(root.subtitle === undefined ? {} : { subtitle: text(root.subtitle, 'outline.subtitle') }), design, sources: Object.freeze(sources), facts: Object.freeze(facts), slides: Object.freeze(slides) })
+  return Object.freeze({ schema: PRESENTATION_OUTLINE_SCHEMA, title: text(root.title, 'outline.title'), ...(root.subtitle === undefined ? {} : { subtitle: text(root.subtitle, 'outline.subtitle') }), ...(factSetArtifactId === undefined ? {} : { factSetArtifactId, factSetFactsSha256: factSetFactsSha256 as string }), design, sources: Object.freeze(sources), facts: Object.freeze(facts), slides: Object.freeze(slides) })
 }
 
 export function traceFromPresentationOutline(input: unknown): Readonly<PresentationTraceV3> {
@@ -738,6 +818,7 @@ export function traceFromPresentationOutline(input: unknown): Readonly<Presentat
   return Object.freeze({
     schemaVersion: PRESENTATION_TRACE_SCHEMA,
     reviewStatus: 'generated',
+    ...(outline.factSetArtifactId === undefined ? {} : { factSetArtifactId: outline.factSetArtifactId, factSetFactsSha256: outline.factSetFactsSha256 as string }),
     sources: Object.freeze(outline.sources.map(source => Object.freeze({ id: source.sourceId, name: source.name, path: source.path, sha256: source.sha256, format: source.format, role: source.role, period: source.period, summary: source.summary, ...(source.artifactId === undefined ? {} : { artifactId: source.artifactId }) }))),
     slides: Object.freeze(outline.slides.map(slide => {
       const blockId = `${slide.slideId}:content`

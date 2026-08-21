@@ -16,6 +16,12 @@ import skillCreatorSkill from '../catalog/skill-creator/SKILL.md?raw'
 import skillCreatorNotice from '../catalog/skill-creator/NOTICE.txt?raw'
 import skillInstallerSkill from '../catalog/skill-installer/SKILL.md?raw'
 import skillInstallerNotice from '../catalog/skill-installer/NOTICE.txt?raw'
+import categoryPerformanceSkill from '../catalog/category-performance-analysis/SKILL.md?raw'
+import categoryPerformanceNotice from '../catalog/category-performance-analysis/NOTICE.txt?raw'
+import categoryOpportunitySkill from '../catalog/category-opportunity-analysis/SKILL.md?raw'
+import categoryOpportunityNotice from '../catalog/category-opportunity-analysis/NOTICE.txt?raw'
+import proposalAssistantSkill from '../catalog/proposal-assistant-orchestration/SKILL.md?raw'
+import proposalAssistantNotice from '../catalog/proposal-assistant-orchestration/NOTICE.txt?raw'
 
 export interface SkillCatalogItem {
   readonly id: string
@@ -81,6 +87,18 @@ const SOURCES: readonly RecommendedSkillSource[] = Object.freeze([
   {
     id: 'build-walmart-buyer-proposal-outline', name: 'build-walmart-buyer-proposal-outline', version: '1.2.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
     description: '从两个已验证分析 Artifact 构建 Walmart Buyer Proposal 提纲。', skill: walmartOutlineSkill, notice: walmartOutlineNotice, licenseText: internalLicense,
+  },
+  {
+    id: 'category-performance-analysis', name: 'category-performance-analysis', version: '1.0.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    description: '从冻结合成数据生成可溯源的品类经营分析 data_result。', skill: categoryPerformanceSkill, notice: categoryPerformanceNotice, licenseText: internalLicense,
+  },
+  {
+    id: 'category-opportunity-analysis', name: 'category-opportunity-analysis', version: '1.0.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    description: '为 Cosmetics、Party Favors 与手工品生成可溯源的机会分析。', skill: categoryOpportunitySkill, notice: categoryOpportunityNotice, licenseText: internalLicense,
+  },
+  {
+    id: 'proposal-assistant-orchestration', name: 'proposal-assistant-orchestration', version: '1.0.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    description: 'AI 驱动 Proposal Assistant，从澄清提问编排到 Fact Layer、Bento Deck 与 Trace Mode。', skill: proposalAssistantSkill, notice: proposalAssistantNotice, licenseText: internalLicense,
   },
 ])
 

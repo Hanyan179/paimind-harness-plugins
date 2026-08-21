@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types", "emitDeclarationOnly": true },
+  "include": ["src"],
+  "references": [
+    { "path": "../artifact-runtime" }, { "path": "../contracts" },
+    { "path": "../harness-compat" }, { "path": "../presentation-contracts" },
+    { "path": "../testkit" }
+  ]
+}

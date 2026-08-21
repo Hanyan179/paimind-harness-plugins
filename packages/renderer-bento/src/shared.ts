@@ -38,10 +38,26 @@ export interface PaimindBentoFocusTarget {
   readonly selector: PaimindBentoSelector
 }
 
+export interface PaimindBentoSlideTarget {
+  readonly slideId: string
+  readonly slide: number
+}
+
+export interface PaimindBentoSlideNavigationItem {
+  readonly slideId: string
+  readonly title: string
+}
+
+export interface PaimindBentoSlideNavigation {
+  readonly slides: readonly PaimindBentoSlideNavigationItem[]
+}
+
 export interface PaimindBentoInspectorContribution {
   readonly id: string
   /** Select and validate inspector state for this exact preview request before trace mode opens. */
   activate?(request: PaimindBentoPreviewRequest): boolean
+  /** Optional, renderer-neutral outline used by the Bento workbench's slide rail. */
+  getSlideNavigation?(): PaimindBentoSlideNavigation | null
   render(scope: PaimindSidebarTabScope): ReactNode
 }
 
@@ -53,6 +69,8 @@ export interface PaimindBentoPreviewSnapshot {
   readonly mode: PaimindBentoMode
   readonly focusRevision: number
   readonly focus: PaimindBentoFocusTarget | null
+  readonly slideTargetRevision: number
+  readonly slideTarget: PaimindBentoSlideTarget | null
   readonly inspectorRevision: number
 }
 
@@ -61,6 +79,7 @@ export interface PaimindBentoPreviewService {
   subscribe(listener: () => void): () => void
   open(request: PaimindBentoPreviewRequest): boolean
   setMode(mode: PaimindBentoMode): boolean
+  navigate(target: PaimindBentoSlideTarget): boolean
   focus(target: PaimindBentoFocusTarget): boolean
   registerInspector(contribution: PaimindBentoInspectorContribution): () => void
   getInspector(): PaimindBentoInspectorContribution | null

@@ -58,6 +58,20 @@
       name: '@paimind/artifact-runtime/invariant'
       inject: [invariants]
 
+    - id: paimind-category-analysis-adapter
+      name: '@paimind/category-analysis-adapter'
+
+    - id: paimind-category-analysis-adapter-invariant
+      name: '@paimind/category-analysis-adapter/invariant'
+      inject: [invariants]
+
+    - id: paimind-fact-layer
+      name: '@paimind/fact-layer'
+
+    - id: paimind-fact-layer-invariant
+      name: '@paimind/fact-layer/invariant'
+      inject: [invariants]
+
     - id: paimind-generator-web
       name: '@paimind/generator-web'
 

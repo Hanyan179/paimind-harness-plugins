@@ -7,8 +7,7 @@ export function apply(): void {}
 export const PROPOSAL_QUESTION_NAMESPACE = 'paimind.proposal.'
 export const PROPOSAL_QUESTION_IDS = Object.freeze({
   customer: 'paimind.proposal.customer/v1',
-  departments: 'paimind.proposal.departments/v1',
-  timeHorizon: 'paimind.proposal.time-horizon/v1',
+  department: 'paimind.proposal.departments/v1',
   deckType: 'paimind.proposal.deck-type/v1',
-  confirm: 'paimind.proposal.confirm/v1',
+  deckStyle: 'paimind.proposal.deck-style/v1',
 })

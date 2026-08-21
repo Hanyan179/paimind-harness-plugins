@@ -6,9 +6,9 @@ Package rules: [Plugin Authoring Standard](../../docs/standards/plugin-authoring
 
 ## Responsibility
 
-Role: **Client plugin**. It renders only namespaced PAIMind proposal questions inside the native `conversation.composer` chain. It owns customer badges, deck-type previews and responsive interaction presentation. Harness retains the Question request, answer, cancellation, Session and Agent lifecycle.
+Role: **Client plugin**. It renders only namespaced PAIMind proposal questions inside the native `conversation.composer` chain. It owns customer badges, deck-style previews, AI-navigation intents and responsive interaction presentation. Harness retains the Question request, answer, cancellation, Session and Agent lifecycle.
 
-The selected Agent is the sole workflow owner: it reads available context, decides whether another clarification is needed, calls `ask_user_question`, consumes the human answer and decides the next action. This package never synthesizes a question from the selected Preset, advances a local step machine, stores proposal answers or writes the confirmed brief. A Proposal Agent may persist its confirmed context to `proposal-context.md` with native filesystem tools so later deck work can reuse it.
+The selected Agent is the sole workflow owner: it reads available context, decides whether another clarification is needed, calls `ask_user_question`, consumes the human answer and decides the next action. The demo intake presents Customer, Department, Deck Type and Deck Style; planning horizon belongs to downstream deck generation rather than this early interaction template. This package never synthesizes a question from the selected Preset, advances a local step machine, stores proposal answers or writes the confirmed brief. `Back to …` answers the current native question with an explicit navigation intent; the Agent invalidates later facts and emits the target question again. The final explicit Deck Style answer replaces a separate confirmation step, after which the Proposal Agent may persist its context to `proposal-context.md` with native filesystem tools.
 
 ## Public entry points
 
@@ -31,7 +31,7 @@ The client registers exactly one higher-priority selector that matches exactly o
 
 ## Published files
 
-Only built JavaScript, declarations and source maps are published. Deck previews are code-native CSS miniatures; screenshots, generated PPT files, local runtime homes and customer data are excluded.
+Only built JavaScript, declarations and source maps are published. The client bundle embeds three curated WebP style storyboards: Strategy Consulting, Paramont Signature and Playful Storybook. Generated PPT files, local runtime homes and customer data are excluded.
 
 ## Verification
 
