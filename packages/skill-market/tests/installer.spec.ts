@@ -100,7 +100,7 @@ metadata:
   it('stages official and PAIMind internal recommendations through the same inspection and atomic install path', async () => {
     const { service, root } = await createInstaller()
     const catalog = await service.listCatalog()
-    expect(catalog.items.map(item => item.id)).toEqual(['openai-docs', 'skill-creator', 'skill-installer', 'bento-ppt', 'fineline-investment-analysis', 'white-space-analysis', 'build-walmart-buyer-proposal-outline'])
+    expect(catalog.items.map(item => item.id)).toEqual(['openai-docs', 'skill-creator', 'skill-installer', 'bento-ppt', 'fineline-investment-analysis', 'white-space-analysis', 'build-walmart-buyer-proposal-outline', 'category-performance-analysis', 'category-opportunity-analysis', 'proposal-assistant-orchestration'])
     const preview = await service.inspectCatalog({ catalogId: 'openai-docs', version: '1.0.0' })
     expect(preview).toMatchObject({ name: 'openai-docs', kind: 'zip', fileCount: 3, operation: 'install' })
     const installed = await service.installUpload({ uploadId: preview.uploadId, digest: preview.digest })
@@ -110,7 +110,9 @@ metadata:
     const bento = await service.inspectCatalog({ catalogId: 'bento-ppt', version: '1.4.0' })
     expect(bento).toMatchObject({ name: 'bento-ppt', kind: 'zip', fileCount: 3, operation: 'install' })
     await service.installUpload({ uploadId: bento.uploadId, digest: bento.digest })
-    await expect(readFile(join(root, 'bento-ppt', 'SKILL.md'), 'utf8')).resolves.toContain('generate_traceable_bento_presentation')
+    const bentoSkill = await readFile(join(root, 'bento-ppt', 'SKILL.md'), 'utf8')
+    expect(bentoSkill).toContain('create_fact_bound_presentation_outline')
+    expect(bentoSkill).toContain('generate_traceable_bento_from_outline')
     await expect(readFile(join(root, 'bento-ppt', 'LICENSE.txt'), 'utf8')).resolves.toContain('Internal Use Only')
   })
 

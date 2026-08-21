@@ -55,6 +55,39 @@ describe('Harness experience semantic markers', () => {
 })
 
 describe('native Harness Agent choice bridge', () => {
+  it('reflects an external native seat change immediately and unsubscribes on disposal', async () => {
+    let current = 'standard'
+    const seatListeners = new Set<() => void>()
+    const nativeSeat: HarnessAgentPresetSeatControl = {
+      getSnapshot: () => ({ current, busy: false, error: null }),
+      subscribe: listener => { seatListeners.add(listener); return () => { seatListeners.delete(listener) } },
+      load: vi.fn(async () => {}),
+      select: vi.fn(async id => { current = id }),
+    }
+    const api = {
+      list: vi.fn(async () => ({ result: { ok: true as const, value: {
+        authorable: true,
+        hasDocument: true,
+        presets: [
+          { id: 'standard', trust: 'system' as const, isDefault: true, name: 'Standard' },
+          { id: 'proposal-assistant', trust: 'user' as const, isDefault: false, name: 'Proposal Assistant' },
+        ],
+      } } })),
+    } as unknown as HarnessAgentPresetApi
+    const bridge = new NativeHarnessAgentChoiceBridge(api, nativeSeat)
+
+    await expect(bridge.load()).resolves.toBe(true)
+    current = 'proposal-assistant'
+    seatListeners.forEach(listener => { listener() })
+    expect(bridge.getSnapshot().current).toBe('proposal-assistant')
+
+    bridge.dispose()
+    current = 'standard'
+    seatListeners.forEach(listener => { listener() })
+    expect(bridge.getSnapshot().current).toBe('proposal-assistant')
+    expect(seatListeners).toHaveLength(0)
+  })
+
   it('classifies roster rows and delegates selection to the native seat', async () => {
     let current = 'standard'
     const nativeSeat: HarnessAgentPresetSeatControl = {

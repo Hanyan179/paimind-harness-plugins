@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { definePresentationOutline, traceFromPresentationOutline, validatePresentationTraceability } from '../src/index.js'
+import { defineAnalysisDataResult, definePresentationFactSet, definePresentationOutline, traceFromPresentationOutline, validatePresentationTraceability } from '../src/index.js'
 
 const hash = 'a'.repeat(64)
 const outline = {
@@ -22,6 +22,18 @@ describe('presentation contracts', () => {
     expect(definePresentationOutline(legacy).design).toMatchObject({ templateId: 'generic-dark', stylePreset: 'startup-pitch', aspectRatio: '16:9' })
     expect(() => definePresentationOutline({ ...outline, design: { ...outline.design, aspectRatio: '4:3' } })).toThrow(/aspectRatio must be 16:9/)
     expect(() => definePresentationOutline({ ...outline, design: { ...outline.design, templateId: 'generic-dark', stylePreset: 'wmt-retail' } })).toThrow(/wmt-retail requires/)
+    expect(definePresentationOutline({ ...outline, design: { ...outline.design, templateId: 'strategy-grid', stylePreset: 'strategy-consulting' } }).design).toMatchObject({ templateId: 'strategy-grid', stylePreset: 'strategy-consulting' })
+    expect(() => definePresentationOutline({ ...outline, design: { ...outline.design, templateId: 'generic-dark', stylePreset: 'playful-storybook' } })).toThrow(/playful-storybook requires/)
+  })
+
+  it('validates analysis and immutable Fact Set contracts plus the Outline truth-boundary reference', () => {
+    const dataResult = defineAnalysisDataResult({ schema: 'paimind.data-result/v2', analysisKind: 'category-performance', sourceManifest: 'inputs/manifest.json', sourceManifestSha256: hash, sources: outline.sources, facts: outline.facts, payloadSha256: hash, payload: { synthetic: true } })
+    expect(dataResult.analysisKind).toBe('category-performance')
+    const factSet = definePresentationFactSet({ schema: 'paimind.fact-set/v1', analysisArtifactIds: ['artifact:analysis'], sources: dataResult.sources, facts: dataResult.facts, factsSha256: hash })
+    expect(factSet.facts).toHaveLength(1)
+    const bound = definePresentationOutline({ ...outline, factSetArtifactId: 'artifact:fact-set', factSetFactsSha256: hash })
+    expect(traceFromPresentationOutline(bound)).toMatchObject({ factSetArtifactId: 'artifact:fact-set', factSetFactsSha256: hash })
+    expect(() => definePresentationOutline({ ...outline, factSetArtifactId: 'artifact:fact-set' })).toThrow(/provided together/)
   })
 
   it('rejects duplicate ids, orphan facts, missing sources and illegal selectors', () => {

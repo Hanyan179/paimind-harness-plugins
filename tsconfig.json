@@ -13,6 +13,8 @@
     { "path": "packages/better-sidebar-adapter" },
     { "path": "packages/task-monitor" },
     { "path": "packages/artifact-runtime" },
+    { "path": "packages/category-analysis-adapter" },
+    { "path": "packages/fact-layer" },
     { "path": "packages/generator-web" },
     { "path": "packages/generator-office" },
     { "path": "packages/generator-bento" },

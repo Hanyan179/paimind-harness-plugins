@@ -13,10 +13,12 @@ function wait(question: HarnessQuestionWait['payload']['questions'][number]): Ha
 }
 
 describe('Proposal Assistant Experience', () => {
-  it('registers a higher-priority namespaced composer takeover and disposes cleanly', () => {
+  it('registers exactly one AI-question renderer and disposes cleanly', () => {
     const fixture = createClientContextFixture()
     apply(fixture.context)
-    const entry = fixture.slots.find(row => row.injectedName === 'conversation.composer')
+    const entries = fixture.slots.filter(row => row.injectedName === 'conversation.composer')
+    expect(entries).toHaveLength(1)
+    const entry = entries[0]
     expect(entry?.options).toMatchObject({ name: 'conversation.composer', priority: -20 })
     expect(document.getElementById('@paimind/proposal-experience')).not.toBeNull()
     fixture.disposeEffects()
@@ -32,40 +34,105 @@ describe('Proposal Assistant Experience', () => {
     expect(selectProposalQuestion({ interactions: [batch] })).toBeNull()
   })
 
-  it('renders professional customer badges and returns the exact native answer label', async () => {
+  it('renders compact brand marks in an inline conversation card and returns the exact native answer label', async () => {
     const pending = wait({
       id: PROPOSAL_QUESTION_IDS.customer, question: 'Which customer are you preparing this deck for?',
       options: [{ label: 'Dollar General' }, { label: 'Walmart' }],
     })
-    render(<ProposalQuestionComposer matched={pending} />)
-    expect(screen.getByText('DG')).toBeInTheDocument()
-    expect(screen.getByText('✳')).toBeInTheDocument()
+    const { container } = render(<ProposalQuestionComposer matched={pending} />)
+    expect(container.querySelectorAll('[data-paimind-brand-logo]')).toHaveLength(2)
+    expect(container.querySelector('[data-mode="ai-tool-question"][data-trigger="ask-user-question"]')).not.toBeNull()
+    expect(container.querySelector('[data-paimind-agent-avatar-seat][data-paimind-agent-id="proposal-assistant"]')).not.toBeNull()
+    expect(screen.getByText('Step 1 of 4')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Dollar General' }).querySelector('[data-brand="dollar-general"]')).not.toBeNull()
+    expect(screen.getByRole('radio', { name: 'Walmart' }).querySelector('[data-brand="walmart"]')).not.toBeNull()
+    expect(screen.getByRole('radio', { name: 'Dollar General' })).toHaveAttribute('data-focused', 'false')
+    expect(screen.queryByRole('button', { name: /Back to/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
     fireEvent.click(screen.getByRole('radio', { name: 'Walmart' }))
+    expect(pending.respond).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     await waitFor(() => expect(pending.respond).toHaveBeenCalledWith({
       ok: true,
       value: { sessionId: 'session-one', answer: { answers: [{ id: PROPOSAL_QUESTION_IDS.customer, selected: ['Walmart'] }] } },
     }))
   })
 
-  it('updates the editorial side preview on hover without selecting the deck type', () => {
+  it('previews on hover and requires an explicit deck-style confirmation', async () => {
     const pending = wait({
-      id: PROPOSAL_QUESTION_IDS.deckType, question: 'What type of deck would you like to create?',
+      id: PROPOSAL_QUESTION_IDS.deckStyle, question: 'Which visual style should shape this deck?',
       options: [
-        { label: 'Executive Proposal (Recommended)' },
-        { label: 'Category Growth Strategy' },
-        { label: 'Line Review & Assortment' },
+        { label: 'Strategy Consulting' },
+        { label: 'Paramont Signature (Recommended)' },
+        { label: 'Playful Storybook' },
       ],
     })
     render(<ProposalQuestionComposer matched={pending} />)
-    expect(screen.getByText('Senior buyer and leadership decisions')).toBeInTheDocument()
-    fireEvent.mouseEnter(screen.getByRole('radio', { name: 'Category Growth Strategy' }))
-    expect(screen.getByText('Category planning and growth workshops')).toBeInTheDocument()
+    expect(screen.getByText('Paramont-owned client and leadership stories')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Paramont Signature storyboard with official mountain identity and enterprise slides' })).toBeInTheDocument()
+    fireEvent.mouseEnter(screen.getByRole('radio', { name: 'Playful Storybook' }))
+    expect(screen.getByText('Family, children and youth-facing concepts')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Playful storybook storyboard with colorful cut-paper illustrations and children' })).toBeInTheDocument()
     expect(pending.respond).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('radio', { name: 'Playful Storybook' }))
+    expect(pending.respond).not.toHaveBeenCalled()
+    expect(screen.getByRole('radio', { name: 'Playful Storybook' })).toHaveAttribute('aria-checked', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'Use this deck style' }))
+    await waitFor(() => expect(pending.respond).toHaveBeenCalledWith({
+      ok: true,
+      value: { sessionId: 'session-one', answer: { answers: [{
+        id: PROPOSAL_QUESTION_IDS.deckStyle,
+        selected: ['Playful Storybook'],
+      }] } },
+    }))
+  })
+
+  it('previews the three deck types and keeps the selection staged until explicit use', async () => {
+    const pending = wait({
+      id: PROPOSAL_QUESTION_IDS.deckType, question: 'What type of deck should we prepare?',
+      options: [
+        { label: 'Category Analysis (Recommended)' },
+        { label: 'Internal Kick Off' },
+        { label: 'Line Review Proposal' },
+      ],
+    })
+    render(<ProposalQuestionComposer matched={pending} />)
+    expect(screen.getByText('Performance analysis')).toBeInTheDocument()
+    fireEvent.mouseEnter(screen.getByRole('radio', { name: 'Internal Kick Off' }))
+    expect(screen.getByText('Internal alignment')).toBeInTheDocument()
+    expect(screen.getByText('Sales, Category and Product Development teams')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('radio', { name: 'Internal Kick Off' }))
+    expect(pending.respond).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Use this deck type' }))
+    await waitFor(() => expect(pending.respond).toHaveBeenCalledWith({
+      ok: true,
+      value: { sessionId: 'session-one', answer: { answers: [{
+        id: PROPOSAL_QUESTION_IDS.deckType,
+        selected: ['Internal Kick Off'],
+      }] } },
+    }))
+  })
+
+  it('returns a navigation intent to the AI instead of locally rewinding the workflow', async () => {
+    const pending = wait({
+      id: PROPOSAL_QUESTION_IDS.deckType, question: 'What type of deck should we prepare?',
+      options: [{ label: 'Category Analysis' }, { label: 'Internal Kick Off' }],
+    })
+    render(<ProposalQuestionComposer matched={pending} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Department' }))
+    await waitFor(() => expect(pending.respond).toHaveBeenCalledWith({
+      ok: true,
+      value: { sessionId: 'session-one', answer: { answers: [{
+        id: PROPOSAL_QUESTION_IDS.deckType,
+        selected: [],
+        custom: `PAIMIND_PROPOSAL_NAVIGATION:BACK:${PROPOSAL_QUESTION_IDS.department}`,
+      }] } },
+    }))
   })
 
   it('keeps multi-select departments in one native structured answer', async () => {
     const pending = wait({
-      id: PROPOSAL_QUESTION_IDS.departments, question: 'Which teams should this proposal speak to?', multiSelect: true,
+      id: PROPOSAL_QUESTION_IDS.department, question: 'Which departments should this deck support?', multiSelect: true,
       options: [{ label: 'Merchandising' }, { label: 'Executive Leadership' }],
     })
     render(<ProposalQuestionComposer matched={pending} />)
@@ -75,9 +142,18 @@ describe('Proposal Assistant Experience', () => {
     await waitFor(() => expect(pending.respond).toHaveBeenCalledWith({
       ok: true,
       value: { sessionId: 'session-one', answer: { answers: [{
-        id: PROPOSAL_QUESTION_IDS.departments,
+        id: PROPOSAL_QUESTION_IDS.department,
         selected: ['Merchandising', 'Executive Leadership'],
       }] } },
     }))
+  })
+
+  it('does not synthesize a workflow from the selected preset without an AI question interaction', () => {
+    const fixture = createClientContextFixture()
+    apply(fixture.context)
+    const entry = fixture.slots.find(row => row.injectedName === 'conversation.composer')
+    const select = entry?.options.select as ((owner: { readonly interactions: readonly unknown[]; readonly session?: unknown }) => unknown)
+    expect(select({ interactions: [], session: { sessionId: 'session-one', running: false, agentPreset: 'proposal-assistant' } })).toBeNull()
+    fixture.disposeEffects()
   })
 })

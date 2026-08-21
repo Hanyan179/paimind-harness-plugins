@@ -58,6 +58,15 @@ describe('FP07 Bento preview client store', () => {
     expect(listener).toHaveBeenCalledOnce()
   })
 
+  it('publishes renderer-neutral slide navigation without inventing an object focus', () => {
+    const store = new BentoPreviewStore(sidebar())
+    store.open({ sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', path: '/workspace/deck.html', title: 'Deck' })
+    expect(store.navigate({ slideId: 'slide-2', slide: 2 })).toBe(true)
+    expect(store.getSnapshot()).toMatchObject({ slideTargetRevision: 1, slideTarget: { slideId: 'slide-2', slide: 2 }, focus: null })
+    expect(Object.isFrozen(store.getSnapshot().slideTarget)).toBe(true)
+    expect(store.navigate({ slideId: '', slide: 0 })).toBe(false)
+  })
+
   it('rejects incomplete requests without touching the provider', () => {
     const provider = sidebar()
     const store = new BentoPreviewStore(provider)

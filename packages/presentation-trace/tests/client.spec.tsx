@@ -19,12 +19,13 @@ const document = {
 }
 
 class BentoMock implements PaimindBentoPreviewService {
-  private snapshot: PaimindBentoPreviewSnapshot = { revision: 1, requestRevision: 1, request: { sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', path: '/workspace/deck.html', title: 'Deck' }, runtimeEvent: null, mode: 'trace', focusRevision: 0, focus: null, inspectorRevision: 0 }
+  private snapshot: PaimindBentoPreviewSnapshot = { revision: 1, requestRevision: 1, request: { sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', path: '/workspace/deck.html', title: 'Deck' }, runtimeEvent: null, mode: 'trace', focusRevision: 0, focus: null, slideTargetRevision: 0, slideTarget: null, inspectorRevision: 0 }
   private readonly listeners = new Set<() => void>()
   getSnapshot = () => this.snapshot
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
   open = () => true
   setMode = () => true
+  navigate = () => true
   focus = () => true
   registerInspector = () => () => {}
   getInspector = () => null
@@ -32,7 +33,7 @@ class BentoMock implements PaimindBentoPreviewService {
 }
 
 describe('FP08 presentation trace client', () => {
-  it('drills from business evidence to technical trace and follows verified Bento slide facts', () => {
+  it('separates directory, business, and technical pages while following Bento slide facts', () => {
     const registry = new PresentationTraceRegistry()
     registry.registerSource({ id: 'producer', getSnapshot: () => ({ traces: [{ id: 'record', traceId: 'trace-1', document }] }), subscribe: () => () => {} })
     registry.selectArtifact(artifact)
@@ -40,6 +41,9 @@ describe('FP08 presentation trace client', () => {
     render(<PresentationTracePanel service={registry} bento={bento} scope={scope} />)
     expect(screen.getByText('Management Deck')).toBeInTheDocument()
     expect(screen.getByText('Verified')).toBeInTheDocument()
+    expect(screen.getByText('Evidence map for this deck')).toBeInTheDocument()
+    expect(screen.queryByText('Registered sales conclusion')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Sales · \$10/ }))
     expect(screen.getByText('Registered sales conclusion')).toBeInTheDocument()
     expect(screen.getByText(/sales.csv · Sales facts/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'View technical trace' }))
@@ -48,6 +52,8 @@ describe('FP08 presentation trace client', () => {
     expect(screen.getByText('build.mjs')).toBeInTheDocument()
     act(() => { bento.slide(2) })
     expect(screen.getByRole('button', { name: /Second conclusion/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('Evidence map for this deck')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Margin · 41%/ }))
     expect(screen.getByText('Registered margin conclusion')).toBeInTheDocument()
     expect(screen.getByText('Not registered')).toBeInTheDocument()
   })

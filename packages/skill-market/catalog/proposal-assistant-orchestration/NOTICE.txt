@@ -1,0 +1,2 @@
+PAIMind Internal · Proposal Assistant demo orchestration
+AI owns the intake, story and layout choices; deterministic Harness Tools own facts, validation, rendering and traceability.

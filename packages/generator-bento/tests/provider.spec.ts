@@ -27,6 +27,7 @@ describe('R3 Bento generator provider', () => {
     const html = writeText.mock.calls[0]?.[1] as string
     expect(output).toEqual({ path: 'deck.html', title: 'Deck' })
     expect(html).toContain("paimind:bento-ready")
+    expect(html).toContain("paimind:bento-navigate")
     expect(html).not.toMatch(/https?:\/\//)
     expect(html).not.toMatch(/<script[^>]+src=/)
   })
@@ -48,19 +49,23 @@ describe('R3 Bento generator provider', () => {
 
   it('renders every required layout, chart selector and table selector without external assets', async () => {
     const html = renderTraceableBentoDocument(traceableOutline)
-    expect(Object.keys(BENTO_TEMPLATE_REGISTRY)).toEqual(['generic-dark', 'wmt-kids-mod'])
-    expect(Object.keys(BENTO_STYLE_PRESETS)).toHaveLength(6)
+    expect(Object.keys(BENTO_TEMPLATE_REGISTRY)).toEqual(['generic-dark', 'wmt-kids-mod', 'strategy-grid', 'paramont-mountain', 'storybook-cutpaper'])
+    expect(Object.keys(BENTO_STYLE_PRESETS)).toHaveLength(9)
     expect(html).toContain(`<meta name="paimind:presentation-schema" content="${HTML_PRESENTATION_SCHEMA}">`)
     expect(html).toContain('data-style-preset="warm-editorial"')
     expect(html).toContain('aspect-ratio:16/9')
     expect(html).toContain('data-edit-field="title"')
     expect(html).toContain('data-edit-lock="fact"')
-    expect(html).toContain('事实值与派生指标已锁定')
+    expect(html).toContain('fact values and derived metrics are locked')
     for (const layout of layouts) expect(html).toContain(`layout-${layout}`)
     for (const chart of ['horizontal-bar', 'lollipop', 'dot-plot', 'bullet', 'slope', 'line']) expect(html).toContain(`chart-${chart}`)
     expect(html).toContain('data-selector-kind="chart-point"')
     expect(html).toContain('data-selector-kind="table-cell"')
     expect(html).toContain('paimind:bento-select')
+    expect(html).toContain('paimind:bento-navigate')
+    expect(html).toContain('Tracing evidence…')
+    expect(html).toContain('trace-text-shimmer')
+    expect(html).toContain('prefers-reduced-motion:reduce')
     expect(html).toContain('data-fit-profile=')
     expect(html).toContain('data-fit-scale="1"')
     expect(html).toContain('MutationObserver')
@@ -117,5 +122,31 @@ describe('R3 Bento generator provider', () => {
     const html = renderTraceableBentoDocument({ ...traceableOutline, slides })
     expect(html).toContain('41 / 41')
     expect(html.match(/data-slide-id=/g)).toHaveLength(41)
+  })
+
+  it('resolves exact current-Session Fact Set and Outline Artifacts before generation', async () => {
+    const definitions: any[] = []
+    const execute = vi.fn(async () => ({ artifact: {} }))
+    const boundOutline = { ...traceableOutline, factSetArtifactId: 'artifact:fact-set', factSetFactsSha256: 'b'.repeat(64) }
+    apply({
+      paimindArtifactGenerators: { register: vi.fn(() => () => {}), execute, list: vi.fn(() => []) },
+      tools: { register: vi.fn(value => { definitions.push(value); return () => {} }), execute: vi.fn() },
+      systemPrompt: { section: vi.fn(() => () => {}), context: vi.fn(() => () => {}) },
+      sessionProjections: { register: vi.fn(), snapshot: () => ({ asOfSeq: 2, values: { 'paimind.artifacts': { schema: 'paimind.artifacts/v1', traces: [], artifacts: [
+        { schema: 'paimind.artifact-produced/v1', artifactId: 'artifact:fact-set', sessionId: 'session-1', workspaceId: 'workspace-1', path: '/workspace/results/proposal.fact-set.json', title: 'Fact Set', kind: 'json', previewKind: 'data-document', revision: 1, producerId: 'paimind.fact-layer', taskId: 'task-1', state: 'available', producedAt: 1 },
+        { schema: 'paimind.artifact-produced/v1', artifactId: 'artifact:outline', sessionId: 'session-1', workspaceId: 'workspace-1', path: '/workspace/results/proposal.outline.json', title: 'Outline', kind: 'json', previewKind: 'data-document', revision: 1, producerId: 'paimind.generator.presentation-outline', taskId: 'task-2', state: 'available', producedAt: 2 },
+      ] } } }) },
+      effect(install) { install() },
+    } as any)
+    const exec = { agent: { id: 'session-1', session: { id: 'session-1', header: { cwd: '/workspace' } } }, signal: new AbortController().signal }
+    const blueprint = { schema: 'paimind.presentation-outline-blueprint/v1', title: 'Blueprint', design: boundOutline.design, slides: [{ slideId: 'cover', layout: 'cover', title: 'Cover', narrative: 'Verified narrative.', elements: [{ objectId: 'kpi', type: 'kpi', factId: 'fact-1' }] }] }
+    await definitions.find(definition => definition.name === 'create_fact_bound_presentation_outline').execute({ file_path: 'results/proposal.outline.json', fact_set_artifact_id: 'artifact:fact-set', blueprint }, exec)
+    expect(execute).toHaveBeenLastCalledWith('paimind.generator.presentation-outline', expect.objectContaining({ __fact_set_path: 'results/proposal.fact-set.json', blueprint }), exec)
+    await definitions.find(definition => definition.name === 'create_presentation_outline_artifact').execute({ file_path: 'results/proposal.outline.json', fact_set_artifact_id: 'artifact:fact-set', outline: boundOutline }, exec)
+    expect(execute).toHaveBeenLastCalledWith('paimind.generator.presentation-outline', expect.objectContaining({ __fact_set_path: 'results/proposal.fact-set.json' }), exec)
+    await definitions.find(definition => definition.name === 'generate_traceable_bento_from_outline').execute({ file_path: 'results/proposal.bento.html', outline_artifact_id: 'artifact:outline', fact_set_artifact_id: 'artifact:fact-set' }, exec)
+    expect(execute).toHaveBeenLastCalledWith('paimind.generator.traceable-bento-deck', expect.objectContaining({ __outline_path: 'results/proposal.outline.json', __fact_set_path: 'results/proposal.fact-set.json', __fact_set_artifact_id: 'artifact:fact-set' }), exec)
+    await definitions.find(definition => definition.name === 'generate_traceable_bento_presentation').execute({ file_path: 'results/proposal.bento.html', outline_artifact_id: 'artifact:outline', outline: boundOutline }, exec)
+    expect(execute).toHaveBeenLastCalledWith('paimind.generator.traceable-bento-deck', expect.objectContaining({ __outline_path: 'results/proposal.outline.json', __fact_set_path: 'results/proposal.fact-set.json' }), exec)
   })
 })

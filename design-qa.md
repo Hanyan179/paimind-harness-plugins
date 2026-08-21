@@ -28,6 +28,150 @@ The source and implementation crops were normalized to the same 536px row-region
 
 final result: passed
 
+# Proposal Assistant Slide Rail and Three-page Trace Design QA
+
+## Comparison input
+
+- Slide-rail reference: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-72fbc608-8df8-498d-afa7-4685b7d04e3d.png` (`119 x 407`).
+- Trace-panel reference: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-98286b5f-dc46-42db-81c7-bcb57fb588c2.png` (`294 x 730`).
+- Live implementation: `/private/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/paimind-proposal-user-uat-dsh-home.G0G0w5By/proposal-trace-directory-uat.png` (`1126 x 866`, device scale factor `1`).
+- Business-trace state: `/private/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/paimind-proposal-user-uat-dsh-home.G0G0w5By/proposal-trace-three-page-uat.png` (`1126 x 866`, device scale factor `1`).
+- Same-state rail comparison: `/private/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/paimind-proposal-user-uat-dsh-home.G0G0w5By/proposal-trace-slide-rail-directory-comparison.png`.
+- Trace-panel comparison: `/private/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/paimind-proposal-user-uat-dsh-home.G0G0w5By/proposal-trace-panel-comparison.png`.
+
+The reference and implementation were reviewed together. The implementation
+preserves the reference rail's vertical hierarchy, numbered thumbnails,
+selected outline and compact slide count, while replacing static placeholders
+with the actual isolated Bento slide source. The old single long trace panel is
+replaced by explicit Directory, Business and Technical pages that reuse the
+same navy, blue-gray and white enterprise visual system.
+
+## Comparison history
+
+1. P1 observed: all rail thumbnails initially showed slide 1 because the previously generated artifact did not include the new navigation runtime.
+2. P1 fix: regenerated the final Bento artifact through the navigation-enabled generator and verified six distinct live slide previews.
+3. P1 observed: selecting a fact opened Business Trace, then a same-slide navigation event returned the inspector to Directory.
+4. P1 fix: preserved the current drill-down page when the selected slide is unchanged; only a different slide returns to Directory.
+5. Post-fix browser QA verified Directory, Business Trace and Technical Trace independently, including both direct fact selection and AI-driven deck selection.
+
+## Findings
+
+- P0: none.
+- P1: none after the generated-artifact and same-slide state fixes.
+- P2: none; document, workbench and trace inspector each measured zero horizontal overflow at `1126 x 866`.
+- P3: the live Paramont thumbnails are visually denser than the light reference thumbnails. This is intentional because each thumbnail is the real deck HTML rather than a decorative image placeholder.
+
+## Required fidelity surfaces
+
+- Typography: consistent with the existing Harness and Paramont Bento system.
+- Spacing: `96px` slide rail at the verified viewport, compact slide counter, evenly distributed real thumbnails and one-page trace content.
+- Color: navy active state, blue-gray borders and neutral page background retained across all three trace pages.
+- Image quality: every rail thumbnail renders the actual isolated slide source at device scale factor `1`; no stretched static assets are used.
+- Copy: all user-facing demo copy remains English, with Directory, Business Trace and Technical Trace clearly separated.
+
+## Verified behavior
+
+- The rail shows `Slides 1 / 6` and six distinct, numbered live slide thumbnails.
+- Selecting slide 4 updates the main deck, selected thumbnail and Directory state to slide 4.
+- Selecting a verified fact opens Business Trace and exposes source, conclusion, method and scope without mixing in implementation lineage.
+- `View technical trace` opens Technical Trace with Data Lineage, Calculation Logic and Code & Runtime.
+- Back actions move Technical to Business and Business to Directory without rebuilding the generated deck.
+- Clicking a traceable block in the deck opens the appropriate Business Trace page through the AI-driven trace contract.
+- The live page has zero document, workbench and inspector horizontal overflow.
+- A fresh, settled browser session reported zero console warnings and zero console errors.
+- The implementation ran only on the isolated `http://127.0.0.1:54047/` Harness runtime; shared port `3080` remained under its existing process.
+
+final result: passed
+
+# Proposal Assistant AI-driven Deck Style Design QA
+
+## Comparison input
+
+- Source visual truth: `packages/proposal-experience/assets/playful-storybook-storyboard.webp` (`1672 x 941`, generated specifically for the horizontal Deck Style preview slot).
+- Live Harness implementation: `/private/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/paimind-proposal-user-uat-dsh-home.G0G0w5By/proposal-style-playful-english-uat.png` (`1920 x 1080`, isolated Harness, English shell, live AI-generated Deck Style question).
+- Normalized focused comparison: `/private/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/paimind-proposal-user-uat-dsh-home.G0G0w5By/proposal-playful-source-vs-implementation.png` (source and implementation normalized to the same `452 x 255` visual slot).
+- Additional live states: `/private/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/paimind-proposal-user-uat-dsh-home.G0G0w5By/proposal-style-paramont-full-uat.png`, `/private/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/paimind-proposal-user-uat-dsh-home.G0G0w5By/proposal-style-consulting-full-uat.png`, and `/private/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/paimind-proposal-user-uat-dsh-home.G0G0w5By/proposal-style-playful-full-uat.png`.
+
+The live state was produced by the Proposal Assistant after the user confirmed
+Dollar General, Merchandising plus Executive Leadership, and Next 12 Months.
+The AI recommended Paramont Signature from that context. Playful Storybook was
+then selected but deliberately left staged until explicit confirmation.
+
+## Findings
+
+- P0: none.
+- P1: none.
+- P2: none.
+- P3: the three preview systems intentionally use different art direction and density instead of forcing one Paramont retail composition across every option.
+
+## Verified behavior
+
+- Typography, spacing, borders and copy preserve the host conversation hierarchy while giving the active Question Card a clear decision surface.
+- Strategy Consulting uses a white, charcoal and cobalt answer-first storyboard; Paramont Signature uses the official Paramont mountain identity with ice-blue brand space; Playful Storybook uses bright cut-paper/gouache family illustration. Their thumbnails, titles, descriptions and full previews remain visibly distinct.
+- The focused comparison confirms the Playful Storybook source is preserved without stretching, placeholder art or implementation-time redrawing.
+- Selecting a style updates the preview but does not answer the Harness question until `Use this deck style` is pressed.
+- `Back to Customer` returned `PAIMIND_PROPOSAL_NAVIGATION:BACK:paimind.proposal.customer/v1` to the Agent. The Agent consumed that Tool Result, invalidated the affected fields and re-issued the canonical Customer question; the renderer did not run a local workflow rewind.
+- The Proposal Assistant speaker seat reused the canonical Harness Preset avatar (`project-progress-agent` projection, `ready=true`) and retained the `PA` fallback only when no native image is available.
+- The complete flow was driven by real Harness Question Tool Calls. The frontend added no second workflow state, answer store or automatic step progression.
+- `1920 x 1080` and `820 x 900` states had zero document horizontal overflow. The narrow state switched to a single-column decision layout and kept the submit action visible.
+- The final browser console contained zero Error entries.
+
+## Comparison history
+
+- Pass 1: no P0, P1 or P2 mismatch. The source asset already matched the measured horizontal slot, so no fidelity repair loop was required.
+
+final result: passed — isolated local Harness pre-acceptance; shared-environment Product Acceptance remains pending
+
+---
+
+# Proposal Assistant Rich GenUI Design QA
+
+## Comparison input
+
+- Source visual truth: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-b114e855-bbf7-490a-b35d-8ca470de61c0.png` (`2398 x 1996`).
+- Browser-rendered implementation: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/.tmp/proposal-visual-qa/deck-style-category-final.png` (`2113 x 1478`).
+- Normalized focused source crop: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/.tmp/proposal-visual-qa/reference-component.png` (`1000 x 1000`).
+- Normalized focused implementation crop: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/.tmp/proposal-visual-qa/implementation-component.png` (`1000 x 1000`).
+- Same-input comparison: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/.tmp/proposal-visual-qa/reference-vs-implementation.png` (`2000 x 1000`).
+
+The reference and implementation were compared in the same Light-theme Deck Style state with Category Growth Strategy selected. The live browser image and component crops were kept at `1x`; only the focused crops were proportionally normalized and top-aligned to a common `1000 x 1000` comparison canvas.
+
+The implementation intentionally uses the native conversation transcript for confirmed prior answers instead of recreating the reference's frontend-owned answer-summary cards. This preserves the accepted runtime boundary: the Agent and Harness Session own workflow context; the plugin renders only the current pending AI question.
+
+## Comparison history
+
+1. Pre-fix: every Deck Style reused the Executive Editorial storyboard and the `210px` preview height made the image secondary.
+2. Fix: added distinct `1024 x 1536` Category Intelligence and Assortment Studio storyboard assets, bound each option to its own semantic image and alternative text, widened the desktop component, raised the preview to `330..470px`, and restored the reference's navy / ivory / gold hierarchy.
+3. Post-fix: a real Proposal Assistant Session progressed through Customer, Audience and Horizon before the model emitted the Deck Style question. Executive, Category and Assortment selection states each switched title, description, metadata and storyboard while retaining explicit confirmation.
+4. Post-fix comparison found no actionable P0, P1 or P2 visual difference in the reusable current-question component.
+
+## Findings
+
+- P0: none.
+- P1: none.
+- P2: none.
+- P3: the live Harness transcript remains visible above the current question and replaces the mock's three completed-answer cards. This is an intentional runtime-ownership decision rather than unresolved visual drift.
+
+## Required fidelity surfaces
+
+- Fonts and typography: native UI sans-serif remains the control and body face; the preview title uses the reference's editorial serif treatment. Heading weights, line height and label tracking preserve the visual hierarchy at the narrower live canvas.
+- Spacing and layout rhythm: the card uses the reference's header / progress / two-column workbench structure, larger `22px` radius, stronger section padding, and consistent option gaps. The primary action remains visible without horizontal overflow.
+- Colors and visual tokens: navy, warm white, cool slate and restrained gold match the source while continuing to consume Harness label, border and surface tokens where semantic theming matters.
+- Image quality and asset fidelity: all three visible storyboards are real WebP raster assets, each sourced at `1024 x 1536`, correctly contained without stretching, placeholder art, CSS drawing or broken-image fallback.
+- Copy and content: all user-facing proposal content is English. Labels and descriptions are supplied by the AI tool call; the renderer adds only stable visual guidance and semantic preview metadata.
+
+## Verified behavior
+
+- Agent Center started a native `proposal-assistant` Session; the model, not the frontend, emitted every visible `ask_user_question` call.
+- Customer, multi-select Audience and Horizon answers returned through native Tool Results before the model decided to request Deck Style.
+- Executive Proposal, Category Growth Strategy and Line Review & Assortment each display a distinct image and preview story.
+- Selection stages a choice but does not answer the tool until `Use this deck style` is pressed.
+- Keyboard focus and pointer hover use the same preview state path; the package test verifies hover without answering the tool.
+- Full repository gate passed: `79` test files / `336` tests, TypeScript build, API snapshot, `34` dry package packs, strict publint, `104` NodeNext public exports, examples, `21` client-plugin framework verification and `92` Markdown documents.
+- The only test warning remains the upstream missing `@deepseek-ai/dsh-client-ui-primitives/lib/index.js.map`; it does not fail the suite.
+
+final result: passed
+
 ---
 
 # Agent Builder Dual-pane Design QA
@@ -310,5 +454,229 @@ The comparison uses the host viewer as positional truth: document title first, a
 - Trace becomes active and mounts the trace inspector in the same workbench.
 - The page has zero horizontal overflow, zero Console Error entries, and the Bento iframe contains zero external `src` / `href` references.
 - Repository gates passed with 70 test files / 233 tests; exact Harness 0.1.0-rc.6 + Better Sidebar 0.12.2 + Office Viewer 0.1.0 install, boot, remove and restore composition also passed with zero upstream delta.
+
+final result: passed
+
+---
+
+# Proposal Assistant Four-step Intake Design QA
+
+## Comparison input
+
+- Source visual system: `/private/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/paimind-proposal-user-uat-dsh-home.G0G0w5By/proposal-style-playful-english-uat.png` (previously accepted Proposal Assistant card, avatar treatment, option list and image-led preview).
+- Full-width implementation: `/private/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/paimind-proposal-user-uat-dsh-home.G0G0w5By/proposal-four-step-deck-type-clean-uat.png` (live isolated Harness, `1440 x 960`).
+- Constrained implementation: `/private/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/paimind-proposal-user-uat-dsh-home.G0G0w5By/proposal-four-step-deck-type-constrained-postfix-uat.png` (right Harness workspace panel expanded).
+- Side-by-side comparison: `/private/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/paimind-proposal-user-uat-dsh-home.G0G0w5By/proposal-four-step-source-vs-implementation.png`.
+
+The source and implementation were reviewed together. The comparison preserves
+the accepted avatar, editorial typography, pale navy palette, rounded option
+cards, left-side selection and right-side preview hierarchy. The structural
+differences are intentional: the new flow removes Horizon and Confirm, renames
+Audience to Department and introduces a dedicated Deck type application
+preview before the image-led Deck style step.
+
+## Iterations
+
+1. Replaced the five-step progress model with Customer, Department, Deck type and Deck style.
+2. Added the three meeting-approved Deck type applications and a contextual right-side preview.
+3. Retained the three visually distinct style assets: Strategy Consulting, Paramont Signature and Playful Storybook.
+4. P2 observed: the initial Deck type preview could be clipped when the Harness workspace panel reduced the available conversation width.
+5. P2 fix: added card-owned container responsiveness and rechecked the same live state with the workspace panel expanded.
+6. Verified real Agent navigation by returning from Deck type to Department, invalidating the later fields and reissuing the canonical Department question.
+
+## Findings
+
+- P0: none.
+- P1: none.
+- P2: none after the constrained-layout fix; the live card measured zero section and body horizontal overflow with the workspace panel expanded.
+- P3: Deck type uses a text-led application preview while Deck style remains image-led. This is intentional because the two steps communicate different decisions.
+
+## Verified behavior
+
+- The live progress indicator contains exactly four steps: Customer, Department, Deck type and Deck style.
+- Horizon and standalone Confirm are absent from the early-stage UI.
+- Known Customer and Department context is reused by the Agent, which asks only for the missing Deck type.
+- Deck type offers exactly Category Analysis, Internal Kick Off and Line Review Proposal, with one AI-selected recommendation.
+- The right-side Deck type preview shows Application, Primary audience and Core story, and updates from the reusable option model.
+- Back to Department returned a `PAIMIND_PROPOSAL_NAVIGATION:BACK:` intent to the Agent; the Agent preserved Customer, reset Department and later fields, and rendered Department again.
+- Returning the two Department selections to the Agent re-rendered Deck type as Step 3 of 4.
+- With the workspace panel expanded, the card body measured `776px` wide with `0px` horizontal overflow; the section also measured `0px` overflow.
+- The final style answer is the intake completion action; no separate confirmation step is rendered or requested.
+- The live browser remained on the isolated `http://127.0.0.1:54047/` runtime and did not use the shared `3080` service.
+
+final result: passed
+
+---
+
+# Proposal Assistant Live Thumbnails, Trace Polish and Demo Reel Design QA
+
+## Comparison input
+
+- Source problem capture: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-27756e33-ba4a-4ce8-bf75-3f34497f2146.png` (`616 x 674`).
+- Same-state implementation capture: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/proposal-demo-final/demo/02-directory-slide-4.png` (`1126 x 866`, CSS viewport `1126 x 866`, device scale factor `1`).
+- Normalized side-by-side comparison: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/proposal-demo-final/demo/thumbnail-before-after.png` (`1232 x 714`). The implementation was cropped to the same `616 x 674` workbench region before comparison.
+- Business Trace capture: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/proposal-demo-final/demo/03-business-trace.png` (`1126 x 866`).
+- Technical Trace capture: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/proposal-demo-final/demo/04-technical-trace.png` (`1126 x 866`).
+- Product demo page capture: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/proposal-demo-final/demo/product-demo-page.png` (`1280 x 720`, CSS viewport `1280 x 720`, device scale factor `1`).
+- Product demo video: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/proposal-demo-final/demo/proposal-assistant-trace-demo.mp4` (`1280 x 720`, `30 fps`, `14.2 s`).
+
+The source problem and revised implementation were opened together in the
+normalized comparison. The source shows each iframe reacting to a thumbnail-
+sized viewport and reflowing deck copy into unreadable vertical text. The
+revision renders every thumbnail inside a fixed `1280 x 720` desktop canvas and
+scales that completed slide into the rail, so the same six real pages remain
+visually recognizable.
+
+## Comparison history
+
+1. P1 observed: thumbnail iframes inherited their physical `70px`-class viewport, triggered the Bento responsive layout and collapsed slide copy into unreadable columns.
+2. P1 fix: each live thumbnail now owns a measured frame and scales a fixed `1280 x 720` iframe with `ResizeObserver`; navigation and isolated-source behavior remain unchanged.
+3. P2 observed: the trace panel was functionally split into three pages but still looked like a dense settings inspector.
+4. P2 fix: introduced a stronger Live Evidence header, compact numbered navigation, a current-slide summary card, verified-fact hero, separated evidence cards and a cleaner technical lineage layout.
+5. P2 observed: the initial opportunity-action video state exposed a valid but visually weak `Not registered` calculation.
+6. P2 fix: the final demo reel uses the traced `$15.2M` sales fact, which visibly demonstrates registered source, `SUM(current_sales_m)`, aggregation and source-field evidence.
+7. Post-fix browser comparison and interaction QA found no remaining P0, P1 or P2 issue.
+
+## Required fidelity surfaces
+
+- Fonts and typography: existing Harness UI typography remains in the workbench; the demo page uses the same sans-serif system with a Georgia editorial display face already present in the accepted Paramont visual language.
+- Spacing and layout rhythm: rail width increased to `118px`; live thumbnails preserve `16:9`; trace navigation, summary, evidence cards and buttons follow a consistent `6–16px` rhythm with no horizontal overflow.
+- Colors and visual tokens: retained Paramont navy, business blue, verified green, white cards and blue-gray borders; no unrelated palette was introduced.
+- Image quality and assets: thumbnails use the real isolated Bento HTML at desktop layout, not placeholders or text simulations. The demo page uses the supplied Dollar General mark and the browser-captured product states.
+- Copy and content: all demo-facing copy is English. Directory, Business Trace and Technical Trace have distinct questions and evidence depth.
+
+## Verified behavior
+
+- All six thumbnail frames are real Bento pages and remain distinct after the desktop-canvas scaling fix.
+- Selecting slide 4 updates its outline, main slide and trace-directory summary.
+- Selecting a fact in the main deck opens Business Trace through the runtime selection event.
+- Business Trace exposes the verified value, registered source, conclusion definition, formula/method and scope.
+- Technical Trace exposes lineage, calculation, aggregation, source fields, join keys and runtime evidence where registered.
+- The demo page video reports `readyState=4`, `duration=14.2`, native dimensions approximately `1280 x 720`, and has working live-demo and video-download targets.
+- Product demo page horizontal overflow is `0px`; a clean browser pass reported zero warnings and zero errors.
+- The live Harness stayed on isolated port `54047`; the standalone demo page stayed on isolated port `55986`; shared port `3080` was not restarted or modified.
+
+## Findings
+
+- P0: none.
+- P1: none after the desktop-canvas thumbnail fix.
+- P2: none after trace-panel polish and selecting a calculation-complete fact for the reel.
+- P3: the main Harness chat remains visible in the video to prove the demo is running in the real product; a future marketing cut could crop it away and add voice-over.
+
+final result: passed
+
+---
+
+# Proposal Assistant Adaptive Trace Theme Design QA
+
+## Comparison input
+
+- User-reported dark-theme problem: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-4730e70b-cc96-42f5-8b42-89dd6de7edf5.png` (`1833 x 920`).
+- Updated dark-theme implementation: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/proposal-demo-final/demo/trace-dark-responsive-after.png` (`1280 x 720`).
+- Normalized visual comparison: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/proposal-demo-final/demo/trace-theme-responsive-before-after.png` (`2560 x 720`). The problem capture was center-cropped to a `16:9` workbench view and resized to the implementation viewport before comparison.
+
+The problem capture and implementation were reviewed together. The problem
+state mixed a hard-coded white trace surface with the dark Harness shell and
+allowed the deck viewport to become too short, clipping slide content. The
+implementation follows Harness semantic theme tokens and uses the Bento
+workbench's measured container width, not the browser viewport, to select its
+layout.
+
+## Iterations
+
+1. P1 observed: fixed light surfaces in the Trace panel broke dark-theme continuity across the header, navigation, overview, fact cards and evidence fields.
+2. P1 fix: every Trace surface, border, label, active state, success badge and action now resolves from `--dsw-alias-*` semantic tokens with safe fallbacks.
+3. P1 observed: viewport media queries never reacted to a narrow right Side Card because the browser itself remained wide.
+4. P1 fix: the Bento root is now a named inline-size container; wide panels keep deck and trace side by side, while panels at or below `780px` stack the two complete surfaces in one internally scrollable workbench.
+5. P1 observed: the stacked stage inherited a `420px` iframe minimum inside a shorter grid row and clipped the bottom of the `16:9` slide.
+6. P1 fix: removed the fixed iframe minimum and assigned two complete `360px` rows in the narrow layout. The workbench scrolls instead of cropping either surface.
+7. Directory, Business and Technical pages were re-run in Dark theme; a verified `$15.2M` fact still reverse-focuses the exact Bento object and exposes its registered source, calculation and lineage.
+
+## Verified behavior
+
+- No automatic focus mode or host-sidebar collapse was introduced; the user's existing Harness layout remains under manual control.
+- At a live `1280 x 720` viewport, the Bento container measured `732 x 645`; the narrow workbench measured `732 x 545` with `720px` scroll height and deliberate internal scrolling.
+- The deck canvas and iframe both measured `636 x 360`; all four cover KPIs, footer and page number remained visible with no slide clipping.
+- The stacked trace inspector measured `732 x 360`; Directory, Business and Technical pages remained independently scrollable.
+- Document horizontal overflow measured `0px`.
+- Dark theme resolved the Trace background to `rgba(29, 40, 59, 0.72)`, raised surfaces to `rgba(20, 29, 45, 0.88)` and primary text to `rgb(237, 243, 251)` from the active Harness semantic tokens.
+- Light theme continued to resolve the same component through the light semantic token set.
+- Renderer and Trace unit tests passed: `2` files / `9` tests.
+- Targeted TypeScript build passed for `@paimind/renderer-bento` and `@paimind/presentation-trace`.
+- Repository build passed, and the protected API snapshot passed for `36` package contracts after recording the two intentional client-bundle hashes.
+- Live verification used only the isolated `54047` Harness; shared `3080` remained running under its original PID and was not restarted or modified.
+
+## Findings
+
+- P0: none.
+- P1: none after semantic-theme and container-responsive fixes.
+- P2: none. In a narrow Side Card the deck and Trace surfaces stack and scroll as complete regions; in a wide Side Card they remain side by side.
+- P3: the previously generated 14-second video is now obsolete visual evidence and must not be used for product review until a new recording is produced from this corrected Trace state.
+
+final result: passed
+
+---
+
+# Proposal Assistant Single-screen Trace and Shimmer Design QA
+
+## Source visual truth
+
+- Scroll-heavy Business Trace reference: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-2f0bc9eb-88ad-4cb4-aefe-22a8ef9a1a81.png` (`431 x 744`).
+- Codex-style shimmer copy reference: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-010fbeda-e8cb-4d2a-8ad4-a4ade99bb48e.png` (`305 x 31`).
+- The selected-cell problem reference is `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-35f1fbae-e473-46ff-ba29-a1e593300de0.png` (`966 x 487`).
+
+## Rendered implementation
+
+- Directory: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/proposal-demo-final/demo/trace-single-screen-directory-final.png` (`1280 x 720`).
+- Business Trace: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/proposal-demo-final/demo/trace-single-screen-business-final.png` (`1280 x 720`).
+- Technical Trace: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/proposal-demo-final/demo/trace-single-screen-technical-final.png` (`1280 x 720`).
+- Shimmer loading state: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/proposal-demo-final/demo/trace-shimmer-loading-final.png` (`1280 x 720`).
+- Sidebar comparison: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/proposal-demo-final/demo/trace-sidebar-before-after-final.png` (`862 x 744`).
+- Focused shimmer comparison: `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins-proposal-demo/proposal-demo-final/demo/trace-shimmer-reference-comparison.png` (`680 x 80`).
+
+The source and implementation were normalized before comparison. The source
+sidebar and the implementation inspector were both resized to `431 x 744` for
+the full-region comparison. The shimmer references were centered on equal
+`340 x 80` canvases. Browser evidence used a `1280 x 720` CSS viewport with
+device scale factor `1`, Dark theme, the real isolated Harness session and the
+same final traceable Bento artifact.
+
+## Comparison history
+
+1. P1 observed: the original Business Trace used a vertically stacked form with a partially hidden CTA and required scrolling to inspect one result.
+2. P1 fix: the sidebar now keeps its header and three-page navigation fixed, combines the verified value with its registered source, uses a two-column evidence grid, and keeps the technical CTA visible in one viewport.
+3. P1 observed: the previous `780px` container breakpoint stacked the deck and inspector into two `360px` rows. In the live `732px` Side Card this reduced the trace page to `191px` and produced `800px` of internal overflow.
+4. P1 fix: narrow workbenches remain true sidebars with deck and inspector side by side. The verified live workbench is `732 x 545`; the inspector is `322 x 545` and no host surface is hidden.
+5. P1 observed after the first compact pass: Directory still exceeded its available page height by `65px`, and Technical Trace exceeded it by `38px`.
+6. P1 fix: Directory uses a two-column deck index, one-line business and fact summaries, and a compact current-slide overview. Technical Trace uses a compact lineage row plus two-column calculation and runtime evidence. Both retain all three primary evidence groups.
+7. P2 observed: selected facts used a hard, static outline that looked like a debug focus ring and did not communicate that the AI was resolving provenance.
+8. P2 fix: selecting a fact now enters a one-shot `Tracing evidence…` state with a Codex-style text shimmer and target glow, then settles into a stable theme-aware selected state. Reduced-motion users skip the animation and receive the final state immediately.
+
+## Required fidelity surfaces
+
+- Fonts and typography: the host font stack is preserved. Labels use small optical weights and tracking, while question and verified-value hierarchy remains readable at `322px` inspector width.
+- Spacing and layout rhythm: header, navigation, overview, evidence cards and CTA use a compact `3–12px` rhythm. No Trace page, inspector, workbench or document vertical scrollbar is required at the verified viewport.
+- Colors and tokens: all sidebar surfaces continue to resolve from Harness semantic Dark/Light tokens. The shimmer uses the deck's existing ink, accent and accent-secondary variables instead of introducing an unrelated palette.
+- Image and asset quality: no visible source asset was replaced. The loading treatment is a native UI state applied to live text and the selected trace target, not a GIF, raster overlay or decorative placeholder.
+- Copy and content: `Tracing evidence…` communicates the short-lived provenance lookup. Directory, Business and Technical remain distinct, and Business still foregrounds source file, conclusion, method and scope.
+
+## Verified behavior
+
+- Directory page: `clientHeight=440`, `scrollHeight=440`, `overflow-y=hidden`.
+- Business page: `clientHeight=440`, `scrollHeight=440`, `overflow-y=hidden`.
+- Technical page: `clientHeight=440`, `scrollHeight=440`, `overflow-y=hidden`.
+- Inspector and workbench: `clientHeight=545`, `scrollHeight=545`, `overflow-y=hidden`; document vertical and horizontal overflow are zero.
+- At `130ms` after selecting `$15.2M`, the deck reported `Tracing evidence…`, opacity `1`, one pending target and zero selected targets.
+- After settlement, the deck reported zero pending targets and one selected target; the AI-driven runtime event opened the matching Business Trace.
+- The regenerated artifact remains valid with `resolutionRate=1`, `sourceHashesVerified=true`, `factValuesChanged=false`, and no validation errors.
+- Targeted verification passed: `3` test files / `17` tests, TypeScript build, repository build and `36` protected API package contracts.
+- Only isolated port `54047` was restarted. Shared port `3080` remained on its original process and was not built, restarted or modified.
+
+## Findings
+
+- P0: none.
+- P1: none after the single-screen Directory and Technical compaction.
+- P2: none after the one-shot shimmer and stable selection treatment.
+- P3: the narrow live deck is intentionally smaller because the user requested a persistent no-scroll Trace sidebar while retaining both the real slide rail and host conversation. No host surface is automatically hidden.
 
 final result: passed

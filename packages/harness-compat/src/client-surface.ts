@@ -618,6 +618,7 @@ export class NativeHarnessAgentChoiceBridge implements HarnessAgentChoiceBridge 
     this.stopNativeSeat()
     this.disposed = true
     this.generation += 1
+    this.stopNativeSeat()
     this.listeners.clear()
   }
 

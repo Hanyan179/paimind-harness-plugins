@@ -164,6 +164,25 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
 
+  packages/category-analysis-adapter:
+    dependencies:
+      '@paimind/artifact-runtime':
+        specifier: workspace:^
+        version: link:../artifact-runtime
+      '@paimind/contracts':
+        specifier: workspace:^
+        version: link:../contracts
+      '@paimind/harness-compat':
+        specifier: workspace:^
+        version: link:../harness-compat
+      '@paimind/presentation-contracts':
+        specifier: workspace:^
+        version: link:../presentation-contracts
+    devDependencies:
+      '@paimind/testkit':
+        specifier: workspace:^
+        version: link:../testkit
+
   packages/contracts: {}
 
   packages/developer-resources:
@@ -203,6 +222,25 @@ importers:
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
+
+  packages/fact-layer:
+    dependencies:
+      '@paimind/artifact-runtime':
+        specifier: workspace:^
+        version: link:../artifact-runtime
+      '@paimind/contracts':
+        specifier: workspace:^
+        version: link:../contracts
+      '@paimind/harness-compat':
+        specifier: workspace:^
+        version: link:../harness-compat
+      '@paimind/presentation-contracts':
+        specifier: workspace:^
+        version: link:../presentation-contracts
+    devDependencies:
+      '@paimind/testkit':
+        specifier: workspace:^
+        version: link:../testkit
 
   packages/generator-bento:
     dependencies:
@@ -299,12 +337,18 @@ importers:
       '@paimind/branding':
         specifier: workspace:^
         version: link:../branding
+      '@paimind/category-analysis-adapter':
+        specifier: workspace:^
+        version: link:../category-analysis-adapter
       '@paimind/developer-resources':
         specifier: workspace:^
         version: link:../developer-resources
       '@paimind/extension-center':
         specifier: workspace:^
         version: link:../extension-center
+      '@paimind/fact-layer':
+        specifier: workspace:^
+        version: link:../fact-layer
       '@paimind/generator-bento':
         specifier: workspace:^
         version: link:../generator-bento

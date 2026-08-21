@@ -7,9 +7,11 @@
     { "name": "@paimind/artifacts", "path": "packages/artifacts", "role": "client-plugin" },
     { "name": "@paimind/better-sidebar-adapter", "path": "packages/better-sidebar-adapter", "role": "client-plugin" },
     { "name": "@paimind/branding", "path": "packages/branding", "role": "client-plugin" },
+    { "name": "@paimind/category-analysis-adapter", "path": "packages/category-analysis-adapter", "role": "headless-plugin" },
     { "name": "@paimind/contracts", "path": "packages/contracts", "role": "shared-support" },
     { "name": "@paimind/developer-resources", "path": "packages/developer-resources", "role": "client-plugin" },
     { "name": "@paimind/extension-center", "path": "packages/extension-center", "role": "client-plugin" },
+    { "name": "@paimind/fact-layer", "path": "packages/fact-layer", "role": "headless-plugin" },
     { "name": "@paimind/generator-bento", "path": "packages/generator-bento", "role": "client-plugin" },
     { "name": "@paimind/generator-office", "path": "packages/generator-office", "role": "client-plugin" },
     { "name": "@paimind/generator-web", "path": "packages/generator-web", "role": "client-plugin" },
@@ -33,7 +35,7 @@
     { "name": "@paimind/testkit", "path": "packages/testkit", "role": "shared-support" },
     { "name": "@paimind/user-settings", "path": "packages/user-settings", "role": "client-plugin" },
     { "name": "@paimind/visual-experience", "path": "packages/visual-experience", "role": "client-plugin" },
-    { "name": "@paimind/workspace-project", "path": "packages/workspace-project", "role": "client-plugin" }
-    ,{ "name": "@paimind/walmart-proposal-adapter", "path": "packages/walmart-proposal-adapter", "role": "headless-plugin" }
+    { "name": "@paimind/workspace-project", "path": "packages/workspace-project", "role": "client-plugin" },
+    { "name": "@paimind/walmart-proposal-adapter", "path": "packages/walmart-proposal-adapter", "role": "headless-plugin" }
   ]
 }

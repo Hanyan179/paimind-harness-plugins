@@ -39,6 +39,8 @@ const artifactRuntimeRoot = resolve(repositoryRoot, 'packages/artifact-runtime')
 const generatorWebRoot = resolve(repositoryRoot, 'packages/generator-web')
 const generatorOfficeRoot = resolve(repositoryRoot, 'packages/generator-office')
 const generatorBentoRoot = resolve(repositoryRoot, 'packages/generator-bento')
+const categoryAnalysisAdapterRoot = resolve(repositoryRoot, 'packages/category-analysis-adapter')
+const factLayerRoot = resolve(repositoryRoot, 'packages/fact-layer')
 const rendererBentoRoot = resolve(repositoryRoot, 'packages/renderer-bento')
 const rendererPdfRoot = resolve(repositoryRoot, 'packages/renderer-pdf')
 const artifactsRoot = resolve(repositoryRoot, 'packages/artifacts')
@@ -565,6 +567,8 @@ try {
     generatorWebRoot,
     generatorOfficeRoot,
     generatorBentoRoot,
+    categoryAnalysisAdapterRoot,
+    factLayerRoot,
     rendererBentoRoot,
     rendererPdfRoot,
     artifactsRoot,
@@ -597,6 +601,8 @@ try {
     'paimind-generator-web', '@paimind/generator-web',
     'paimind-generator-office', '@paimind/generator-office',
     'paimind-generator-bento', '@paimind/generator-bento',
+    'paimind-category-analysis-adapter', '@paimind/category-analysis-adapter',
+    'paimind-fact-layer', '@paimind/fact-layer',
     'paimind-renderer-bento', '@paimind/renderer-bento',
     'paimind-renderer-pdf', '@paimind/renderer-pdf',
     'paimind-artifacts', '@paimind/artifacts',
