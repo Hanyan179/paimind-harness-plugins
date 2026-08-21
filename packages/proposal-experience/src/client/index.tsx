@@ -10,7 +10,7 @@ import {
   type HarnessSessionService,
   type PaimindClientContext,
 } from '@paimind/harness-compat'
-import { PaimindCheckIcon, PaimindCloseIcon } from '@paimind/harness-compat/client-icons'
+import { PaimindCheckIcon } from '@paimind/harness-compat/client-icons'
 import DOLLAR_GENERAL_MARK from '../../assets/dollar-general-mark.webp'
 import WALMART_SPARK from '../../assets/walmart-spark.webp'
 import EXECUTIVE_STORYBOARD from '../../assets/paramont-executive-editorial-storyboard.webp'
@@ -21,25 +21,27 @@ const STYLE_ID = '@paimind/proposal-experience'
 
 const STYLE = `
 [data-paimind-proposal-frame]{display:flex;justify-content:center;padding:8px calc(var(--dsh-composer-side-clearance,0px) + 16px) 12px}
+[data-paimind-proposal-thread]{display:grid;width:min(900px,100%);max-height:min(72vh,720px);gap:10px;overflow:auto;scrollbar-gutter:stable;padding:2px 6px 8px;color:var(--dsw-alias-label-primary,#172033)}
+[data-paimind-proposal-speaker]{display:flex;align-items:center;gap:10px;padding:0 2px}
+[data-paimind-proposal-avatar]{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border-radius:11px;background:linear-gradient(145deg,#102b4b,#356fa8);color:#fff;font-size:11px;font-weight:780;letter-spacing:.04em;box-shadow:0 7px 18px rgba(22,55,89,.2)}
+[data-paimind-proposal-speaker] strong{display:block;font-size:12px;line-height:17px;font-weight:680}
+[data-paimind-proposal-speaker] small{display:block;color:var(--dsw-alias-label-tertiary,#7b8796);font-size:9px;line-height:13px}
 [data-paimind-proposal-card],[data-paimind-proposal-card] *{box-sizing:border-box}
-[data-paimind-proposal-card]{width:min(980px,100%);max-height:min(78vh,700px);overflow:hidden;border:1px solid var(--dsw-alias-border-l2-darkmode-thin,rgba(110,120,135,.28));border-radius:24px;background:var(--dsw-specific-input-major,#fff);color:var(--dsw-alias-label-primary,#172033);box-shadow:0 24px 72px rgba(12,31,55,.2)}
-[data-paimind-proposal-head]{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;padding:20px 22px 15px;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.16))}
+[data-paimind-proposal-card]{width:calc(100% - 42px);margin-left:42px;overflow:hidden;border:1px solid var(--dsw-alias-border-l2-darkmode-thin,rgba(110,120,135,.24));border-radius:18px 18px 18px 7px;background:var(--dsw-specific-input-major,#fff);color:var(--dsw-alias-label-primary,#172033);box-shadow:0 10px 32px rgba(12,31,55,.09)}
+[data-paimind-proposal-head]{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:17px 18px 13px;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.14))}
 [data-paimind-proposal-heading]{min-width:0}
 [data-paimind-proposal-kicker-row]{display:flex;align-items:center;gap:8px;margin-bottom:5px}
 [data-paimind-proposal-kicker]{margin:0;color:var(--dsw-alias-brand-primary,#356fa8);font-size:10px;font-weight:780;letter-spacing:.17em;text-transform:uppercase}
 [data-paimind-proposal-step-count]{color:var(--dsw-alias-label-tertiary,#7b8796);font-size:10px;font-weight:650}
 [data-paimind-proposal-title]{margin:0;font-size:19px;line-height:25px;font-weight:670;letter-spacing:-.018em}
 [data-paimind-proposal-detail]{max-width:680px;margin:6px 0 0;color:var(--dsw-alias-label-secondary,#667085);font-size:12px;line-height:18px}
-[data-paimind-proposal-close]{display:grid;place-items:center;align-self:start;width:30px;height:30px;padding:0;border:0;border-radius:999px;background:transparent;color:var(--dsw-alias-label-tertiary,#7b8796);cursor:pointer}
-[data-paimind-proposal-close] svg{width:15px;height:15px}
-[data-paimind-proposal-close]:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(120,130,145,.12));color:var(--dsw-alias-label-primary,#172033)}
-[data-paimind-proposal-progress]{grid-column:1/-1;display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:7px 0 0;padding:0;list-style:none}
+[data-paimind-proposal-progress]{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:4px 0 0;padding:0;list-style:none}
 [data-paimind-proposal-progress] li{position:relative;min-width:0;padding-top:8px;color:var(--dsw-alias-label-tertiary,#7b8796);font-size:9px;font-weight:650;line-height:13px}
 [data-paimind-proposal-progress] li::before{content:'';position:absolute;inset:0 0 auto;height:2px;border-radius:999px;background:var(--dsw-alias-border-l1,rgba(110,120,135,.18))}
 [data-paimind-proposal-progress] li[data-state='complete'],[data-paimind-proposal-progress] li[data-state='current']{color:var(--dsw-alias-label-primary,#172033)}
 [data-paimind-proposal-progress] li[data-state='complete']::before{background:color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 62%,#8fa7bf)}
 [data-paimind-proposal-progress] li[data-state='current']::before{height:3px;background:var(--dsw-alias-brand-primary,#356fa8);box-shadow:0 0 0 3px color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 11%,transparent)}
-[data-paimind-proposal-body]{display:grid;grid-template-columns:minmax(300px,1fr);min-height:0;max-height:540px;overflow:auto}
+[data-paimind-proposal-body]{display:grid;grid-template-columns:minmax(300px,1fr);min-height:0}
 [data-paimind-proposal-body][data-preview='true']{grid-template-columns:minmax(260px,.96fr) minmax(280px,1.04fr)}
 [data-paimind-proposal-options]{display:grid;grid-template-columns:1fr;align-content:start;gap:9px;min-width:0;padding:17px 18px 19px}
 [data-paimind-proposal-options][data-stage='customer']{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -71,6 +73,9 @@ const STYLE = `
 [data-paimind-proposal-actions] span{color:var(--dsw-alias-label-tertiary,#7b8796);font-size:10px}
 [data-paimind-proposal-submit]{min-height:34px;padding:8px 14px;border:0;border-radius:10px;background:var(--dsw-alias-label-primary,#172033);color:var(--dsw-alias-label-primary-foreground,#fff);font-size:11px;font-weight:670;cursor:pointer}
 [data-paimind-proposal-submit]:disabled{opacity:.45;cursor:default}
+[data-paimind-proposal-utility]{display:flex;justify-content:flex-end;padding:0 18px 12px}
+[data-paimind-proposal-utility] button{padding:4px 0;border:0;background:transparent;color:var(--dsw-alias-label-tertiary,#7b8796);font-size:9px;cursor:pointer}
+[data-paimind-proposal-utility] button:hover{color:var(--dsw-alias-label-primary,#172033);text-decoration:underline;text-underline-offset:3px}
 [data-paimind-proposal-error]{grid-column:1/-1;margin:0;color:#c64242;font-size:11px;line-height:17px}
 [data-paimind-deck-preview]{display:flex;flex-direction:column;min-width:0;padding:17px 18px 16px;border-left:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.16));background:linear-gradient(155deg,color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 8%,transparent),transparent 55%)}
 [data-paimind-deck-preview] > small{color:var(--dsw-alias-brand-primary,#356fa8);font-size:9px;font-weight:780;letter-spacing:.15em;text-transform:uppercase}
@@ -84,6 +89,17 @@ const STYLE = `
 [data-paimind-preview-meta] span{display:block;color:var(--dsw-alias-label-tertiary,#7b8796);font-size:8px;font-weight:760;letter-spacing:.09em;text-transform:uppercase}
 [data-paimind-preview-meta] strong{display:block;margin-top:3px;font-size:10px;line-height:14px;font-weight:620}
 [data-paimind-preview-hint]{margin-top:9px!important;font-size:9px!important}
+[data-paimind-proposal-summaries]{display:grid;width:calc(100% - 42px);margin-left:42px;gap:7px}
+[data-paimind-proposal-summary]{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:48px;padding:8px 10px;border:1px solid color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 20%,transparent);border-radius:13px;background:color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 6%,var(--dsw-specific-input-major,#fff));box-shadow:0 4px 14px rgba(12,31,55,.04)}
+[data-paimind-proposal-summary-check]{display:grid;place-items:center;width:24px;height:24px;border-radius:8px;background:color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 13%,transparent);color:var(--dsw-alias-brand-primary,#356fa8)}
+[data-paimind-proposal-summary-check] svg{width:13px;height:13px}
+[data-paimind-proposal-summary-copy]{min-width:0}
+[data-paimind-proposal-summary-copy] span{display:block;color:var(--dsw-alias-label-tertiary,#7b8796);font-size:8px;font-weight:760;letter-spacing:.1em;text-transform:uppercase}
+[data-paimind-proposal-summary-copy] strong{display:block;overflow:hidden;margin-top:2px;font-size:11px;line-height:16px;font-weight:640;text-overflow:ellipsis;white-space:nowrap}
+[data-paimind-proposal-summary-edit]{min-height:28px;padding:5px 9px;border:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.18));border-radius:8px;background:var(--dsw-specific-input-major,#fff);color:var(--dsw-alias-label-secondary,#667085);font-size:9px;font-weight:650;cursor:pointer}
+[data-paimind-proposal-summary-edit]:hover,[data-paimind-proposal-summary-edit]:focus-visible{outline:none;border-color:color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 48%,transparent);color:var(--dsw-alias-brand-primary,#356fa8)}
+[data-paimind-proposal-summary] [data-paimind-brand-logo-shell]{width:28px;height:28px;flex-basis:28px;padding:4px;border-radius:8px;box-shadow:none}
+[data-paimind-proposal-summary] [data-paimind-brand-logo-shell][data-brand='dollar-general']{padding:0;border-radius:999px}
 [data-paimind-proposal-ready]{padding:19px}
 [data-paimind-proposal-ready-hero]{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:13px;padding:15px;border:1px solid color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 24%,transparent);border-radius:16px;background:color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 7%,transparent)}
 [data-paimind-proposal-ready-icon]{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:var(--dsw-alias-brand-primary,#356fa8);color:#fff;box-shadow:0 10px 22px color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 28%,transparent)}
@@ -97,9 +113,11 @@ const STYLE = `
 [data-paimind-proposal-ready-actions]{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:13px}
 [data-paimind-proposal-ready-actions] small{color:var(--dsw-alias-label-tertiary,#7b8796);font-size:9px;line-height:14px}
 [data-ds-dark-theme] [data-paimind-proposal-card]{background:#151e2c;color:#edf3fb}
+[data-ds-dark-theme] [data-paimind-proposal-summary]{background:color-mix(in srgb,#356fa8 13%,#151e2c)}
+[data-ds-dark-theme] [data-paimind-proposal-summary-edit]{background:#151e2c;color:#c5d0dd}
 [data-ds-dark-theme] [data-paimind-brand-logo-shell]{border-color:rgba(255,255,255,.18)}
-@media(max-width:840px){[data-paimind-proposal-card]{max-height:min(80vh,720px)}[data-paimind-proposal-body][data-preview='true']{grid-template-columns:1fr}[data-paimind-deck-preview]{border-top:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.16));border-left:0}[data-paimind-storyboard]{height:230px}}
-@media(max-width:620px){[data-paimind-proposal-frame]{padding-right:10px;padding-left:10px}[data-paimind-proposal-head]{padding:16px 15px 13px}[data-paimind-proposal-progress] li{font-size:0}[data-paimind-proposal-progress] li::after{content:attr(data-step);font-size:9px}[data-paimind-proposal-options]{padding:12px}[data-paimind-proposal-options][data-stage='customer'],[data-paimind-proposal-options][data-stage='departments'],[data-paimind-proposal-options][data-stage='confirm'],[data-paimind-proposal-brief-grid]{grid-template-columns:1fr}[data-paimind-proposal-options][data-stage='time-horizon']{grid-template-columns:1fr}[data-paimind-proposal-options][data-stage='time-horizon'] [data-paimind-proposal-option]{min-height:60px;flex-direction:row;align-items:center}[data-paimind-proposal-ready-actions]{align-items:flex-start;flex-direction:column}}
+@media(max-width:840px){[data-paimind-proposal-body][data-preview='true']{grid-template-columns:1fr}[data-paimind-deck-preview]{border-top:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.16));border-left:0}[data-paimind-storyboard]{height:230px}}
+@media(max-width:620px){[data-paimind-proposal-frame]{padding-right:10px;padding-left:10px}[data-paimind-proposal-thread]{padding-right:0;padding-left:0}[data-paimind-proposal-card],[data-paimind-proposal-summaries]{width:100%;margin-left:0}[data-paimind-proposal-head]{padding:16px 15px 13px}[data-paimind-proposal-progress] li{font-size:0}[data-paimind-proposal-progress] li::after{content:attr(data-step);font-size:9px}[data-paimind-proposal-options]{padding:12px}[data-paimind-proposal-options][data-stage='customer'],[data-paimind-proposal-options][data-stage='departments'],[data-paimind-proposal-options][data-stage='confirm'],[data-paimind-proposal-brief-grid]{grid-template-columns:1fr}[data-paimind-proposal-options][data-stage='time-horizon']{grid-template-columns:1fr}[data-paimind-proposal-options][data-stage='time-horizon'] [data-paimind-proposal-option]{min-height:60px;flex-direction:row;align-items:center}[data-paimind-proposal-ready-actions]{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){[data-paimind-proposal-option]{transition:none}}
 `
 
@@ -227,6 +245,50 @@ interface ProposalDemoSelections {
 
 const EMPTY_DEMO_SELECTIONS: ProposalDemoSelections = Object.freeze({ departments: [] })
 
+function ProposalSpeaker(): React.JSX.Element {
+  return <div data-paimind-proposal-speaker>
+    <span data-paimind-proposal-avatar aria-hidden="true">PA</span>
+    <span><strong>Proposal Assistant</strong><small>Guided proposal intake · answers stay editable in this conversation</small></span>
+  </div>
+}
+
+function selectionSummary(step: number, selections: ProposalDemoSelections): string | undefined {
+  if (step === 0) return selections.customer
+  if (step === 1) return selections.departments.length === 0 ? undefined : selections.departments.join(', ')
+  if (step === 2) return selections.timeHorizon
+  if (step === 3) return selections.deckType
+  return undefined
+}
+
+function completedSelectionSteps(selections: ProposalDemoSelections, confirmed: boolean): readonly number[] {
+  const steps = PROPOSAL_STEPS
+    .slice(0, 4)
+    .map((_, index) => index)
+    .filter(index => selectionSummary(index, selections) !== undefined)
+  return confirmed ? [...steps, 4] : steps
+}
+
+function AnswerSummaries(props: {
+  readonly selections: ProposalDemoSelections
+  readonly activeStep: number
+  readonly visibleThrough: number
+  readonly onEdit: (step: number) => void
+}): React.JSX.Element | null {
+  const summaries = PROPOSAL_STEPS.slice(0, 4).flatMap((step, index) => {
+    const value = selectionSummary(index, props.selections)
+    if (value === undefined || index === props.activeStep || index >= props.visibleThrough) return []
+    return [{ step, index, value }]
+  })
+  if (summaries.length === 0) return null
+  return <div data-paimind-proposal-summaries aria-label="Proposal answers">
+    {summaries.map(summary => <div data-paimind-proposal-summary key={summary.step.id}>
+      {summary.index === 0 ? brandLogo(summary.value) : <span data-paimind-proposal-summary-check aria-hidden="true"><PaimindCheckIcon /></span>}
+      <span data-paimind-proposal-summary-copy><span>{summary.step.label}</span><strong>{summary.value}</strong></span>
+      <button type="button" data-paimind-proposal-summary-edit aria-label={`Edit ${summary.step.label}`} onClick={() => { props.onEdit(summary.index) }}>Edit</button>
+    </div>)}
+  </div>
+}
+
 function questionForDemoStep(step: number, selections: ProposalDemoSelections): HarnessQuestionItem {
   const customer = selections.customer ?? 'the selected customer'
   switch (step) {
@@ -280,46 +342,45 @@ function ProposalBriefReady(props: {
   readonly selections: ProposalDemoSelections
   readonly onRestart: () => void
 }): React.JSX.Element {
-  return <div data-paimind-proposal-frame>
-    <section data-paimind-proposal-card data-stage="ready" aria-labelledby="proposal-brief-ready-title">
-      <header data-paimind-proposal-head>
-        <div data-paimind-proposal-heading>
-          <div data-paimind-proposal-kicker-row><p data-paimind-proposal-kicker>Proposal setup · Complete</p><span data-paimind-proposal-step-count>5 of 5 decisions captured</span></div>
-          <h2 data-paimind-proposal-title id="proposal-brief-ready-title">Proposal brief ready for deck generation</h2>
-          <p data-paimind-proposal-detail>Proposal Assistant has structured the intake. Slide content and PPTX generation remain intentionally deferred to the next delivery phase.</p>
-        </div>
-        <ProgressRail current={PROPOSAL_STEPS.length} />
-      </header>
-      <div data-paimind-proposal-ready>
-        <div data-paimind-proposal-ready-hero><span data-paimind-proposal-ready-icon><PaimindCheckIcon /></span><div><strong>Decision-ready intake captured</strong><p>The next run can turn this brief into an outline, evidence plan and editable deck.</p></div></div>
-        <div data-paimind-proposal-brief-grid>
-          <div><span>Customer</span><strong>{props.selections.customer}</strong></div>
-          <div><span>Audience</span><strong>{props.selections.departments.join(', ')}</strong></div>
-          <div><span>Planning horizon</span><strong>{props.selections.timeHorizon}</strong></div>
-          <div><span>Deck style</span><strong>{props.selections.deckType}</strong></div>
-        </div>
-        <div data-paimind-proposal-ready-actions><small>Demo scope: intake and visual interaction only. No PPTX has been generated.</small><button type="button" data-paimind-proposal-submit onClick={props.onRestart}>Start another proposal</button></div>
+  return <section data-paimind-proposal-card data-stage="ready" aria-labelledby="proposal-brief-ready-title">
+    <header data-paimind-proposal-head>
+      <div data-paimind-proposal-heading>
+        <div data-paimind-proposal-kicker-row><p data-paimind-proposal-kicker>Proposal setup · Complete</p><span data-paimind-proposal-step-count>5 of 5 decisions captured</span></div>
+        <h2 data-paimind-proposal-title id="proposal-brief-ready-title">Proposal brief ready for deck generation</h2>
+        <p data-paimind-proposal-detail>Proposal Assistant has structured the intake. Slide content and PPTX generation remain intentionally deferred to the next delivery phase.</p>
       </div>
-    </section>
-  </div>
+      <ProgressRail current={PROPOSAL_STEPS.length} />
+    </header>
+    <div data-paimind-proposal-ready>
+      <div data-paimind-proposal-ready-hero><span data-paimind-proposal-ready-icon><PaimindCheckIcon /></span><div><strong>Decision-ready intake captured</strong><p>The answers above remain editable. The next run can turn this brief into an outline, evidence plan and editable deck.</p></div></div>
+      <div data-paimind-proposal-ready-actions><small>Demo scope: intake and visual interaction only. No PPTX has been generated.</small><button type="button" data-paimind-proposal-submit onClick={props.onRestart}>Start another proposal</button></div>
+    </div>
+  </section>
 }
 
 function ProposalGuidedDemo({ matched }: { readonly matched: ProposalDemoMatch }): React.JSX.Element {
   const [step, setStep] = useState(0)
+  const [resumeStep, setResumeStep] = useState<number | null>(null)
   const [selections, setSelections] = useState<ProposalDemoSelections>(EMPTY_DEMO_SELECTIONS)
   const question = useMemo(() => questionForDemoStep(step, selections), [selections, step])
+  const initialAnswer = useMemo(() => {
+    const values = step === 1 ? selections.departments : [selectionSummary(step, selections)].filter((value): value is string => value !== undefined)
+    const selected = (question.options ?? []).filter(option => values.includes(optionPresentation(option.label).label)).map(option => option.label)
+    const custom = values.find(value => !(question.options ?? []).some(option => optionPresentation(option.label).label === value)) ?? ''
+    return { selected, custom }
+  }, [question, selections, step])
   const wait = useMemo<HarnessQuestionWait>(() => ({
     kind: 'question', key: `${matched.key}:${String(step)}`, sessionId: matched.sessionId,
     payload: { questions: [question] },
     respond: async response => {
       if (!response.ok) {
-        setSelections(EMPTY_DEMO_SELECTIONS); setStep(0)
+        setSelections(EMPTY_DEMO_SELECTIONS); setResumeStep(null); setStep(0)
         return { accepted: true }
       }
       const answer = response.value.answer.answers[0]
       if (answer === undefined) return { accepted: false, reason: 'Proposal answer missing' }
       if (answer.id === PROPOSAL_QUESTION_IDS.confirm && selectionValue(answer) === 'Review from the beginning') {
-        setStep(0)
+        setResumeStep(null); setStep(0)
         return { accepted: true }
       }
       setSelections(current => {
@@ -329,15 +390,38 @@ function ProposalGuidedDemo({ matched }: { readonly matched: ProposalDemoMatch }
         if (answer.id === PROPOSAL_QUESTION_IDS.deckType) return { ...current, deckType: selectionValue(answer) }
         return current
       })
-      setStep(current => Math.min(PROPOSAL_STEPS.length, current + 1))
+      setStep(current => resumeStep ?? Math.min(PROPOSAL_STEPS.length, current + 1))
+      setResumeStep(null)
       return { accepted: true }
     },
-  }), [matched.key, matched.sessionId, question, step])
+  }), [matched.key, matched.sessionId, question, resumeStep, step])
 
-  if (step >= PROPOSAL_STEPS.length) {
-    return <ProposalBriefReady selections={selections} onRestart={() => { setSelections(EMPTY_DEMO_SELECTIONS); setStep(0) }} />
+  const edit = (targetStep: number): void => {
+    setResumeStep(step)
+    setStep(targetStep)
   }
-  return <ProposalQuestionComposer key={wait.key} matched={wait} />
+
+  return <div data-paimind-proposal-frame>
+    <div data-paimind-proposal-thread data-mode="guided-demo">
+      <ProposalSpeaker />
+      <AnswerSummaries
+        selections={selections}
+        activeStep={step}
+        visibleThrough={resumeStep === null ? step : PROPOSAL_STEPS.length}
+        onEdit={edit}
+      />
+      {step >= PROPOSAL_STEPS.length
+        ? <ProposalBriefReady selections={selections} onRestart={() => { setSelections(EMPTY_DEMO_SELECTIONS); setResumeStep(null); setStep(0) }} />
+        : <ProposalQuestionCard
+            key={wait.key}
+            matched={wait}
+            inline
+            initialSelected={initialAnswer.selected}
+            initialCustom={initialAnswer.custom}
+            completedSteps={completedSelectionSteps(selections, false)}
+          />}
+    </div>
+  </div>
 }
 
 function questionStep(question: HarnessQuestionItem): number {
@@ -357,22 +441,31 @@ function optionDetail(option: HarnessQuestionOption): string | undefined {
   return option.description ?? OPTION_DETAILS[optionPresentation(option.label).label]
 }
 
-function ProgressRail({ current }: { readonly current: number }): React.JSX.Element {
+function ProgressRail(props: { readonly current: number; readonly completedSteps?: readonly number[] }): React.JSX.Element {
   return <ol data-paimind-proposal-progress aria-label="Proposal setup progress">
     {PROPOSAL_STEPS.map((step, index) => <li
       key={step.id}
       data-step={index + 1}
-      data-state={index < current ? 'complete' : index === current ? 'current' : 'upcoming'}
-      aria-current={index === current ? 'step' : undefined}
+      data-state={index < props.current || props.completedSteps?.includes(index) === true ? 'complete' : index === props.current ? 'current' : 'upcoming'}
+      aria-current={index === props.current ? 'step' : undefined}
     >{step.label}</li>)}
   </ol>
 }
 
-export function ProposalQuestionComposer({ matched }: { readonly matched: HarnessQuestionWait }): React.JSX.Element {
+interface ProposalQuestionComposerProps {
+  readonly matched: HarnessQuestionWait
+  readonly inline?: boolean
+  readonly initialSelected?: readonly string[]
+  readonly initialCustom?: string
+  readonly completedSteps?: readonly number[]
+}
+
+function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.Element {
+  const { matched } = props
   const question = matched.payload.questions[0]!
   const options = question.options ?? []
-  const [selected, setSelected] = useState<readonly string[]>([])
-  const [custom, setCustom] = useState('')
+  const [selected, setSelected] = useState<readonly string[]>(props.initialSelected ?? [])
+  const [custom, setCustom] = useState(props.initialCustom ?? '')
   const [focused, setFocused] = useState(options[0]?.label ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -402,13 +495,9 @@ export function ProposalQuestionComposer({ matched }: { readonly matched: Harnes
       setSelected(current => current.includes(label) ? current.filter(value => value !== label) : [...current, label])
       return
     }
-    if (hasPreview) {
-      setCustom('')
-      setFocused(label)
-      setSelected([label])
-      return
-    }
-    void answer([label])
+    setCustom('')
+    setFocused(label)
+    setSelected([label])
   }
 
   const cancel = (): void => {
@@ -419,14 +508,12 @@ export function ProposalQuestionComposer({ matched }: { readonly matched: Harnes
     })
   }
 
-  const showActions = question.multiSelect === true || hasPreview
   const actionLabel = hasPreview ? 'Use this deck style' : 'Continue'
   const actionStatus = hasPreview
     ? selected.length === 0 ? 'Preview and select one style' : `${optionPresentation(selected[0]!).label} selected`
-    : `${selected.length} selected`
+    : selected.length === 0 && custom.trim() === '' ? 'Select an option to continue' : `${selected.length || 1} selected`
 
-  return <div data-paimind-proposal-frame data-question-key={matched.key}>
-    <section data-paimind-proposal-card data-stage={stage} aria-labelledby={`proposal-question-${matched.key}`}>
+  const card = <section data-paimind-proposal-card data-stage={stage} aria-labelledby={`proposal-question-${matched.key}`}>
       <header data-paimind-proposal-head>
         <div data-paimind-proposal-heading>
           <div data-paimind-proposal-kicker-row>
@@ -436,8 +523,7 @@ export function ProposalQuestionComposer({ matched }: { readonly matched: Harnes
           <h2 data-paimind-proposal-title id={`proposal-question-${matched.key}`}>{question.question}</h2>
           {question.detail === undefined ? null : <p data-paimind-proposal-detail>{question.detail}</p>}
         </div>
-        <button type="button" data-paimind-proposal-close aria-label="Cancel proposal question" disabled={busy} onClick={cancel}><PaimindCloseIcon /></button>
-        <ProgressRail current={step} />
+        <ProgressRail current={step} {...(props.completedSteps === undefined ? {} : { completedSteps: props.completedSteps })} />
       </header>
       <div data-paimind-proposal-body data-preview={hasPreview}>
         <div data-paimind-proposal-options data-stage={stage} role={question.multiSelect === true ? 'group' : 'radiogroup'}>
@@ -450,7 +536,7 @@ export function ProposalQuestionComposer({ matched }: { readonly matched: Harnes
               type="button"
               key={`${option.label}-${String(index)}`}
               data-paimind-proposal-option
-              data-focused={focused === option.label}
+              data-focused={hasPreview && focused === option.label}
               role={question.multiSelect === true ? 'checkbox' : 'radio'}
               aria-checked={active}
               aria-label={display.label}
@@ -477,16 +563,25 @@ export function ProposalQuestionComposer({ matched }: { readonly matched: Harnes
               onKeyDown={event => { if (event.key === 'Enter' && custom.trim() !== '') { event.preventDefault(); void answer([], custom.trim()) } }}
             />
           </label>
-          {showActions && <div data-paimind-proposal-actions data-kind={hasPreview ? 'deck' : 'multi-select'}>
+          <div data-paimind-proposal-actions data-kind={hasPreview ? 'deck' : question.multiSelect === true ? 'multi-select' : 'single-select'}>
             <span>{actionStatus}</span>
             <button type="button" data-paimind-proposal-submit disabled={busy || (selected.length === 0 && custom.trim() === '')} onClick={() => { void answer(selected, custom.trim()) }}>{actionLabel}</button>
-          </div>}
+          </div>
           {error === null ? null : <p data-paimind-proposal-error role="status">{error}</p>}
         </div>
         {hasPreview ? <DeckPreview option={focusedOption} /> : null}
       </div>
+      <footer data-paimind-proposal-utility><button type="button" aria-label="Cancel proposal question" disabled={busy} onClick={cancel}>Cancel intake</button></footer>
     </section>
+
+  if (props.inline === true) return card
+  return <div data-paimind-proposal-frame data-question-key={matched.key}>
+    <div data-paimind-proposal-thread data-mode="native-question"><ProposalSpeaker />{card}</div>
   </div>
+}
+
+export function ProposalQuestionComposer({ matched }: { readonly matched: HarnessQuestionWait }): React.JSX.Element {
+  return <ProposalQuestionCard matched={matched} />
 }
 
 interface ProposalExperienceClientContext extends PaimindClientContext {

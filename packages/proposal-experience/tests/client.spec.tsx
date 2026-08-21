@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import type { ComponentType } from 'react'
 import { createClientContextFixture } from '@paimind/testkit'
 import type { HarnessQuestionWait } from '@paimind/harness-compat'
 import { PROPOSAL_QUESTION_IDS } from '../src/index.ts'
@@ -32,17 +33,22 @@ describe('Proposal Assistant Experience', () => {
     expect(selectProposalQuestion({ interactions: [batch] })).toBeNull()
   })
 
-  it('renders compact brand marks, visible progress, and returns the exact native answer label', async () => {
+  it('renders compact brand marks in an inline conversation card and returns the exact native answer label', async () => {
     const pending = wait({
       id: PROPOSAL_QUESTION_IDS.customer, question: 'Which customer are you preparing this deck for?',
       options: [{ label: 'Dollar General' }, { label: 'Walmart' }],
     })
     const { container } = render(<ProposalQuestionComposer matched={pending} />)
     expect(container.querySelectorAll('[data-paimind-brand-logo]')).toHaveLength(2)
+    expect(container.querySelector('[data-mode="native-question"]')).not.toBeNull()
     expect(screen.getByText('Step 1 of 5')).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Dollar General' }).querySelector('[data-brand="dollar-general"]')).not.toBeNull()
     expect(screen.getByRole('radio', { name: 'Walmart' }).querySelector('[data-brand="walmart"]')).not.toBeNull()
+    expect(screen.getByRole('radio', { name: 'Dollar General' })).toHaveAttribute('data-focused', 'false')
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
     fireEvent.click(screen.getByRole('radio', { name: 'Walmart' }))
+    expect(pending.respond).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     await waitFor(() => expect(pending.respond).toHaveBeenCalledWith({
       ok: true,
       value: { sessionId: 'session-one', answer: { answers: [{ id: PROPOSAL_QUESTION_IDS.customer, selected: ['Walmart'] }] } },
@@ -92,5 +98,36 @@ describe('Proposal Assistant Experience', () => {
         selected: ['Merchandising', 'Executive Leadership'],
       }] } },
     }))
+  })
+
+  it('collapses submitted answers in the conversation and edits them in place', async () => {
+    const fixture = createClientContextFixture()
+    apply(fixture.context)
+    const guidedEntry = fixture.slots.find(row => row.options.priority === -19)
+    const GuidedDemo = guidedEntry?.component as ComponentType<{ readonly matched: {
+      readonly kind: 'proposal-demo'; readonly key: string; readonly sessionId: string
+    } }>
+    const { container } = render(<GuidedDemo matched={{
+      kind: 'proposal-demo', key: 'proposal-demo:session-one', sessionId: 'session-one',
+    }} />)
+    expect(container.querySelector('[data-mode="guided-demo"]')).not.toBeNull()
+    expect(screen.queryByLabelText('Proposal answers')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Walmart' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Edit Customer' })).toBeInTheDocument())
+    expect(screen.getByText('Which departments should this proposal speak to?')).toBeInTheDocument()
+    expect(screen.getByLabelText('Proposal answers')).toHaveTextContent('Walmart')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Customer' }))
+    expect(screen.getByText('Which company are you preparing this proposal for?')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Edit Customer' })).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Walmart' })).toHaveAttribute('aria-checked', 'true')
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Dollar General' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    await waitFor(() => expect(screen.getByText('Which departments should this proposal speak to?')).toBeInTheDocument())
+    expect(screen.getByLabelText('Proposal answers')).toHaveTextContent('Dollar General')
+    fixture.disposeEffects()
   })
 })
