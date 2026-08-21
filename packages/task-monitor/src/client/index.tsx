@@ -164,28 +164,69 @@ const STYLE = `
 [data-paimind-task-disclosure] summary { padding:5px 2px; color:var(--dsw-alias-label-secondary,#626872); cursor:pointer; font-size:10px; line-height:16px; list-style-position:inside; }
 [data-paimind-task-disclosure][open] summary { margin-bottom:3px; }
 [data-paimind-task-resource-list] { display:grid; gap:5px; }
-[data-paimind-task-resource-row] { min-width:0; display:grid; grid-template-columns:72px minmax(0,1fr); gap:8px; align-items:start; padding:7px 9px; border-radius:8px; background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.055)); }
-[data-paimind-task-resource-label] { display:inline-flex; align-items:center; gap:6px; color:var(--dsw-alias-label-tertiary,#7a808a); font-size:10px; line-height:19px; font-weight:500; }
-[data-paimind-task-resource-label] svg { flex:none; }
-[data-paimind-task-resource-values] { min-width:0; display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
-[data-paimind-task-chip] { max-width:100%; overflow:hidden; padding:1px 7px; border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.1)); border-radius:999px; color:var(--dsw-alias-label-secondary,#626872); background:var(--dsw-alias-bg-layer-1,#fff); font-size:10px; line-height:17px; text-overflow:ellipsis; white-space:nowrap; }
-[data-paimind-task-chip][data-kind='agent'] { color:var(--dsw-alias-state-business-primary,#4f7ff8); }
-[data-paimind-task-chip][data-kind='skill-used'],[data-paimind-task-chip][data-kind='mcp-used'] { border-color:color-mix(in srgb,var(--dsw-alias-state-success-primary,#2b8a57) 24%,transparent); color:var(--dsw-alias-state-success-primary,#2b8a57); background:color-mix(in srgb,var(--dsw-alias-state-success-primary,#2b8a57) 7%,transparent); }
-[data-paimind-task-main-agent] { position:relative; min-width:0; display:inline-flex; align-items:center; border-radius:999px; outline:none; }
-[data-paimind-task-main-agent]:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:2px; }
-[data-paimind-task-model-tooltip] { position:absolute; z-index:5; right:0; bottom:calc(100% + 6px); width:max-content; max-width:260px; overflow:hidden; padding:4px 7px; border-radius:6px; color:#fff; background:#1f2329; box-shadow:0 6px 18px #0003; font-size:9px; line-height:14px; text-overflow:ellipsis; white-space:nowrap; opacity:0; pointer-events:none; transform:translateY(3px); transition:opacity .12s ease,transform .12s ease; }
-[data-paimind-task-main-agent]:hover [data-paimind-task-model-tooltip],[data-paimind-task-main-agent]:focus-visible [data-paimind-task-model-tooltip] { opacity:1; transform:translateY(0); }
 [data-paimind-task-agent-children] { grid-column:1 / -1; min-width:0; margin-top:2px; padding:6px 0 0 74px; border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.1)); }
 [data-paimind-task-agent-children] [data-paimind-task-row] { padding-inline:0; }
 [data-paimind-task-resource-empty] { color:var(--dsw-alias-label-tertiary,#7a808a); font-size:10px; line-height:19px; }
-[data-paimind-task-chip-overflow] { flex-basis:100%; }
-[data-paimind-task-chip-overflow] > summary { width:max-content; padding:2px 4px; color:var(--dsw-alias-label-secondary,#626872); cursor:pointer; font-size:9px; line-height:15px; }
-[data-paimind-task-chip-overflow] > div { display:flex; flex-wrap:wrap; gap:5px; padding-top:4px; }
 [data-paimind-task-technical] summary { cursor:pointer; color:var(--dsw-alias-label-secondary,#626872); font-size:11px; font-weight:600; }
 [data-paimind-task-technical] dl { display:grid; grid-template-columns:auto minmax(0,1fr); gap:5px 10px; margin:10px 0 0; font-size:9px; line-height:14px; }
 [data-paimind-task-technical] dt { color:var(--dsw-alias-label-tertiary,#7a808a); }
 [data-paimind-task-technical] dd { min-width:0; margin:0; overflow-wrap:anywhere; }
 [data-paimind-task-error] { padding:7px 9px; border-radius:8px; color:var(--dsw-alias-state-error-primary,#d04444); background:color-mix(in srgb,currentColor 8%,transparent); font-size:10px; line-height:16px; }
+[data-paimind-task-panel] { border-radius:16px; box-shadow:0 18px 48px rgba(0,0,0,.18); }
+[data-paimind-task-panel-header] { padding:15px 17px 12px; }
+[data-paimind-task-panel-header] > div { min-width:0; }
+[data-paimind-task-status-pill] { display:inline-flex; align-items:center; gap:6px; padding:3px 7px; background:transparent; }
+[data-paimind-task-status-pill]::before { content:''; width:6px; height:6px; flex:none; border-radius:50%; background:currentColor; opacity:.72; }
+[data-paimind-task-body] { padding:12px 16px 15px; }
+[data-paimind-task-summary-card] { padding:12px 13px; border-color:var(--dsw-alias-border-l1,rgba(128,128,128,.14)); background:transparent; }
+[data-paimind-task-summary-copy] strong { font-size:13px; line-height:18px; }
+[data-paimind-task-summary-stats] { gap:6px; margin-top:10px; }
+[data-paimind-task-summary-stats] button { min-height:48px; grid-template-columns:22px minmax(0,1fr); column-gap:7px; padding:7px 8px; border-color:var(--dsw-alias-border-l1,rgba(128,128,128,.1)); background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.04)); }
+[data-paimind-task-summary-stats] button:hover { transform:none; }
+[data-paimind-task-summary-stat-icon] { width:22px; height:22px; }
+[data-paimind-task-summary-stats] b { font-size:13px; line-height:16px; }
+[data-paimind-task-summary-stats] small { font-size:9px; line-height:13px; }
+[data-paimind-task-section] { padding:14px 0; }
+[data-paimind-task-section] h3 { margin-bottom:8px; color:var(--dsw-alias-label-primary,#202124); font-size:12px; }
+[data-paimind-task-empty-state] { display:grid; justify-items:center; gap:5px; margin:14px 0 2px; padding:22px 18px; border:1px dashed var(--dsw-alias-border-l1,rgba(128,128,128,.18)); border-radius:11px; color:var(--dsw-alias-label-tertiary,#7a808a); text-align:center; }
+[data-paimind-task-empty-state] > span:first-child { width:30px; height:30px; display:grid; place-items:center; border-radius:9px; color:var(--dsw-alias-label-secondary,#626872); background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.07)); }
+[data-paimind-task-empty-state] strong { color:var(--dsw-alias-label-secondary,#626872); font-size:11px; line-height:17px; }
+[data-paimind-task-empty-state] small { max-width:260px; font-size:9px; line-height:15px; }
+[data-paimind-task-file] { width:100%; border:0; color:inherit; background:transparent; font:inherit; text-align:left; cursor:pointer; }
+[data-paimind-task-file][data-paimind-task-row] { grid-template-columns:minmax(0,1fr) auto; padding-inline:10px 7px; }
+[data-paimind-task-file]:hover { background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.08)); }
+[data-paimind-task-file]:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:1px; }
+[data-paimind-task-file] [data-paimind-task-row-meta] { display:inline-flex; align-items:center; gap:4px; }
+[data-paimind-task-resource-list] { gap:8px; }
+[data-paimind-task-agent-group],[data-paimind-task-capability-group] { display:block; margin:0; padding:0; border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.12)); border-radius:10px; overflow:hidden; background:transparent; list-style:none; }
+[data-paimind-task-main-agent] { min-width:0; min-height:47px; display:grid; grid-template-columns:28px minmax(0,1fr) auto; gap:9px; align-items:center; padding:7px 9px; border-radius:0; }
+[data-paimind-task-main-agent-icon] { width:27px; height:27px; display:grid; place-items:center; border-radius:8px; color:var(--dsw-alias-state-business-primary,#4f7ff8); background:color-mix(in srgb,currentColor 9%,transparent); }
+[data-paimind-task-main-agent-copy] { min-width:0; display:grid; gap:1px; }
+[data-paimind-task-main-agent-copy] small { color:var(--dsw-alias-label-tertiary,#7a808a); font-size:9px; line-height:13px; }
+[data-paimind-task-main-agent-copy] strong { overflow:hidden; font-size:11px; line-height:17px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+[data-paimind-task-main-agent-role] { color:var(--dsw-alias-label-tertiary,#7a808a); font-size:9px; line-height:14px; }
+[data-paimind-task-agent-children] { position:relative; margin:0; padding:7px 7px 7px 28px; border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.1)); background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.025)); }
+[data-paimind-task-agent-children]::before { content:''; position:absolute; top:11px; bottom:11px; left:20px; width:1px; background:var(--dsw-alias-border-l1,rgba(128,128,128,.14)); }
+[data-paimind-task-agent-children] [data-paimind-task-row] { min-height:40px; padding:3px 5px; }
+[data-paimind-task-capability-row] { min-width:0; min-height:47px; display:grid; grid-template-columns:28px minmax(0,1fr) auto; gap:9px; align-items:center; padding:7px 9px; }
+[data-paimind-task-capability-row] + [data-paimind-task-capability-row] { border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.1)); }
+[data-paimind-task-capability-icon] { width:27px; height:27px; display:grid; place-items:center; border-radius:8px; color:var(--dsw-alias-state-business-primary,#4f7ff8); background:color-mix(in srgb,currentColor 9%,transparent); }
+[data-paimind-task-capability-icon][data-kind='skill'] { color:#8b63c7; }
+[data-paimind-task-capability-icon][data-kind='mcp'] { color:#2d8a6e; }
+[data-paimind-task-capability-copy] { min-width:0; display:grid; gap:1px; }
+[data-paimind-task-capability-copy] small { color:var(--dsw-alias-label-tertiary,#7a808a); font-size:9px; line-height:13px; }
+[data-paimind-task-capability-copy] strong { overflow:hidden; font-size:11px; line-height:17px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+[data-paimind-task-capability-meta] { color:var(--dsw-alias-label-tertiary,#7a808a); font-size:9px; line-height:14px; }
+[data-paimind-task-capability-overflow] { border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.1)); }
+[data-paimind-task-capability-overflow] > summary { padding:7px 10px; color:var(--dsw-alias-label-secondary,#626872); cursor:pointer; font-size:10px; line-height:16px; }
+[data-paimind-task-details] { padding:11px 0 0; }
+[data-paimind-task-details] > summary { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 2px; color:var(--dsw-alias-label-secondary,#626872); cursor:pointer; font-size:11px; line-height:17px; font-weight:600; list-style:none; }
+[data-paimind-task-details] > summary::-webkit-details-marker { display:none; }
+[data-paimind-task-details] > summary::after { content:'›'; color:var(--dsw-alias-label-tertiary,#7a808a); transform:rotate(90deg); transition:transform .12s ease; }
+[data-paimind-task-details][open] > summary::after { transform:rotate(-90deg); }
+[data-paimind-task-details-body] { margin-top:5px; padding:8px 10px 10px; border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.1)); border-radius:9px; background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.035)); }
+[data-paimind-task-session-log] { margin:0; padding:0 0 8px; border-top:0; border-bottom:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.1)); }
+[data-paimind-task-technical] dl { margin-top:8px; }
 @media(max-width:640px){[data-paimind-task-panel]{top:auto!important; right:8px!important; bottom:8px; left:8px!important; width:auto; max-width:none; max-height:min(82vh,680px)!important; border-radius:16px}[data-paimind-task-panel-header]{padding-top:14px}[data-paimind-task-body]{padding-inline:14px}[data-paimind-task-agent-children]{padding-left:0}}
 `
 
@@ -245,7 +286,7 @@ const WORKFLOW_STATUS: Readonly<Record<TaskMonitorWorkflowStatus, readonly [stri
 const PRIMARY_ROW_LIMIT = 4
 const TODO_ROW_LIMIT = 5
 const CHECKLIST_HISTORY_LIMIT = 3
-const RESOURCE_CHIP_LIMIT = 4
+const RESOURCE_ROW_LIMIT = 4
 
 function duration(job: TaskMonitorJobView, now: number): string {
   const end = isLivePaimindJob(job) ? now : job.finishedAt ?? job.startedAt
@@ -269,23 +310,39 @@ function Section(props: { readonly id?: string; readonly title: string; readonly
 function focusTaskAnchor(id: string): void {
   const target = document.getElementById(id)
   if (!(target instanceof HTMLElement)) return
-  target.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+  const panel = target.closest<HTMLElement>('[data-paimind-task-panel]')
+  if (panel !== null) {
+    const panelTop = panel.getBoundingClientRect().top
+    const targetTop = target.getBoundingClientRect().top
+    const headerHeight = panel.querySelector<HTMLElement>('[data-paimind-task-panel-header]')?.getBoundingClientRect().height ?? 0
+    panel.scrollTo?.({ top: Math.max(0, panel.scrollTop + targetTop - panelTop - headerHeight - 12), behavior: 'smooth' })
+  } else {
+    target.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+  }
   target.focus({ preventScroll: true })
 }
 
-function FileRows(props: { readonly files: readonly TaskMonitorFileView[]; readonly onOpen: (file: TaskMonitorFileView) => void }): React.JSX.Element {
-  return <ul data-paimind-task-list>{props.files.map(file => <li key={`${file.source}:${file.artifactSourceId ?? ''}:${file.path}`} data-paimind-task-row>
-    <span data-paimind-task-row-icon aria-hidden="true">{file.source === 'read' ? <PaimindInputIcon size={14} /> : <PaimindUploadIcon size={14} />}</span>
-    <div data-paimind-task-row-main><button type="button" data-paimind-task-link title={file.path} onClick={() => { props.onOpen(file) }}>{file.title}</button><small>{file.path}</small></div>
-    <span data-paimind-task-row-meta>{file.state ?? (file.revision === undefined ? file.source : `r${file.revision}`)}</span>
-  </li>)}</ul>
+function FileRows(props: { readonly files: readonly TaskMonitorFileView[]; readonly zh: boolean; readonly onOpen: (file: TaskMonitorFileView) => void }): React.JSX.Element {
+  const stateLabel = (state: TaskMonitorFileView['state']): string | undefined => {
+    if (state === 'updating') return props.zh ? '更新中' : 'Updating'
+    if (state === 'missing') return props.zh ? '不可用' : 'Unavailable'
+    if (state === 'failed') return props.zh ? '失败' : 'Failed'
+    return undefined
+  }
+  return <ul data-paimind-task-list>{props.files.map(file => {
+    const status = stateLabel(file.state)
+    return <li key={`${file.source}:${file.artifactSourceId ?? ''}:${file.path}`}><button type="button" data-paimind-task-row data-paimind-task-file aria-label={file.title} onClick={() => { props.onOpen(file) }}>
+      <span data-paimind-task-row-main><strong>{file.title}</strong></span>
+      <span data-paimind-task-row-meta>{status !== undefined && <span data-paimind-task-file-status>{status}</span>}<PaimindChevronRightIcon size={12} /></span>
+    </button></li>
+  })}</ul>
 }
 
 function Files(props: { readonly files: readonly TaskMonitorFileView[]; readonly zh: boolean; readonly onOpen: (file: TaskMonitorFileView) => void }): React.JSX.Element {
   if (props.files.length === 0) return <></>
   const primary = props.files.slice(0, PRIMARY_ROW_LIMIT)
   const remaining = props.files.slice(PRIMARY_ROW_LIMIT)
-  return <><FileRows files={primary} onOpen={props.onOpen} />{remaining.length > 0 && <details data-paimind-task-disclosure><summary>{props.zh ? `其余 ${remaining.length} 项` : `${remaining.length} more`}</summary><FileRows files={remaining} onOpen={props.onOpen} /></details>}</>
+  return <><FileRows files={primary} zh={props.zh} onOpen={props.onOpen} />{remaining.length > 0 && <details data-paimind-task-disclosure><summary>{props.zh ? `其余 ${remaining.length} 项` : `${remaining.length} more`}</summary><FileRows files={remaining} zh={props.zh} onOpen={props.onOpen} /></details>}</>
 }
 
 interface SubagentRowData {
@@ -352,14 +409,20 @@ function FoldedSubagents(props: {
   return <><SubagentRows rows={primary} zh={props.zh} onOpen={props.onOpen}/>{remaining.length > 0 && <details data-paimind-task-disclosure data-paimind-task-subagent-overflow><summary>{props.zh ? `其余 ${remaining.length} 个子代理` : `${remaining.length} more Subagents`}</summary><SubagentRows rows={remaining} zh={props.zh} onOpen={props.onOpen}/></details>}</>
 }
 
-function ResourceChips(props: {
-  readonly values: readonly { readonly key: string; readonly text: string; readonly kind?: string; readonly title?: string }[]
+function CapabilityRows(props: {
+  readonly values: readonly { readonly key: string; readonly text: string }[]
   readonly zh: boolean
+  readonly kind: 'skill' | 'mcp'
+  readonly Icon: LucideIcon
 }): React.JSX.Element {
-  const chip = (value: { readonly key: string; readonly text: string; readonly kind?: string; readonly title?: string }): React.JSX.Element => <span key={value.key} data-paimind-task-chip title={value.title} {...(value.kind === undefined ? {} : { 'data-kind': value.kind })}>{value.text}</span>
-  const primary = props.values.slice(0, RESOURCE_CHIP_LIMIT)
-  const remaining = props.values.slice(RESOURCE_CHIP_LIMIT)
-  return <>{primary.map(chip)}{remaining.length > 0 && <details data-paimind-task-chip-overflow><summary>{props.zh ? `其余 ${remaining.length} 项` : `${remaining.length} more`}</summary><div>{remaining.map(chip)}</div></details>}</>
+  const rows = (values: typeof props.values): React.JSX.Element => <>{values.map(value => <li key={value.key} data-paimind-task-capability-row data-kind={props.kind}>
+    <span data-paimind-task-capability-icon data-kind={props.kind} aria-hidden="true"><props.Icon size={15} /></span>
+    <span data-paimind-task-capability-copy><small>{props.kind === 'skill' ? 'Skill' : 'MCP'}</small><strong>{value.text}</strong></span>
+    <span data-paimind-task-capability-meta>{props.zh ? '已使用' : 'Used'}</span>
+  </li>)}</>
+  const primary = props.values.slice(0, RESOURCE_ROW_LIMIT)
+  const remaining = props.values.slice(RESOURCE_ROW_LIMIT)
+  return <ul data-paimind-task-capability-group data-kind={props.kind}>{rows(primary)}{remaining.length > 0 && <li><details data-paimind-task-capability-overflow><summary>{props.zh ? `其余 ${remaining.length} 项` : `${remaining.length} more`}</summary><ul data-paimind-task-capability-group>{rows(remaining)}</ul></details></li>}</ul>
 }
 
 function ProgressSection(props: {
@@ -414,7 +477,6 @@ function Resources(props: {
   readonly onSubagent: (id: string, mode: 'one-shot' | 'continuable') => void
 }): React.JSX.Element {
   const { view, zh } = props
-  const modelTooltipId = useId()
   const mainAgentLabel = view.session.agentPreset ?? (zh ? '主 Agent' : 'Main Agent')
   const hasMainAgent = view.session.agentPreset !== undefined || view.model !== undefined
   const subagentSlots = new Map(view.subagents.map((subagent, index) => [subagent.id, index]))
@@ -427,16 +489,19 @@ function Resources(props: {
     status: subagent.activity === 'running' ? (zh ? '进行中' : 'Running') : (zh ? '空闲' : 'Inactive'),
     visualSlot: subagentSlots.get(subagent.id) ?? 0,
   }))
-  const skillValues = view.skills.map(skill => ({ key: `skill:${skill}`, text: skill, kind: 'skill-used', title: zh ? '本会话已使用' : 'Used in this Session' }))
-  const mcpValues = view.mcps.filter(mcp => mcp.status === 'used').map(mcp => ({ key: `mcp:${mcp.server}`, text: mcp.server, kind: 'mcp-used', title: zh ? '本会话已使用' : 'Used in this Session' }))
+  const skillValues = view.skills.map(skill => ({ key: `skill:${skill}`, text: skill }))
+  const mcpValues = view.mcps.filter(mcp => mcp.status === 'used').map(mcp => ({ key: `mcp:${mcp.server}`, text: mcp.server }))
   return <div data-paimind-task-resource-list aria-busy={props.loading}>
-    {(hasMainAgent || subagentRows.length > 0) && <div data-paimind-task-resource-row data-paimind-task-agent-group>
-      <b data-paimind-task-resource-label title={zh ? '主 Agent 与子代理' : 'Main Agent and Subagents'}><PaimindAgentIcon size={15} />Agent</b>
-      {hasMainAgent && <div data-paimind-task-resource-values><span data-paimind-task-main-agent tabIndex={view.model === undefined ? undefined : 0} {...(view.model === undefined ? {} : { 'aria-describedby': modelTooltipId })}><span data-paimind-task-chip data-kind="agent">{mainAgentLabel} · {zh ? '主 Agent' : 'Main Agent'}</span>{view.model !== undefined && <span id={modelTooltipId} role="tooltip" data-paimind-task-model-tooltip>{view.model.provider} · {view.model.model}</span>}</span></div>}
+    {(hasMainAgent || subagentRows.length > 0) && <div data-paimind-task-agent-group>
+      {hasMainAgent && <div data-paimind-task-main-agent>
+        <span data-paimind-task-main-agent-icon aria-hidden="true"><PaimindAgentIcon size={15} /></span>
+        <span data-paimind-task-main-agent-copy><small>{zh ? '主 Agent' : 'Main Agent'}</small><strong>{mainAgentLabel}</strong></span>
+        <span data-paimind-task-main-agent-role>{zh ? '负责人' : 'Lead'}</span>
+      </div>}
       {subagentRows.length > 0 && <div id={props.subagentAnchorId} data-paimind-task-anchor data-paimind-task-agent-children tabIndex={-1}><FoldedSubagents rows={subagentRows} zh={zh} onOpen={props.onSubagent} /></div>}
     </div>}
-    {skillValues.length > 0 && <div data-paimind-task-resource-row><b data-paimind-task-resource-label title={zh ? '已使用的 Skill' : 'Used Skills'}><PaimindSkillIcon size={15} />Skill</b><div data-paimind-task-resource-values><ResourceChips values={skillValues} zh={zh} /></div></div>}
-    {mcpValues.length > 0 && <div data-paimind-task-resource-row><b data-paimind-task-resource-label title={zh ? '已使用的 MCP' : 'Used MCP Servers'}><PaimindMcpIcon size={15} />MCP</b><div data-paimind-task-resource-values><ResourceChips values={mcpValues} zh={zh} /></div></div>}
+    {skillValues.length > 0 && <CapabilityRows values={skillValues} zh={zh} kind="skill" Icon={PaimindSkillIcon} />}
+    {mcpValues.length > 0 && <CapabilityRows values={mcpValues} zh={zh} kind="mcp" Icon={PaimindMcpIcon} />}
   </div>
 }
 
@@ -637,7 +702,10 @@ export function TaskMonitorAction(props: TaskMonitorActionProps): React.JSX.Elem
     return () => { window.clearInterval(timer) }
   }, [open, liveCount])
 
-  const openFile = (file: TaskMonitorFileView): void => { void props.workspaces.openPath(file.path) }
+  const openFile = (file: TaskMonitorFileView): void => {
+    setOpen(false)
+    void props.workspaces.openPath(file.path)
+  }
   const openSubagent = (childSessionId: string, mode: 'one-shot' | 'continuable'): void => {
     setNavigationError(undefined)
     if (props.sessions.openSubagent !== undefined) {
@@ -678,16 +746,21 @@ export function TaskMonitorAction(props: TaskMonitorActionProps): React.JSX.Elem
     ...(view.subagents.length === 0 ? [] : [{ key: 'subagents', value: view.subagents.length, label: zh ? '子代理' : 'Subagents', targetId: subagentAnchorId, icon: <PaimindBranchIcon size={13} /> }]),
     ...(view.outputs.length === 0 ? [] : [{ key: 'outputs', value: view.outputs.length, label: zh ? '产物' : 'Outputs', targetId: outputAnchorId, icon: <PaimindUploadIcon size={13} /> }]),
   ]
+  const sections: readonly { readonly key: string; readonly visible: boolean; readonly id?: string; readonly title: string; readonly content: ReactNode }[] = [
+    { key: 'progress', visible: hasProgress, title: zh ? '任务进度' : 'Task Progress', content: <ProgressSection view={view} zh={zh} now={now} todoAnchorId={todoAnchorId} /> },
+    { key: 'resources', visible: hasResources, title: zh ? 'Agent、Skill 与 MCP' : 'Agent, Skill & MCP', content: <Resources view={view} zh={zh} loading={resourceHistoryLoading} subagentAnchorId={subagentAnchorId} onSubagent={openSubagent} /> },
+    { key: 'inputs', visible: view.inputs.length > 0, title: zh ? '输入文件' : 'Input Files', content: <Files files={view.inputs} zh={zh} onOpen={openFile} /> },
+    { key: 'outputs', visible: view.outputs.length > 0, id: outputAnchorId, title: zh ? '输出与产物' : 'Outputs & Artifacts', content: <Files files={view.outputs} zh={zh} onOpen={openFile} /> },
+  ]
+  const hasVisibleContent = sections.some(section => section.visible)
   const taskSummaryLabel = zh ? '任务摘要' : 'Task Summary'
   const panel = open ? <section ref={panelRef} id={panelId} role="region" aria-label={label} data-paimind-task-panel style={position}>
     <header data-paimind-task-panel-header><div><h2>{taskSummaryLabel}</h2><p>{zh ? '当前会话 · 原生状态' : 'Current Session · native facts'}</p></div><span data-paimind-task-status-pill data-status={view.status}>{STATUS_COPY[view.status][zh ? 0 : 1]}</span></header>
     <div data-paimind-task-body>
-      <section data-paimind-task-summary-card aria-label={zh ? '当前摘要' : 'Current Summary'}><div data-paimind-task-summary><div data-paimind-task-summary-copy><strong title={view.session.title}>{view.session.title}</strong>{view.session.projectTitle !== undefined && <span>{view.session.projectTitle}</span>}</div></div>{summaryStats.length > 0 && <div data-paimind-task-summary-stats>{summaryStats.map(stat => <button type="button" key={stat.key} data-paimind-task-summary-stat={stat.key} aria-label={zh ? `查看${stat.label}：${stat.value}` : `View ${stat.value} ${stat.label}`} onClick={() => { focusTaskAnchor(stat.targetId) }}><span data-paimind-task-summary-stat-icon aria-hidden="true">{stat.icon}</span><b>{stat.value}</b><small>{stat.label}</small></button>)}</div>}{props.sessionLog !== undefined && <div data-paimind-task-session-log><button type="button" aria-label={zh ? '下载会话日志' : 'Download Session Log'} disabled={sessionLog?.status === 'downloading'} onClick={requestSessionLog}><DownloadIcon />{zh ? '会话日志' : 'Session Log'}</button><small title={sessionLogStatus}>{sessionLogStatus}</small></div>}{(navigationError ?? view.error) !== undefined && <p data-paimind-task-error>{navigationError ?? view.error}</p>}</section>
-      {hasProgress && <Section title={zh ? '任务进度' : 'Task Progress'}><ProgressSection view={view} zh={zh} now={now} todoAnchorId={todoAnchorId} /></Section>}
-      {hasResources && <Section title={zh ? 'Agent、Skill 与 MCP' : 'Agent, Skill & MCP'}><Resources view={view} zh={zh} loading={resourceHistoryLoading} subagentAnchorId={subagentAnchorId} onSubagent={openSubagent} /></Section>}
-      {view.outputs.length > 0 && <Section id={outputAnchorId} title={zh ? '输出与产物' : 'Outputs & Artifacts'}><Files files={view.outputs} zh={zh} onOpen={openFile} /></Section>}
-      {view.inputs.length > 0 && <Section title={zh ? '输入文件' : 'Input Files'}><Files files={view.inputs} zh={zh} onOpen={openFile} /></Section>}
-      <section data-paimind-task-section><details data-paimind-task-technical><summary>{zh ? '技术详情' : 'Technical Details'}</summary><dl><dt>Session</dt><dd>{view.session.id}</dd>{project !== undefined && <><dt>Project</dt><dd>{project.workspaceId}</dd></>}{view.jobs.length > 0 && <><dt>Jobs</dt><dd>{view.jobs.length}</dd></>}{artifactCount > 0 && <><dt>Artifacts</dt><dd>{artifactCount}</dd></>}{view.queueCount > 0 && <><dt>Queue</dt><dd>{view.queueCount}</dd></>}</dl></details></section>
+      <section data-paimind-task-summary-card aria-label={zh ? '当前摘要' : 'Current Summary'}><div data-paimind-task-summary><div data-paimind-task-summary-copy><strong title={view.session.title}>{view.session.title}</strong>{view.session.projectTitle !== undefined && <span>{view.session.projectTitle}</span>}</div></div>{summaryStats.length > 0 && <div data-paimind-task-summary-stats>{summaryStats.map(stat => <button type="button" key={stat.key} data-paimind-task-summary-stat={stat.key} aria-label={zh ? `查看${stat.label}：${stat.value}` : `View ${stat.value} ${stat.label}`} onClick={() => { focusTaskAnchor(stat.targetId) }}><span data-paimind-task-summary-stat-icon aria-hidden="true">{stat.icon}</span><b>{stat.value}</b><small>{stat.label}</small></button>)}</div>}{(navigationError ?? view.error) !== undefined && <p data-paimind-task-error>{navigationError ?? view.error}</p>}</section>
+      {!hasVisibleContent && <div data-paimind-task-empty-state role="status"><span aria-hidden="true"><PaimindTaskMonitorIcon size={16} /></span><strong>{zh ? '暂无任务内容' : 'No task content yet'}</strong><small>{zh ? '会话开始执行后，这里会汇总任务进度、Agent 与产物。' : 'Task progress, Agents, and outputs will appear after this Session starts work.'}</small></div>}
+      {sections.filter(section => section.visible).map(section => <Section key={section.key} {...(section.id === undefined ? {} : { id: section.id })} title={section.title}>{section.content}</Section>)}
+      <details data-paimind-task-details data-paimind-task-technical><summary>{props.sessionLog === undefined ? (zh ? '详情' : 'Details') : (zh ? '详情与日志' : 'Details & Log')}</summary><div data-paimind-task-details-body>{props.sessionLog !== undefined && <div data-paimind-task-session-log><button type="button" aria-label={zh ? '下载会话日志' : 'Download Session Log'} disabled={sessionLog?.status === 'downloading'} onClick={requestSessionLog}><DownloadIcon />{zh ? '下载会话日志' : 'Download Session Log'}</button><small title={sessionLogStatus}>{sessionLogStatus}</small></div>}<dl><dt>Session</dt><dd>{view.session.id}</dd>{project !== undefined && <><dt>Project</dt><dd>{project.workspaceId}</dd></>}{view.model !== undefined && <><dt>{zh ? '供应商' : 'Provider'}</dt><dd>{view.model.provider}</dd><dt>{zh ? '模型' : 'Model'}</dt><dd>{view.model.model}</dd></>}{view.jobs.length > 0 && <><dt>Jobs</dt><dd>{view.jobs.length}</dd></>}{artifactCount > 0 && <><dt>Artifacts</dt><dd>{artifactCount}</dd></>}{view.queueCount > 0 && <><dt>Queue</dt><dd>{view.queueCount}</dd></>}</dl></div></details>
     </div>
   </section> : null
   return <div ref={rootRef} data-paimind-task-action>
