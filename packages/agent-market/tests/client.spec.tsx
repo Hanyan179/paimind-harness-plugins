@@ -931,6 +931,38 @@ describe('Agent Center business UI', () => {
     controller.dispose()
   })
 
+  it('releases the Center surface when native Shell navigation is activated', async () => {
+    const fixture = services()
+    const controller = new PaimindProductSurfaceController('agent-center', window, document)
+    const center = document.createElement('main')
+    const nativeConversation = document.createElement('div')
+    nativeConversation.dataset.slot = 'conversation'
+    nativeConversation.append(document.createElement('section'))
+    center.append(nativeConversation)
+    document.body.append(center)
+    const navigate = vi.fn()
+    render(<>
+      <button type="button" onClick={navigate}>Dollar General workspace</button>
+      <AgentCenterTrigger wide controller={controller} locale={locale()} />
+      <AgentCenterSurface controller={controller} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />
+    </>)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Agent Center' }))
+    await screen.findByRole('main', { name: 'Agent Center' })
+    expect(nativeConversation).toHaveAttribute('inert')
+
+    const workspace = screen.getByRole('button', { name: 'Dollar General workspace' })
+    workspace.focus()
+    fireEvent.click(workspace)
+
+    await waitFor(() => expect(screen.queryByRole('main', { name: 'Agent Center' })).toBeNull())
+    expect(navigate).toHaveBeenCalledOnce()
+    expect(workspace).toHaveFocus()
+    expect(nativeConversation).not.toHaveAttribute('inert')
+    expect(nativeConversation).not.toHaveAttribute('aria-hidden')
+    controller.dispose()
+  })
+
   it('closes only the starter or Builder on their first Escape inside the combined Center surface', async () => {
     const fixture = services()
     let currentSessionId = 'session-original'

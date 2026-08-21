@@ -310,7 +310,7 @@ describe('PAIMind product Center host adapter', () => {
 })
 
 describe('PAIMind product surface interaction', () => {
-  it('focuses the Center, leaves page scroll and Tab native, handles Escape, and cleans up', () => {
+  it('focuses the Center, leaves page scroll and Tab native, dismisses on outside activation, and cleans up', () => {
     vi.useFakeTimers()
     document.body.style.overflow = 'auto'
     const trigger = document.createElement('button')
@@ -333,6 +333,23 @@ describe('PAIMind product surface interaction', () => {
     document.dispatchEvent(tab)
     expect(tab.defaultPrevented).toBe(false)
     expect(document.activeElement).toBe(last)
+
+    last.click()
+    expect(controller.getSnapshot().open).toBe(true)
+
+    const outside = document.createElement('button')
+    outside.textContent = 'Workspace'
+    document.body.append(outside)
+    outside.focus()
+    const outsideClick = new MouseEvent('click', { bubbles: true, cancelable: true })
+    outside.dispatchEvent(outsideClick)
+    expect(outsideClick.defaultPrevented).toBe(false)
+    expect(controller.getSnapshot().open).toBe(false)
+    expect(document.activeElement).toBe(outside)
+
+    controller.open(trigger)
+    trigger.click()
+    expect(controller.getSnapshot().open).toBe(true)
 
     const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
     document.dispatchEvent(escape)

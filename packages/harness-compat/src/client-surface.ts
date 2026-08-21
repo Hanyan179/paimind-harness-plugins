@@ -658,8 +658,10 @@ function focusableElements(root: HTMLElement): HTMLElement[] {
 
 /**
  * Install the non-modal Center-page interaction lifecycle: move focus into the
- * opened surface once and let Escape close it. Native document scrolling and
- * Tab navigation remain untouched because the Harness sidebar stays usable.
+ * opened surface once, let Escape close it, and release it when the user
+ * activates navigation outside the surface. Native document scrolling, Tab
+ * navigation, and the outside activation itself remain untouched because the
+ * Harness sidebar stays usable.
  */
 export function installPaimindProductSurfaceInteraction(
   root: HTMLElement,
@@ -676,8 +678,26 @@ export function installPaimindProductSurfaceInteraction(
     event.preventDefault()
     controller.close()
   }
+  const onClick = (event: MouseEvent): void => {
+    const view = doc.defaultView
+    if (view === null || !(event.target instanceof view.Node)) return
+    const target = event.target
+    if (root.contains(target)) return
+
+    const element = target instanceof view.Element ? target : target.parentElement
+    const trigger = element?.closest<HTMLElement>('[data-paimind-product-trigger]')
+    if (trigger?.dataset.paimindProductTrigger === controller.id) return
+
+    // Do not restore focus to the Center trigger: the outside control owns the
+    // activation and should retain focus while its native navigation continues.
+    controller.close(false)
+  }
   doc.addEventListener('keydown', onKeyDown)
-  return () => { doc.removeEventListener('keydown', onKeyDown) }
+  doc.addEventListener('click', onClick, true)
+  return () => {
+    doc.removeEventListener('keydown', onKeyDown)
+    doc.removeEventListener('click', onClick, true)
+  }
 }
 
 export interface HarnessScheduledSessionMarkerSnapshot {
