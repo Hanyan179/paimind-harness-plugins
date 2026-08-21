@@ -3,7 +3,6 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
-  AGENT_AUTHORING_PROPOSAL_TOOL,
   AGENT_PROFILE_FILE,
   AGENT_SKILL_SCOPE_DIRECTORY,
   PaimindAgentProfileService,
@@ -44,34 +43,25 @@ const authoringDraft: AgentAuthoringDraftContext = {
 }
 
 describe('headless Agent profile workflow', () => {
-  it('seals one namespaced native cordis Session with a complete prompt scope and monotonic tool denial', async () => {
+  it('seals native cordis authoring Sessions to the native question tool and a complete prompt scope', async () => {
     const sessionId = 'paimind-authoring-123e4567-e89b-12d3-a456-426614174000'
     const session = {
       id: sessionId, header: { id: sessionId, agentPreset: 'cordis' }, events: [],
     }
     const section = vi.fn(() => () => {})
     const suppressRuntimeContext = vi.fn(() => () => {})
-    const presentAs = vi.fn(() => () => {})
-    const restrict = vi.fn(() => () => {})
-    let proposalTool: {
-      readonly name: string
-      execute(args: unknown, execution: unknown): Promise<unknown>
-      presentCall?: (args: unknown) => unknown
-      presentResult?: (args: unknown, result: { readonly isError: boolean }) => unknown
-    } | undefined
-    const register = vi.fn((definition: typeof proposalTool) => { proposalTool = definition; return () => {} })
     const agent = {
       id: sessionId,
       session,
-      ctx: { systemPrompt: { section, suppressRuntimeContext }, tools: { presentAs, restrict, register } },
+      ctx: { systemPrompt: { section, suppressRuntimeContext } },
     }
     let composedPreset = 'cordis'
-    let guard: ((execution: { readonly name: string; readonly agent?: typeof agent }) => string | undefined) | undefined
+    let guard: ((execution: { readonly name: string; readonly agent?: { readonly session?: typeof session } }) => string | undefined) | undefined
     let assemble: ((
       assembly: { readonly tools: readonly unknown[] },
-      context: { readonly agent?: { readonly session?: typeof session } },
+      context: { readonly agent?: typeof agent },
       next: () => Promise<{ readonly tools: readonly unknown[] }>,
-    ) => Promise<{ readonly tools: readonly unknown[] }>) | undefined
+    ) => Promise<{ readonly sections?: readonly unknown[]; readonly contexts?: readonly unknown[]; readonly tools: readonly unknown[] }>) | undefined
     const context = {
       reflect: { provide: () => {} }, get: () => undefined,
       effect(install: () => void | (() => void)) { install() },
@@ -93,36 +83,22 @@ describe('headless Agent profile workflow', () => {
     expect(isPaimindAgentAuthoringSession(session)).toBe(true)
     expect(section).toHaveBeenCalledOnce()
     expect(section).toHaveBeenCalledWith(expect.objectContaining({ complete: true, name: 'paimind:agent-authoring' }))
+    const defaultPrompt = section.mock.calls[0]?.[0]?.text
+    expect(typeof defaultPrompt === 'function' ? defaultPrompt({}) : defaultPrompt).toContain('LOCALE="auto"')
     expect(suppressRuntimeContext).toHaveBeenCalledOnce()
-    expect(presentAs).toHaveBeenCalledWith('native')
-    expect(restrict).toHaveBeenCalledWith({ allow: [] })
-    expect(register).toHaveBeenCalledOnce()
-    expect(proposalTool?.name).toBe(AGENT_AUTHORING_PROPOSAL_TOOL)
-    expect(guard?.({ name: AGENT_AUTHORING_PROPOSAL_TOOL, agent })).toBeUndefined()
-    expect(guard?.({ name: 'bash', agent })).toContain(`only ${AGENT_AUTHORING_PROPOSAL_TOOL}`)
-    expect(guard?.({ name: 'bash', agent: { ...agent, session: { ...session, id: 'ordinary' } } })).toBeUndefined()
-    const proposalSchema = { name: AGENT_AUTHORING_PROPOSAL_TOOL }
-    await expect(assemble?.({ tools: [] }, { agent: { session } }, async () => ({ tools: [proposalSchema, { name: 'bash' }] }))).resolves.toEqual({ tools: [proposalSchema] })
-    await expect(assemble?.({ tools: [] }, { agent: { session: { ...session, id: 'ordinary' } } }, async () => ({ tools: [{ name: 'bash' }] }))).resolves.toEqual({ tools: [{ name: 'bash' }] })
-
-    await service.prepareAuthoringTurn({
-      sessionId, draft: authoringDraft, skills: [{ name: 'web-research', description: 'Research the web' }], locale: 'zh-CN',
-    })
-    await expect(proposalTool?.execute({ name: '周末助手', preferredSkillNames: ['web-research'] }, {})).resolves.toEqual({ accepted: true })
-    await expect(proposalTool?.execute({ name: '周末助手', basePresetId: 'minimal' }, {})).rejects.toThrow('不允许的字段')
-    await expect(proposalTool?.execute({ preferredSkillNames: ['ppt-master'] }, {})).rejects.toThrow('未安装或非精确名称')
-    expect(proposalTool?.presentCall?.({ secret: 'never render me' })).toEqual({
-      card: 'generic', title: 'Agent brief proposal', kind: 'other',
-    })
-    expect(proposalTool?.presentResult?.({}, { isError: false })).toEqual({
-      card: 'generic', title: '已生成待确认配置提案', content: [],
-    })
+    expect(guard?.({ name: 'ask_user_question', agent: { session } })).toBeUndefined()
+    expect(guard?.({ name: 'bash', agent: { session } })).toContain('only ask_user_question')
+    expect(guard?.({ name: 'write', agent: { session: { ...session, id: 'ordinary' } } })).toContain('only ask_user_question')
+    const askTool = Object.freeze({ name: 'ask_user_question', schema: Object.freeze({}) })
+    await expect(assemble?.({ tools: ['cordis_define'] }, { agent }, async () => ({ tools: ['bash', askTool] }))).resolves.toMatchObject({ tools: [askTool], contexts: [] })
+    await expect(assemble?.({ tools: [] }, { agent }, async () => ({ tools: ['ask_user_question', 'bash'] }))).resolves.toMatchObject({ tools: ['ask_user_question'], contexts: [] })
 
     session.header.agentPreset = 'standard'
     composedPreset = 'standard'
     expect(isPaimindAgentAuthoringSession(session)).toBe(true)
-    expect(guard?.({ name: AGENT_AUTHORING_PROPOSAL_TOOL, agent })).toContain(`only ${AGENT_AUTHORING_PROPOSAL_TOOL}`)
-    await expect(assemble?.({ tools: [] }, { agent: { session } }, async () => ({ tools: [proposalSchema, { name: 'bash' }] }))).resolves.toEqual({ tools: [proposalSchema] })
+    expect(guard?.({ name: 'ask_user_question', agent: { session } })).toBeUndefined()
+    expect(guard?.({ name: 'bash', agent: { session } })).toContain('only ask_user_question')
+    await expect(assemble?.({ tools: ['cordis_define'] }, { agent }, async () => ({ tools: ['ask_user_question', 'bash'] }))).resolves.toMatchObject({ tools: ['ask_user_question'], contexts: [] })
     await expect(service.sealAuthoringSession({ sessionId })).rejects.toThrow('Harness cordis')
 
     session.header.agentPreset = 'cordis'
@@ -132,14 +108,54 @@ describe('headless Agent profile workflow', () => {
     })).rejects.toThrow('当前运行的原生 Agent Preset 已不是 cordis')
   })
 
+  it('adopts a native cordis selection made after Agent creation on the same first turn', async () => {
+    const sessionId = 'native-create-agent'
+    const session = {
+      id: sessionId,
+      header: { id: sessionId, agentPreset: 'standard' },
+      events: [{ type: 'agent-preset/selected', data: { agentPreset: 'cordis' } }],
+    }
+    const section = vi.fn(() => () => {})
+    const suppressRuntimeContext = vi.fn(() => () => {})
+    const agent = { id: sessionId, session, ctx: { systemPrompt: { section, suppressRuntimeContext } } }
+    let assemble: ((
+      assembly: { readonly sections?: readonly unknown[]; readonly contexts?: readonly unknown[]; readonly tools: readonly unknown[] },
+      context: { readonly agent?: typeof agent },
+      next: () => Promise<{ readonly sections?: readonly unknown[]; readonly contexts?: readonly unknown[]; readonly tools: readonly unknown[] }>,
+    ) => Promise<{ readonly sections?: readonly unknown[]; readonly contexts?: readonly unknown[]; readonly tools: readonly unknown[] }>) | undefined
+    const context = {
+      reflect: { provide: () => {} }, get: () => undefined,
+      effect(install: () => void | (() => void)) { install() },
+      sessions: { get: (id: string) => id === sessionId ? session : undefined },
+      agents: { get: (id: string) => id === sessionId ? agent : undefined, list: () => [] },
+      tools: { guard: () => () => {} },
+      agentPresets: { composedPreset: () => 'cordis' },
+      on(event: string, listener: typeof assemble) { if (event === 'system-prompt/assemble') assemble = listener; return () => {} },
+    }
+
+    const service = new PaimindAgentProfileService(context as never)
+    expect(isPaimindAgentAuthoringSession(session)).toBe(true)
+    await expect(assemble?.(
+      { sections: [{ name: 'ordinary', text: 'ordinary prompt' }], contexts: [{ name: 'cwd' }], tools: ['bash'] },
+      { agent },
+      async () => ({ sections: [{ name: 'ordinary', text: 'ordinary prompt' }], contexts: [{ name: 'cwd' }], tools: ['bash', 'ask_user_question'] }),
+    )).resolves.toMatchObject({
+      sections: [{ name: 'paimind:agent-authoring', text: expect.stringContaining('PAIMind Personal Agent creation assistant') }],
+      contexts: [],
+      tools: ['ask_user_question'],
+    })
+    expect(section).toHaveBeenCalledWith(expect.objectContaining({ complete: true, name: 'paimind:agent-authoring' }))
+    expect(suppressRuntimeContext).toHaveBeenCalledOnce()
+    await expect(service.prepareAuthoringTurn({
+      sessionId, draft: authoringDraft, skills: [{ name: 'web-research', description: 'Research the web' }], locale: 'zh-CN',
+    })).resolves.toEqual({ sessionId, agentPreset: 'cordis', prepared: true })
+  })
+
   it('assembles only the latest prepared turn context and clears it on Agent and service disposal', async () => {
     const sessionId = 'paimind-authoring-323e4567-e89b-12d3-a456-426614174000'
     const session = { id: sessionId, header: { id: sessionId, agentPreset: 'cordis' }, events: [] }
     const disposeSections = vi.fn()
     const disposeRuntimeContexts = vi.fn()
-    const disposePresentations = vi.fn()
-    const disposeRestrictions = vi.fn()
-    const disposeProposalTools = vi.fn()
     const sections: Array<{
       readonly name: string
       readonly complete?: boolean
@@ -147,14 +163,7 @@ describe('headless Agent profile workflow', () => {
     }> = []
     const section = vi.fn((entry: (typeof sections)[number]) => { sections.push(entry); return disposeSections })
     const suppressRuntimeContext = vi.fn(() => disposeRuntimeContexts)
-    const agent = { id: sessionId, session, ctx: {
-      systemPrompt: { section, suppressRuntimeContext },
-      tools: {
-        presentAs: vi.fn(() => disposePresentations),
-        restrict: vi.fn(() => disposeRestrictions),
-        register: vi.fn(() => disposeProposalTools),
-      },
-    } }
+    const agent = { id: sessionId, session, ctx: { systemPrompt: { section, suppressRuntimeContext } } }
     let liveAgent: typeof agent | undefined = agent
     const lifecycle = new Map<string, (event: { readonly agent: typeof agent }) => void>()
     const effectCleanups = new Map<string, () => void | Promise<void>>()
@@ -178,7 +187,7 @@ describe('headless Agent profile workflow', () => {
     const firstText = sections[0]?.text
     expect(typeof firstText).toBe('function')
     const renderFirst = firstText as (context: Readonly<Record<string, unknown>>) => string
-    expect(() => renderFirst({})).toThrow('本轮上下文尚未准备')
+    expect(renderFirst({})).toContain('LOCALE="auto"')
 
     await expect(service.prepareAuthoringTurn({
       sessionId,
@@ -187,9 +196,13 @@ describe('headless Agent profile workflow', () => {
       locale: 'zh-CN',
     })).resolves.toEqual({ sessionId, agentPreset: 'cordis', prepared: true })
     const firstPrompt = renderFirst({})
-    expect(firstPrompt).toContain(`call ${AGENT_AUTHORING_PROPOSAL_TOOL} exactly once`)
-    expect(firstPrompt).not.toContain('PAIMIND_AGENT_DRAFT')
-    expect(firstPrompt).not.toContain('<!--')
+    expect(firstPrompt.match(/<!--PAIMIND_AGENT_DRAFT/g)).toHaveLength(1)
+    expect(firstPrompt).toContain('A one-sentence request is a valid first turn')
+    expect(firstPrompt).toContain('Autonomously decide whether clarification is useful')
+    expect(firstPrompt).toContain('call ask_user_question with exactly one question item')
+    expect(firstPrompt).toContain('Never ask a clarification question as ordinary visible prose')
+    expect(firstPrompt).toContain('pending state, answer receipt, Session history')
+    expect(firstPrompt).toContain('explicitly asks to proceed without further questions')
     expect(firstPrompt).toContain('LOCALE="zh-CN"')
     expect(firstPrompt).toContain('CURRENT_DRAFT=')
     expect(firstPrompt).toContain('INSTALLED_SKILLS=')
@@ -210,15 +223,12 @@ describe('headless Agent profile workflow', () => {
 
     liveAgent = undefined
     lifecycle.get('agent/disposed')?.({ agent })
-    expect(() => renderFirst({})).toThrow('本轮上下文尚未准备')
+    expect(renderFirst({})).toContain('LOCALE="auto"')
     await expect(service.prepareAuthoringTurn({
       sessionId, draft: authoringDraft, skills: [{ name: 'web-research', description: 'Research the web' }], locale: 'zh-CN',
     })).rejects.toThrow('同一原生 Harness Agent')
     expect(disposeSections).toHaveBeenCalledOnce()
     expect(disposeRuntimeContexts).toHaveBeenCalledOnce()
-    expect(disposePresentations).toHaveBeenCalledOnce()
-    expect(disposeRestrictions).toHaveBeenCalledOnce()
-    expect(disposeProposalTools).toHaveBeenCalledOnce()
 
     liveAgent = agent
     await service.prepareAuthoringTurn({
@@ -229,12 +239,9 @@ describe('headless Agent profile workflow', () => {
     const renderSecond = secondText as (context: Readonly<Record<string, unknown>>) => string
     expect(renderSecond({})).toContain('Research Assistant')
     await effectCleanups.get('paimind-agent-builder: authoring prompt scope lifecycle')?.()
-    expect(() => renderSecond({})).toThrow('本轮上下文尚未准备')
+    expect(renderSecond({})).toContain('LOCALE="auto"')
     expect(disposeSections).toHaveBeenCalledTimes(2)
     expect(disposeRuntimeContexts).toHaveBeenCalledTimes(2)
-    expect(disposePresentations).toHaveBeenCalledTimes(2)
-    expect(disposeRestrictions).toHaveBeenCalledTimes(2)
-    expect(disposeProposalTools).toHaveBeenCalledTimes(2)
   })
 
   it('publishes a strict Remote contract for preparing one authoring turn', () => {
@@ -255,7 +262,7 @@ describe('headless Agent profile workflow', () => {
     })
   })
 
-  it('rejects a non-cordis/non-namespaced Session and re-applies scope safely to a resumed native conversation', async () => {
+  it('rejects non-cordis Sessions and accepts the native universal cordis entry', async () => {
     const wrongId = 'paimind-authoring-123e4567-e89b-12d3-a456-426614174000'
     const startedId = 'paimind-authoring-223e4567-e89b-12d3-a456-426614174000'
     const sessions = new Map<string, { id: string; header: { id: string; agentPreset: string }; events: unknown[] }>()
@@ -271,10 +278,7 @@ describe('headless Agent profile workflow', () => {
         return session === undefined ? undefined : {
           id,
           session,
-          ctx: {
-            systemPrompt: { section: () => () => {}, suppressRuntimeContext: () => () => {} },
-            tools: { presentAs: () => () => {}, restrict: () => () => {}, register: () => () => {} },
-          },
+          ctx: { systemPrompt: { section: () => () => {}, suppressRuntimeContext: () => () => {} } },
         }
       }, list: () => [] },
       tools: { guard: () => () => {} },
@@ -283,11 +287,11 @@ describe('headless Agent profile workflow', () => {
     }
     const service = new PaimindAgentProfileService(context as never)
     await expect(service.sealAuthoringSession({ sessionId: wrongId })).rejects.toThrow('Harness cordis')
-    sessions.get(wrongId)!.events.push({ type: 'agent-preset/selected', data: { agentPreset: 'cordis' } })
-    await expect(service.sealAuthoringSession({ sessionId: wrongId })).resolves.toMatchObject({ sessionId: wrongId, sealed: true })
     await expect(service.sealAuthoringSession({ sessionId: startedId })).resolves.toMatchObject({ sessionId: startedId, sealed: true })
     sessions.set('ordinary', { id: 'ordinary', header: { id: 'ordinary', agentPreset: 'cordis' }, events: [] })
-    await expect(service.sealAuthoringSession({ sessionId: 'ordinary' })).rejects.toThrow('authoring 原生命名空间')
+    await expect(service.sealAuthoringSession({ sessionId: 'ordinary' })).resolves.toMatchObject({
+      sessionId: 'ordinary', agentPreset: 'cordis', sealed: true,
+    })
   })
 
   it('keeps Business Agent placement across the strict Remote contract', () => {
@@ -349,41 +353,6 @@ describe('headless Agent profile workflow', () => {
     await expect(service.saveProfile({
       ...input, behavior: 'Overwrite from a stale edit', expectedVersion: created.configVersion,
     })).rejects.toThrow('智能体已更新，请刷新后重试')
-  })
-
-  it('serializes concurrent saves so one shared expectedVersion can commit only once', async () => {
-    const base = await mkdtemp(join(tmpdir(), 'paimind-agent-concurrent-save-'))
-    roots.push(base)
-    const presetRoot = join(base, '.agent-presets')
-    const source = join(presetRoot, 'concurrent-agent')
-    await mkdir(source, { recursive: true })
-    await writeFile(join(source, 'agent.cordis.yml'), "- id: persona\n  name: '@deepseek-ai/dsh-persona'\n  config:\n    text: old\n")
-    const context = { ...authoringPolicyStubs, reflect: { provide: () => {} }, effect(install: () => void) { install() }, get: () => undefined }
-    const service = new PaimindAgentProfileService(context as never, { presetRoot, stateRoot: join(base, '.state'), now: () => 42 })
-    const input = {
-      agentId: 'concurrent-agent', presetId: 'concurrent-agent', name: 'Concurrent Agent', description: '',
-      basePresetId: 'minimal', role: 'Concurrency owner', goal: 'Commit one revision',
-      behavior: 'Use optimistic concurrency', preferredSkillNames: [], instructions: '',
-    } as const
-    const created = await service.saveProfile(input)
-
-    const attempts = await Promise.allSettled([
-      service.saveProfile({ ...input, behavior: 'First concurrent edit', expectedVersion: created.configVersion }),
-      service.saveProfile({ ...input, behavior: 'Second concurrent edit', expectedVersion: created.configVersion }),
-    ])
-    const fulfilled = attempts.filter((result): result is PromiseFulfilledResult<Readonly<AgentBusinessProfile>> => result.status === 'fulfilled')
-    const rejected = attempts.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
-    expect(fulfilled).toHaveLength(1)
-    expect(rejected).toHaveLength(1)
-    expect(rejected[0]?.reason).toEqual(expect.objectContaining({ message: '智能体已更新，请刷新后重试' }))
-    expect(fulfilled[0]?.value).toMatchObject({ revision: 2 })
-
-    const persisted = JSON.parse(await readFile(join(source, AGENT_PROFILE_FILE), 'utf8')) as AgentBusinessProfile
-    expect(persisted).toMatchObject({
-      revision: 2,
-      configVersion: fulfilled[0]?.value.configVersion,
-      behavior: fulfilled[0]?.value.behavior,
-    })
   })
 
   it('replaces only the native persona row and embeds business behavior and preferred Skills', () => {
@@ -549,7 +518,7 @@ describe('headless Agent profile workflow', () => {
       { type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Need a plan' }] } },
       { type: 'tool/call', data: { arguments: 'secret internal call' } },
       { type: 'user/message', data: { source: { kind: 'plugin' }, content: [{ type: 'text', text: 'hidden injection' }] } },
-      { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: 'Here is the plan' }] } } },
+      { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: 'Here is the plan\n<!--PAIMIND_AGENT_DRAFT\n{"name":"Internal draft"}\n-->' }] } } },
     ], 'old-session')
     expect(summary).toContain('Need a plan')
     expect(summary).toContain('Here is the plan')
@@ -557,6 +526,8 @@ describe('headless Agent profile workflow', () => {
     expect(summary).toContain('已使用最新版智能体继续。')
     expect(summary).not.toContain('secret internal call')
     expect(summary).not.toContain('hidden injection')
+    expect(summary).not.toContain('PAIMIND_AGENT_DRAFT')
+    expect(summary).not.toContain('Internal draft')
   })
 
   it('folds native preset-selection events before the first human turn', () => {
@@ -576,7 +547,7 @@ describe('headless Agent profile workflow', () => {
         { type: 'user/message', data: { source: { kind: 'user' } } },
         { type: 'assistant/message', seq: 11, data: { message: { content: [{ type: 'tool-call', name: 'skill' }] } } },
         { type: 'assistant/message', seq: 12, data: { message: { content: [{ type: 'text', text: '正在查询。' }] } } },
-        { type: 'assistant/message', seq: 13, data: { message: { content: [{ type: 'text', text: '最终答复。' }] } } },
+        { type: 'assistant/message', seq: 13, data: { message: { content: [{ type: 'text', text: '最终答复。\n<!--PAIMIND_AGENT_DRAFT\n{"goal":"内部字段"}\n-->' }] } } },
         { type: 'user/message', data: { source: { kind: 'user' } } },
         { type: 'assistant/message', seq: 14, data: { message: { content: [{ type: 'text', text: '第二轮。' }] } } },
       ],

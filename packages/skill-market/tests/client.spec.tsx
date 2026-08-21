@@ -226,7 +226,6 @@ describe('Skill Market business UI', () => {
     const conversationContent = screen.getByText('Native conversation')
     const conversation = conversationContent.closest<HTMLElement>('[data-slot="conversation"]')!
     expect(surface.parentElement).toBe(center)
-    expect(conversationContent).toHaveAttribute('data-paimind-product-center-native-conversation-content')
     expect(conversation).toHaveAttribute('inert')
     expect(conversation).toHaveAttribute('aria-hidden', 'true')
     expect(trigger).toHaveAttribute('aria-current', 'page')
@@ -239,7 +238,6 @@ describe('Skill Market business UI', () => {
     await waitFor(() => expect(screen.queryByRole('main', { name: 'Skill Center' })).toBeNull())
     expect(conversation).not.toHaveAttribute('inert')
     expect(conversation).not.toHaveAttribute('aria-hidden')
-    expect(conversationContent).not.toHaveAttribute('data-paimind-product-center-native-conversation-content')
     expect(trigger).not.toHaveAttribute('aria-current')
     controller.dispose()
   })

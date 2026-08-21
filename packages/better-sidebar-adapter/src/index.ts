@@ -11,7 +11,7 @@ export function apply(): void {}
 /** Stable PAIMind-side contract version, independent of the provider package version. */
 export const PAIMIND_SIDEBAR_CONTRACT_VERSION = 4 as const
 /** Exactly verified provider release. Floating ranges are forbidden at the bundle boundary. */
-export const VERIFIED_BETTER_SIDEBAR_VERSION = '0.12.2' as const
+export const VERIFIED_BETTER_SIDEBAR_VERSION = '0.14.0' as const
 
 export type PaimindSidebarProviderState = 'active' | 'missing' | 'incompatible' | 'failed'
 

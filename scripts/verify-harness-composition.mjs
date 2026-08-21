@@ -16,7 +16,7 @@ const providerOption = option('--provider')
 const officeProviderOption = option('--office-provider')
 const upstreamOption = option('--upstream-checkout') ?? harnessOption
 const expectedDshVersion = option('--expected-dsh-version')
-const expectedProviderVersion = option('--expected-provider-version') ?? '0.12.2'
+const expectedProviderVersion = option('--expected-provider-version') ?? '0.14.0'
 const expectedOfficeProviderVersion = option('--expected-office-provider-version') ?? '0.1.0'
 
 if ((harnessOption === undefined && (runtimeOption === undefined || dshBinOption === undefined)) || providerOption === undefined) {

@@ -306,4 +306,14 @@ describe('Task Monitor client', () => {
     expect(utilities.every(entry => entry.disposed())).toBe(true)
     expect(document.head.querySelector('style[data-paimind-plugin="@paimind/task-monitor"]')).toBeNull()
   })
+
+  it('aligns the collapsed-sidebar summary trigger with the fixed rail controls', () => {
+    const fixture = createClientContextFixture()
+    apply(fixture.context)
+    const style = document.head.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@paimind/task-monitor"]')
+    expect(style?.textContent).toContain(
+      'body[data-dsh-sidebar-collapsed] [data-paimind-task-action] { transform:translateY(-11px); }',
+    )
+    fixture.disposeEffects()
+  })
 })

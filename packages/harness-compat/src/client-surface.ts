@@ -121,11 +121,7 @@ function restoreAttribute(element: HTMLElement, name: string, saved: SavedAttrib
   else element.setAttribute(name, saved.value ?? '')
 }
 
-/**
- * RC8 renders one native Conversation content root directly inside its Slot.
- * Keep this version-specific seam private to the compatibility package and
- * fail closed rather than exposing the Slot's child structure to consumers.
- */
+/** Keep RC8's replaceable Conversation content seam inside compat. */
 function resolveNativeConversationContent(nativeConversation: HTMLElement): HTMLElement | null {
   if (!nativeConversation.isConnected || nativeConversation.children.length !== 1) return null
   const content = nativeConversation.firstElementChild
@@ -165,12 +161,6 @@ function validProductCenterHost(target: PaimindProductCenterHost): HTMLElement |
   return resolveNativeConversationContent(nativeConversation)
 }
 
-/**
- * Follow Harness's legitimate Session-to-Session content-root replacement
- * without ever changing the leased Slot anchor or its owning center column.
- * A still-connected old root or a pre-marked replacement is ambiguous and
- * therefore remains fail-closed.
- */
 function reconcileNativeConversationContent(
   state: ProductCenterHostState,
   next: HTMLElement,
@@ -552,7 +542,7 @@ export class NativeHarnessAgentChoiceBridge implements HarnessAgentChoiceBridge 
       status: 'loading', choices: Object.freeze([]), current: seat.current,
       busy: seat.busy, error: seat.error,
     })
-    this.stopNativeSeat = nativeSeat.subscribe?.(() => { this.syncFromNativeSeat() }) ?? (() => {})
+    this.stopNativeSeat = nativeSeat.subscribe?.(() => { this.restore() }) ?? (() => {})
   }
 
   getSnapshot(): HarnessAgentChoiceSnapshot { return this.snapshot }
@@ -625,16 +615,10 @@ export class NativeHarnessAgentChoiceBridge implements HarnessAgentChoiceBridge 
 
   dispose(): void {
     if (this.disposed) return
+    this.stopNativeSeat()
     this.disposed = true
     this.generation += 1
-    this.stopNativeSeat()
     this.listeners.clear()
-  }
-
-  private syncFromNativeSeat(): void {
-    if (this.disposed) return
-    const seat = this.nativeSeat.getSnapshot()
-    this.publish({ ...this.snapshot, current: seat.current, busy: seat.busy, error: seat.error })
   }
 
   private publish(snapshot: HarnessAgentChoiceSnapshot): void {
@@ -674,7 +658,6 @@ export function installPaimindProductSurfaceInteraction(
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== 'Escape') return
-    if (root.querySelector('[data-paimind-product-escape-scope]') !== null) return
     event.preventDefault()
     controller.close()
   }

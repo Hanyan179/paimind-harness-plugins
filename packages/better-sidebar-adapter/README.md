@@ -23,7 +23,7 @@ Role: **Client plugin**. It owns the product projection described above; Harness
 ## Dependencies
 
 - Internal runtime dependencies: `@paimind/harness-compat` (`workspace:^`), `@paimind/workspace-project` (`workspace:^`).
-- External runtime or peer dependencies: `dsh-better-sidebar` (`0.12.2`), `react` (`>=18.0.0 <20.0.0`).
+- External runtime or peer dependencies: `dsh-better-sidebar` (`0.14.0`), `react` (`>=18.0.0 <20.0.0`).
 - Client service injection: `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-locale`, `@paimind/workspace-project`, `dsh-better-sidebar`.
 
 The manifest is authoritative for dependency direction and version selection.

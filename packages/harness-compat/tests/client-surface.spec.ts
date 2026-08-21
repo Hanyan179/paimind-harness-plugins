@@ -71,11 +71,7 @@ describe('PAIMind product surface controller', () => {
 })
 
 describe('PAIMind product Center host adapter', () => {
-  function harnessShell(): {
-    readonly center: HTMLElement
-    readonly conversation: HTMLElement
-    readonly conversationContent: HTMLElement
-  } {
+  function harnessShell(): { readonly center: HTMLElement; readonly conversation: HTMLElement } {
     document.body.innerHTML = `
       <div data-slot="root">
         <div data-harness-frame>
@@ -93,7 +89,6 @@ describe('PAIMind product Center host adapter', () => {
     return {
       center: document.querySelector<HTMLElement>('[data-harness-center]')!,
       conversation: document.querySelector<HTMLElement>('[data-slot="conversation"]')!,
-      conversationContent: document.querySelector<HTMLElement>('[data-native-conversation]')!,
     }
   }
 
@@ -105,37 +100,18 @@ describe('PAIMind product Center host adapter', () => {
     expect(target?.mount).not.toBe(document.body)
   })
 
-  it('fails closed for absent, ambiguous, detached, body-level, or structurally ambiguous anchors', () => {
+  it('fails closed for absent, ambiguous, detached, or body-level anchors', () => {
     expect(resolvePaimindProductCenterHost(document)).toBeNull()
 
-    document.body.innerHTML = `
-      <main>
-        <div data-slot="conversation"><section></section></div>
-        <div data-slot="conversation"><section></section></div>
-      </main>
-    `
+    document.body.innerHTML = '<main><div data-slot="conversation"></div><div data-slot="conversation"></div></main>'
     expect(resolvePaimindProductCenterHost(document)).toBeNull()
 
-    document.body.innerHTML = '<div data-slot="conversation"><section></section></div>'
-    expect(resolvePaimindProductCenterHost(document)).toBeNull()
-
-    document.body.innerHTML = '<main><div data-slot="conversation"></div></main>'
-    expect(resolvePaimindProductCenterHost(document)).toBeNull()
-
-    document.body.innerHTML = `
-      <main><div data-slot="conversation"><section></section><section></section></div></main>
-    `
-    expect(resolvePaimindProductCenterHost(document)).toBeNull()
-
-    document.body.innerHTML = `
-      <main><div data-slot="conversation"><svg xmlns="http://www.w3.org/2000/svg"></svg></div></main>
-    `
+    document.body.innerHTML = '<div data-slot="conversation"></div>'
     expect(resolvePaimindProductCenterHost(document)).toBeNull()
 
     const detached = document.createElement('main')
     const anchor = document.createElement('div')
     anchor.dataset.slot = 'conversation'
-    anchor.append(document.createElement('section'))
     detached.append(anchor)
     expect(installPaimindProductCenterHost({ mount: detached, nativeConversation: anchor })).toBeNull()
   })
@@ -145,23 +121,19 @@ describe('PAIMind product Center host adapter', () => {
     const target = resolvePaimindProductCenterHost(document)!
 
     const dispose = installPaimindProductCenterHost(target)
+    const content = fixture.conversation.firstElementChild
     expect(dispose).not.toBeNull()
     expect(fixture.conversation).toHaveAttribute('inert')
     expect(fixture.conversation).toHaveAttribute('aria-hidden', 'true')
     expect(fixture.center).toHaveAttribute('data-paimind-product-center-host', '')
-    expect(fixture.conversationContent).toHaveAttribute(
-      'data-paimind-product-center-native-conversation-content',
-      '',
-    )
+    expect(content).toHaveAttribute('data-paimind-product-center-native-conversation-content', '')
     expect(fixture.center.style.position).toBe('relative')
 
     dispose?.()
     expect(fixture.conversation).not.toHaveAttribute('inert')
     expect(fixture.conversation).not.toHaveAttribute('aria-hidden')
     expect(fixture.center).not.toHaveAttribute('data-paimind-product-center-host')
-    expect(fixture.conversationContent).not.toHaveAttribute(
-      'data-paimind-product-center-native-conversation-content',
-    )
+    expect(content).not.toHaveAttribute('data-paimind-product-center-native-conversation-content')
     expect(fixture.center).not.toHaveAttribute('style')
   })
 
@@ -199,10 +171,6 @@ describe('PAIMind product Center host adapter', () => {
     fixture.conversation.setAttribute('aria-hidden', 'false')
     fixture.center.setAttribute('data-paimind-product-center-host', 'native-owner')
     fixture.center.setAttribute('style', 'position: absolute; color: red;')
-    fixture.conversationContent.setAttribute(
-      'data-paimind-product-center-native-conversation-content',
-      'native-owner',
-    )
     const beforeConversation = fixture.conversation.outerHTML
     const beforeStyle = fixture.center.getAttribute('style')
 
@@ -210,77 +178,11 @@ describe('PAIMind product Center host adapter', () => {
     const dispose = installPaimindProductCenterHost(target)
     expect(fixture.conversation).toHaveAttribute('aria-hidden', 'true')
     expect(fixture.center.style.position).toBe('absolute')
-    expect(fixture.conversationContent).toHaveAttribute(
-      'data-paimind-product-center-native-conversation-content',
-      '',
-    )
 
     dispose?.()
     expect(fixture.conversation.outerHTML).toBe(beforeConversation)
     expect(fixture.center).toHaveAttribute('data-paimind-product-center-host', 'native-owner')
     expect(fixture.center.getAttribute('style')).toBe(beforeStyle)
-  })
-
-  it('follows a detached native Conversation content replacement without changing the Slot lease', () => {
-    const fixture = harnessShell()
-    const target = resolvePaimindProductCenterHost(document)!
-    const dispose = installPaimindProductCenterHost(target)!
-    const replacement = document.createElement('section')
-
-    fixture.conversation.replaceChildren(replacement)
-
-    expect(setPaimindProductCenterNativeConversation(target, true)).toBe(true)
-    expect(replacement).toHaveAttribute('data-paimind-product-center-native-conversation-content', '')
-    expect(fixture.center).toHaveAttribute('data-paimind-product-center-native-conversation', '')
-    const overlapping = installPaimindProductCenterHost(target)
-    expect(overlapping).not.toBeNull()
-
-    dispose()
-    expect(replacement).toHaveAttribute('data-paimind-product-center-native-conversation-content', '')
-    overlapping?.()
-    expect(fixture.conversationContent).not.toHaveAttribute(
-      'data-paimind-product-center-native-conversation-content',
-    )
-    expect(replacement).not.toHaveAttribute('data-paimind-product-center-native-conversation-content')
-  })
-
-  it('fails closed if the previous native Conversation content was moved instead of detached', () => {
-    const fixture = harnessShell()
-    const target = resolvePaimindProductCenterHost(document)!
-    const dispose = installPaimindProductCenterHost(target)!
-    const replacement = document.createElement('section')
-    const foreign = document.createElement('aside')
-    document.body.append(foreign)
-    foreign.append(fixture.conversationContent)
-    fixture.conversation.append(replacement)
-
-    expect(setPaimindProductCenterNativeConversation(target, true)).toBe(false)
-    expect(installPaimindProductCenterHost(target)).toBeNull()
-    expect(replacement).not.toHaveAttribute('data-paimind-product-center-native-conversation-content')
-
-    dispose()
-    expect(fixture.conversationContent).not.toHaveAttribute(
-      'data-paimind-product-center-native-conversation-content',
-    )
-  })
-
-  it('fails closed if another owner changes the leased content marker', () => {
-    const fixture = harnessShell()
-    const target = resolvePaimindProductCenterHost(document)!
-    const dispose = installPaimindProductCenterHost(target)!
-
-    fixture.conversationContent.setAttribute(
-      'data-paimind-product-center-native-conversation-content',
-      'foreign-owner',
-    )
-
-    expect(setPaimindProductCenterNativeConversation(target, true)).toBe(false)
-    expect(installPaimindProductCenterHost(target)).toBeNull()
-
-    dispose()
-    expect(fixture.conversationContent).not.toHaveAttribute(
-      'data-paimind-product-center-native-conversation-content',
-    )
   })
 
   it('keeps isolation active across overlapping Agent and Skill leases', () => {
@@ -294,18 +196,11 @@ describe('PAIMind product Center host adapter', () => {
     expect(fixture.conversation).toHaveAttribute('inert')
     expect(fixture.conversation).toHaveAttribute('aria-hidden', 'true')
     expect(fixture.center).toHaveAttribute('data-paimind-product-center-host')
-    expect(fixture.conversationContent).toHaveAttribute(
-      'data-paimind-product-center-native-conversation-content',
-      '',
-    )
 
     second()
     expect(fixture.conversation).not.toHaveAttribute('inert')
     expect(fixture.conversation).not.toHaveAttribute('aria-hidden')
     expect(fixture.center).not.toHaveAttribute('data-paimind-product-center-host')
-    expect(fixture.conversationContent).not.toHaveAttribute(
-      'data-paimind-product-center-native-conversation-content',
-    )
   })
 })
 

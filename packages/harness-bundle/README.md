@@ -4,7 +4,7 @@ Package rules: [Plugin Authoring Standard](../../docs/standards/plugin-authoring
 
 The ordered PAIMind configuration layer installed after the Harness Web bundle. Feature plugins remain separate packages; the profile installs them beside this bundle so the patch can resolve each row from the profile root.
 
-The bundle pins `dsh-better-sidebar@0.12.2` exactly. Only `@paimind/better-sidebar-adapter` crosses its client service boundary; feature packages consume the PAIMind adapter contract. Better Sidebar 0.12.x moved Office viewers out of core, so the bundle also pins the technical provider `@huanlin/dsh-plugin-better-sidebar-plugin-office@0.1.0`. The external Office package owns its own Harness Bundle row and must activate after `dsh-better-sidebar`; PAIMind does not copy its loader patch. It supplies PPTX/XLSX viewing only and does not become a PAIMind product category or domain owner.
+The bundle pins `dsh-better-sidebar@0.14.0` exactly. Only `@paimind/better-sidebar-adapter` crosses its client service boundary; feature packages consume the PAIMind adapter contract. The external technical provider `@huanlin/dsh-plugin-better-sidebar-plugin-office@0.1.0` owns its own Harness Bundle row and must activate after `dsh-better-sidebar`; PAIMind does not copy its loader patch. It supplies PPTX/XLSX viewing only and does not become a PAIMind product category or domain owner.
 
 The PAIMind product shell loads `@paimind/platform-scheduler` as its only
 Scheduled Tasks product and runtime, together with the Harness, HTTP and

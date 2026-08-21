@@ -30,6 +30,40 @@ final result: passed
 
 ---
 
+# Agent Builder Dual-pane Design QA
+
+## Comparison input
+
+- User reference: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-8d8c9ecd-87a0-41fd-89ca-89591ae1bce5.png` (`4266 x 2970`; the red annotation identifies the intended form-and-conversation split).
+- Live Harness implementation: `/Users/hansen/.codex/visualizations/2026/08/20/01a01f0b-14ce-7851-9ca3-2993ac3bb988/agent-center-dual-pane-delivered-1280x720.png` (`1280 x 720`, live `http://127.0.0.1:3080/`).
+- Native-session restoration: `/Users/hansen/.codex/visualizations/2026/08/20/01a01f0b-14ce-7851-9ca3-2993ac3bb988/agent-center-session-restore-1280x720.png`.
+- Native Session-tree re-entry: `/Users/hansen/.codex/visualizations/2026/08/20/01a01f0b-14ce-7851-9ca3-2993ac3bb988/agent-authoring-session-click-reopen-1280x720.png` (`1280 x 720`; selected from the normal Harness Session tree after first opening an ordinary Session).
+
+The reference and implementation were reviewed together. The delivered state converts the annotated empty right area into the real Harness conversation while keeping the editable Agent brief on the left; no parallel message renderer, Session store, or shadow Agent identity was added.
+
+## Findings
+
+- P0: none.
+- P1: none after the native conversation became visible, interactive, and session-bound in the Builder.
+- P2: none after the Builder surface stopped the outer scroll chain and gave the left form its own mouse-wheel scroll region.
+- P3: Harness still renders the configuration draft payload in its canonical conversation history; this is intentional runtime ownership rather than duplicated PAIMind chat UI.
+
+## Verified behavior
+
+- At `1280 x 720`, the Builder is a true split surface: left form `x=280..845` (`565px`) and native conversation `x=845..1280` (`435px`). The page has zero horizontal overflow.
+- The right pane is the unique native Harness conversation content, marked through the compatibility lease; the PAIMind Builder does not contain another composer.
+- The real authoring Session appears immediately in the native Session tree and the connection state reaches `Harness native configuration conversation connected`.
+- Selecting an existing canonical `Agent authoring` Session from the native Session tree reopens the same dual-pane Builder and reconstructs the editable brief from real Harness history. Ordinary Sessions do not open Agent Center, and closing the Builder does not loop-open it until the user switches away and selects the authoring Session again.
+- A real mouse-wheel gesture changed the left form scroll position from `18` to `538` (`+520px`) without moving or covering the native conversation.
+- The native Composer accepted `双屏右侧原生输入联动验收`; closing the Builder restored the prior Session, while `Start conversation` keeps the newly selected Agent Session active.
+- Independent authoring Sessions can progress concurrently; duplicate work in the same Session remains guarded.
+- Model-proposed Skills are restricted to exact installed Harness Skills, so an uninstalled suggestion no longer aborts the generated brief.
+- Browser Console errors: `0`. Targeted Vitest: `2 files / 37 tests` passed. Package TypeScript build, package-only client build, and `git diff --check` passed.
+
+final result: passed
+
+---
+
 # FP-17 PAIMind Visual Experience Design QA
 
 ## Comparison input

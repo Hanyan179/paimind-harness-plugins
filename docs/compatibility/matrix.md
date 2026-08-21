@@ -8,7 +8,7 @@ evidence, not in a second active matrix.
 ```json
 {
   "schemaVersion": 1,
-  "lastVerified": "2026-08-20",
+  "lastVerified": "2026-08-21",
   "officialHarnessDocsCommit": "141eb6fef83422698aef7a981029e843e8161534",
   "runtime": {
     "package": "@deepseek-ai/dsh",
@@ -19,7 +19,7 @@ evidence, not in a second active matrix.
     { "package": "cordis", "version": "4.0.0-rc.8", "purpose": "External provider compatibility" }
   ],
   "providers": [
-    { "package": "dsh-better-sidebar", "version": "0.12.2", "owner": "@paimind/better-sidebar-adapter", "adapterContract": 4 },
+    { "package": "dsh-better-sidebar", "version": "0.14.0", "owner": "@paimind/better-sidebar-adapter", "adapterContract": 4 },
     { "package": "@huanlin/dsh-plugin-better-sidebar-plugin-office", "version": "0.1.0", "owner": "external", "knownPeerRisk": "declares dsh-better-sidebar ^0.6.0" }
   ],
   "toolchain": {
@@ -29,8 +29,8 @@ evidence, not in a second active matrix.
   "verification": {
     "fastGate": "passed",
     "freshInstallAgeGate": "pending-24h",
-    "releaseComposition": "passed",
-    "browser3080": "passed",
+    "releaseComposition": "pending-provider-upgrade-gate",
+    "browser3080": "pending-user-verification",
     "upstreamDelta": "zero"
   }
 }

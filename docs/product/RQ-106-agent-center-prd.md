@@ -20,21 +20,20 @@
 
 - 智能体中心保留 Harness 原生 Sidebar（侧边栏）、工作区与会话导航，只替换原生对话中央列；中心不是遮住整页的 Modal（模态层），也不新增产品自有返回栏。
 - Sidebar（侧边栏）不重复展示“助手”目录；智能体中心与技能中心继续作为侧边栏底部的业务入口。侧边栏收起或展开时，中央列都跟随宿主可用宽度布局。
-- 创建个人智能体先用紧凑弹窗收集用途，再在中央列自然展开 Builder（构建器）；编辑已有智能体复用同一 Builder，不进入另一套页面或表单。创建 Session 就绪后由 `sessions.open(sessionId)` 切换到 Harness 唯一原生 Conversation（对话）。
-- Builder 的说明书区域可直接编辑；“配置对话 / 测试对话”是原生 Session 的目标切换与状态入口，不是 PAIMind 自建 Chat（聊天）前端。配置过程只有一个 Harness 原生 Composer（输入框）与 Transcript（消息历史）；Builder 只投影待确认草稿和门禁状态，不保存或渲染第二份对话历史。
+- 创建个人智能体先用紧凑弹窗收集用途，再在中央列自然展开 Builder（构建器）；编辑已有智能体复用同一 Builder，不进入另一套页面或表单。
+- Builder 左侧是可直接编辑的智能体说明书，右侧是贯穿页面高度的配置对话；右侧在“配置对话 / 测试对话”之间切换。配置对话产生的是待确认草稿，用户确认并保存前不得修改运行配置。
 - 会话技能默认折叠，仅展示已选数量；展开后再披露搜索、分类、只看已选与技能列表，避免长名称和说明被固定宽度截断。
-- 测试入口存在 Unsaved Changes Gate（未保存变更门禁）：未保存的新建或编辑草稿不能测试，也不能创建临时 Preset 副本；保存后每次测试新建一个 Harness 原生 Session，选择刚保存的同一 Agent Preset，并通过 `sessions.open(testSessionId)` 进入原生 Conversation。
+- 测试对话存在 Unsaved Changes Gate（未保存变更门禁）：未保存的新建或编辑草稿不能测试，也不能创建临时 Preset 副本；保存后测试必须复用刚保存的同一 Agent Preset。
 
 Harness 原生 `cordis` 只作为“个人智能体创建助手”的 Runtime Capability（运行能力）：智能体中心入口和主对话 `@` 入口可以调用它生成或调整 Builder 草稿，但它不是新的 PAIMind Agent 实体、不是个人智能体运行底座，也不产生第二套 Preset、ID、存储或权限模型。最终保存仍复制用户选择的真实基础 Preset，并把 Profile 写入同一 Preset 目录。
 
 ### 真实 AI 配置对话
 
-- 首次提交用途或配置消息时，Builder 必须通过 Harness 原生 Session API 创建 `agentPreset=cordis` 的 Session，并立即调用 `sessions.open(sessionId)` 切换到 Harness 原生 Conversation；同一次创建或编辑过程中的后续消息复用该 Session，以保留真实多轮上下文。不得用前端正则、固定模板、关键词映射或字符串追加替代模型生成。
-- 用户在原生 Conversation 中发送的 `user/message` 只包含实际自然语言。每轮发送前，Client 通过 `prepareAuthoringTurn` 把当前说明书、真实已安装 Skill 和语言交给 Host；Host 仅在 live Agent 内存中组合隐藏的动态 Complete System Prompt（完整系统提示）。不得把 `CURRENT_DRAFT`、Skill 清单或内部 JSON 放进用户消息、可见历史或另一套存储。
-- Waiting（等待）、Thinking（思考）、Streaming（流式生成）、Completed（完成）和 Error（错误）由 Harness 原生 Conversation 呈现。Builder 只增加 Pending Confirmation（待确认）业务门禁并把完成后的 Proposal Tool（提案工具）调用投影到说明书；可见回复只保留自然语言，隐藏推理、Tool Arguments（工具参数）和 Tool Result（工具结果）不作为正文展示。
-- 一轮配置只有在原生事件出现 `turn/end reason=completed`，同轮 `paimind_propose_agent_draft` 的 `tool/call` 与成功 `tool/result` 能通过 `turn + callId` 唯一关联，并且结果之后存在非空可见助手回复时才能完成。失败、取消、超时、重复或未知工具调用、无模型或其他结束原因不得生成提案、修改运行配置或回退到本地规则结果。
-- 模型信息不足时仍必须通过 Proposal Tool（提案工具）提交空对象，再提出最多两个关键澄清问题；信息足够时提交严格结构化提案。只允许业务分类、名称、用途、角色、目标、行为规范、补充要求和完整会话技能清单。未知字段直接拒绝，技能必须来自当前真实已安装清单，基础 Preset、产品类型、智能体身份、版本、存储和权限不能由模型修改。
-- 提案可以在说明书中预览，但必须保持待确认状态。用户选择 Keep（保留更新）后才把本轮建议作为当前草稿继续编辑；选择 Undo（撤销）必须恢复提案前草稿。提案未处理前禁止原生 Conversation 继续发送和保存，模型运行期间发生的手动修改不得被晚到回复覆盖。
+- 首次提交用途或配置消息时，Builder 必须通过 Harness 原生 Session API 创建 `agentPreset=cordis` 的 Session；同一次创建或编辑过程中的后续消息复用该 Session，以保留真实多轮上下文。不得用前端正则、固定模板、关键词映射或字符串追加替代模型生成。
+- 页面必须区分 Waiting（等待）、Thinking（思考）、Streaming（流式生成）、Pending Confirmation（待确认）、Completed（完成）和 Error（错误）。流式区域只显示面向用户的可见文本；结构化提案和隐藏推理不作为流式正文展示。
+- 一轮配置只有在原生事件出现 `turn/end reason=completed`，且同轮存在非空可见助手回复后才能完成。失败、取消、超时、无模型或其他结束原因不得生成提案、修改运行配置或回退到本地规则结果。
+- 模型可以在信息不足时只提出最多两个关键澄清问题，不生成 Proposal（提案）。信息足够时，回复可以附带一个严格结构化提案；只允许业务分类、名称、用途、角色、目标、行为规范、补充要求和完整会话技能清单。未知字段忽略，技能必须来自当前真实已安装清单，基础 Preset、产品类型、智能体身份、版本、存储和权限不能由模型修改。
+- 提案可以在左侧说明书中预览，但必须保持待确认状态。用户选择“保留更新”后才把本轮建议作为当前草稿继续编辑；选择“撤销”必须恢复提案前草稿。提案未处理前禁止继续发送配置消息和保存，模型运行期间发生的手动修改不得被晚到回复覆盖。
 - AI 配置 Session 只保存 Harness 原生对话历史；它不创建第二套 Agent、Preset 或权限对象。模型只负责理解、澄清和提出草稿建议；PAIMind UI 负责字段校验、确认和最终保存。
 
 ## 业务字段
@@ -57,7 +56,7 @@ Harness 原生 `cordis` 只作为“个人智能体创建助手”的 Runtime Ca
 
 `开始对话` 优先复用当前真实空白会话；当前会话已运行时创建新空白会话。目标智能体必须通过 Harness 原生 Agent Preset Seat（预设选择器）绑定；只有 Session（会话）绑定和顶部选择器的稳定状态都与目标 Preset（预设）一致时，智能体中心才能关闭。完成后记录配置版本，并预填一个不重复配置的中性问题，由用户决定是否发送；任一状态不一致时保留在智能体中心并显示真实错误。
 
-Builder 内的测试入口使用同一绑定规则。保存成功后，每次测试必须创建新的 Harness 原生 Session，选择该 Profile 对应的同一个 Agent Preset，并记录相同的 `presetId + configVersion`；随后调用 `sessions.open(testSessionId)` 进入 Harness 原生 Conversation。不得复用创建助手 Session、复制 Preset、构造临时 Agent、维护内嵌测试聊天历史或绕过原生选择器。
+Builder 内的 `测试对话` 使用同一绑定规则。保存成功后，测试链路创建或复用真实空白 Session，选择该 Profile 对应的同一个 Agent Preset，并记录相同的 `presetId + configVersion`；不得复制 Preset、构造临时 Agent 或绕过原生选择器。测试完成后可以打开完整 Harness 对话查看原生运行事件和模型回复。
 
 ## 版本迁移
 
@@ -77,10 +76,9 @@ Builder 内的测试入口使用同一绑定规则。保存成功后，每次测
 - 修改后新会话使用新版本；旧会话打开后迁移并保留原历史。
 - 技能缺失、预设损坏、模型失败或版本不一致时不标记验证通过。
 - 打开智能体中心或 Builder 时，原生 Sidebar 保持可见且可识别；中央列不覆盖 Sidebar，不出现第二套产品顶栏或右上角返回按钮。
-- 创建和编辑复用同一 Builder；配置提案可 Keep（保留更新）或 Undo（撤销），待确认时禁止发送和保存；会话技能按需渐进披露；未保存草稿进入测试入口时必须提示先保存。
-- 首轮与后续配置消息通过同一个 Harness 原生 `cordis` Session 调用真实模型，并由 `sessions.open` 切换到唯一原生 Conversation；页面不得出现 PAIMind 自建的第二套消息历史或 Composer。
-- 原生 `user/message` 只包含用户实际输入；当前说明书、真实 Skill 清单与语言只通过 Host 隐藏动态 System Context 注入。Harness 原生 Conversation 显示可见流式文本，并且只有 `turn/end reason=completed` 与非空助手回复同时存在时才接纳本轮结果。
+- 创建和编辑复用同一 Builder；配置对话变更可确认或撤回，会话技能按需渐进披露；未保存草稿进入测试对话时必须提示先保存。
+- 首轮与后续配置消息通过同一个 Harness 原生 `cordis` Session 调用真实模型；页面能显示可见流式文本，并且只有 `turn/end reason=completed` 与非空助手回复同时存在时才接纳本轮结果。
 - 模型提案只影响允许的业务字段和真实已安装技能；提案待确认时不能继续对话或保存，撤销恢复上一版，模型失败时不得生成本地替代结果。
-- 保存后每次测试新建原生 Session，选择被编辑智能体同一 `presetId + configVersion`，通过 `sessions.open` 进入完整 Harness Conversation 并核对真实回复。
+- 保存后的测试会话与被编辑智能体使用同一 `presetId + configVersion`，并能打开完整 Harness 对话核对真实回复。
 - 主对话 `@个人智能体创建助手` 与智能体中心创建入口汇入同一 Builder 请求；两条路径都只复用原生 `cordis` 能力，不创建新的 Agent 类型或影子 Preset。
 - 真实 AI 验收必须同时留存创建参数、创建结果或原生 Session Header 中的 `agentPreset=cordis`，以及模型请求、用户输入、可见助手回复和正常完成事件；字段变化、页面文案、模拟返回值或保存后测试智能体的回复不能代替创建助手证据。

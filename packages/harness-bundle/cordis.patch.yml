@@ -107,6 +107,13 @@
       name: '@paimind/presentation-trace/invariant'
       inject: [invariants]
 
+    - id: paimind-proposal-experience
+      name: '@paimind/proposal-experience'
+
+    - id: paimind-proposal-experience-invariant
+      name: '@paimind/proposal-experience/invariant'
+      inject: [invariants]
+
     - id: paimind-walmart-proposal-adapter
       name: '@paimind/walmart-proposal-adapter'
 

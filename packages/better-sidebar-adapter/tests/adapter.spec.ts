@@ -64,7 +64,7 @@ function definition(label: string): PaimindSidebarTabDefinition {
 
 describe('FP05 Better Sidebar adapter', () => {
   it('exposes a versioned active boundary and maps only stable render scope', () => {
-    expect(VERIFIED_BETTER_SIDEBAR_VERSION).toBe('0.12.2')
+    expect(VERIFIED_BETTER_SIDEBAR_VERSION).toBe('0.14.0')
     const external = provider()
     const language = locale('en')
     const adapter = new BetterSidebarAdapter(external.service, language, projects())

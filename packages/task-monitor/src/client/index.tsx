@@ -85,6 +85,11 @@ const STYLE_ID = '@paimind/task-monitor'
 const HEADER_SHADOW_PRIORITY = -10
 const STYLE = `
 [data-paimind-task-action] { position:relative; display:inline-flex; align-items:center; color:inherit; font:inherit; }
+/* Better Sidebar pins its collapsed 28px rail controls at top:3px, while the
+   Harness Session header starts at top:12px and gives this 32px utility its
+   own center line. Lift only the collapsed-state utility by the exact 11px
+   center-line delta so the three top-right controls read as one toolbar. */
+body[data-dsh-sidebar-collapsed] [data-paimind-task-action] { transform:translateY(-11px); }
 [data-paimind-task-trigger] { position:relative; width:32px; height:32px; display:grid; place-items:center; padding:0; border:0; border-radius:9px; color:var(--dsw-alias-label-secondary,#626872); background:transparent; cursor:pointer; }
 [data-paimind-task-trigger]:hover,[data-paimind-task-trigger]:focus-visible,[data-paimind-task-trigger][aria-pressed='true'] { color:var(--dsw-alias-label-primary,#202124); background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.11)); }
 [data-paimind-task-trigger]:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:2px; }

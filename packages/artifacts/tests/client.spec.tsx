@@ -40,7 +40,7 @@ function service(rows: readonly PaimindArtifact[]) {
 
 function sidebar(): PaimindSidebarService {
   return {
-    getStatus: () => ({ state: 'active', provider: 'dsh-better-sidebar', providerVersion: '0.12.2', contractVersion: 4, error: null }),
+    getStatus: () => ({ state: 'active', provider: 'dsh-better-sidebar', providerVersion: '0.14.0', contractVersion: 4, error: null }),
     subscribe: () => () => {}, registerTab: () => () => {}, openTab: () => true, closeTab: () => true,
     getFileCapability: () => ({ state: 'available', viewerId: 'pdf' }),
     openFile: vi.fn(() => ({ state: 'opened', viewerId: 'pdf' })),
