@@ -13,6 +13,7 @@ import {
   AgentCenterTrigger,
   apply,
   inject,
+  starterPromptForProfile,
 } from '../src/client/index.js'
 import { AGENT_CENTER_STYLE } from '../src/client/styles.js'
 
@@ -187,8 +188,16 @@ describe('Agent Center business UI', () => {
     expect(seat.select).toHaveBeenCalledWith('standard')
     expect(row.agentPreset).toBe('standard')
     expect(selected).toBe('standard')
-    expect(setDraft).toHaveBeenCalledWith('请介绍一下你可以如何帮助我，并给出一个简短示例。')
+    expect(setDraft).toHaveBeenCalledWith('')
     runtime.dispose()
+  })
+
+  it('prefills the explicit saved trigger instead of an unrelated generic example', () => {
+    expect(starterPromptForProfile({
+      ...profile,
+      instructions: 'When the user says “Start a new proposal.”, run the guided intake.',
+    })).toBe('Start a new proposal.')
+    expect(starterPromptForProfile(profile)).toBe('')
   })
 
   it('fails clearly without a selector seat and creates no shadow binding', async () => {

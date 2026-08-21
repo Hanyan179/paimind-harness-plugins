@@ -623,6 +623,8 @@ export interface HarnessAgentPresetSeatSnapshot {
 /** Version-isolated control face for the native new-conversation Preset selector. */
 export interface HarnessAgentPresetSeatControl {
   getSnapshot(): HarnessAgentPresetSeatSnapshot
+  /** Observe native selector changes made by another product surface. */
+  subscribe?(listener: () => void): () => void
   load(): Promise<void>
   select(agentPreset: string): Promise<void>
 }
@@ -664,6 +666,7 @@ export function resolveHarnessAgentPresetSeatControl(
           if (current === null) throw new Error('Harness Agent Preset selector returned an invalid snapshot')
           return current
         },
+        subscribe(listener: () => void): () => void { return store.subscribe(listener) },
         async load(): Promise<void> { await injected.load!() },
         async select(agentPreset: string): Promise<void> { await injected.select!(agentPreset) },
       }))
@@ -997,6 +1000,89 @@ export interface PaimindClientContext {
   readonly locale: PaimindLocaleSource
   readonly reflect: HarnessReflectRegistry
   effect(install: () => void | (() => void), label?: string): void
+}
+
+/** Native option shape carried by a pending Harness user-question request. */
+export interface HarnessQuestionOption {
+  readonly label: string
+  readonly description?: string
+}
+
+/** Version-isolated question fields consumed by PAIMind composer takeovers. */
+export interface HarnessQuestionItem {
+  readonly id: string
+  readonly question: string
+  readonly detail?: string
+  readonly header?: string
+  readonly options?: readonly HarnessQuestionOption[]
+  readonly multiSelect?: boolean
+}
+
+/** Structured answer item returned through the native pending-interaction carrier. */
+export interface HarnessQuestionAnswerItem {
+  readonly id: string
+  readonly selected: readonly string[]
+  readonly custom?: string
+}
+
+/** Narrow native question wait exposed to a PAIMind composer renderer. */
+export interface HarnessQuestionWait {
+  readonly kind: 'question'
+  readonly key: string
+  readonly sessionId: string
+  readonly payload: { readonly questions: readonly HarnessQuestionItem[] }
+  respond(response:
+    | { readonly ok: true; readonly value: { readonly sessionId: string; readonly answer: { readonly answers: readonly HarnessQuestionAnswerItem[] } } }
+    | { readonly ok: false; readonly error: { readonly code: 'cancelled'; readonly message: string; readonly details: Readonly<Record<string, never>> } }
+  ): Promise<{ readonly accepted: boolean; readonly reason?: string }>
+}
+
+function questionWait(value: unknown): HarnessQuestionWait | null {
+  if (typeof value !== 'object' || value === null) return null
+  const candidate = value as Partial<HarnessQuestionWait>
+  if (candidate.kind !== 'question' || typeof candidate.key !== 'string' || typeof candidate.sessionId !== 'string') return null
+  if (typeof candidate.respond !== 'function' || !Array.isArray(candidate.payload?.questions)) return null
+  return candidate as HarnessQuestionWait
+}
+
+/**
+ * Select one namespaced, single-question wait from the native composer currency.
+ * Multi-question or malformed requests deliberately fall through to Harness's
+ * generic question renderer so every answer remains reachable.
+ */
+export function selectHarnessNamespacedQuestion(
+  interactions: readonly unknown[],
+  namespace: string,
+): HarnessQuestionWait | null {
+  for (const interaction of interactions) {
+    const wait = questionWait(interaction)
+    const questions = wait?.payload.questions
+    if (wait === null || questions === undefined || questions.length !== 1) continue
+    const question = questions[0]
+    if (question !== undefined && question.id.startsWith(namespace)) return wait
+  }
+  return null
+}
+
+/** Resolve a native question wait with the exact structured answer protocol. */
+export async function answerHarnessQuestion(
+  wait: HarnessQuestionWait,
+  answers: readonly HarnessQuestionAnswerItem[],
+): Promise<void> {
+  const receipt = await wait.respond({
+    ok: true,
+    value: { sessionId: wait.sessionId, answer: { answers } },
+  })
+  if (!receipt.accepted) throw new Error(`question response rejected: ${receipt.reason ?? 'unknown reason'}`)
+}
+
+/** Cancel the native question wait without creating a PAIMind interaction store. */
+export async function cancelHarnessQuestion(wait: HarnessQuestionWait): Promise<void> {
+  const receipt = await wait.respond({
+    ok: false,
+    error: { code: 'cancelled', message: 'the user closed this proposal question', details: {} },
+  })
+  if (!receipt.accepted) throw new Error(`question cancellation rejected: ${receipt.reason ?? 'unknown reason'}`)
 }
 
 /** Client-side snapshot of one native Harness Settings namespace. */

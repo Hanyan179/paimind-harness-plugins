@@ -21,6 +21,7 @@
     { "path": "packages/artifacts" },
     { "path": "packages/presentation-trace" },
     { "path": "packages/walmart-proposal-adapter" },
+    { "path": "packages/proposal-experience" },
     { "path": "packages/agent-market" },
     { "path": "packages/agent-builder" },
     { "path": "packages/skill-market" },

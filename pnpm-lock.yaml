@@ -326,6 +326,9 @@ importers:
       '@paimind/presentation-trace':
         specifier: workspace:^
         version: link:../presentation-trace
+      '@paimind/proposal-experience':
+        specifier: workspace:^
+        version: link:../proposal-experience
       '@paimind/renderer-bento':
         specifier: workspace:^
         version: link:../renderer-bento
@@ -496,6 +499,22 @@ importers:
       '@paimind/workspace-project':
         specifier: workspace:^
         version: link:../workspace-project
+    devDependencies:
+      '@paimind/testkit':
+        specifier: workspace:^
+        version: link:../testkit
+      '@testing-library/react':
+        specifier: ^16.3.2
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+
+  packages/proposal-experience:
+    dependencies:
+      '@paimind/harness-compat':
+        specifier: workspace:^
+        version: link:../harness-compat
     devDependencies:
       '@paimind/testkit':
         specifier: workspace:^

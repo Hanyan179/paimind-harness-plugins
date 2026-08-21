@@ -24,6 +24,7 @@
     "@paimind/renderer-pdf": "workspace:^",
     "@paimind/artifacts": "workspace:^",
     "@paimind/presentation-trace": "workspace:^",
+    "@paimind/proposal-experience": "workspace:^",
     "@paimind/walmart-proposal-adapter": "workspace:^",
     "@paimind/agent-market": "workspace:^",
     "@paimind/agent-builder": "workspace:^",

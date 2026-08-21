@@ -139,6 +139,13 @@ function remoteValue<Value>(result: HarnessRemoteResult<Value>): Value {
 
 function messageOf(error: unknown): string { return error instanceof Error ? error.message : String(error) }
 
+/** Derive one intentional first-turn CTA from the saved Agent brief. */
+export function starterPromptForProfile(profile: AgentBusinessProfile | undefined): string {
+  if (profile === undefined) return ''
+  const trigger = /when the user says\s*[“"'‘]([^”"'’]{1,160})[”"'’]/i.exec(profile.instructions)?.[1]?.trim()
+  return trigger ?? ''
+}
+
 async function waitForBlankSession(sessions: HarnessSessionService, workspaces: HarnessWorkspaceService, timeoutMs = 10_000): Promise<string> {
   const before = sessions.list.getSnapshot()
   const previous = before.current
@@ -224,7 +231,7 @@ export class AgentCenterRuntime {
     }
     const binding = this.sessions.binding?.(sessionId)
     if (binding?.ctx === undefined) throw new Error('真实对话尚未就绪')
-    this.conversation.input.for(binding.ctx).setDraft('请介绍一下你可以如何帮助我，并给出一个简短示例。')
+    this.conversation.input.for(binding.ctx).setDraft(starterPromptForProfile(profile))
     this.sessions.open(sessionId)
     return sessionId
   }

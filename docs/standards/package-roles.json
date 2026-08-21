@@ -20,6 +20,7 @@
     { "name": "@paimind/platform-sdk", "path": "packages/platform-sdk", "role": "shared-support" },
     { "name": "@paimind/presentation-contracts", "path": "packages/presentation-contracts", "role": "shared-support" },
     { "name": "@paimind/presentation-trace", "path": "packages/presentation-trace", "role": "client-plugin" },
+    { "name": "@paimind/proposal-experience", "path": "packages/proposal-experience", "role": "client-plugin" },
     { "name": "@paimind/renderer-bento", "path": "packages/renderer-bento", "role": "client-plugin" },
     { "name": "@paimind/renderer-pdf", "path": "packages/renderer-pdf", "role": "client-plugin" },
     { "name": "@paimind/runtime-orbs", "path": "packages/runtime-orbs", "role": "client-plugin" },
