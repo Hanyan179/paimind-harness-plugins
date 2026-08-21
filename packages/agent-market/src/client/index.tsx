@@ -8,6 +8,8 @@ import {
   useState,
   useSyncExternalStore,
   type ErrorInfo,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react'
 import { createPortal } from 'react-dom'
@@ -48,7 +50,6 @@ import {
   PaimindAgentBuilderRequestController,
   PaimindProductSurfaceController,
   installPaimindProductCenterHost,
-  installPaimindProductSurfaceInteraction,
   resolvePaimindProductCenterHost,
   setPaimindProductCenterNativeConversation,
   type PaimindAgentBuilderRequestSnapshot,
@@ -63,7 +64,7 @@ import type {
   AgentSessionBinding,
   AgentVerificationRecord,
 } from '@paimind/agent-builder'
-import { AGENT_AUTHORING_PROPOSAL_TOOL, AGENT_AUTHORING_SESSION_PREFIX } from '@paimind/agent-builder/client-contract'
+import { AGENT_AUTHORING_SESSION_PREFIX } from '@paimind/agent-builder/client-contract'
 import type { SkillInstallerSnapshot, SkillInstallRecord } from '@paimind/skill-market'
 import {
   SKILL_PRODUCT_CATEGORIES,
@@ -234,6 +235,12 @@ export interface AgentAuthoringTurnResult {
   readonly proposal: AgentAuthoringProposal | null
 }
 
+export interface AgentAuthoringResumeSnapshot {
+  readonly sessionId: string
+  readonly draft: Readonly<AgentAuthoringDraftContext>
+  readonly cursor: number
+}
+
 export interface AgentAuthoringWatchCallbacks {
   readonly onRunning?: () => void
   readonly onIdle?: () => void
@@ -241,20 +248,7 @@ export interface AgentAuthoringWatchCallbacks {
   readonly onError: (error: Error) => void
 }
 
-const AUTHORING_PROPOSAL_STRING_LIMITS = Object.freeze({
-  businessCategory: 80,
-  name: 80,
-  description: 500,
-  role: 2_000,
-  goal: 2_000,
-  behavior: 4_000,
-  instructions: 4_000,
-} as const)
-const AUTHORING_PROPOSAL_FIELDS = new Set<string>([
-  ...Object.keys(AUTHORING_PROPOSAL_STRING_LIMITS),
-  'preferredSkillNames',
-])
-const AUTHORING_PROPOSAL_CONTROL = /[\u0000-\u001f\u007f]/g
+const AUTHORING_DRAFT_BLOCK = /<!--\s*PAIMIND_AGENT_DRAFT\s*\n?([\s\S]*?)\s*-->/gi
 
 function assistantTextFromHistoryEvent(event: { readonly type: string; readonly data?: unknown }): string {
   if (event.type !== 'assistant/message' || typeof event.data !== 'object' || event.data === null) return ''
@@ -271,38 +265,72 @@ function assistantTextFromHistoryEvent(event: { readonly type: string; readonly 
     .trim()
 }
 
-function parseAuthoringProposalArguments(
-  payload: string,
-  installedSkills: readonly { readonly name: string }[],
-): Readonly<AgentAuthoringProposal> {
+function parseAuthoringTurn(text: string): { readonly text: string; readonly proposal: AgentAuthoringProposal | null } {
+  const matches = [...text.matchAll(AUTHORING_DRAFT_BLOCK)]
+  if (matches.length === 0) {
+    if (/PAIMIND_AGENT_DRAFT/i.test(text)) throw new Error('Harness cordis 返回的说明书提案不完整')
+    return Object.freeze({ text: text.trim(), proposal: null })
+  }
+  const match = matches[0]
+  const payload = match?.[1]
+  if (matches.length !== 1 || match === undefined || payload === undefined) throw new Error('Harness cordis 每轮只能返回一份说明书提案')
   let parsed: unknown
   try { parsed = JSON.parse(payload) } catch { throw new Error('Harness cordis 返回的说明书提案不是有效 JSON') }
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('Harness cordis 返回的说明书提案必须是 JSON 对象')
   const record = parsed as Readonly<Record<string, unknown>>
-  const unknown = Object.keys(record).filter(key => !AUTHORING_PROPOSAL_FIELDS.has(key))
+  const allowed = new Set(['businessCategory', 'name', 'description', 'role', 'goal', 'behavior', 'instructions', 'preferredSkillNames'])
+  const unknown = Object.keys(record).filter(key => !allowed.has(key))
   if (unknown.length > 0) throw new Error(`Harness cordis 返回了不允许修改的字段：${unknown.join('、')}`)
   const proposal: Record<string, string | readonly string[]> = {}
-  for (const [field, limit] of Object.entries(AUTHORING_PROPOSAL_STRING_LIMITS)) {
-    const value = record[field]
-    if (value === undefined) continue
-    if (typeof value !== 'string') throw new Error(`Harness cordis 返回的 ${field} 字段类型无效`)
-    const normalized = value.replace(AUTHORING_PROPOSAL_CONTROL, ' ').trim()
-    if (normalized.length > limit) throw new Error(`Harness cordis 返回的 ${field} 字段过长`)
-    proposal[field] = normalized
+  for (const key of ['businessCategory', 'name', 'description', 'role', 'goal', 'behavior', 'instructions'] as const) {
+    if (record[key] === undefined) continue
+    if (typeof record[key] !== 'string') throw new Error(`Harness cordis 返回的 ${key} 字段类型无效`)
+    proposal[key] = record[key]
   }
   if (record.preferredSkillNames !== undefined) {
-    if (!Array.isArray(record.preferredSkillNames) || record.preferredSkillNames.length > 40
-      || !record.preferredSkillNames.every(value => typeof value === 'string')) {
+    if (!Array.isArray(record.preferredSkillNames) || !record.preferredSkillNames.every(value => typeof value === 'string')) {
       throw new Error('Harness cordis 返回的 preferredSkillNames 字段类型无效')
     }
-    const installed = new Set(installedSkills.map(skill => skill.name))
-    const requested = record.preferredSkillNames as string[]
-    const unknownSkills = requested.filter(name => name !== name.trim() || name === '' || !installed.has(name))
-    if (unknownSkills.length > 0) throw new Error(`Harness cordis 返回了未安装或非精确名称的 Skill：${unknownSkills.join('、')}`)
-    if (new Set(requested).size !== requested.length) throw new Error('Harness cordis 返回了重复的 Skill')
-    proposal.preferredSkillNames = Object.freeze([...requested])
+    proposal.preferredSkillNames = record.preferredSkillNames
   }
-  return Object.freeze(proposal) as Readonly<AgentAuthoringProposal>
+  const visibleText = text.replace(match[0], '').trim()
+  if (/PAIMIND_AGENT_DRAFT/i.test(visibleText)) throw new Error('Harness cordis 返回的说明书提案标记不完整')
+  if (/[?？]/u.test(visibleText)) throw new Error('创建助手的澄清问题必须通过 Harness 原生提问组件提出')
+  return Object.freeze({
+    text: visibleText,
+    proposal: Object.freeze(proposal) as AgentAuthoringProposal,
+  })
+}
+
+function validateAuthoringProposal(
+  proposal: AgentAuthoringProposal | null,
+  installedSkills: readonly { readonly name: string }[],
+): AgentAuthoringProposal | null {
+  if (proposal?.preferredSkillNames === undefined) return proposal
+  const installed = new Set(installedSkills.map(skill => skill.name))
+  const requested = [...new Set(proposal.preferredSkillNames.map(name => name.trim()))]
+  // Skill suggestions are model output, not authority. Keep only exact names from
+  // the real installed catalog so a speculative suggestion cannot abort the brief.
+  const available = requested.filter(name => name !== '' && installed.has(name))
+  return Object.freeze({ ...proposal, preferredSkillNames: Object.freeze(available) })
+}
+
+function mergeAuthoringDraftContext(
+  draft: Readonly<AgentAuthoringDraftContext>,
+  proposal: AgentAuthoringProposal | null,
+): Readonly<AgentAuthoringDraftContext> {
+  if (proposal === null) return draft
+  return Object.freeze({
+    ...draft,
+    ...(proposal.businessCategory === undefined || draft.productKind !== 'business' ? {} : { businessCategory: proposal.businessCategory }),
+    ...(proposal.name === undefined ? {} : { name: proposal.name }),
+    ...(proposal.description === undefined ? {} : { description: proposal.description }),
+    ...(proposal.role === undefined ? {} : { role: proposal.role }),
+    ...(proposal.goal === undefined ? {} : { goal: proposal.goal }),
+    ...(proposal.behavior === undefined ? {} : { behavior: proposal.behavior }),
+    ...(proposal.instructions === undefined ? {} : { instructions: proposal.instructions }),
+    ...(proposal.preferredSkillNames === undefined ? {} : { preferredSkillNames: proposal.preferredSkillNames }),
+  })
 }
 
 function historySeq(event: { readonly seq?: number }): number { return typeof event.seq === 'number' ? event.seq : -1 }
@@ -347,75 +375,6 @@ function assistantTurn(event: { readonly type: string; readonly data?: unknown }
   if (event.type !== 'assistant/message' || typeof event.data !== 'object' || event.data === null) return null
   const turn = (event.data as { readonly turn?: unknown }).turn
   return typeof turn === 'number' && Number.isInteger(turn) ? turn : null
-}
-
-interface CorrelatedAuthoringProposal {
-  readonly proposal: Readonly<AgentAuthoringProposal>
-  readonly resultSeq: number
-}
-
-/** Extract one successful native Proposal Tool call/result pair from the exact completed Turn. */
-function correlatedAuthoringProposal(
-  events: readonly { readonly type: string; readonly seq?: number; readonly data?: unknown }[],
-  turn: number,
-  afterSeq: number,
-  beforeSeq: number,
-  installedSkills: readonly { readonly name: string }[],
-): CorrelatedAuthoringProposal {
-  const window = events.filter(event => historySeq(event) > afterSeq && historySeq(event) < beforeSeq)
-  const calls = window.filter(event => {
-    if (event.type !== 'tool/call' || typeof event.data !== 'object' || event.data === null) return false
-    return (event.data as { readonly turn?: unknown }).turn === turn
-  })
-  const unexpected = calls.filter(event => (
-    (event.data as { readonly name?: unknown }).name !== AGENT_AUTHORING_PROPOSAL_TOOL
-  ))
-  if (unexpected.length > 0) throw new Error('Harness cordis 创建轮次调用了未授权工具')
-  if (calls.length !== 1) {
-    throw new Error(calls.length === 0
-      ? 'Harness cordis 创建轮次没有提交原生说明书提案'
-      : 'Harness cordis 创建轮次提交了多份原生说明书提案')
-  }
-  const call = calls[0]
-  if (call === undefined) throw new Error('Harness cordis 创建轮次没有提交原生说明书提案')
-  const callData = call.data as {
-    readonly callId?: unknown
-    readonly arguments?: unknown
-  }
-  if (typeof callData.callId !== 'string' || typeof callData.arguments !== 'string') {
-    throw new Error('Harness cordis 原生说明书提案调用缺少关联字段')
-  }
-  const results = window.filter(event => {
-    if (event.type !== 'tool/result' || historySeq(event) <= historySeq(call) || typeof event.data !== 'object' || event.data === null) return false
-    const data = event.data as {
-      readonly turn?: unknown
-      readonly message?: {
-        readonly source?: { readonly kind?: unknown; readonly callId?: unknown }
-        readonly content?: unknown
-      }
-    }
-    return data.turn === turn && data.message?.source?.kind === 'tool' && data.message.source.callId === callData.callId
-  })
-  if (results.length !== 1) throw new Error('Harness cordis 原生说明书提案结果无法唯一关联')
-  const result = results[0]
-  if (result === undefined) throw new Error('Harness cordis 原生说明书提案结果无法唯一关联')
-  const resultData = result.data as {
-    readonly error?: unknown
-    readonly message?: { readonly content?: unknown }
-  }
-  const resultBlocks = resultData.message?.content
-  const resultBlock = Array.isArray(resultBlocks) ? resultBlocks.find(block => (
-    typeof block === 'object' && block !== null
-    && (block as { readonly type?: unknown }).type === 'tool-result'
-    && (block as { readonly toolCallId?: unknown }).toolCallId === callData.callId
-  )) as { readonly isError?: unknown } | undefined : undefined
-  if (resultData.error !== undefined || resultBlock === undefined || resultBlock.isError === true) {
-    throw new Error('Harness cordis 原生说明书提案未被 Host 接受')
-  }
-  return Object.freeze({
-    proposal: parseAuthoringProposalArguments(callData.arguments, installedSkills),
-    resultSeq: historySeq(result),
-  })
 }
 
 function correlateAuthoringTurn(
@@ -464,48 +423,19 @@ function turnEndFailure(event: { readonly type: string; readonly data?: unknown 
 }
 
 function visibleAuthoringPartial(blocks: readonly { readonly kind: string; readonly text?: string }[]): string {
-  return blocks
+  const text = blocks
     .filter((block): block is { readonly kind: 'text'; readonly text: string } => block.kind === 'text' && typeof block.text === 'string')
     .map(block => block.text)
     .join('\n')
-    .trim()
-}
-
-interface AgentAuthoringProposalToolRowProps {
-  readonly block: {
-    readonly kind?: string
-    readonly isError?: boolean
-    readonly error?: { readonly code?: string }
+  const marker = '<PAIMIND_AGENT_DRAFT>'
+  const upper = text.toLocaleUpperCase()
+  let cut = upper.indexOf(marker)
+  if (cut < 0) {
+    for (let length = marker.length - 1; length > 0; length -= 1) {
+      if (upper.endsWith(marker.slice(0, length))) { cut = text.length - length; break }
+    }
   }
-  readonly locale: PaimindLocaleSource
-}
-
-/** Compact native Tool row; deliberately never reads or renders proposal arguments or result content. */
-function AgentAuthoringProposalToolRow({ block, locale }: AgentAuthoringProposalToolRowProps): React.JSX.Element {
-  const activeLocale = useSyncExternalStore(
-    locale.subscribe.bind(locale),
-    () => locale.getLocale().active,
-    () => locale.getLocale().active,
-  )
-  const zh = activeLocale.startsWith('zh')
-  const settled = block.kind === 'tool-result'
-  const failed = settled && block.isError === true
-  const label = !settled
-    ? (zh ? '正在生成配置提案' : 'Generating configuration proposal')
-    : failed
-      ? (zh ? '配置提案生成失败' : 'Configuration proposal failed')
-      : (zh ? '已生成待确认配置提案' : 'Configuration proposal ready for review')
-  return (
-    <div
-      role="status"
-      data-paimind-agent-proposal-tool-row
-      data-state={!settled ? 'running' : failed ? 'error' : 'ok'}
-      aria-label={label}
-    >
-      <span aria-hidden="true">{failed ? <PaimindWarningIcon size={14} /> : <PaimindCheckIcon size={14} />}</span>
-      <span>{label}</span>
-    </div>
-  )
+  return text.slice(0, cut < 0 ? text.length : cut).trim()
 }
 
 /** Derive one intentional first-turn CTA from the saved Agent brief. */
@@ -519,9 +449,6 @@ async function waitForBlankSession(sessions: HarnessSessionService, workspaces: 
   const before = sessions.list.getSnapshot()
   const previous = before.current
   if (previous !== undefined && before.byId[previous]?.blank === true) return previous
-  const workspaceSnapshot = workspaces.list.getSnapshot()
-  const workspaceId = workspaceSnapshot.items.find(item => previous !== undefined && item.sessionIds.includes(previous))?.workspaceId
-    ?? workspaceSnapshot.recentWorkspaceId
   return await new Promise<string>((resolveSession, reject) => {
     let done = false
     let timer: ReturnType<typeof setTimeout>
@@ -535,27 +462,9 @@ async function waitForBlankSession(sessions: HarnessSessionService, workspaces: 
     }
     const unsubscribe = sessions.list.subscribe(inspect)
     timer = setTimeout(() => { done = true; unsubscribe(); reject(new Error('创建真实空白对话超时')) }, timeoutMs)
-    workspaces.startSession(workspaceId)
+    workspaces.startSession()
     inspect()
   })
-}
-
-async function createProjectedNativeSession(
-  sessions: HarnessSessionService,
-  workspaces: HarnessWorkspaceService,
-  sessionId?: string,
-): Promise<string> {
-  if (sessions.create === undefined) throw new Error('当前 Harness 版本未提供可投影的原生会话创建能力')
-  const workspaceSnapshot = workspaces.list.getSnapshot()
-  const currentSessionId = sessions.list.getSnapshot().current
-  const workspaceId = workspaceSnapshot.items.find(item => currentSessionId !== undefined && item.sessionIds.includes(currentSessionId))?.workspaceId
-    ?? workspaceSnapshot.recentWorkspaceId
-  const createdSessionId = await sessions.create({
-    ...(workspaceId === undefined ? {} : { workspaceId }),
-    ...(sessionId === undefined ? {} : { sessionId }),
-  })
-  sessions.open(createdSessionId)
-  return createdSessionId
 }
 
 async function selectPresetInNativeSeat(
@@ -588,35 +497,22 @@ async function selectPresetInNativeSeat(
   throw new Error('智能体已选择，但会话绑定或顶部显示未同步')
 }
 
-const authoringTurnBusySessions = new WeakMap<object, Set<string>>()
-const authoringContextQueues = new WeakMap<object, Map<string, Promise<void>>>()
-
-function busyAuthoringSessions(runtime: object): Set<string> {
-  const existing = authoringTurnBusySessions.get(runtime)
-  if (existing !== undefined) return existing
-  const created = new Set<string>()
-  authoringTurnBusySessions.set(runtime, created)
-  return created
-}
-
-function queuedAuthoringContexts(runtime: object): Map<string, Promise<void>> {
-  const existing = authoringContextQueues.get(runtime)
-  if (existing !== undefined) return existing
-  const created = new Map<string, Promise<void>>()
-  authoringContextQueues.set(runtime, created)
-  return created
-}
-
 export class AgentCenterRuntime {
   private disposed = false
   private authoringTurnBusy = false
-  private authoringContextQueue: Promise<void> = Promise.resolve()
   private readonly busySessions = new Set<string>()
+  private readonly authoringDrafts = new Map<string, Readonly<{
+    readonly draft: Readonly<AgentAuthoringDraftContext>
+    readonly cursor: number
+  }>>()
+  private readonly recognizedNativeAuthoringSessions = new Set<string>()
+  private agentCenterBrowseActive = false
   private readonly offSessions: () => void
   private notice: string | null = null
   private error: string | null = null
   private snapshot: { readonly notice: string | null; readonly error: string | null } = Object.freeze({ notice: null, error: null })
   private readonly listeners = new Set<() => void>()
+  private readonly sessionListeners = new Set<() => void>()
 
   constructor(
     private readonly seat: HarnessAgentPresetSeatControl | null | (() => HarnessAgentPresetSeatControl | null),
@@ -626,7 +522,10 @@ export class AgentCenterRuntime {
     private readonly conversation: HarnessConversationDraftService,
     private readonly authoringApi?: HarnessSessionAuthoringApi,
   ) {
-    this.offSessions = sessions.list.subscribe(() => { void this.inspectCurrentSession() })
+    this.offSessions = sessions.list.subscribe(() => {
+      void this.inspectCurrentSession()
+      for (const listener of this.sessionListeners) listener()
+    })
     void this.inspectCurrentSession()
   }
 
@@ -634,7 +533,7 @@ export class AgentCenterRuntime {
   subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
 
   async start(presetId: string, profile?: AgentBusinessProfile): Promise<string> {
-    this.error = null; this.publish()
+    this.notice = null; this.error = null; this.publish()
     const sessionId = await waitForBlankSession(this.sessions, this.workspaces)
     await selectPresetInNativeSeat(this.seatControl(), this.sessions, sessionId, presetId)
     if (profile !== undefined) {
@@ -660,8 +559,8 @@ export class AgentCenterRuntime {
 
   /** Prepare a saved Preset in a native blank Session; its native composer owns every test turn. */
   async beginTest(presetId: string, profile: AgentBusinessProfile): Promise<string> {
-    this.error = null; this.publish()
-    const sessionId = await createProjectedNativeSession(this.sessions, this.workspaces)
+    this.notice = null; this.error = null; this.publish()
+    const sessionId = await waitForBlankSession(this.sessions, this.workspaces)
     await selectPresetInNativeSeat(this.seatControl(), this.sessions, sessionId, presetId)
     remoteValue(await this.remote.bindSession({
       sessionId,
@@ -670,61 +569,8 @@ export class AgentCenterRuntime {
       configVersion: profile.configVersion,
     }))
     this.watchFirstRun(sessionId)
+    this.sessions.open(sessionId)
     return sessionId
-  }
-
-  /**
-   * Create an empty native cordis Session for editing an existing Profile.
-   * The first visible user message is still submitted by Harness's own
-   * Conversation composer; authoring context never becomes a fake user bubble.
-   */
-  async beginAuthoring(input: {
-    readonly draft: AgentAuthoringDraftContext
-    readonly skills: readonly { readonly name: string; readonly description: string }[]
-    readonly locale: string
-  }): Promise<Readonly<{ readonly sessionId: string; readonly endSeq: number }>> {
-    const api = this.authoringApi
-    if (api === undefined) throw new Error('当前 Harness 版本未提供真实智能体创建会话')
-    const deadline = Date.now() + 30_000
-    const requestedSessionId = `${AGENT_AUTHORING_SESSION_PREFIX}${crypto.randomUUID()}`
-    const sessionId = await boundedAuthoringPromise(
-      '创建可投影的 Harness 会话', deadline, 15_000,
-      async () => await createProjectedNativeSession(this.sessions, this.workspaces, requestedSessionId),
-    )
-    if (sessionId !== requestedSessionId) throw new Error('Harness 未保留创建助手的指定会话标识')
-    await boundedAuthoringPromise(
-      '绑定 Harness cordis 身份', deadline, 10_000,
-      async () => { await selectPresetInNativeSeat(this.seatControl(), this.sessions, sessionId, 'cordis') },
-    )
-    const sealed = remoteValue(await boundedAuthoringPromise(
-      '封锁 Harness 创建会话工具', deadline, 10_000,
-      async () => await this.remote.sealAuthoringSession({ sessionId }),
-    ))
-    if (sealed.sessionId !== sessionId || sealed.agentPreset !== 'cordis' || !sealed.sealed) {
-      throw new Error('Harness cordis 创建会话未完成原生工具封锁')
-    }
-    const prepared = remoteValue(await boundedAuthoringPromise(
-      '准备 Harness 创建上下文', deadline, 10_000,
-      async () => await this.remote.prepareAuthoringTurn({
-        sessionId,
-        draft: input.draft,
-        skills: input.skills,
-        locale: input.locale,
-      }),
-    ))
-    if (prepared.sessionId !== sessionId || !prepared.prepared) throw new Error('Harness cordis 创建上下文未就绪')
-    const prefix = input.locale.startsWith('zh') ? '智能体配置' : 'Agent authoring'
-    const subject = input.draft.name.trim() || input.draft.description.trim() || (input.locale.startsWith('zh') ? '智能体' : 'Agent')
-    await boundedAuthoringRpc('命名 Harness 创建会话', deadline, 5_000, async signal => (
-      await api.rename({ sessionId, title: `${prefix} · ${subject}`.slice(0, 80) }, signal)
-    )).catch(() => undefined)
-    const history = remoteValue((await boundedAuthoringRpc('读取 Harness 创建会话', deadline, 8_000, async signal => (
-      await api.history({ sessionId, maxMessages: 20 }, signal)
-    ))).result)
-    return Object.freeze({
-      sessionId,
-      endSeq: history.events.reduce((latest, entry) => Math.max(latest, historySeq(entry.event)), -1),
-    })
   }
 
   /** Run the embedded configuration chat as a real, native cordis Session. */
@@ -738,6 +584,12 @@ export class AgentCenterRuntime {
     readonly onSessionInvalidated?: () => void
     readonly onProgress?: (visibleText: string) => void
   }): Promise<Readonly<AgentAuthoringTurnResult>> {
+    let lockedSessionId = input.sessionId
+    if (lockedSessionId !== null) {
+      if (this.busySessions.has(lockedSessionId)) throw new Error('Harness cordis 创建助手仍在处理这个会话的上一条消息')
+      this.busySessions.add(lockedSessionId)
+      this.authoringTurnBusy = true
+    }
     let disposeProgress: () => void = () => {}
     const api = this.authoringApi
     const deadline = Date.now() + 180_000
@@ -754,17 +606,6 @@ export class AgentCenterRuntime {
     let sessionContaminated = false
     let progressAttached = false
     let publishProgress = (): void => {}
-    let busySessionId: string | null = null
-    const busySessions = busyAuthoringSessions(this)
-    const acquireSession = (candidate: string): void => {
-      if (busySessions.has(candidate)) {
-        throw new Error('这个 Harness cordis 创建会话仍在处理上一条消息')
-      }
-      busySessions.add(candidate)
-      this.authoringTurnBusy = true
-      busySessionId = candidate
-    }
-    if (sessionId !== null) acquireSession(sessionId)
     const requireSessionId = (): string => {
       if (sessionId === null) throw new Error('Harness cordis 创建会话尚未就绪')
       return sessionId
@@ -872,32 +713,26 @@ export class AgentCenterRuntime {
     try {
       if (api === undefined) throw new Error('当前 Harness 版本未提供真实智能体创建会话')
       if (sessionId === null) {
-        if (this.sessions.create === undefined) {
-          const workspaces = this.workspaces.list.getSnapshot()
-          const currentSessionId = this.sessions.list.getSnapshot().current
-          const workspaceId = workspaces.items.find(item => currentSessionId !== undefined && item.sessionIds.includes(currentSessionId))?.workspaceId
-            ?? workspaces.recentWorkspaceId
-          const requestedSessionId = `${AGENT_AUTHORING_SESSION_PREFIX}${crypto.randomUUID()}`
-          const created = remoteValue((await boundedAuthoringRpc('创建 Harness cordis 会话', deadline, 15_000, async signal => (
-            await api.create({ sessionId: requestedSessionId, agentPreset: 'cordis', ...(workspaceId === undefined ? {} : { workspaceId }) }, signal)
-          ))).result)
-          if (created.sessionId !== requestedSessionId || created.agentPreset !== 'cordis') throw new Error('真实创建会话未使用指定的 Harness cordis 身份')
-          sessionId = created.sessionId
-        } else {
-          const requestedSessionId = `${AGENT_AUTHORING_SESSION_PREFIX}${crypto.randomUUID()}`
-          sessionId = await boundedAuthoringPromise(
-            '创建可投影的 Harness 会话', deadline, 15_000,
-            async () => await createProjectedNativeSession(this.sessions, this.workspaces, requestedSessionId),
-          )
-          if (sessionId !== requestedSessionId) throw new Error('Harness 未保留创建助手的指定会话标识')
-          await boundedAuthoringPromise(
-            '绑定 Harness cordis 身份', deadline, 10_000,
-            async () => { await selectPresetInNativeSeat(this.seatControl(), this.sessions, requireSessionId(), 'cordis') },
-          )
-        }
-        acquireSession(requireSessionId())
-        input.onSessionCreated?.(requireSessionId())
+        const workspaces = this.workspaces.list.getSnapshot()
+        const currentSessionId = this.sessions.list.getSnapshot().current
+        const workspaceId = workspaces.items.find(item => currentSessionId !== undefined && item.sessionIds.includes(currentSessionId))?.workspaceId
+          ?? workspaces.recentWorkspaceId
+        const requestedSessionId = `${AGENT_AUTHORING_SESSION_PREFIX}${crypto.randomUUID()}`
+        const created = remoteValue((await boundedAuthoringRpc('创建 Harness cordis 会话', deadline, 15_000, async signal => (
+          await api.create({ sessionId: requestedSessionId, agentPreset: 'cordis', ...(workspaceId === undefined ? {} : { workspaceId }) }, signal)
+        ))).result)
+        if (created.sessionId !== requestedSessionId || created.agentPreset !== 'cordis') throw new Error('真实创建会话未使用指定的 Harness cordis 身份')
+        sessionId = created.sessionId
+        if (this.busySessions.has(sessionId)) throw new Error('Harness cordis 创建助手仍在处理这个会话的上一条消息')
+        lockedSessionId = sessionId
+        this.busySessions.add(sessionId)
+        this.authoringTurnBusy = true
+        input.onSessionCreated?.(sessionId)
       }
+      this.authoringDrafts.set(requireSessionId(), Object.freeze({
+        draft: input.draft,
+        cursor: this.authoringDrafts.get(requireSessionId())?.cursor ?? -1,
+      }))
       const sealed = remoteValue(await boundedAuthoringPromise(
         '封锁 Harness 创建会话工具', deadline, 10_000,
         async () => await this.remote.sealAuthoringSession({ sessionId: requireSessionId() }),
@@ -965,18 +800,17 @@ export class AgentCenterRuntime {
           const reason = turnEndReason(ended)
           if (reason !== 'completed') throw new Error(`Harness cordis 创建轮次未正常完成：${turnEndFailure(ended)}`)
           const endSeq = historySeq(ended)
-          const correlatedProposal = correlatedAuthoringProposal(
-            events, completedTurn, targetUserSeq, endSeq, input.skills,
-          )
           const text = [...events]
-            .filter(event => assistantTurn(event) === completedTurn
-              && historySeq(event) > correlatedProposal.resultSeq
-              && historySeq(event) < endSeq)
+            .filter(event => assistantTurn(event) === completedTurn && historySeq(event) > targetUserSeq && historySeq(event) < endSeq)
             .reverse().map(assistantTextFromHistoryEvent).find(value => value !== '') ?? ''
           if (text === '') throw new Error('Harness cordis 已结束，但没有返回可见回复')
+          const parsed = parseAuthoringTurn(text)
+          const proposal = validateAuthoringProposal(parsed.proposal, input.skills)
+          const cachedDraft = mergeAuthoringDraftContext(input.draft, proposal)
+          this.authoringDrafts.set(requireSessionId(), Object.freeze({ draft: cachedDraft, cursor: endSeq }))
           return Object.freeze({
             sessionId: requireSessionId(), turn: completedTurn, endSeq,
-            text, proposal: correlatedProposal.proposal,
+            text: parsed.text, proposal,
           })
         }
         await new Promise(resolve => { setTimeout(resolve, 500) })
@@ -988,8 +822,8 @@ export class AgentCenterRuntime {
       throw error
     } finally {
       disposeProgress()
-      if (busySessionId !== null) busySessions.delete(busySessionId)
-      this.authoringTurnBusy = busySessions.size > 0
+      if (lockedSessionId !== null) this.busySessions.delete(lockedSessionId)
+      this.authoringTurnBusy = this.busySessions.size > 0
     }
   }
 
@@ -999,21 +833,149 @@ export class AgentCenterRuntime {
     readonly skills: readonly { readonly name: string; readonly description: string }[]
     readonly locale: string
   }): Promise<void> {
-    const queues = queuedAuthoringContexts(this)
-    const previous = queues.get(input.sessionId) ?? Promise.resolve()
-    const queued = previous.then(async () => {
-      const prepared = remoteValue(await this.remote.prepareAuthoringTurn(input))
-      if (prepared.sessionId !== input.sessionId || !prepared.prepared) throw new Error('Harness cordis 创建上下文未就绪')
+    const prepared = remoteValue(await this.remote.prepareAuthoringTurn(input))
+    if (prepared.sessionId !== input.sessionId || !prepared.prepared) throw new Error('Harness cordis 创建上下文未就绪')
+    this.authoringDrafts.set(input.sessionId, Object.freeze({
+      draft: input.draft,
+      cursor: this.authoringDrafts.get(input.sessionId)?.cursor ?? -1,
+    }))
+  }
+
+  currentAuthoringSessionId(): string | null {
+    return this.agentCenterBrowseActive ? null : this.rawCurrentAuthoringSessionId()
+  }
+
+  /**
+   * Opening the Center is a browse intent, not a request to restore whichever
+   * persisted Session still backs Harness's unsaved New Session surface.
+   */
+  beginAgentCenterBrowse(): void {
+    const browseChanged = !this.agentCenterBrowseActive
+    this.agentCenterBrowseActive = true
+    const noticeChanged = this.notice !== null
+    this.notice = null
+    if (noticeChanged) this.publish()
+    if (browseChanged) for (const listener of this.sessionListeners) listener()
+  }
+
+  /** Release browse suppression when the user explicitly selects a history row. */
+  resumeSelectedAuthoringSession(): void {
+    if (!this.agentCenterBrowseActive) return
+    this.agentCenterBrowseActive = false
+    for (const listener of this.sessionListeners) listener()
+  }
+
+  /** Clear a manual browse intent after its Center surface has unmounted. */
+  endAgentCenterBrowse(): void {
+    this.agentCenterBrowseActive = false
+  }
+
+  private rawCurrentAuthoringSessionId(): string | null {
+    const snapshot = this.sessions.list.getSnapshot()
+    const sessionId = snapshot.current
+    if (sessionId === undefined || snapshot.byId[sessionId]?.agentPreset !== 'cordis') return null
+    return sessionId.startsWith(AGENT_AUTHORING_SESSION_PREFIX)
+      || this.recognizedNativeAuthoringSessions.has(sessionId)
+      ? sessionId
+      : null
+  }
+
+  /**
+   * Recognize a universal-entry cordis Session only after one completed human
+   * turn contains a valid Agent draft. Selecting the Preset or starting the
+   * model never opens the Builder by itself.
+   */
+  async detectCompletedAuthoringSession(sessionId: string): Promise<boolean> {
+    const row = this.sessions.list.getSnapshot().byId[sessionId]
+    if (row?.agentPreset !== 'cordis') return false
+    if (sessionId.startsWith(AGENT_AUTHORING_SESSION_PREFIX)) return true
+    if (this.recognizedNativeAuthoringSessions.has(sessionId)) return true
+    if (row.running || this.authoringApi === undefined) return false
+    const deadline = Date.now() + 12_000
+    const page = remoteValue((await boundedAuthoringRpc('识别原生智能体创建结果', deadline, 8_000, async signal => (
+      await this.authoringApi!.history({ sessionId, maxMessages: 30 }, signal)
+    ))).result)
+    const events = page.events.map(entry => entry.event).sort((left, right) => historySeq(left) - historySeq(right))
+    const completedTurns = events.filter(event => event.type === 'turn/end' && turnEndReason(event) === 'completed').reverse()
+    const recognized = completedTurns.some(ended => {
+      const turn = historyTurn(ended, 'turn/end')
+      const endSeq = historySeq(ended)
+      if (turn === null || endSeq < 0) return false
+      const started = [...events].reverse().find(event => historyTurn(event, 'turn/start') === turn && historySeq(event) < endSeq)
+      const startSeq = started === undefined ? -1 : historySeq(started)
+      const hasHumanMessage = events.some(event => (
+        event.type === 'user/message'
+        && historySeq(event) > startSeq
+        && historySeq(event) < endSeq
+        && typeof event.data === 'object'
+        && event.data !== null
+        && (event.data as { readonly source?: { readonly kind?: unknown } }).source?.kind === 'user'
+      ))
+      if (!hasHumanMessage) return false
+      const text = [...events]
+        .filter(event => assistantTurn(event) === turn && historySeq(event) > startSeq && historySeq(event) < endSeq)
+        .reverse().map(assistantTextFromHistoryEvent).find(value => value !== '') ?? ''
+      if (text === '') return false
+      try { return parseAuthoringTurn(text).proposal !== null } catch { return false }
     })
-    const tail = queued.catch(() => undefined)
-    queues.set(input.sessionId, tail)
-    this.authoringContextQueue = tail
-    try {
-      await queued
-    } finally {
-      if (queues.get(input.sessionId) === tail) queues.delete(input.sessionId)
-      if (this.authoringContextQueue === tail) this.authoringContextQueue = Promise.resolve()
+    if (!recognized || this.sessions.list.getSnapshot().byId[sessionId]?.agentPreset !== 'cordis') return false
+    this.recognizedNativeAuthoringSessions.add(sessionId)
+    for (const listener of this.sessionListeners) listener()
+    return true
+  }
+
+  async resumeAuthoringSession(
+    sessionId: string,
+    fallbackDraft: Readonly<AgentAuthoringDraftContext>,
+    skills: readonly { readonly name: string }[],
+  ): Promise<Readonly<AgentAuthoringResumeSnapshot>> {
+    if (this.authoringApi === undefined) throw new Error('当前 Harness 版本未提供真实智能体创建会话')
+    const row = this.sessions.list.getSnapshot().byId[sessionId]
+    const recognized = sessionId.startsWith(AGENT_AUTHORING_SESSION_PREFIX)
+      || await this.detectCompletedAuthoringSession(sessionId)
+    if (!recognized || row?.agentPreset !== 'cordis') {
+      throw new Error('当前会话不是 PAIMind 原生智能体创建会话')
     }
+    const cached = this.authoringDrafts.get(sessionId)
+    let draft = cached?.draft ?? fallbackDraft
+    let cursor = cached?.cursor ?? -1
+    const events: Array<{ readonly type: string; readonly seq?: number; readonly data?: unknown }> = []
+    let beforeSeq: number | undefined
+    let hasMore = true
+    const deadline = Date.now() + 20_000
+    while (hasMore) {
+      const page = remoteValue((await boundedAuthoringRpc('恢复 Harness 创建会话', deadline, 8_000, async signal => (
+        await this.authoringApi!.history({
+          sessionId,
+          maxMessages: 20,
+          ...(beforeSeq === undefined ? {} : { beforeSeq }),
+        }, signal)
+      ))).result)
+      const known = new Set(events.map(event => historySeq(event)))
+      events.push(...page.events.map(entry => entry.event).filter(event => !known.has(historySeq(event))))
+      hasMore = page.hasMore
+      if (!hasMore) break
+      const earliest = events.reduce((value, event) => Math.min(value, historySeq(event)), Number.POSITIVE_INFINITY)
+      if (!Number.isFinite(earliest) || earliest < 0 || earliest === beforeSeq) break
+      beforeSeq = earliest
+    }
+    const ordered = events.sort((left, right) => historySeq(left) - historySeq(right))
+    for (const ended of ordered.filter(event => event.type === 'turn/end')) {
+      const turn = historyTurn(ended, 'turn/end')
+      const endSeq = historySeq(ended)
+      if (turn === null || endSeq < 0 || turnEndReason(ended) !== 'completed') continue
+      const text = [...ordered]
+        .filter(event => assistantTurn(event) === turn && historySeq(event) < endSeq)
+        .reverse().map(assistantTextFromHistoryEvent).find(value => value !== '') ?? ''
+      if (text !== '') {
+        const parsed = parseAuthoringTurn(text)
+        draft = mergeAuthoringDraftContext(draft, validateAuthoringProposal(parsed.proposal, skills))
+      }
+      cursor = Math.max(cursor, endSeq)
+    }
+    const checkpoint = Object.freeze({ draft, cursor })
+    this.authoringDrafts.set(sessionId, checkpoint)
+    return Object.freeze({ sessionId, ...checkpoint })
   }
 
   /**
@@ -1081,16 +1043,14 @@ export class AgentCenterRuntime {
           if (!hasHumanMessage) continue
           const reason = turnEndReason(ended)
           if (reason !== 'completed') throw new Error(`Harness cordis 创建轮次未正常完成：${turnEndFailure(ended)}`)
-          const correlatedProposal = correlatedAuthoringProposal(events, turn, startSeq, endSeq, skills)
           const text = [...events]
-            .filter(event => assistantTurn(event) === turn
-              && historySeq(event) > correlatedProposal.resultSeq
-              && historySeq(event) < endSeq)
+            .filter(event => assistantTurn(event) === turn && historySeq(event) > startSeq && historySeq(event) < endSeq)
             .reverse().map(assistantTextFromHistoryEvent).find(value => value !== '') ?? ''
           if (text === '') throw new Error('Harness cordis 已结束，但没有返回可见回复')
+          const parsed = parseAuthoringTurn(text)
           await callbacks.onTurn(Object.freeze({
-            sessionId, turn, endSeq, text,
-            proposal: correlatedProposal.proposal,
+            sessionId, turn, endSeq, text: parsed.text,
+            proposal: validateAuthoringProposal(parsed.proposal, skills),
           }))
         }
         callbacks.onIdle?.()
@@ -1132,42 +1092,38 @@ export class AgentCenterRuntime {
     })
   }
 
-  subscribeSessions(listener: () => void): () => void { return this.sessions.list.subscribe(listener) }
+  subscribeSessions(listener: () => void): () => void {
+    this.sessionListeners.add(listener)
+    return () => { this.sessionListeners.delete(listener) }
+  }
 
   currentSessionId(): string | null { return this.sessions.list.getSnapshot().current ?? null }
 
-  openSession(sessionId: string): () => void {
+  openSession(sessionId: string): void {
     if (this.sessions.list.getSnapshot().byId[sessionId] !== undefined) {
       this.sessions.open(sessionId)
-      return () => {}
+      return
     }
-    let active = true
+    let opened = false
     let dispose = (): void => {}
-    let timeout: ReturnType<typeof setTimeout> | undefined
-    const stopWaiting = (): void => {
-      if (!active) return
-      active = false
-      dispose()
-      if (timeout !== undefined) clearTimeout(timeout)
-    }
     const openWhenReady = (): void => {
-      if (!active || this.sessions.list.getSnapshot().byId[sessionId] === undefined) return
-      stopWaiting()
+      if (opened || this.sessions.list.getSnapshot().byId[sessionId] === undefined) return
+      opened = true
+      dispose()
       this.sessions.open(sessionId)
     }
     dispose = this.sessions.list.subscribe(openWhenReady)
-    timeout = setTimeout(stopWaiting, 10_000)
+    if (opened) { dispose(); return }
     openWhenReady()
-    return stopWaiting
+    setTimeout(dispose, 10_000)
   }
 
   dispose(): void {
     this.disposed = true
-    authoringTurnBusySessions.delete(this)
-    authoringContextQueues.delete(this)
-    this.authoringTurnBusy = false
-    this.authoringContextQueue = Promise.resolve()
     this.offSessions()
+    this.authoringDrafts.clear()
+    this.recognizedNativeAuthoringSessions.clear()
+    this.sessionListeners.clear()
     this.listeners.clear()
   }
 
@@ -1243,6 +1199,40 @@ export class AgentCenterRuntime {
   }
 }
 
+/**
+ * Route only canonical cordis authoring Sessions back into the existing Agent
+ * Builder surface. Harness still owns Session selection and history.
+ */
+export function installAgentAuthoringSessionNavigation(
+  runtime: AgentCenterRuntime,
+  surface: PaimindProductSurfaceController,
+): () => void {
+  let lastRoutedSessionId: string | null = null
+  let observedSessionId: string | null = null
+  let pendingSessionId: string | null = null
+  const synchronize = (): void => {
+    const current = runtime.currentSessionId()
+    if (current !== observedSessionId) {
+      observedSessionId = current
+      lastRoutedSessionId = null
+      pendingSessionId = null
+    }
+    if (current === null || current === lastRoutedSessionId || current === pendingSessionId) return
+    pendingSessionId = current
+    void runtime.detectCompletedAuthoringSession(current).then(recognized => {
+      if (pendingSessionId === current) pendingSessionId = null
+      if (!recognized || runtime.currentSessionId() !== current || lastRoutedSessionId === current) return
+      lastRoutedSessionId = current
+      surface.open()
+    }, () => {
+      if (pendingSessionId === current) pendingSessionId = null
+    })
+  }
+  const dispose = runtime.subscribeSessions(synchronize)
+  synchronize()
+  return dispose
+}
+
 type RosterState = { readonly status: 'loading'; readonly roster: null; readonly error: null }
   | { readonly status: 'ready'; readonly roster: HarnessAgentPresetRoster; readonly error: null }
   | { readonly status: 'error'; readonly roster: null; readonly error: string }
@@ -1271,6 +1261,134 @@ interface PendingDraftUpdate {
 const IDLE_BUILDER_REQUEST: PaimindAgentBuilderRequestSnapshot = Object.freeze({ revision: 0, productKind: 'personal' })
 const subscribeNever = (): (() => void) => () => {}
 const idleBuilderRequest = (): PaimindAgentBuilderRequestSnapshot => IDLE_BUILDER_REQUEST
+const AGENT_CENTER_CONVERSATION_WIDTH = '--paimind-agent-native-conversation-width'
+const AGENT_CENTER_MIN_CONVERSATION_WIDTH = 320
+const AGENT_CENTER_MAX_CONVERSATION_WIDTH = 760
+
+const AUTHORING_CONTROL_PAYLOAD = /<!--\s*PAIMIND_AGENT_DRAFT\s*\n?[\s\S]*?\s*-->/gi
+const AUTHORING_CONTROL_MARKER = /<!--\s*PAIMIND_AGENT_DRAFT/i
+
+/**
+ * Project the native authoring timeline into a business-facing conversation.
+ * Harness keeps the canonical message and execution trace; this reversible DOM
+ * projection only removes PAIMind's machine envelope and collapses authoring
+ * implementation rows while the combined Builder is active.
+ */
+function installAgentAuthoringMessageProjection(root: HTMLElement, locale: string): () => void {
+  const document = root.ownerDocument
+  const view = document.defaultView
+  if (view === null) return () => {}
+  const restoredText = new Map<Text, Readonly<{ original: string; projected: string }>>()
+  const restoredRows = new Map<HTMLElement, Readonly<{ hidden: boolean; display: string; priority: string }>>()
+  const projectionNodes = new Set<HTMLElement>()
+  let disposed = false
+  let queued = false
+
+  const project = (): void => {
+    queued = false
+    if (disposed) return
+    const selectedNativeTab = root.querySelector<HTMLElement>("[role='tab'][aria-selected='true']")
+    const showingChat = selectedNativeTab === null || selectedNativeTab.textContent?.trim() === 'Chat'
+    for (const row of root.querySelectorAll<HTMLElement>("[data-chat-flow-kind='context'], [data-variant='think']")) {
+      if (!restoredRows.has(row)) restoredRows.set(row, Object.freeze({
+        hidden: row.hasAttribute('hidden'),
+        display: row.style.getPropertyValue('display'),
+        priority: row.style.getPropertyPriority('display'),
+      }))
+      const previous = restoredRows.get(row)!
+      row.hidden = showingChat ? true : previous.hidden
+      if (showingChat) {
+        row.style.setProperty('display', 'none', 'important')
+        row.dataset.paimindAgentAuthoringTrace = 'collapsed'
+      } else {
+        if (previous.display === '') row.style.removeProperty('display')
+        else row.style.setProperty('display', previous.display, previous.priority)
+        delete row.dataset.paimindAgentAuthoringTrace
+      }
+    }
+    const walker = document.createTreeWalker(root, view.NodeFilter.SHOW_TEXT)
+    let candidate = walker.nextNode()
+    while (candidate !== null) {
+      const node = candidate as Text
+      candidate = walker.nextNode()
+      const marker = AUTHORING_CONTROL_MARKER.exec(node.data)
+      AUTHORING_CONTROL_MARKER.lastIndex = 0
+      if (marker === null) continue
+      const original = node.data
+      const complete = AUTHORING_CONTROL_PAYLOAD.test(original)
+      AUTHORING_CONTROL_PAYLOAD.lastIndex = 0
+      const projected = complete
+        ? original.replace(AUTHORING_CONTROL_PAYLOAD, '').trim()
+        : original.slice(0, marker.index).trim()
+      AUTHORING_CONTROL_PAYLOAD.lastIndex = 0
+      restoredText.set(node, Object.freeze({ original, projected }))
+      node.data = projected
+      const container = node.parentElement
+      if (!complete || container === null || container.querySelector('[data-paimind-agent-draft-projection]') !== null) continue
+      container.dataset.paimindAgentDraftMessage = 'projected'
+      const status = document.createElement('span')
+      status.dataset.paimindAgentDraftProjection = ''
+      status.setAttribute('role', 'status')
+      status.textContent = locale.startsWith('zh')
+        ? '草稿已同步到左侧，请确认后保存'
+        : 'Draft synced to the brief. Review it before saving.'
+      container.append(status)
+      projectionNodes.add(status)
+    }
+  }
+  const schedule = (): void => {
+    if (queued || disposed) return
+    queued = true
+    view.queueMicrotask(project)
+  }
+  const observer = new view.MutationObserver(schedule)
+  root.dataset.paimindAgentAuthoringProjection = ''
+  observer.observe(root, { attributes: true, attributeFilter: ['aria-selected'], childList: true, characterData: true, subtree: true })
+  project()
+  return () => {
+    disposed = true
+    observer.disconnect()
+    delete root.dataset.paimindAgentAuthoringProjection
+    for (const node of projectionNodes) node.remove()
+    for (const [row, previous] of restoredRows) {
+      if (!root.contains(row)) continue
+      row.hidden = previous.hidden
+      if (previous.display === '') row.style.removeProperty('display')
+      else row.style.setProperty('display', previous.display, previous.priority)
+      delete row.dataset.paimindAgentAuthoringTrace
+    }
+    for (const [node, value] of restoredText) {
+      if (root.contains(node) && node.data === value.projected) node.data = value.original
+      delete node.parentElement?.dataset.paimindAgentDraftMessage
+    }
+  }
+}
+
+function agentCenterSplitBounds(host: HTMLElement): Readonly<{ min: number; max: number }> {
+  const width = host.getBoundingClientRect().width
+  const minimumFormWidth = Math.min(480, Math.max(360, Math.round(width * .42)))
+  const available = Math.max(240, width - minimumFormWidth)
+  const min = Math.min(AGENT_CENTER_MIN_CONVERSATION_WIDTH, available)
+  return Object.freeze({
+    min,
+    max: Math.max(min, Math.min(AGENT_CENTER_MAX_CONVERSATION_WIDTH, available)),
+  })
+}
+
+function currentAgentCenterConversationWidth(host: HTMLElement): number {
+  const content = host.querySelector<HTMLElement>('[data-paimind-product-center-native-conversation-content]')
+  const measured = content?.getBoundingClientRect().width ?? 0
+  if (Number.isFinite(measured) && measured > 0) return measured
+  const inline = Number.parseFloat(host.style.getPropertyValue(AGENT_CENTER_CONVERSATION_WIDTH))
+  return Number.isFinite(inline) ? inline : 520
+}
+
+function setAgentCenterConversationWidth(host: HTMLElement, requested: number): number {
+  const bounds = agentCenterSplitBounds(host)
+  const width = Math.round(Math.min(bounds.max, Math.max(bounds.min, requested)))
+  host.style.setProperty(AGENT_CENTER_CONVERSATION_WIDTH, `${width}px`)
+  return width
+}
 
 function draftSignature(draft: Draft): string {
   return JSON.stringify({
@@ -1300,6 +1418,24 @@ function authoringDraftContext(draft: Draft): AgentAuthoringDraftContext {
     behavior: draft.behavior,
     instructions: draft.instructions,
     preferredSkillNames: draft.preferredSkillNames,
+  })
+}
+
+function resumedDraft(context: Readonly<AgentAuthoringDraftContext>): Draft {
+  return Object.freeze({
+    editing: null,
+    copiedFromPlatform: null,
+    productKind: context.productKind,
+    businessCategory: context.businessCategory,
+    businessCategoryId: null,
+    name: context.name,
+    description: context.description,
+    basePresetId: context.basePresetId,
+    role: context.role,
+    goal: context.goal,
+    behavior: context.behavior,
+    instructions: context.instructions,
+    preferredSkillNames: context.preferredSkillNames,
   })
 }
 
@@ -1424,7 +1560,7 @@ function privatePresetId(name: string, roster: HarnessAgentPresetRoster): string
 }
 
 export interface AgentCenterSectionProps {
-  /** Pass false only when the Center intentionally navigated to a new native Session. */
+  /** Pass false only when intentionally keeping the newly opened native Session active. */
   readonly close: (restorePreviousSession?: boolean) => void
   readonly api: HarnessAgentPresetApi
   readonly profiles: AgentProfilesRemoteNamespace
@@ -1446,6 +1582,11 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     props.builderRequests?.subscribe ?? subscribeNever,
     props.builderRequests?.getSnapshot ?? idleBuilderRequest,
     props.builderRequests?.getSnapshot ?? idleBuilderRequest,
+  )
+  const currentAuthoringSessionId = useSyncExternalStore(
+    props.runtime.subscribeSessions.bind(props.runtime),
+    props.runtime.currentAuthoringSessionId.bind(props.runtime),
+    props.runtime.currentAuthoringSessionId.bind(props.runtime),
   )
   const zh = activeLocale.startsWith('zh')
   const [tab, setTab] = useState<'platform' | 'mine'>('mine')
@@ -1479,17 +1620,107 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   const starterRef = useRef<HTMLElement>(null)
   const starterPurposeRef = useRef<HTMLTextAreaElement>(null)
   const builderTriggerRef = useRef<HTMLElement | null>(null)
+  const builderAutofocusPending = useRef(false)
   const busyRef = useRef(false)
   const draftRef = useRef<Draft | null>(null)
   const nativeTurnSourceSignature = useRef<string | null>(null)
-  const nativeTurnRunning = useRef(false)
   const contextSyncRevision = useRef(0)
   const lastPreparedSignature = useRef<string | null>(null)
+  const dismissedAuthoringSessionId = useRef<string | null>(null)
+  const resumingAuthoringSessionId = useRef<string | null>(null)
+  const splitDragCleanup = useRef<() => void>(() => {})
+  const [nativeConversationWidth, setNativeConversationWidth] = useState(520)
+  const [nativeConversationBounds, setNativeConversationBounds] = useState<Readonly<{ min: number; max: number }>>({
+    min: AGENT_CENTER_MIN_CONVERSATION_WIDTH,
+    max: AGENT_CENTER_MAX_CONVERSATION_WIDTH,
+  })
+  const [resizingNativeConversation, setResizingNativeConversation] = useState(false)
   const builderOpen = draft !== null
-  const onNativeConversationChange = props.onNativeConversationChange
 
   useEffect(() => { busyRef.current = busy }, [busy])
   useEffect(() => { draftRef.current = draft }, [draft])
+  useEffect(() => () => { splitDragCleanup.current() }, [])
+
+  useLayoutEffect(() => {
+    if (!builderOpen || builderRef.current === null) return
+    const host = builderRef.current.closest<HTMLElement>('[data-paimind-product-center-host]')
+    if (host === null) return
+    const previousWidth = host.style.getPropertyValue(AGENT_CENTER_CONVERSATION_WIDTH)
+    const previousPriority = host.style.getPropertyPriority(AGENT_CENTER_CONVERSATION_WIDTH)
+    let observer: ResizeObserver | null = null
+    const update = (): void => {
+      const nativeContent = host.querySelector<HTMLElement>('[data-paimind-product-center-native-conversation-content]')
+      if (nativeContent !== null) observer?.observe(nativeContent)
+      setNativeConversationBounds(agentCenterSplitBounds(host))
+      setNativeConversationWidth(Math.round(currentAgentCenterConversationWidth(host)))
+    }
+    const ResizeObserverConstructor = host.ownerDocument.defaultView?.ResizeObserver
+    observer = ResizeObserverConstructor === undefined ? null : new ResizeObserverConstructor(update)
+    observer?.observe(host)
+    const MutationObserverConstructor = host.ownerDocument.defaultView?.MutationObserver
+    const mutationObserver = MutationObserverConstructor === undefined ? null : new MutationObserverConstructor(update)
+    mutationObserver?.observe(host, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: [
+        'data-paimind-product-center-native-conversation',
+        'data-paimind-product-center-native-conversation-content',
+      ],
+    })
+    update()
+    return () => {
+      observer?.disconnect()
+      mutationObserver?.disconnect()
+      splitDragCleanup.current()
+      setResizingNativeConversation(false)
+      if (previousWidth === '') host.style.removeProperty(AGENT_CENTER_CONVERSATION_WIDTH)
+      else host.style.setProperty(AGENT_CENTER_CONVERSATION_WIDTH, previousWidth, previousPriority)
+    }
+  }, [builderOpen])
+
+  const resizeNativeConversation = (handle: HTMLElement, requested: number): void => {
+    const host = handle.closest<HTMLElement>('[data-paimind-product-center-host]')
+    if (host === null) return
+    setNativeConversationBounds(agentCenterSplitBounds(host))
+    setNativeConversationWidth(setAgentCenterConversationWidth(host, requested))
+  }
+  const startNativeConversationResize = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (event.button !== 0) return
+    const handle = event.currentTarget
+    const host = handle.closest<HTMLElement>('[data-paimind-product-center-host]')
+    const view = handle.ownerDocument.defaultView
+    if (host === null || view === null) return
+    event.preventDefault()
+    splitDragCleanup.current()
+    const startX = event.clientX
+    const startWidth = currentAgentCenterConversationWidth(host)
+    setResizingNativeConversation(true)
+    const move = (moveEvent: PointerEvent): void => {
+      setNativeConversationWidth(setAgentCenterConversationWidth(host, startWidth + startX - moveEvent.clientX))
+    }
+    const finish = (): void => {
+      view.removeEventListener('pointermove', move)
+      view.removeEventListener('pointerup', finish)
+      view.removeEventListener('pointercancel', finish)
+      splitDragCleanup.current = () => {}
+      setResizingNativeConversation(false)
+    }
+    splitDragCleanup.current = finish
+    view.addEventListener('pointermove', move)
+    view.addEventListener('pointerup', finish)
+    view.addEventListener('pointercancel', finish)
+  }
+  const handleNativeConversationResizeKey = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+    const step = event.shiftKey ? 64 : 24
+    let requested: number | null = null
+    if (event.key === 'ArrowLeft') requested = nativeConversationWidth + step
+    else if (event.key === 'ArrowRight') requested = nativeConversationWidth - step
+    else if (event.key === 'Home') requested = AGENT_CENTER_MIN_CONVERSATION_WIDTH
+    else if (event.key === 'End') requested = AGENT_CENTER_MAX_CONVERSATION_WIDTH
+    if (requested === null) return
+    event.preventDefault()
+    resizeNativeConversation(event.currentTarget, requested)
+  }
 
   useEffect(() => {
     if (starterDraft === null) return
@@ -1497,12 +1728,9 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     const dialog = starterRef.current
     if (dialog === null) return
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') {
-        event.preventDefault(); event.stopPropagation()
-        if (!busyRef.current) {
-          setStarterDraft(null)
-          window.setTimeout(() => { builderTriggerRef.current?.focus() }, 0)
-        }
+      if (event.key === 'Escape' && !busyRef.current) {
+        event.preventDefault(); event.stopPropagation(); setStarterDraft(null)
+        window.setTimeout(() => { builderTriggerRef.current?.focus() }, 0)
         return
       }
       if (event.key !== 'Tab') return
@@ -1522,27 +1750,36 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     if (builder === null) return
     const center = builder.closest<HTMLElement>('[data-paimind-agent-center]')
     if (center !== null) center.scrollTop = 0
+    if (builderAutofocusPending.current && !busy) {
+      builder.querySelector<HTMLElement>('[data-paimind-builder-autofocus]')?.focus({ preventScroll: true })
+      builderAutofocusPending.current = false
+    }
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape' || event.defaultPrevented) return
-      event.preventDefault()
-      event.stopImmediatePropagation()
-      if (!busyRef.current) {
+      if (event.key === 'Escape' && !busyRef.current) {
+        event.preventDefault()
+        event.stopPropagation()
+        dismissedAuthoringSessionId.current = authoringSessionId
+        // Returning from the Builder is a browse intent. The product surface
+        // may now restore the Session that was active before the Center
+        // opened; if that Session is an older cordis history row, suppress its
+        // automatic Builder resume until the user explicitly selects it.
+        props.runtime.beginAgentCenterBrowse()
+        setError(null)
         setDraft(null)
         window.setTimeout(() => { builderTriggerRef.current?.focus() }, 0)
       }
     }
-    builder.ownerDocument.addEventListener('keydown', onKeyDown)
-    return () => { builder.ownerDocument.removeEventListener('keydown', onKeyDown) }
-  }, [builderOpen])
+    builder.addEventListener('keydown', onKeyDown)
+    return () => { builder.removeEventListener('keydown', onKeyDown) }
+  }, [authoringSessionId, builderOpen, busy, props.runtime])
 
   const openBuilder = (nextDraft: Draft, preserveTrigger = false): void => {
     if (!preserveTrigger) builderTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    builderAutofocusPending.current = true
     setError(null)
     setAuthoringSessionId(null)
     setAuthoringCursor(null)
     setAuthoringContextReady(false)
-    nativeTurnRunning.current = false
-    nativeTurnSourceSignature.current = null
     lastPreparedSignature.current = null
     setAuthoringStatus('idle')
     setBuilderTab('configure')
@@ -1571,7 +1808,6 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     setAuthoringStatus('running')
     setAuthoringContextReady(false)
     setBusy(true)
-    let retainedSessionId = sessionId
     try {
       const result = await props.runtime.author({
         sessionId,
@@ -1580,12 +1816,15 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
         skills: installedSkills.map(skill => ({ name: skill.name, description: skill.description })),
         locale: activeLocale,
         onSessionCreated: createdSessionId => {
-          retainedSessionId = createdSessionId
           setAuthoringSessionId(createdSessionId)
           setAuthoringContextReady(false)
+          // Creating from the Center is now an explicit authoring intent. End
+          // browse suppression immediately so the native question card,
+          // message projection, and history row stay attached to this exact
+          // Harness Session while its first Turn is still running.
+          props.runtime.resumeSelectedAuthoringSession()
         },
         onSessionInvalidated: () => {
-          retainedSessionId = null
           setAuthoringSessionId(null)
           setAuthoringCursor(null)
           setAuthoringContextReady(false)
@@ -1613,9 +1852,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     } catch (cause) {
       setAuthoringStatus('error')
       setAuthoringContextReady(false)
-      setError(zh
-        ? `真实创建助手调用失败：${messageOf(cause)}${retainedSessionId === null ? '' : '。已创建的 Harness 会话仍显示在右侧，草稿没有丢失。'}`
-        : `Real creation assistant failed: ${messageOf(cause)}${retainedSessionId === null ? '' : '. The created Harness Session remains visible on the right and the draft is preserved.'}`)
+      setError(zh ? `真实创建助手调用失败：${messageOf(cause)}` : `Real creation assistant failed: ${messageOf(cause)}`)
     } finally { busyRef.current = false; setBusy(false) }
   }
   const continueStarter = (): void => {
@@ -1625,7 +1862,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
       return
     }
     const purpose = starterDraft.description.trim()
-    if (purpose === '') { setError(zh ? '请先描述这个智能体要完成什么。' : 'Describe what this Agent should accomplish.'); return }
+    if (purpose === '') { setError(zh ? '请用一句话描述你想创建的智能体。' : 'Describe the Agent you want in one sentence.'); return }
     const nextDraft = { ...starterDraft, name: starterDraft.name.trim(), description: purpose }
     setStarterDraft(null)
     openBuilder(nextDraft, true)
@@ -1633,6 +1870,9 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   }
   const closeBuilder = (): void => {
     if (busyRef.current) return
+    dismissedAuthoringSessionId.current = authoringSessionId
+    props.runtime.beginAgentCenterBrowse()
+    setError(null)
     setDraft(null)
     setPendingUpdate(null)
     window.setTimeout(() => { builderTriggerRef.current?.focus() }, 0)
@@ -1687,9 +1927,54 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   const mine = useMemo(() => personalProfiles.filter(row => `${row.name} ${row.description} ${row.role} ${row.goal}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())), [personalProfiles, query])
   const templates = roster.status === 'ready' ? roster.roster.presets.filter(row => row.broken === undefined && row.trust === 'system' && metadataForPreset(row).kind === 'platform-mode' && row.id !== 'cordis') : []
   const creatorPreset = roster.status === 'ready' ? roster.roster.presets.find(row => row.id === 'cordis' && row.trust === 'system') : undefined
+  useEffect(() => {
+    if (currentAuthoringSessionId === null) {
+      dismissedAuthoringSessionId.current = null
+      return
+    }
+    if (dismissedAuthoringSessionId.current !== null && dismissedAuthoringSessionId.current !== currentAuthoringSessionId) {
+      dismissedAuthoringSessionId.current = null
+    }
+    if (dismissedAuthoringSessionId.current === currentAuthoringSessionId
+      || (draftRef.current !== null && authoringSessionId === currentAuthoringSessionId)
+      || resumingAuthoringSessionId.current === currentAuthoringSessionId
+      || roster.status !== 'ready'
+      || templates.length === 0) return
+    let active = true
+    const fallback = emptyDraft(templates[0]!.id)
+    resumingAuthoringSessionId.current = currentAuthoringSessionId
+    setBusy(true)
+    setError(null)
+    void props.runtime.resumeAuthoringSession(
+      currentAuthoringSessionId,
+      authoringDraftContext(fallback),
+      installedSkills.map(skill => ({ name: skill.name })),
+    ).then(snapshot => {
+      if (!active || props.runtime.currentAuthoringSessionId() !== currentAuthoringSessionId) return
+      setStarterDraft(null)
+      openBuilder(resumedDraft(snapshot.draft), true)
+      setAuthoringSessionId(snapshot.sessionId)
+      setAuthoringCursor(snapshot.cursor)
+      setAuthoringContextReady(false)
+      setAuthoringStatus(props.runtime.sessionState(snapshot.sessionId).running ? 'running' : 'idle')
+    }, cause => {
+      if (!active) return
+      console.error('[paimind-agent-market] failed to resume native authoring Session', cause)
+      props.close(false)
+    }).finally(() => {
+      if (resumingAuthoringSessionId.current === currentAuthoringSessionId) resumingAuthoringSessionId.current = null
+      if (active) setBusy(false)
+    })
+    return () => { active = false }
+  }, [authoringSessionId, currentAuthoringSessionId, installedSkills, props, roster.status])
   const currentSignature = draft === null ? null : draftSignature(draft)
   const draftDirty = draft !== null && currentSignature !== savedSignature
   const canTestDraft = draft !== null && !draftDirty && savedProfile !== null
+  useEffect(() => {
+    if (!draftDirty) return
+    setTestSessionId(null)
+    setTestStatus('idle')
+  }, [draftDirty])
   const skillCategoryCounts = useMemo(() => Object.fromEntries(SKILL_PRODUCT_CATEGORIES.map(category => [category, category === 'all'
     ? installedSkills.length
     : installedSkills.filter(skill => metadataForSkill(skill).category === category).length])) as Record<SkillProductCategoryFilter, number>, [installedSkills])
@@ -1728,53 +2013,6 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   }, [businessCategories, installedSkills, zh])
 
   useEffect(() => {
-    const sourceDraft = draftRef.current
-    if (!builderOpen || builderTab !== 'configure' || sourceDraft === null
-      || authoringSessionId !== null || authoringStatus !== 'idle') return
-    let active = true
-    const sourceSignature = draftSignature(sourceDraft)
-    busyRef.current = true
-    setBusy(true)
-    setError(null)
-    setAuthoringStatus('running')
-    setAuthoringContextReady(false)
-    const previousSessionId = props.runtime.currentSessionId()
-    let projectedSession = false
-    const stopProjectingSession = props.runtime.subscribeSessions(() => {
-      if (!active || projectedSession) return
-      const currentSessionId = props.runtime.currentSessionId()
-      if (currentSessionId === null || currentSessionId === previousSessionId
-        || !currentSessionId.startsWith(AGENT_AUTHORING_SESSION_PREFIX)) return
-      projectedSession = true
-      setAuthoringSessionId(currentSessionId)
-    })
-    void props.runtime.beginAuthoring({
-      draft: authoringDraftContext(sourceDraft),
-      skills: installedSkills.map(skill => ({ name: skill.name, description: skill.description })),
-      locale: activeLocale,
-    }).then(result => {
-      if (!active) return
-      setAuthoringSessionId(result.sessionId)
-      setAuthoringCursor(result.endSeq)
-      const current = draftRef.current
-      const unchanged = current !== null && draftSignature(current) === sourceSignature
-      lastPreparedSignature.current = unchanged ? sourceSignature : null
-      setAuthoringContextReady(unchanged)
-      setAuthoringStatus('idle')
-      busyRef.current = false
-      setBusy(false)
-    }, cause => {
-      if (!active) return
-      setAuthoringStatus('error')
-      setAuthoringContextReady(false)
-      setError(zh ? `真实配置会话创建失败：${messageOf(cause)}` : `Could not create the native configuration conversation: ${messageOf(cause)}`)
-      busyRef.current = false
-      setBusy(false)
-    })
-    return () => { active = false; stopProjectingSession() }
-  }, [activeLocale, builderOpen, builderTab, installedSkills, props.runtime, zh])
-
-  useEffect(() => {
     if (!builderOpen || builderTab !== 'configure' || authoringSessionId === null || authoringCursor === null) return
     return props.runtime.watchAuthoringSession(
       authoringSessionId,
@@ -1782,14 +2020,10 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
       installedSkills.map(skill => ({ name: skill.name })),
       {
         onRunning: () => {
-          if (!nativeTurnRunning.current) {
-            const current = draftRef.current
-            nativeTurnSourceSignature.current = current === null ? null : draftSignature(current)
-            nativeTurnRunning.current = true
-          }
+          const current = draftRef.current
+          nativeTurnSourceSignature.current = current === null ? null : draftSignature(current)
           busyRef.current = true
           setBusy(true)
-          setError(null)
           setAuthoringStatus('running')
           setAuthoringContextReady(false)
         },
@@ -1797,19 +2031,13 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
           const current = draftRef.current
           const sourceSignature = nativeTurnSourceSignature.current ?? (current === null ? '' : draftSignature(current))
           applyNativeAuthoringResult(result, sourceSignature)
-          nativeTurnRunning.current = false
-          nativeTurnSourceSignature.current = null
         },
         onIdle: () => {
-          nativeTurnRunning.current = false
-          nativeTurnSourceSignature.current = null
           busyRef.current = false
           setBusy(false)
           setAuthoringStatus('idle')
         },
         onError: cause => {
-          nativeTurnRunning.current = false
-          nativeTurnSourceSignature.current = null
           busyRef.current = false
           setBusy(false)
           setAuthoringStatus('error')
@@ -1846,25 +2074,28 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
 
   useEffect(() => {
     if (!builderOpen) {
-      onNativeConversationChange?.({ sessionId: null, interactive: false })
+      props.onNativeConversationChange?.({ sessionId: null, interactive: false })
       return
     }
     if (builderTab === 'configure') {
-      onNativeConversationChange?.({
+      props.onNativeConversationChange?.({
         sessionId: authoringSessionId,
-        interactive: !busy && authoringSessionId !== null && authoringStatus === 'idle' && pendingUpdate === null && authoringContextReady,
+        // Harness may render its required question card while the authoring
+        // Turn is running. Inerting the whole native conversation also inerts
+        // that answer control, so Harness must own its interaction state here.
+        interactive: authoringSessionId !== null && pendingUpdate === null,
       })
       return
     }
-    onNativeConversationChange?.({
+    props.onNativeConversationChange?.({
       sessionId: canTestDraft ? testSessionId : null,
-      interactive: !busy && canTestDraft && testSessionId !== null && testStatus === 'ready',
+      interactive: canTestDraft && testSessionId !== null && testStatus === 'ready',
     })
-  }, [authoringContextReady, authoringSessionId, authoringStatus, builderOpen, builderTab, busy, canTestDraft, onNativeConversationChange, pendingUpdate, testSessionId, testStatus])
+  }, [authoringContextReady, authoringSessionId, authoringStatus, builderOpen, builderTab, canTestDraft, pendingUpdate, props, testSessionId, testStatus])
 
   useEffect(() => () => {
-    onNativeConversationChange?.({ sessionId: null, interactive: false })
-  }, [onNativeConversationChange])
+    props.onNativeConversationChange?.({ sessionId: null, interactive: false })
+  }, [props.onNativeConversationChange])
 
   useEffect(() => {
     if (builderRequest.revision === 0 || builderRequest.revision <= handledBuilderRequest.current || templates.length === 0) return
@@ -1879,18 +2110,16 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   }, [builderRequest, templates])
 
   const start = async (preset: HarnessAgentPresetEntry, profile?: AgentBusinessProfile): Promise<void> => {
-    if (preset.broken !== undefined || busyRef.current) return
-    busyRef.current = true
+    if (preset.broken !== undefined || busy) return
     setBusy(true); setError(null)
-    try { await props.runtime.start(preset.id, profile); props.close(false) } catch (cause) { setError(messageOf(cause)) } finally { busyRef.current = false; setBusy(false) }
+    try { await props.runtime.start(preset.id, profile); props.close(false) } catch (cause) { setError(messageOf(cause)) } finally { setBusy(false) }
   }
   const save = async (): Promise<void> => {
-    if (draft === null || roster.status !== 'ready' || busyRef.current) return
+    if (draft === null || roster.status !== 'ready' || busy) return
     if (pendingUpdate !== null) { setError(zh ? '请先保留或撤销创建助手的待确认更新。' : 'Keep or undo the pending creation-assistant update before saving.'); return }
     if (!roster.roster.authorable) { setError(zh ? '当前 Harness 环境未开放智能体创建权限。' : 'This Harness deployment does not allow Agent authoring.'); return }
     if (draft.name.trim() === '' || draft.role.trim() === '' || draft.goal.trim() === '' || draft.behavior.trim() === '') { setError(zh ? '请填写名称、角色、目标和行为规范。' : 'Complete name, role, goal, and behavior.'); return }
     if (draft.productKind === 'business' && draft.businessCategory.trim() === '') { setError(zh ? '请填写业务分类。' : 'Choose or create a business category.'); return }
-    busyRef.current = true
     setBusy(true); setError(null)
     let createdPreset: string | null = null
     let committed = false
@@ -1918,8 +2147,6 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
       setDraft(savedDraft)
       setSavedProfile(profile)
       setSavedSignature(draftSignature(savedDraft))
-      setTestSessionId(null)
-      setTestStatus('idle')
       setPendingUpdate(null)
       setRevision(value => value + 1)
       if (draft.productKind === 'business') { setTab('platform'); setPlatformView('business') } else setTab('mine')
@@ -1936,7 +2163,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     } catch (cause) {
       if (!committed && createdPreset !== null) await props.api.remove({ agentPreset: createdPreset }).catch(() => undefined)
       setError(messageOf(cause))
-    } finally { busyRef.current = false; setBusy(false) }
+    } finally { setBusy(false) }
   }
   const remove = async (profile: AgentBusinessProfile): Promise<void> => {
     if (!window.confirm(zh ? `删除“${profile.name}”？已有对话会保留历史记录。` : `Delete “${profile.name}”? Existing conversations keep their history.`)) return
@@ -1996,20 +2223,22 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   const nativeConversationStatus = builderTab === 'configure'
     ? authoringStatus === 'error'
       ? { tone: 'error', title: zh ? '原生配置对话连接失败' : 'Native configuration conversation failed', detail: zh ? '说明书草稿仍保留；返回中心后重新进入即可重试。' : 'The brief is preserved. Return to the Center and reopen it to retry.' }
-      : authoringSessionId === null || authoringStatus === 'running'
-        ? { tone: 'busy', title: zh ? '正在连接 Harness 原生配置对话' : 'Connecting the native Harness configuration conversation', detail: zh ? '右侧会直接显示主对话的消息与输入区，不创建第二套聊天界面。' : 'The native message timeline and composer will appear on the right; no second chat UI is created.' }
-        : pendingUpdate !== null
-          ? { tone: 'warning', title: zh ? '请先确认本轮建议' : 'Confirm this proposal first', detail: zh ? '保留或撤销说明书更新后，右侧原生输入区会继续可用。' : 'Keep or undo the brief update to re-enable the native composer.' }
+      : authoringSessionId === null
+        ? { tone: 'busy', title: zh ? '正在连接 Harness 原生配置对话' : 'Connecting the native Harness configuration conversation', detail: zh ? '主对话的消息、流式回复和输入区会显示在右侧。' : 'The native message timeline, streaming replies, and composer appear on the right.' }
+        : authoringStatus === 'running'
+          ? { tone: 'busy', title: zh ? '创建助手正在原生对话中处理' : 'Creation assistant is working in the native conversation', detail: zh ? '如出现原生提问卡，请直接回答；Harness 会在同一轮继续创建。' : 'Answer any native question card directly; Harness will continue the same Turn.' }
+          : pendingUpdate !== null
+          ? { tone: 'warning', title: zh ? '请先确认本轮建议' : 'Confirm this proposal first', detail: zh ? '保留或撤销说明书更新后，原生输入区会继续可用。' : 'Keep or undo the brief update to re-enable the native composer.' }
           : !authoringContextReady
-            ? { tone: 'busy', title: zh ? '正在同步说明书上下文' : 'Syncing the brief context', detail: zh ? '同步完成后可直接在右侧主对话继续调整。' : 'Continue in the native conversation after synchronization completes.' }
-            : { tone: 'ready', title: zh ? '右侧是 Harness 原生配置对话' : 'Harness native configuration conversation is on the right', detail: zh ? '消息历史、流式回复和输入区全部由主对话原生组件提供。' : 'The native Conversation owns history, streaming replies, and the composer.' }
+            ? { tone: 'busy', title: zh ? '正在同步说明书上下文' : 'Syncing the brief context', detail: zh ? '同步完成后可直接在主对话继续调整。' : 'Continue in the native conversation after synchronization completes.' }
+            : { tone: 'ready', title: zh ? 'Harness 原生配置对话已连接' : 'Harness native configuration conversation connected', detail: zh ? 'Harness 是消息历史、流式回复和输入区的唯一所有者。' : 'Harness exclusively owns history, streaming replies, and the composer.' }
     : !canTestDraft
-      ? { tone: 'warning', title: zh ? '请先保存智能体配置' : 'Save the Agent configuration first', detail: zh ? '测试对话只运行已保存的同一个 Agent Preset，不会为未保存草稿创建副本。' : 'Test Chat runs the same saved Agent Preset; it never copies an unsaved draft.' }
+      ? { tone: 'warning', title: zh ? '请先保存智能体配置' : 'Save the Agent configuration first', detail: zh ? '测试对话只运行已保存的同一个 Agent Preset。' : 'Test Chat runs the exact saved Agent Preset.' }
       : testStatus === 'error'
         ? { tone: 'error', title: zh ? '原生测试对话创建失败' : 'Native test conversation failed', detail: zh ? '已保存配置保持不变；重新进入测试页即可重试。' : 'The saved configuration is unchanged. Reopen Test Chat to retry.' }
         : testSessionId === null || testStatus === 'starting'
-          ? { tone: 'busy', title: zh ? '正在创建 Harness 原生测试对话' : 'Creating a native Harness test conversation', detail: zh ? '右侧就绪后，请使用主对话输入区直接测试。' : 'When the right side is ready, test directly in the native composer.' }
-          : { tone: 'ready', title: zh ? '右侧是 Harness 原生测试对话' : 'Harness native test conversation is on the right', detail: zh ? '它运行刚刚保存的同一个 Agent Preset。' : 'It runs the exact Agent Preset revision you just saved.' }
+          ? { tone: 'busy', title: zh ? '正在创建 Harness 原生测试对话' : 'Creating a native Harness test conversation', detail: zh ? '就绪后请直接使用主对话输入区测试。' : 'When ready, test directly in the native composer.' }
+          : { tone: 'ready', title: zh ? 'Harness 原生测试对话已连接' : 'Harness native test conversation connected', detail: zh ? '它运行刚刚保存的同一个 Agent Preset。' : 'It runs the exact Agent Preset revision you saved.' }
 
   const managedProfileCard = (profile: AgentBusinessProfile): React.JSX.Element => {
     const preset = roster.status === 'ready' ? roster.roster.presets.find(row => row.id === profile.presetId) : undefined
@@ -2019,23 +2248,27 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     const business = profile.productKind === 'business'
     return <li key={profile.agentId} data-paimind-agent-card data-paimind-agent-id={profile.agentId} data-broken={broken} data-product-kind={business ? 'business' : 'personal'}>
       <div data-paimind-agent-card-head><span data-paimind-agent-card-icon data-paimind-agent-avatar-seat="" data-paimind-agent-id={profile.agentId} data-paimind-agent-avatar-kind={business ? 'business' : 'personal'} role="img" aria-label={zh ? `${profile.name} 头像` : `${profile.name} avatar`}><span data-paimind-agent-avatar-fallback="" aria-hidden="true">{business ? <PaimindAgentIcon size={23} /> : <PaimindUserIcon size={23} />}</span></span><div data-paimind-agent-card-title><h3>{profile.name}</h3><span data-paimind-agent-card-kicker>{business ? (zh ? '业务智能体 · 本地维护' : 'Business Agent · Locally managed') : (zh ? '个人智能体' : 'Personal Agent')}</span></div></div>
-      <div data-paimind-agent-badges>{business && <span data-paimind-agent-badge data-category="true">{profile.businessCategory}</span>}<span data-paimind-agent-badge>{modeLabel(runtimeMode, zh)}</span><span data-paimind-agent-badge>{zh ? `第 ${profile.revision} 版` : `Revision ${profile.revision}`}</span>{preset?.isDefault === true && <span data-paimind-agent-badge data-success="true">{zh ? '默认' : 'Default'}</span>}{broken && <span data-paimind-agent-badge>{zh ? '需修复' : 'Needs repair'}</span>}</div>
+      <div data-paimind-agent-badges><span data-paimind-agent-badge data-category="true">{business ? profile.businessCategory : (zh ? '个人' : 'Personal')}</span><span data-paimind-agent-badge>{modeLabel(runtimeMode, zh)}</span><span data-paimind-agent-badge>{zh ? `第 ${profile.revision} 版` : `Revision ${profile.revision}`}</span>{preset?.isDefault === true && <span data-paimind-agent-badge data-success="true">{zh ? '默认' : 'Default'}</span>}{broken && <span data-paimind-agent-badge>{zh ? '需修复' : 'Needs repair'}</span>}</div>
       <p>{profile.description || profile.role}</p>
-      <div data-paimind-agent-card-context><span><PaimindSkillIcon size={13} />{profile.preferredSkillNames.length === 0 ? (zh ? '未封装会话技能' : 'No packaged session Skills') : (zh ? `${profile.preferredSkillNames.length} 个会话技能` : `${profile.preferredSkillNames.length} session Skills`)}</span></div>
+      <div data-paimind-agent-card-context><span><PaimindSkillIcon size={13} />{profile.preferredSkillNames.length === 0 ? (zh ? '未封装会话技能' : 'No packaged session Skills') : (zh ? `${profile.preferredSkillNames.length} 个会话技能` : `${profile.preferredSkillNames.length} session Skills`)}</span><span>{zh ? 'Harness 原生预设' : 'Native Harness Preset'}</span></div>
       {broken && <p role="alert" data-paimind-agent-card-alert>{zh ? '原生预设缺失或损坏，请编辑或前往高级配置修复。' : 'The native Preset is missing or damaged. Edit it or repair it in advanced configuration.'}</p>}
-      <div data-paimind-agent-actions><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || broken} onClick={() => { if (preset !== undefined) void start(preset, profile) }}><PaimindNewConversationIcon size={14} />{zh ? '开始对话' : 'Start conversation'}</button><button type="button" data-paimind-agent-button disabled={busy} onClick={() => { setSkillQuery(''); setSkillCategory('all'); setSelectedSkillsOnly(false); openBuilder(editDraft(profile)) }}><PaimindEditIcon size={14} />{zh ? '编辑' : 'Edit'}</button>{preset?.isDefault !== true && <button type="button" data-paimind-agent-button data-quiet="true" data-icon-only="true" aria-label={zh ? `将 ${profile.name} 设为默认` : `Set ${profile.name} as default`} title={zh ? '设为默认' : 'Set default'} disabled={busy} onClick={() => { void setDefault(profile) }}><PaimindCheckIcon size={14} /></button>}<button type="button" data-paimind-agent-button data-danger="true" data-icon-only="true" aria-label={`${zh ? '删除' : 'Delete'} ${profile.name}`} title={zh ? '删除' : 'Delete'} disabled={busy} onClick={() => { void remove(profile) }}><PaimindTrashIcon size={14} /></button></div>
+      <div data-paimind-agent-actions><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || broken} onClick={() => { if (preset !== undefined) void start(preset, profile) }}><PaimindNewConversationIcon size={14} />{zh ? '开始对话' : 'Start conversation'}</button><button type="button" data-paimind-agent-button disabled={busy} onClick={() => { setSkillQuery(''); setSkillCategory('all'); setSelectedSkillsOnly(false); openBuilder(editDraft(profile)) }}><PaimindEditIcon size={14} />{zh ? '编辑' : 'Edit'}</button><button type="button" data-paimind-agent-button data-quiet="true" disabled={busy || preset?.isDefault === true} onClick={() => { void setDefault(profile) }}>{zh ? '设为默认' : 'Set default'}</button><button type="button" data-paimind-agent-button data-danger="true" data-icon-only="true" aria-label={`${zh ? '删除' : 'Delete'} ${profile.name}`} disabled={busy} onClick={() => { void remove(profile) }}><PaimindTrashIcon size={14} /></button></div>
     </li>
   }
 
-  return <section data-paimind-agent-center aria-label={zh ? '智能体中心' : 'Agent Center'} aria-busy={busy}>
+  return <section data-paimind-agent-center data-builder-open={builderOpen} aria-label={zh ? '智能体中心' : 'Agent Center'} aria-busy={busy}>
     <header data-paimind-agent-hero>
       <div>
         <p data-paimind-agent-eyebrow><PaimindAgentIcon size={15} />{zh ? '真实 Harness 智能体' : 'Live Harness Agents'}</p>
         <h1 id="paimind-agent-center-title" tabIndex={-1} data-paimind-product-initial-focus>{zh ? '智能体中心' : 'Agent Center'}</h1>
-        <p data-paimind-agent-hero-copy>{zh ? '选择适合当前任务的智能体，然后直接开始对话。' : 'Choose the right Agent for the task, then start a conversation.'}</p>
+        <p data-paimind-agent-hero-copy>{zh ? '选择一个智能体、创建自己的智能体，或直接开始真实对话。' : 'Choose an Agent, create your own, or start a real conversation.'}</p>
       </div>
       <div data-paimind-agent-hero-actions>
         <div data-paimind-agent-search-row><div data-paimind-agent-search-wrap><span data-paimind-agent-search-icon><PaimindSearchIcon size={17} /></span><input data-paimind-agent-search type="search" aria-label={zh ? '搜索智能体' : 'Search Agents'} placeholder={zh ? '搜索名称、说明、角色或目标' : 'Search names, descriptions, roles, or goals'} value={query} onChange={event => { setQuery(event.currentTarget.value) }} /></div><button type="button" data-paimind-agent-button data-icon-only="true" aria-label={zh ? '返回对话' : 'Back to conversation'} onClick={() => { props.close() }}><PaimindCloseIcon size={16} /></button></div>
+        <div data-paimind-agent-hero-buttons>
+          <button type="button" data-paimind-agent-button onClick={openAdvanced}><PaimindSettingsIcon size={15} />{zh ? '高级配置' : 'Advanced configuration'}</button>
+          <button type="button" data-paimind-agent-button data-primary="true" onClick={primaryCreateBusiness ? createBusinessAgent : createPersonalAgent} disabled={busy || templates.length === 0}><PaimindPlusIcon size={15} />{primaryCreateBusiness ? (zh ? '创建业务智能体' : 'Create Business Agent') : (zh ? '创建个人智能体' : 'Create Personal Agent')}</button>
+        </div>
       </div>
     </header>
 
@@ -2046,48 +2279,49 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
         <button role="tab" type="button" data-paimind-agent-tab aria-label={zh ? '我的智能体' : 'My Agents'} aria-selected={tab === 'mine'} onClick={() => { setTab('mine'); setQuery('') }}><PaimindUserIcon size={16} />{zh ? '我的智能体' : 'My Agents'}<span data-paimind-agent-count>{personalProfiles.length}</span></button>
       </div>
       {tab === 'platform' && platformView === 'business' && businessCategories.length > 0 && <label data-paimind-agent-business-filter>{zh ? '业务分类' : 'Business category'}<select aria-label={zh ? '业务分类' : 'Business category'} value={businessCategory} onChange={event => { setBusinessCategory(event.currentTarget.value) }}><option value="all">{zh ? '全部业务分类' : 'All business categories'}</option>{businessCategories.map(category => <option key={category.id} value={category.id}>{businessCategoryLabel(category, zh)} · {category.count}</option>)}</select></label>}
-      <div data-paimind-agent-hero-buttons>
-        <button type="button" data-paimind-agent-button data-quiet="true" onClick={openAdvanced}><PaimindSettingsIcon size={15} />{zh ? '高级配置' : 'Advanced configuration'}</button>
-        <button type="button" data-paimind-agent-button data-primary="true" onClick={primaryCreateBusiness ? createBusinessAgent : createPersonalAgent} disabled={busy || templates.length === 0}><PaimindPlusIcon size={15} />{primaryCreateBusiness ? (zh ? '创建业务智能体' : 'Create Business Agent') : (zh ? '创建个人智能体' : 'Create Personal Agent')}</button>
-      </div>
     </div>
 
     {(runtimeState.notice !== null || runtimeState.error !== null) && <p data-paimind-agent-note role="status">{runtimeState.error ?? runtimeState.notice}</p>}
     {error !== null && <p role="alert" data-paimind-agent-error>{error}</p>}
-    <div data-paimind-agent-section-head><div><h2 data-paimind-agent-visually-hidden>{tab === 'platform' ? (platformView === 'modes' ? (zh ? '选择工作模式' : 'Choose a working mode') : (zh ? '业务智能体' : 'Business Agents')) : (zh ? '我的智能体' : 'My Agents')}</h2><p>{tab === 'mine' ? (zh ? '为高频任务保存稳定角色、目标和会话技能。' : 'Save stable roles, goals, and session Skills for recurring work.') : platformView === 'business' ? (zh ? '按业务场景选择官方或本地维护的智能体。' : 'Choose an official or locally maintained Agent for a business scenario.') : (zh ? '平台模式决定对话的基础运行方式。' : 'Platform modes define the base conversation runtime.')}</p></div><div data-paimind-agent-section-actions><span data-paimind-agent-result-count aria-live="polite">{zh ? `${visibleCount} 个结果` : `${visibleCount} results`}</span></div></div>
+    <div data-paimind-agent-section-head><div><h2>{tab === 'platform' ? (platformView === 'modes' ? (zh ? '选择工作模式' : 'Choose a working mode') : (zh ? '业务智能体' : 'Business Agents')) : (zh ? '我的智能体' : 'My Agents')}</h2><p>{tab === 'mine' ? (zh ? '为自己的高频任务配置稳定角色、目标和会话技能。' : 'Configure stable roles, goals, and session Skills for your recurring work.') : platformView === 'business' ? (zh ? '按业务场景选择官方或本地维护的智能体。' : 'Choose an official or locally maintained Agent for a business scenario.') : (zh ? '平台模式决定对话的基础运行方式，可直接使用，也可复制为自己的智能体。' : 'Platform modes define the base runtime. Start directly or copy one into your own Agent.')}</p></div><div data-paimind-agent-section-actions><span data-paimind-agent-result-count>{zh ? `${visibleCount} 个结果` : `${visibleCount} results`}</span></div></div>
     {roster.status === 'loading' && <div data-paimind-agent-loading-grid aria-busy="true" aria-label={zh ? '正在读取智能体' : 'Reading Agents'}>{[0, 1, 2, 3].map(index => <div key={index} data-paimind-agent-loading-card><span /><strong /><i /></div>)}</div>}
     {roster.status === 'error' && <div data-paimind-agent-status role="alert"><span data-paimind-agent-status-icon><PaimindSettingsIcon size={22} /></span><strong>{zh ? '智能体连接失败' : 'Agent connection failed'}</strong><p>{roster.error}</p><button type="button" data-paimind-agent-button onClick={() => { setRevision(value => value + 1) }}>{zh ? '重新加载' : 'Retry'}</button></div>}
     {roster.status === 'ready' && tab === 'platform' && (visibleCount === 0 ? <div data-paimind-agent-status><span data-paimind-agent-status-icon><PaimindSearchIcon size={22} /></span><strong>{query.trim() !== '' ? (zh ? '没有匹配结果' : 'No matching results') : platformView === 'business' ? (zh ? '暂无业务智能体' : 'No Business Agents yet') : (zh ? '暂无平台模式' : 'No platform modes yet')}</strong><p>{query.trim() !== '' ? (zh ? '试试更短的关键词，或清空搜索。' : 'Try a shorter search or clear the query.') : (zh ? '当前 Harness 还没有提供此类可用预设。' : 'The current Harness does not expose an available Preset in this category.')}</p>{query.trim() !== '' && <button type="button" data-paimind-agent-button onClick={() => { setQuery('') }}>{zh ? '清空搜索' : 'Clear search'}</button>}{query.trim() === '' && platformView === 'business' && <button type="button" data-paimind-agent-button data-primary="true" onClick={createBusinessAgent} disabled={templates.length === 0}><PaimindPlusIcon size={14} />{zh ? '创建业务智能体' : 'Create Business Agent'}</button>}</div> : <ul data-paimind-agent-grid>{platform.map(preset => { const metadata = metadataForPreset(preset); const presentation = platformPresetPresentation(preset, zh); return <li key={preset.id} data-paimind-agent-card data-paimind-agent-preset-id={preset.id} data-broken={preset.broken !== undefined}>
-      <div data-paimind-agent-card-head><span data-paimind-agent-card-icon><PaimindAgentIcon size={23} /></span><div data-paimind-agent-card-title><h3>{presentation.name}</h3><span data-paimind-agent-card-kicker>{metadata.kind === 'platform-mode' ? (zh ? '平台模式' : 'Platform mode') : (zh ? '官方业务智能体' : 'Official Business Agent')}</span></div></div>
+      <div data-paimind-agent-card-head><span data-paimind-agent-card-icon><PaimindAgentIcon size={23} /></span><div data-paimind-agent-card-title><h3>{presentation.name}</h3><span data-paimind-agent-card-kicker>{metadata.kind === 'platform-mode' ? (zh ? '平台模式 · Harness 原生预设' : 'Platform mode · Native Harness Preset') : (zh ? '官方业务智能体' : 'Official Business Agent')}</span></div></div>
       <div data-paimind-agent-badges>{metadata.kind === 'business-agent' && metadata.category !== undefined && <span data-paimind-agent-badge data-category="true">{businessCategoryLabel(metadata.category, zh)}</span>}<span data-paimind-agent-badge>{modeLabel(metadata.mode, zh)}</span><span data-paimind-agent-badge>{zh ? '官方维护' : 'Official'}</span>{preset.isDefault && <span data-paimind-agent-badge data-success="true">{zh ? '默认' : 'Default'}</span>}{preset.broken !== undefined && <span data-paimind-agent-badge>{zh ? '需修复' : 'Needs repair'}</span>}</div>
       <p>{presentation.description}</p>
       {preset.broken !== undefined && <p role="alert">{zh ? `当前不可用：${preset.broken}` : `Unavailable: ${preset.broken}`}</p>}
-      <div data-paimind-agent-actions>{preset.id === 'cordis' ? <><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || preset.broken !== undefined || templates.length === 0} onClick={createPersonalAgent}><PaimindPlusIcon size={14} />{zh ? '创建个人智能体' : 'Create Personal Agent'}</button><button type="button" data-paimind-agent-button disabled={busy} onClick={openAdvanced}><PaimindSettingsIcon size={14} />{zh ? '管理预设' : 'Manage Presets'}</button></> : <><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || preset.broken !== undefined} onClick={() => { void start(preset) }}><PaimindPlayIcon size={14} />{zh ? '开始对话' : 'Start conversation'}</button><button type="button" data-paimind-agent-button disabled={busy || preset.broken !== undefined} onClick={() => { copyPlatformAgent(preset) }}><PaimindEditIcon size={14} />{zh ? '复制并编辑' : 'Copy and edit'}</button></>}</div>
+      <div data-paimind-agent-actions>{preset.id === 'cordis' ? <><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || preset.broken !== undefined || templates.length === 0} onClick={createPersonalAgent}><PaimindPlusIcon size={14} />{zh ? '创建个人智能体' : 'Create Personal Agent'}</button><button type="button" data-paimind-agent-button disabled={busy} onClick={openAdvanced}><PaimindSettingsIcon size={14} />{zh ? '管理预设' : 'Manage Presets'}</button></> : <><button type="button" data-paimind-agent-button disabled={busy || preset.broken !== undefined} onClick={() => { copyPlatformAgent(preset) }}><PaimindEditIcon size={14} />{zh ? '复制并编辑' : 'Copy and edit'}</button><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || preset.broken !== undefined} onClick={() => { void start(preset) }}><PaimindPlayIcon size={14} />{zh ? '开始对话' : 'Start conversation'}</button></>}</div>
     </li> })}{platformView === 'business' && visibleBusinessProfiles.map(managedProfileCard)}</ul>)}
     {roster.status === 'ready' && tab === 'mine' && (mine.length === 0 ? <div data-paimind-agent-status><span data-paimind-agent-status-icon><PaimindUserIcon size={22} /></span><strong>{query.trim() === '' ? (zh ? '还没有个人智能体' : 'No personal Agents yet') : (zh ? '没有匹配的个人智能体' : 'No matching personal Agents')}</strong><p>{query.trim() === '' ? (zh ? '从一个平台模式开始，配置你的角色、目标与会话技能。' : 'Start from a platform mode and configure your role, goal, and session Skills.') : (zh ? '试试更短的关键词，或清空搜索。' : 'Try a shorter search or clear the query.')}</p><button type="button" data-paimind-agent-button data-primary="true" onClick={query.trim() === '' ? createPersonalAgent : () => { setQuery('') }} disabled={query.trim() === '' && templates.length === 0}><PaimindPlusIcon size={14} />{query.trim() === '' ? (zh ? '创建个人智能体' : 'Create Personal Agent') : (zh ? '清空搜索' : 'Clear search')}</button></div> : <ul data-paimind-agent-grid>{mine.map(managedProfileCard)}</ul>)}
 
     {starterDraft !== null && <div data-paimind-agent-starter-backdrop>
       <section ref={starterRef} data-paimind-agent-starter role="dialog" aria-modal="true" aria-labelledby="paimind-agent-starter-title">
-        <header data-paimind-agent-starter-head><div data-paimind-agent-starter-icon aria-hidden="true">{starterDraft.productKind === 'business' ? <PaimindAgentIcon size={25} /> : <PaimindUserIcon size={25} />}</div><div data-paimind-agent-starter-copy><p data-paimind-agent-form-kicker>{starterDraft.productKind === 'business' ? (zh ? '业务智能体' : 'Business Agent') : (zh ? '个人智能体' : 'Personal Agent')}</p><h2 id="paimind-agent-starter-title">{zh ? '你的智能体应该做什么？' : 'What should your Agent do?'}</h2><p>{zh ? '先描述用途。创建助手会生成一份可编辑说明书，保存前不会写入运行配置。' : 'Describe the purpose first. The creation assistant will generate an editable brief; nothing is written until you save.'}</p></div><button type="button" data-paimind-agent-builder-close aria-label={zh ? '关闭创建弹窗' : 'Close creation dialog'} onClick={closeStarter}><PaimindCloseIcon size={17} /></button></header>
+        <header data-paimind-agent-starter-head><div data-paimind-agent-starter-icon aria-hidden="true">{starterDraft.productKind === 'business' ? <PaimindAgentIcon size={25} /> : <PaimindUserIcon size={25} />}</div><div data-paimind-agent-starter-copy><p data-paimind-agent-form-kicker>{starterDraft.productKind === 'business' ? (zh ? '业务智能体' : 'Business Agent') : (zh ? '个人智能体' : 'Personal Agent')}</p><h2 id="paimind-agent-starter-title">{zh ? '用一句话开始' : 'Start with one sentence'}</h2><p>{zh ? '告诉创建助手你想要什么。信息不足时它会自然追问，草稿准备好后再由你确认保存。' : 'Tell the creation assistant what you want. It will ask a natural follow-up only when needed, then let you review the draft before saving.'}</p></div><button type="button" data-paimind-agent-builder-close aria-label={zh ? '关闭创建弹窗' : 'Close creation dialog'} onClick={closeStarter}><PaimindCloseIcon size={17} /></button></header>
         {error !== null && <p role="alert" data-paimind-agent-starter-error>{error}</p>}
-        <label data-paimind-agent-starter-purpose>{zh ? '描述它要完成什么' : 'Describe what it should accomplish'}<textarea ref={starterPurposeRef} value={starterDraft.description} maxLength={500} placeholder={zh ? '例如：帮助我诊断人际互动中的难点，给出可落地的沟通建议。' : 'For example: diagnose difficult interactions and suggest practical communication steps.'} onChange={event => { setError(null); setStarterDraft({ ...starterDraft, description: event.currentTarget.value }) }} /></label>
-        <div data-paimind-agent-starter-suggestions><span>{zh ? '试试这些示例' : 'Try an example'}</span><div>{[
-          zh ? '帮助我建立更好的人际关系' : 'Help me build better relationships',
-          zh ? '帮助我定义产品需求' : 'Help me define product requirements',
-          zh ? '帮助我准备求职面试' : 'Help me prepare for interviews',
-        ].map(example => <button key={example} type="button" onClick={() => { setStarterDraft({ ...starterDraft, description: example }) }}>{example}</button>)}</div></div>
-        <div data-paimind-agent-starter-fields>
-          <label data-paimind-agent-field>{zh ? '智能体名称（可稍后修改）' : 'Agent name (editable later)'}<input value={starterDraft.name} maxLength={80} placeholder={zh ? '留空将根据用途自动生成' : 'Leave blank to generate from the purpose'} onChange={event => { setError(null); setStarterDraft({ ...starterDraft, name: event.currentTarget.value }) }} /></label>
-          <label data-paimind-agent-field>{zh ? '基础模式' : 'Base mode'}<select value={starterDraft.basePresetId} onChange={event => { setStarterDraft({ ...starterDraft, basePresetId: event.currentTarget.value }) }}>{templates.map(row => <option key={row.id} value={row.id}>{modeLabel(metadataForPreset(row).mode, zh)} · {row.name ?? (zh ? '平台模板' : 'Platform template')}</option>)}</select></label>
-        </div>
-        <div data-paimind-agent-starter-note><PaimindAgentIcon size={16} /><span>{zh ? '保存前不会生效；从平台模式开始时，官方模板保持不变。' : 'Nothing takes effect until you save; platform templates remain unchanged.'}</span></div>
-        <div data-paimind-agent-starter-actions><button type="button" data-paimind-agent-button onClick={closeStarter}>{zh ? '取消' : 'Cancel'}</button><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || creatorPreset === undefined || creatorPreset.broken !== undefined} onClick={continueStarter}>{creatorPreset === undefined || creatorPreset.broken !== undefined ? (zh ? '真实创建助手不可用' : 'Real creator unavailable') : (zh ? '生成智能体说明书' : 'Generate Agent brief')}</button></div>
+        <label data-paimind-agent-starter-purpose>{zh ? '你想创建什么智能体？' : 'What Agent do you want to create?'}<textarea ref={starterPurposeRef} value={starterDraft.description} maxLength={500} placeholder={zh ? '例如：创建一个帮我检查交期风险的智能体。' : 'For example: create an Agent that helps me check delivery risks.'} onChange={event => { setError(null); setStarterDraft({ ...starterDraft, description: event.currentTarget.value }) }} /></label>
+        <div data-paimind-agent-starter-note><PaimindAgentIcon size={16} /><span>{zh ? '只需描述意图；名称、角色和工作方式会在对话中逐步生成，确认前不会保存。' : 'Describe only the intent. The name, role, and workflow will be shaped in conversation and nothing is saved before confirmation.'}</span></div>
+        <div data-paimind-agent-starter-actions><button type="button" data-paimind-agent-button onClick={closeStarter}>{zh ? '取消' : 'Cancel'}</button><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || creatorPreset === undefined || creatorPreset.broken !== undefined} onClick={continueStarter}>{creatorPreset === undefined || creatorPreset.broken !== undefined ? (zh ? '真实创建助手不可用' : 'Real creator unavailable') : (zh ? '开始创建' : 'Start creating')}</button></div>
       </section>
     </div>}
 
     {draft !== null && <div data-paimind-agent-builder-layer data-paimind-product-escape-scope>
+      <div
+        role="separator"
+        tabIndex={0}
+        aria-label={zh ? '调整对话区域宽度' : 'Resize conversation pane'}
+        aria-orientation="vertical"
+        aria-valuemin={nativeConversationBounds.min}
+        aria-valuemax={nativeConversationBounds.max}
+        aria-valuenow={nativeConversationWidth}
+        aria-valuetext={`${nativeConversationWidth}px`}
+        data-paimind-agent-splitter
+        data-active={resizingNativeConversation}
+        onPointerDown={startNativeConversationResize}
+        onKeyDown={handleNativeConversationResizeKey}
+      />
       <section ref={builderRef} data-paimind-agent-form role="region" aria-labelledby="paimind-agent-builder-title">
-        <header data-paimind-agent-form-head><button type="button" data-paimind-agent-builder-close aria-label={zh ? '返回智能体中心' : 'Back to Agent Center'} disabled={busy} onClick={closeBuilder}><PaimindCloseIcon size={18} /></button><div><p data-paimind-agent-form-kicker>{draft.productKind === 'business' ? (zh ? '业务智能体' : 'Business Agent') : (zh ? '个人智能体' : 'Personal Agent')}</p><h2 id="paimind-agent-builder-title">{draft.editing !== null ? (zh ? '编辑智能体' : 'Edit Agent') : (zh ? '创建智能体' : 'Create Agent')}</h2><p>{draft.copiedFromPlatform !== null ? (zh ? `基于“${draft.copiedFromPlatform}”生成可编辑版本，官方原版保持不变。` : `Create an editable version from “${draft.copiedFromPlatform}”; the official original stays unchanged.`) : (zh ? '通过说明书和配置对话完成创建；编辑也使用同一条流程。' : 'Create through the brief and configuration chat; editing uses the same flow.')}</p></div><span data-paimind-agent-save-state data-dirty={draftDirty}>{draftDirty ? (zh ? '草稿未保存' : 'Unsaved draft') : (zh ? '已保存' : 'Saved')}</span></header>
+        <header data-paimind-agent-form-head><button type="button" data-paimind-agent-builder-close data-paimind-builder-autofocus aria-label={zh ? '返回智能体中心' : 'Back to Agent Center'} disabled={busy} onClick={closeBuilder}><PaimindCloseIcon size={18} /></button><div><p data-paimind-agent-form-kicker>{draft.productKind === 'business' ? (zh ? '业务智能体' : 'Business Agent') : (zh ? '个人智能体' : 'Personal Agent')}</p><h2 id="paimind-agent-builder-title">{draft.editing !== null ? (zh ? '编辑智能体' : 'Edit Agent') : (zh ? '创建智能体' : 'Create Agent')}</h2><p>{draft.copiedFromPlatform !== null ? (zh ? `基于“${draft.copiedFromPlatform}”生成可编辑版本，官方原版保持不变。` : `Create an editable version from “${draft.copiedFromPlatform}”; the official original stays unchanged.`) : (zh ? '通过说明书和配置对话完成创建；编辑也使用同一条流程。' : 'Create through the brief and configuration chat; editing uses the same flow.')}</p></div><span data-paimind-agent-save-state data-dirty={draftDirty}>{draftDirty ? (zh ? '草稿未保存' : 'Unsaved draft') : (zh ? '已保存' : 'Saved')}</span></header>
         <div data-paimind-agent-form-message>{error !== null && <p role="alert" data-paimind-agent-form-error>{error}</p>}</div>
         <div data-paimind-agent-native-toolbar>
           <div role="tablist" aria-label={zh ? '创建助手模式' : 'Creation assistant modes'} data-paimind-agent-conversation-tabs><button type="button" role="tab" aria-selected={builderTab === 'configure'} disabled={busy} onClick={() => { setBuilderTab('configure') }}>{zh ? '配置对话' : 'Configuration chat'}</button><button type="button" role="tab" aria-selected={builderTab === 'test'} disabled={busy} onClick={() => { setBuilderTab('test') }}>{zh ? '测试对话' : 'Test chat'}</button></div>
@@ -2095,9 +2329,17 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
         </div>
         <div data-paimind-agent-form-body>
           <div data-paimind-agent-form-main>
-            {pendingUpdate !== null && <div data-paimind-agent-ai-update role="status"><span><PaimindCheckIcon size={15} />{zh ? `创建助手已更新：${pendingUpdate.changed.join('、')}` : `Creation assistant updated: ${pendingUpdate.changed.join(', ')}`}</span><div><button type="button" onClick={() => { setPendingUpdate(null) }}>{zh ? '保留更新' : 'Keep changes'}</button><button type="button" onClick={() => { setDraft(pendingUpdate.previous); setPendingUpdate(null) }}>{zh ? '撤销' : 'Undo'}</button></div></div>}
-            <fieldset data-paimind-agent-editable-fields disabled={busy || pendingUpdate !== null}>
             <section data-paimind-agent-brief-head aria-labelledby="paimind-agent-brief-title"><div><h2 id="paimind-agent-brief-title">{zh ? '智能体说明书' : 'Agent brief'}</h2><p>{zh ? '完善以下信息，定义你的智能体。' : 'Complete the information below to define your Agent.'}</p></div><div data-paimind-agent-identity-row><label data-paimind-agent-field>{zh ? '智能体名称' : 'Agent name'}<input value={draft.name} maxLength={80} onChange={event => { setDraft({ ...draft, name: event.currentTarget.value }) }} /></label><label data-paimind-agent-field>{zh ? '基础模式' : 'Base mode'}<select aria-label={zh ? '基础模式' : 'Base mode'} value={draft.basePresetId} disabled={draft.editing !== null} onChange={event => { const basePresetId = event.currentTarget.value; setDraft({ ...draft, basePresetId, preferredSkillNames: basePresetId === 'minimal' ? [] : draft.preferredSkillNames }) }}>{templates.map(row => <option key={row.id} value={row.id}>{modeLabel(metadataForPreset(row).mode, zh)} · {row.name ?? (zh ? '平台模板' : 'Platform template')}</option>)}</select></label>{draft.productKind === 'business' && <label data-paimind-agent-field>{zh ? '业务分类' : 'Business category'}<input type="search" list="paimind-agent-business-category-options" value={draft.businessCategory} maxLength={80} onChange={event => { const businessCategory = event.currentTarget.value; const matched = businessCategories.find(category => businessCategoryLabel(category, zh) === businessCategory); setDraft({ ...draft, businessCategory, businessCategoryId: matched?.id ?? null }) }} /><datalist id="paimind-agent-business-category-options">{businessCategories.map(category => <option key={category.id} value={businessCategoryLabel(category, zh)} />)}</datalist></label>}<label data-paimind-agent-field data-wide="true">{zh ? '用途说明' : 'Purpose'}<input value={draft.description} maxLength={500} placeholder={zh ? '一句话说明它适合完成什么任务' : 'One sentence describing the task this Agent handles'} onChange={event => { setDraft({ ...draft, description: event.currentTarget.value }) }} /></label></div></section>
+
+            {pendingUpdate !== null && <section data-paimind-agent-ai-update role="region" aria-labelledby="paimind-agent-draft-review-title" aria-live="polite">
+              <span data-paimind-agent-ai-update-icon aria-hidden="true"><PaimindCheckIcon size={16} /></span>
+              <div data-paimind-agent-ai-update-copy>
+                <strong id="paimind-agent-draft-review-title">{zh ? '智能体草稿已生成' : 'Agent draft ready'}</strong>
+                <p>{zh ? `创建助手已将 ${pendingUpdate.changed.length} 项建议预填到下方表单，确认前不会保存。` : `The creation assistant prefilled ${pendingUpdate.changed.length} suggested changes below. Nothing is saved until you confirm.`}</p>
+                <div data-paimind-agent-ai-update-fields aria-label={zh ? '本轮更新字段' : 'Updated fields'}>{pendingUpdate.changed.map(field => <span key={field}>{field}</span>)}</div>
+              </div>
+              <div data-paimind-agent-ai-update-actions><button type="button" data-primary="true" onClick={() => { setPendingUpdate(null) }}>{zh ? '确认并应用' : 'Confirm and apply'}</button><button type="button" onClick={() => { setDraft(pendingUpdate.previous); setPendingUpdate(null) }}>{zh ? '撤销本轮建议' : 'Undo this proposal'}</button></div>
+            </section>}
 
             <section data-paimind-agent-form-panel aria-labelledby="paimind-agent-role-title"><div data-paimind-agent-panel-head><span>1</span><div><h3 id="paimind-agent-role-title">{zh ? '它是谁' : 'Who it is'}</h3><p>{zh ? '定义智能体的角色、身份与定位。' : 'Define the Agent’s role and identity.'}</p></div></div><label data-paimind-agent-field><span>{zh ? '角色' : 'Role'}</span><textarea value={draft.role} maxLength={2000} placeholder={zh ? '例如：你是一位擅长帮助用户建立高质量人际关系的沟通教练。' : 'For example: You are a communication coach who helps users build stronger relationships.'} onChange={event => { setDraft({ ...draft, role: event.currentTarget.value }) }} /></label></section>
             <section data-paimind-agent-form-panel aria-labelledby="paimind-agent-goal-title"><div data-paimind-agent-panel-head><span>2</span><div><h3 id="paimind-agent-goal-title">{zh ? '要完成什么' : 'What it accomplishes'}</h3><p>{zh ? '明确核心目标与可交付结果。' : 'Define the core goal and expected outcome.'}</p></div></div><label data-paimind-agent-field><span>{zh ? '目标' : 'Goal'}</span><textarea value={draft.goal} maxLength={2000} placeholder={zh ? '例如：诊断互动难点，提供可落地的策略与沟通建议。' : 'For example: diagnose interaction problems and provide practical strategies.'} onChange={event => { setDraft({ ...draft, goal: event.currentTarget.value }) }} /></label></section>
@@ -2105,7 +2347,6 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
 
             <section data-paimind-agent-form-panel data-paimind-agent-skills-panel aria-labelledby="paimind-agent-skills-title"><button type="button" data-paimind-agent-skills-toggle aria-expanded={skillPickerOpen} onClick={() => { setSkillPickerOpen(value => !value) }}><span data-paimind-agent-panel-head><span><PaimindSkillIcon size={15} /></span><span><strong id="paimind-agent-skills-title">{zh ? '会话技能（可选）' : 'Session Skills (optional)'}</strong><small>{zh ? '为智能体添加完成任务所需要的技能。' : 'Add only the Skills required for this Agent.'}</small></span></span><span>{zh ? `已选择 ${draft.preferredSkillNames.length} 项` : `${draft.preferredSkillNames.length} selected`}</span></button>{skillPickerOpen && <fieldset data-paimind-agent-field data-paimind-agent-skill-picker disabled={draft.basePresetId === 'minimal'}><legend>{zh ? '会话注入技能' : 'Session-injected Skills'}</legend><p data-paimind-agent-skill-policy>{zh ? '只有选中的技能会进入这个智能体的新对话。' : 'Only selected Skills enter new conversations for this Agent.'}</p>{draft.basePresetId === 'minimal' ? <div data-paimind-agent-skill-empty>{zh ? '极简模式不启用会话技能。' : 'Minimal mode does not enable Session Skills.'}</div> : installedSkills.length === 0 ? <div data-paimind-agent-skill-empty>{zh ? '暂无已安装技能' : 'No installed Skills'}</div> : <><div data-paimind-agent-skill-toolbar><label data-paimind-agent-skill-search><PaimindSearchIcon size={15} /><input type="search" aria-label={zh ? '搜索会话技能' : 'Search session Skills'} placeholder={zh ? '搜索名称、说明或标签' : 'Search names, descriptions, or tags'} value={skillQuery} onChange={event => { setSkillQuery(event.currentTarget.value) }} /></label><button type="button" data-paimind-agent-skill-selected aria-pressed={selectedSkillsOnly} onClick={() => { setSelectedSkillsOnly(value => !value) }}>{zh ? `只看已选 ${draft.preferredSkillNames.length}` : `Selected ${draft.preferredSkillNames.length}`}</button></div><div data-paimind-agent-skill-categories role="group" aria-label={zh ? '技能分类' : 'Skill categories'}>{SKILL_PRODUCT_CATEGORIES.map(category => <button key={category} type="button" aria-label={`${skillCategoryLabel(category, zh)} ${skillCategoryCounts[category]}`} aria-pressed={skillCategory === category} onClick={() => { setSkillCategory(category) }}><span>{skillCategoryLabel(category, zh)}</span><small>{skillCategoryCounts[category]}</small></button>)}</div><div data-paimind-agent-skill-summary><span>{zh ? `已选择 ${draft.preferredSkillNames.length} / 已安装 ${installedSkills.length}` : `${draft.preferredSkillNames.length} selected / ${installedSkills.length} installed`}</span><span>{zh ? `${visibleSkills.length} 个结果` : `${visibleSkills.length} results`}</span></div><div data-paimind-agent-skill-results>{visibleSkills.length === 0 ? <div data-paimind-agent-skill-empty>{zh ? '当前筛选没有匹配技能。' : 'No Skills match the filters.'}</div> : visibleSkills.map(skill => { const metadata = metadataForSkill(skill); return <label key={skill.name} data-paimind-agent-skill data-selected={draft.preferredSkillNames.includes(skill.name)}><input type="checkbox" checked={draft.preferredSkillNames.includes(skill.name)} onChange={event => { setDraft({ ...draft, preferredSkillNames: event.currentTarget.checked ? [...draft.preferredSkillNames, skill.name] : draft.preferredSkillNames.filter(value => value !== skill.name) }) }} /><span><strong>{skill.name}</strong><small>{skillCategoryLabel(metadata.category, zh)}</small><em>{skill.description}</em></span></label> })}</div></>}</fieldset>}</section>
             <p data-paimind-agent-runtime-note>{zh ? '运行时资源与权限由 Harness 平台统一管理与执行。' : 'Runtime resources and permissions are managed and executed by Harness.'}</p>
-            </fieldset>
           </div>
 
         </div>
@@ -2119,6 +2360,7 @@ export function AgentCenterTrigger(props: {
   readonly wide: boolean
   readonly controller: PaimindProductSurfaceController
   readonly locale: PaimindLocaleSource
+  readonly onBrowse?: () => void
 }): React.JSX.Element {
   const snapshot = useSyncExternalStore(props.controller.subscribe, props.controller.getSnapshot, props.controller.getSnapshot)
   const locale = useSyncExternalStore(props.locale.subscribe.bind(props.locale), () => props.locale.getLocale().active, () => props.locale.getLocale().active)
@@ -2131,7 +2373,10 @@ export function AgentCenterTrigger(props: {
     aria-expanded={snapshot.open}
     aria-current={snapshot.open ? 'page' : undefined}
     aria-label={zh ? '打开智能体中心' : 'Open Agent Center'}
-    onClick={event => { props.controller.toggle(event.currentTarget) }}
+    onClick={event => {
+      if (!snapshot.open) props.onBrowse?.()
+      props.controller.toggle(event.currentTarget)
+    }}
   >
     <PaimindAgentIcon size={props.wide ? 16 : 18} />
     {props.wide && <span data-paimind-agent-trigger-label>{zh ? '智能体中心' : 'Agent Center'}</span>}
@@ -2142,17 +2387,64 @@ export interface AgentCenterSurfaceProps extends Omit<AgentCenterSectionProps, '
   readonly controller: PaimindProductSurfaceController
 }
 
-const HIDDEN_NATIVE_CONVERSATION: Readonly<{ readonly sessionId: string | null; readonly interactive: boolean }> = Object.freeze({ sessionId: null, interactive: false })
+const HIDDEN_NATIVE_CONVERSATION = Object.freeze({ sessionId: null, interactive: false })
+
+function installAgentCenterSurfaceInteraction(
+  root: HTMLElement,
+  nativeConversation: HTMLElement,
+  controller: PaimindProductSurfaceController,
+  onOutsideNavigation: () => void,
+  onSessionNavigationIntent: () => void,
+  currentSessionId: () => string | null,
+  currentAuthoringSessionId: () => string | null,
+): () => void {
+  const document = root.ownerDocument
+  root.querySelector<HTMLElement>('[data-paimind-product-initial-focus], button:not(:disabled), input:not(:disabled), [tabindex="0"]')?.focus()
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape') return
+    event.preventDefault()
+    controller.close()
+  }
+  const onClick = (event: MouseEvent): void => {
+    const target = event.target
+    const view = document.defaultView
+    if (view === null || !(target instanceof view.Node)) return
+    if (root.contains(target) || nativeConversation.contains(target)) return
+    const element = target instanceof view.Element ? target : target.parentElement
+    const trigger = element?.closest<HTMLElement>('[data-paimind-product-trigger]')
+    if (trigger?.dataset.paimindProductTrigger === controller.id) return
+    const sessionRow = element?.closest<HTMLElement>('[role="treeitem"][aria-selected]')
+    const sessionNavigationIntent = sessionRow !== null
+    if (sessionNavigationIntent) onSessionNavigationIntent()
+    const previousSessionId = currentSessionId()
+    view.queueMicrotask(() => {
+      const nextSessionId = currentSessionId()
+      if ((nextSessionId !== previousSessionId || sessionNavigationIntent)
+        && currentAuthoringSessionId() === nextSessionId) return
+      onOutsideNavigation()
+      controller.close(false)
+    })
+  }
+  document.addEventListener('keydown', onKeyDown)
+  document.addEventListener('click', onClick, true)
+  return () => {
+    document.removeEventListener('keydown', onKeyDown)
+    document.removeEventListener('click', onClick, true)
+  }
+}
 
 export function AgentCenterSurface(props: AgentCenterSurfaceProps): ReactNode {
   const snapshot = useSyncExternalStore(props.controller.subscribe, props.controller.getSnapshot, props.controller.getSnapshot)
   const root = useRef<HTMLDivElement>(null)
   const [host, setHost] = useState<PaimindProductCenterHost | null>(null)
-  const [nativeConversation, setNativeConversation] = useState(HIDDEN_NATIVE_CONVERSATION)
+  const [nativeConversation, setNativeConversation] = useState<Readonly<{
+    readonly sessionId: string | null
+    readonly interactive: boolean
+  }>>(HIDDEN_NATIVE_CONVERSATION)
   const previousSessionId = useRef<string | null | undefined>(undefined)
   const suppressRestore = useRef(false)
 
-  const restorePreviousSession = useCallback((clear = false): void => {
+  const restorePreviousSession = useCallback((clear = false) => {
     const previous = previousSessionId.current
     if (!suppressRestore.current && previous !== undefined && previous !== null && props.runtime.currentSessionId() !== previous) {
       props.runtime.openSession(previous)
@@ -2166,18 +2458,15 @@ export function AgentCenterSurface(props: AgentCenterSurfaceProps): ReactNode {
   const handleNativeConversationChange = useCallback((next: Readonly<{
     readonly sessionId: string | null
     readonly interactive: boolean
-  }>): void => {
-    if (previousSessionId.current === undefined) previousSessionId.current = props.runtime.currentSessionId()
+  }>) => {
     props.onNativeConversationChange?.(next)
     setNativeConversation(current => current.sessionId === next.sessionId && current.interactive === next.interactive
       ? current
       : Object.freeze({ sessionId: next.sessionId, interactive: next.interactive }))
-  }, [props.onNativeConversationChange, props.runtime])
+  }, [props.onNativeConversationChange])
 
   useLayoutEffect(() => {
     if (!snapshot.open) {
-      setNativeConversation(HIDDEN_NATIVE_CONVERSATION)
-      restorePreviousSession(true)
       setHost(null)
       return
     }
@@ -2193,11 +2482,18 @@ export function AgentCenterSurface(props: AgentCenterSurfaceProps): ReactNode {
       setHost(null)
       return
     }
+    // Capture the native Session at the surface boundary. A newly created
+    // authoring Session can become current before the Builder publishes its
+    // conversation seat, and child unmount cleanup also publishes a hidden
+    // seat. Neither transition is a reliable source for the return target.
+    previousSessionId.current = props.runtime.currentSessionId()
     suppressRestore.current = false
     setHost(nextHost)
     return () => {
       setPaimindProductCenterNativeConversation(nextHost, false, false)
       restorePreviousSession(true)
+      props.runtime.endAgentCenterBrowse()
+      setNativeConversation(HIDDEN_NATIVE_CONVERSATION)
       setHost(null)
       disposeHost()
     }
@@ -2211,32 +2507,48 @@ export function AgentCenterSurface(props: AgentCenterSurfaceProps): ReactNode {
       restorePreviousSession()
       return
     }
+
     setPaimindProductCenterNativeConversation(host, false, false)
-    const synchronize = (): void => {
+    const synchronize = () => {
       const ready = props.runtime.currentSessionId() === sessionId
       setPaimindProductCenterNativeConversation(host, ready, ready && nativeConversation.interactive)
     }
     const disposeSessions = props.runtime.subscribeSessions(synchronize)
-    const cancelOpen = props.runtime.openSession(sessionId)
+    const MutationObserverConstructor = host.nativeConversation.ownerDocument.defaultView?.MutationObserver
+    const observer = MutationObserverConstructor === undefined ? null : new MutationObserverConstructor(synchronize)
+    observer?.observe(host.nativeConversation, { childList: true })
+    props.runtime.openSession(sessionId)
     synchronize()
     return () => {
-      cancelOpen()
+      observer?.disconnect()
       disposeSessions()
       setPaimindProductCenterNativeConversation(host, false, false)
     }
   }, [host, nativeConversation.interactive, nativeConversation.sessionId, props.runtime, restorePreviousSession, snapshot.open])
 
+  useLayoutEffect(() => {
+    if (!snapshot.open || host === null || nativeConversation.sessionId === null) return
+    if (props.runtime.currentAuthoringSessionId() !== nativeConversation.sessionId) return
+    return installAgentAuthoringMessageProjection(host.nativeConversation, props.locale.getLocale().active)
+  }, [host, nativeConversation.sessionId, props.locale, props.runtime, snapshot.open])
+
   useEffect(() => {
     if (!snapshot.open || host === null || root.current === null) return
-    return installPaimindProductSurfaceInteraction(root.current, props.controller)
-  }, [host, props.controller, snapshot.open])
+    return installAgentCenterSurfaceInteraction(root.current, host.nativeConversation, props.controller, () => {
+      suppressRestore.current = true
+    }, props.runtime.resumeSelectedAuthoringSession.bind(props.runtime), props.runtime.currentSessionId.bind(props.runtime), props.runtime.currentAuthoringSessionId.bind(props.runtime))
+  }, [host, props.controller, props.runtime, snapshot.open])
 
   if (!snapshot.open || host === null) return null
   return createPortal(<div ref={root} data-paimind-product-surface="agent-center" role="main" aria-labelledby="paimind-agent-center-title">
-    <div data-paimind-product-body><AgentCenterSection {...props} onNativeConversationChange={handleNativeConversationChange} close={(restorePreviousSession = true) => {
-      if (!restorePreviousSession) suppressRestore.current = true
-      props.controller.close()
-    }} /></div>
+    <div data-paimind-product-body><AgentCenterSection
+      {...props}
+      onNativeConversationChange={handleNativeConversationChange}
+      close={(restore = true) => {
+        suppressRestore.current = !restore
+        props.controller.close()
+      }}
+    /></div>
   </div>, host.mount)
 }
 
@@ -2271,6 +2583,10 @@ export async function apply(ctx: AgentCenterClientContext): Promise<() => Promis
     scope.effect(() => () => { surfaceController.dispose() }, 'paimind-agent-market: surface controller')
     scope.effect(() => () => { builderRequests.dispose() }, 'paimind-agent-market: builder requests')
     scope.effect(() => () => { presetSettings.dispose() }, 'paimind-agent-market: native Preset navigation')
+    scope.effect(
+      () => installAgentAuthoringSessionNavigation(runtime, surfaceController),
+      'paimind-agent-market: native authoring Session navigation',
+    )
     contributePaimindExtension(scope.slots, {
       id: 'paimind:agent-market', packageName: '@paimind/agent-market', category: 'agents',
       nameZh: '智能体中心', nameEn: 'Agent Center',
@@ -2292,15 +2608,10 @@ export async function apply(ctx: AgentCenterClientContext): Promise<() => Promis
         return opened
       },
     })
-    scope.slots.inject('tool.call.toolview', () => scope.slots.register({
-      name: 'tool.call.toolview', key: AGENT_AUTHORING_PROPOSAL_TOOL,
-    }, (props: Omit<AgentAuthoringProposalToolRowProps, 'locale'>) => (
-      <AgentAuthoringProposalToolRow {...props} locale={scope.locale} />
-    )))
     scope.slots.inject('sidebar.footer.action', () => scope.slots.register({
       name: 'sidebar.footer.action', id: 'paimind-agent-center-trigger', order: -12,
       label: () => scope.locale.getLocale().active.startsWith('zh') ? '智能体中心' : 'Agent Center',
-      inject: () => ({ controller: surfaceController, locale: scope.locale }),
+      inject: () => ({ controller: surfaceController, locale: scope.locale, onBrowse: runtime.beginAgentCenterBrowse.bind(runtime) }),
     }, (props: { readonly wide: boolean; readonly controller: PaimindProductSurfaceController; readonly locale: PaimindLocaleSource }) => <AgentCenterBoundary><AgentCenterTrigger {...props} /></AgentCenterBoundary>))
     scope.slots.inject('shell.overlay', () => scope.slots.register({
       name: 'shell.overlay', id: 'paimind-agent-center-surface', order: 10, inject: injectProps,
