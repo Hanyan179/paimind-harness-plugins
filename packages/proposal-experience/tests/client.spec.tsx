@@ -1,6 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { ComponentType } from 'react'
 import { createClientContextFixture } from '@paimind/testkit'
 import type { HarnessQuestionWait } from '@paimind/harness-compat'
 import { PROPOSAL_QUESTION_IDS } from '../src/index.ts'
@@ -14,10 +13,12 @@ function wait(question: HarnessQuestionWait['payload']['questions'][number]): Ha
 }
 
 describe('Proposal Assistant Experience', () => {
-  it('registers a higher-priority namespaced composer takeover and disposes cleanly', () => {
+  it('registers exactly one AI-question renderer and disposes cleanly', () => {
     const fixture = createClientContextFixture()
     apply(fixture.context)
-    const entry = fixture.slots.find(row => row.injectedName === 'conversation.composer')
+    const entries = fixture.slots.filter(row => row.injectedName === 'conversation.composer')
+    expect(entries).toHaveLength(1)
+    const entry = entries[0]
     expect(entry?.options).toMatchObject({ name: 'conversation.composer', priority: -20 })
     expect(document.getElementById('@paimind/proposal-experience')).not.toBeNull()
     fixture.disposeEffects()
@@ -40,7 +41,7 @@ describe('Proposal Assistant Experience', () => {
     })
     const { container } = render(<ProposalQuestionComposer matched={pending} />)
     expect(container.querySelectorAll('[data-paimind-brand-logo]')).toHaveLength(2)
-    expect(container.querySelector('[data-mode="native-question"]')).not.toBeNull()
+    expect(container.querySelector('[data-mode="ai-tool-question"][data-trigger="ask-user-question"]')).not.toBeNull()
     expect(screen.getByText('Step 1 of 5')).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Dollar General' }).querySelector('[data-brand="dollar-general"]')).not.toBeNull()
     expect(screen.getByRole('radio', { name: 'Walmart' }).querySelector('[data-brand="walmart"]')).not.toBeNull()
@@ -100,34 +101,12 @@ describe('Proposal Assistant Experience', () => {
     }))
   })
 
-  it('collapses submitted answers in the conversation and edits them in place', async () => {
+  it('does not synthesize a workflow from the selected preset without an AI question interaction', () => {
     const fixture = createClientContextFixture()
     apply(fixture.context)
-    const guidedEntry = fixture.slots.find(row => row.options.priority === -19)
-    const GuidedDemo = guidedEntry?.component as ComponentType<{ readonly matched: {
-      readonly kind: 'proposal-demo'; readonly key: string; readonly sessionId: string
-    } }>
-    const { container } = render(<GuidedDemo matched={{
-      kind: 'proposal-demo', key: 'proposal-demo:session-one', sessionId: 'session-one',
-    }} />)
-    expect(container.querySelector('[data-mode="guided-demo"]')).not.toBeNull()
-    expect(screen.queryByLabelText('Proposal answers')).not.toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('radio', { name: 'Walmart' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Edit Customer' })).toBeInTheDocument())
-    expect(screen.getByText('Which departments should this proposal speak to?')).toBeInTheDocument()
-    expect(screen.getByLabelText('Proposal answers')).toHaveTextContent('Walmart')
-
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Customer' }))
-    expect(screen.getByText('Which company are you preparing this proposal for?')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Edit Customer' })).not.toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'Walmart' })).toHaveAttribute('aria-checked', 'true')
-
-    fireEvent.click(screen.getByRole('radio', { name: 'Dollar General' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
-    await waitFor(() => expect(screen.getByText('Which departments should this proposal speak to?')).toBeInTheDocument())
-    expect(screen.getByLabelText('Proposal answers')).toHaveTextContent('Dollar General')
+    const entry = fixture.slots.find(row => row.injectedName === 'conversation.composer')
+    const select = entry?.options.select as ((owner: { readonly interactions: readonly unknown[]; readonly session?: unknown }) => unknown)
+    expect(select({ interactions: [], session: { sessionId: 'session-one', running: false, agentPreset: 'proposal-assistant' } })).toBeNull()
     fixture.disposeEffects()
   })
 })

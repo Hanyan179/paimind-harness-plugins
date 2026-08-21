@@ -7,7 +7,6 @@ import {
   type HarnessQuestionItem,
   type HarnessQuestionOption,
   type HarnessQuestionWait,
-  type HarnessSessionService,
   type PaimindClientContext,
 } from '@paimind/harness-compat'
 import { PaimindCheckIcon } from '@paimind/harness-compat/client-icons'
@@ -16,12 +15,12 @@ import WALMART_SPARK from '../../assets/walmart-spark.webp'
 import EXECUTIVE_STORYBOARD from '../../assets/paramont-executive-editorial-storyboard.webp'
 import { PROPOSAL_QUESTION_IDS, PROPOSAL_QUESTION_NAMESPACE } from '../index.js'
 
-export const inject = ['slots', 'sessions']
+export const inject = ['slots']
 const STYLE_ID = '@paimind/proposal-experience'
 
 const STYLE = `
 [data-paimind-proposal-frame]{display:flex;justify-content:center;padding:8px calc(var(--dsh-composer-side-clearance,0px) + 16px) 12px}
-[data-paimind-proposal-thread]{display:grid;width:min(900px,100%);max-height:min(72vh,720px);gap:10px;overflow:auto;scrollbar-gutter:stable;padding:2px 6px 8px;color:var(--dsw-alias-label-primary,#172033)}
+[data-paimind-proposal-thread]{display:grid;width:min(760px,100%);max-height:min(62vh,560px);gap:9px;overflow:auto;scrollbar-gutter:stable;padding:2px 6px 8px;color:var(--dsw-alias-label-primary,#172033)}
 [data-paimind-proposal-speaker]{display:flex;align-items:center;gap:10px;padding:0 2px}
 [data-paimind-proposal-avatar]{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border-radius:11px;background:linear-gradient(145deg,#102b4b,#356fa8);color:#fff;font-size:11px;font-weight:780;letter-spacing:.04em;box-shadow:0 7px 18px rgba(22,55,89,.2)}
 [data-paimind-proposal-speaker] strong{display:block;font-size:12px;line-height:17px;font-weight:680}
@@ -82,42 +81,17 @@ const STYLE = `
 [data-paimind-deck-preview] > h3{margin:5px 0 4px;font-family:Georgia,'Times New Roman',serif;font-size:19px;line-height:23px;font-weight:650}
 [data-paimind-deck-preview] > p{margin:0;color:var(--dsw-alias-label-secondary,#667085);font-size:11px;line-height:16px}
 [data-paimind-storyboard-frame]{position:relative;display:flex;align-items:center;justify-content:center;min-height:0;margin-top:12px;padding:10px;border:1px solid rgba(29,51,78,.13);border-radius:14px;background:#081b30;box-shadow:0 14px 30px rgba(12,31,55,.16);overflow:hidden}
-[data-paimind-storyboard]{display:block;width:auto;max-width:100%;height:268px;object-fit:contain}
+[data-paimind-storyboard]{display:block;width:auto;max-width:100%;height:210px;object-fit:contain}
 [data-paimind-storyboard-caption]{position:absolute;right:16px;bottom:15px;padding:4px 7px;border-radius:999px;background:rgba(7,20,35,.76);color:#fff;font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(8px)}
 [data-paimind-preview-meta]{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}
 [data-paimind-preview-meta] div{padding:8px 9px;border:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.16));border-radius:10px;background:color-mix(in srgb,var(--dsw-specific-input-major,#fff) 82%,transparent)}
 [data-paimind-preview-meta] span{display:block;color:var(--dsw-alias-label-tertiary,#7b8796);font-size:8px;font-weight:760;letter-spacing:.09em;text-transform:uppercase}
 [data-paimind-preview-meta] strong{display:block;margin-top:3px;font-size:10px;line-height:14px;font-weight:620}
 [data-paimind-preview-hint]{margin-top:9px!important;font-size:9px!important}
-[data-paimind-proposal-summaries]{display:grid;width:calc(100% - 42px);margin-left:42px;gap:7px}
-[data-paimind-proposal-summary]{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:48px;padding:8px 10px;border:1px solid color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 20%,transparent);border-radius:13px;background:color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 6%,var(--dsw-specific-input-major,#fff));box-shadow:0 4px 14px rgba(12,31,55,.04)}
-[data-paimind-proposal-summary-check]{display:grid;place-items:center;width:24px;height:24px;border-radius:8px;background:color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 13%,transparent);color:var(--dsw-alias-brand-primary,#356fa8)}
-[data-paimind-proposal-summary-check] svg{width:13px;height:13px}
-[data-paimind-proposal-summary-copy]{min-width:0}
-[data-paimind-proposal-summary-copy] span{display:block;color:var(--dsw-alias-label-tertiary,#7b8796);font-size:8px;font-weight:760;letter-spacing:.1em;text-transform:uppercase}
-[data-paimind-proposal-summary-copy] strong{display:block;overflow:hidden;margin-top:2px;font-size:11px;line-height:16px;font-weight:640;text-overflow:ellipsis;white-space:nowrap}
-[data-paimind-proposal-summary-edit]{min-height:28px;padding:5px 9px;border:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.18));border-radius:8px;background:var(--dsw-specific-input-major,#fff);color:var(--dsw-alias-label-secondary,#667085);font-size:9px;font-weight:650;cursor:pointer}
-[data-paimind-proposal-summary-edit]:hover,[data-paimind-proposal-summary-edit]:focus-visible{outline:none;border-color:color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 48%,transparent);color:var(--dsw-alias-brand-primary,#356fa8)}
-[data-paimind-proposal-summary] [data-paimind-brand-logo-shell]{width:28px;height:28px;flex-basis:28px;padding:4px;border-radius:8px;box-shadow:none}
-[data-paimind-proposal-summary] [data-paimind-brand-logo-shell][data-brand='dollar-general']{padding:0;border-radius:999px}
-[data-paimind-proposal-ready]{padding:19px}
-[data-paimind-proposal-ready-hero]{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:13px;padding:15px;border:1px solid color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 24%,transparent);border-radius:16px;background:color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 7%,transparent)}
-[data-paimind-proposal-ready-icon]{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:var(--dsw-alias-brand-primary,#356fa8);color:#fff;box-shadow:0 10px 22px color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 28%,transparent)}
-[data-paimind-proposal-ready-icon] svg{width:19px;height:19px}
-[data-paimind-proposal-ready-hero] strong{display:block;font-size:14px;line-height:20px}
-[data-paimind-proposal-ready-hero] p{margin:3px 0 0;color:var(--dsw-alias-label-secondary,#667085);font-size:11px;line-height:17px}
-[data-paimind-proposal-brief-grid]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}
-[data-paimind-proposal-brief-grid] div{padding:11px 12px;border:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.16));border-radius:12px;background:color-mix(in srgb,var(--dsw-specific-input-major,#fff) 90%,transparent)}
-[data-paimind-proposal-brief-grid] span{display:block;color:var(--dsw-alias-label-tertiary,#7b8796);font-size:8px;font-weight:760;letter-spacing:.1em;text-transform:uppercase}
-[data-paimind-proposal-brief-grid] strong{display:block;margin-top:4px;font-size:11px;line-height:16px;font-weight:630}
-[data-paimind-proposal-ready-actions]{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:13px}
-[data-paimind-proposal-ready-actions] small{color:var(--dsw-alias-label-tertiary,#7b8796);font-size:9px;line-height:14px}
 [data-ds-dark-theme] [data-paimind-proposal-card]{background:#151e2c;color:#edf3fb}
-[data-ds-dark-theme] [data-paimind-proposal-summary]{background:color-mix(in srgb,#356fa8 13%,#151e2c)}
-[data-ds-dark-theme] [data-paimind-proposal-summary-edit]{background:#151e2c;color:#c5d0dd}
 [data-ds-dark-theme] [data-paimind-brand-logo-shell]{border-color:rgba(255,255,255,.18)}
-@media(max-width:840px){[data-paimind-proposal-body][data-preview='true']{grid-template-columns:1fr}[data-paimind-deck-preview]{border-top:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.16));border-left:0}[data-paimind-storyboard]{height:230px}}
-@media(max-width:620px){[data-paimind-proposal-frame]{padding-right:10px;padding-left:10px}[data-paimind-proposal-thread]{padding-right:0;padding-left:0}[data-paimind-proposal-card],[data-paimind-proposal-summaries]{width:100%;margin-left:0}[data-paimind-proposal-head]{padding:16px 15px 13px}[data-paimind-proposal-progress] li{font-size:0}[data-paimind-proposal-progress] li::after{content:attr(data-step);font-size:9px}[data-paimind-proposal-options]{padding:12px}[data-paimind-proposal-options][data-stage='customer'],[data-paimind-proposal-options][data-stage='departments'],[data-paimind-proposal-options][data-stage='confirm'],[data-paimind-proposal-brief-grid]{grid-template-columns:1fr}[data-paimind-proposal-options][data-stage='time-horizon']{grid-template-columns:1fr}[data-paimind-proposal-options][data-stage='time-horizon'] [data-paimind-proposal-option]{min-height:60px;flex-direction:row;align-items:center}[data-paimind-proposal-ready-actions]{align-items:flex-start;flex-direction:column}}
+@media(max-width:760px){[data-paimind-proposal-body][data-preview='true']{grid-template-columns:1fr}[data-paimind-deck-preview]{border-top:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.16));border-left:0}[data-paimind-storyboard]{height:190px}}
+@media(max-width:620px){[data-paimind-proposal-frame]{padding-right:10px;padding-left:10px}[data-paimind-proposal-thread]{padding-right:0;padding-left:0}[data-paimind-proposal-card]{width:100%;margin-left:0}[data-paimind-proposal-head]{padding:16px 15px 13px}[data-paimind-proposal-progress] li{font-size:0}[data-paimind-proposal-progress] li::after{content:attr(data-step);font-size:9px}[data-paimind-proposal-options]{padding:12px}[data-paimind-proposal-options][data-stage='customer'],[data-paimind-proposal-options][data-stage='departments'],[data-paimind-proposal-options][data-stage='confirm']{grid-template-columns:1fr}[data-paimind-proposal-options][data-stage='time-horizon']{grid-template-columns:1fr}[data-paimind-proposal-options][data-stage='time-horizon'] [data-paimind-proposal-option]{min-height:60px;flex-direction:row;align-items:center}}
 @media(prefers-reduced-motion:reduce){[data-paimind-proposal-option]{transition:none}}
 `
 
@@ -230,197 +204,10 @@ const PROPOSAL_STEPS = Object.freeze([
   { id: PROPOSAL_QUESTION_IDS.confirm, label: 'Confirm', stage: 'confirm' },
 ] as const)
 
-interface ProposalDemoMatch {
-  readonly kind: 'proposal-demo'
-  readonly key: string
-  readonly sessionId: string
-}
-
-interface ProposalDemoSelections {
-  readonly customer?: string
-  readonly departments: readonly string[]
-  readonly timeHorizon?: string
-  readonly deckType?: string
-}
-
-const EMPTY_DEMO_SELECTIONS: ProposalDemoSelections = Object.freeze({ departments: [] })
-
 function ProposalSpeaker(): React.JSX.Element {
   return <div data-paimind-proposal-speaker>
     <span data-paimind-proposal-avatar aria-hidden="true">PA</span>
-    <span><strong>Proposal Assistant</strong><small>Guided proposal intake · answers stay editable in this conversation</small></span>
-  </div>
-}
-
-function selectionSummary(step: number, selections: ProposalDemoSelections): string | undefined {
-  if (step === 0) return selections.customer
-  if (step === 1) return selections.departments.length === 0 ? undefined : selections.departments.join(', ')
-  if (step === 2) return selections.timeHorizon
-  if (step === 3) return selections.deckType
-  return undefined
-}
-
-function completedSelectionSteps(selections: ProposalDemoSelections, confirmed: boolean): readonly number[] {
-  const steps = PROPOSAL_STEPS
-    .slice(0, 4)
-    .map((_, index) => index)
-    .filter(index => selectionSummary(index, selections) !== undefined)
-  return confirmed ? [...steps, 4] : steps
-}
-
-function AnswerSummaries(props: {
-  readonly selections: ProposalDemoSelections
-  readonly activeStep: number
-  readonly visibleThrough: number
-  readonly onEdit: (step: number) => void
-}): React.JSX.Element | null {
-  const summaries = PROPOSAL_STEPS.slice(0, 4).flatMap((step, index) => {
-    const value = selectionSummary(index, props.selections)
-    if (value === undefined || index === props.activeStep || index >= props.visibleThrough) return []
-    return [{ step, index, value }]
-  })
-  if (summaries.length === 0) return null
-  return <div data-paimind-proposal-summaries aria-label="Proposal answers">
-    {summaries.map(summary => <div data-paimind-proposal-summary key={summary.step.id}>
-      {summary.index === 0 ? brandLogo(summary.value) : <span data-paimind-proposal-summary-check aria-hidden="true"><PaimindCheckIcon /></span>}
-      <span data-paimind-proposal-summary-copy><span>{summary.step.label}</span><strong>{summary.value}</strong></span>
-      <button type="button" data-paimind-proposal-summary-edit aria-label={`Edit ${summary.step.label}`} onClick={() => { props.onEdit(summary.index) }}>Edit</button>
-    </div>)}
-  </div>
-}
-
-function questionForDemoStep(step: number, selections: ProposalDemoSelections): HarnessQuestionItem {
-  const customer = selections.customer ?? 'the selected customer'
-  switch (step) {
-    case 0: return {
-      id: PROPOSAL_QUESTION_IDS.customer,
-      question: 'Which company are you preparing this proposal for?',
-      detail: 'Choose the customer account so Proposal Assistant can shape the audience, time horizon and narrative style.',
-      options: [{ label: 'Dollar General (Recommended)' }, { label: 'Walmart' }],
-    }
-    case 1: return {
-      id: PROPOSAL_QUESTION_IDS.departments,
-      question: 'Which departments should this proposal speak to?',
-      detail: `Account context loaded for ${customer}. The brief will emphasize practical growth, shopper relevance and an executable path. Select every team that should see the final story.`,
-      multiSelect: true,
-      options: [
-        { label: 'Merchandising' }, { label: 'Category Management' },
-        { label: 'Sales' }, { label: 'Executive Leadership' },
-        { label: 'Marketing' }, { label: 'Sourcing & Procurement' },
-      ],
-    }
-    case 2: return {
-      id: PROPOSAL_QUESTION_IDS.timeHorizon,
-      question: 'What planning horizon should the proposal cover?',
-      detail: `The selected audience spans ${selections.departments.length || 'multiple'} team${selections.departments.length === 1 ? '' : 's'}. Choose the horizon that best matches the decision window.`,
-      options: [{ label: 'Next Quarter' }, { label: 'Next 6 Months' }, { label: 'Next 12 Months (Recommended)' }],
-    }
-    case 3: return {
-      id: PROPOSAL_QUESTION_IDS.deckType,
-      question: 'What type of deck would you like to create?',
-      detail: 'Hover or focus a style to inspect its visual system. Selection is staged until you confirm it.',
-      options: [
-        { label: 'Executive Proposal (Recommended)' },
-        { label: 'Category Growth Strategy' },
-        { label: 'Line Review & Assortment' },
-      ],
-    }
-    default: return {
-      id: PROPOSAL_QUESTION_IDS.confirm,
-      question: 'Ready to create the proposal brief?',
-      detail: `${customer} · ${selections.departments.join(', ')} · ${selections.timeHorizon ?? 'Planning horizon'} · ${selections.deckType ?? 'Deck style'}`,
-      options: [{ label: 'Confirm and create brief' }, { label: 'Review from the beginning' }],
-    }
-  }
-}
-
-function selectionValue(answer: { readonly selected: readonly string[]; readonly custom?: string }): string {
-  return answer.custom?.trim() || optionPresentation(answer.selected[0] ?? '').label
-}
-
-function ProposalBriefReady(props: {
-  readonly selections: ProposalDemoSelections
-  readonly onRestart: () => void
-}): React.JSX.Element {
-  return <section data-paimind-proposal-card data-stage="ready" aria-labelledby="proposal-brief-ready-title">
-    <header data-paimind-proposal-head>
-      <div data-paimind-proposal-heading>
-        <div data-paimind-proposal-kicker-row><p data-paimind-proposal-kicker>Proposal setup · Complete</p><span data-paimind-proposal-step-count>5 of 5 decisions captured</span></div>
-        <h2 data-paimind-proposal-title id="proposal-brief-ready-title">Proposal brief ready for deck generation</h2>
-        <p data-paimind-proposal-detail>Proposal Assistant has structured the intake. Slide content and PPTX generation remain intentionally deferred to the next delivery phase.</p>
-      </div>
-      <ProgressRail current={PROPOSAL_STEPS.length} />
-    </header>
-    <div data-paimind-proposal-ready>
-      <div data-paimind-proposal-ready-hero><span data-paimind-proposal-ready-icon><PaimindCheckIcon /></span><div><strong>Decision-ready intake captured</strong><p>The answers above remain editable. The next run can turn this brief into an outline, evidence plan and editable deck.</p></div></div>
-      <div data-paimind-proposal-ready-actions><small>Demo scope: intake and visual interaction only. No PPTX has been generated.</small><button type="button" data-paimind-proposal-submit onClick={props.onRestart}>Start another proposal</button></div>
-    </div>
-  </section>
-}
-
-function ProposalGuidedDemo({ matched }: { readonly matched: ProposalDemoMatch }): React.JSX.Element {
-  const [step, setStep] = useState(0)
-  const [resumeStep, setResumeStep] = useState<number | null>(null)
-  const [selections, setSelections] = useState<ProposalDemoSelections>(EMPTY_DEMO_SELECTIONS)
-  const question = useMemo(() => questionForDemoStep(step, selections), [selections, step])
-  const initialAnswer = useMemo(() => {
-    const values = step === 1 ? selections.departments : [selectionSummary(step, selections)].filter((value): value is string => value !== undefined)
-    const selected = (question.options ?? []).filter(option => values.includes(optionPresentation(option.label).label)).map(option => option.label)
-    const custom = values.find(value => !(question.options ?? []).some(option => optionPresentation(option.label).label === value)) ?? ''
-    return { selected, custom }
-  }, [question, selections, step])
-  const wait = useMemo<HarnessQuestionWait>(() => ({
-    kind: 'question', key: `${matched.key}:${String(step)}`, sessionId: matched.sessionId,
-    payload: { questions: [question] },
-    respond: async response => {
-      if (!response.ok) {
-        setSelections(EMPTY_DEMO_SELECTIONS); setResumeStep(null); setStep(0)
-        return { accepted: true }
-      }
-      const answer = response.value.answer.answers[0]
-      if (answer === undefined) return { accepted: false, reason: 'Proposal answer missing' }
-      if (answer.id === PROPOSAL_QUESTION_IDS.confirm && selectionValue(answer) === 'Review from the beginning') {
-        setResumeStep(null); setStep(0)
-        return { accepted: true }
-      }
-      setSelections(current => {
-        if (answer.id === PROPOSAL_QUESTION_IDS.customer) return { ...current, customer: selectionValue(answer) }
-        if (answer.id === PROPOSAL_QUESTION_IDS.departments) return { ...current, departments: answer.custom?.trim() ? [answer.custom.trim()] : answer.selected.map(label => optionPresentation(label).label) }
-        if (answer.id === PROPOSAL_QUESTION_IDS.timeHorizon) return { ...current, timeHorizon: selectionValue(answer) }
-        if (answer.id === PROPOSAL_QUESTION_IDS.deckType) return { ...current, deckType: selectionValue(answer) }
-        return current
-      })
-      setStep(current => resumeStep ?? Math.min(PROPOSAL_STEPS.length, current + 1))
-      setResumeStep(null)
-      return { accepted: true }
-    },
-  }), [matched.key, matched.sessionId, question, resumeStep, step])
-
-  const edit = (targetStep: number): void => {
-    setResumeStep(step)
-    setStep(targetStep)
-  }
-
-  return <div data-paimind-proposal-frame>
-    <div data-paimind-proposal-thread data-mode="guided-demo">
-      <ProposalSpeaker />
-      <AnswerSummaries
-        selections={selections}
-        activeStep={step}
-        visibleThrough={resumeStep === null ? step : PROPOSAL_STEPS.length}
-        onEdit={edit}
-      />
-      {step >= PROPOSAL_STEPS.length
-        ? <ProposalBriefReady selections={selections} onRestart={() => { setSelections(EMPTY_DEMO_SELECTIONS); setResumeStep(null); setStep(0) }} />
-        : <ProposalQuestionCard
-            key={wait.key}
-            matched={wait}
-            inline
-            initialSelected={initialAnswer.selected}
-            initialCustom={initialAnswer.custom}
-            completedSteps={completedSelectionSteps(selections, false)}
-          />}
-    </div>
+    <span><strong>Proposal Assistant</strong><small>AI-requested decision · your answer returns to the agent</small></span>
   </div>
 }
 
@@ -441,12 +228,12 @@ function optionDetail(option: HarnessQuestionOption): string | undefined {
   return option.description ?? OPTION_DETAILS[optionPresentation(option.label).label]
 }
 
-function ProgressRail(props: { readonly current: number; readonly completedSteps?: readonly number[] }): React.JSX.Element {
+function ProgressRail(props: { readonly current: number }): React.JSX.Element {
   return <ol data-paimind-proposal-progress aria-label="Proposal setup progress">
     {PROPOSAL_STEPS.map((step, index) => <li
       key={step.id}
       data-step={index + 1}
-      data-state={index < props.current || props.completedSteps?.includes(index) === true ? 'complete' : index === props.current ? 'current' : 'upcoming'}
+      data-state={index < props.current ? 'complete' : index === props.current ? 'current' : 'upcoming'}
       aria-current={index === props.current ? 'step' : undefined}
     >{step.label}</li>)}
   </ol>
@@ -454,18 +241,14 @@ function ProgressRail(props: { readonly current: number; readonly completedSteps
 
 interface ProposalQuestionComposerProps {
   readonly matched: HarnessQuestionWait
-  readonly inline?: boolean
-  readonly initialSelected?: readonly string[]
-  readonly initialCustom?: string
-  readonly completedSteps?: readonly number[]
 }
 
 function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.Element {
   const { matched } = props
   const question = matched.payload.questions[0]!
   const options = question.options ?? []
-  const [selected, setSelected] = useState<readonly string[]>(props.initialSelected ?? [])
-  const [custom, setCustom] = useState(props.initialCustom ?? '')
+  const [selected, setSelected] = useState<readonly string[]>([])
+  const [custom, setCustom] = useState('')
   const [focused, setFocused] = useState(options[0]?.label ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -523,7 +306,7 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
           <h2 data-paimind-proposal-title id={`proposal-question-${matched.key}`}>{question.question}</h2>
           {question.detail === undefined ? null : <p data-paimind-proposal-detail>{question.detail}</p>}
         </div>
-        <ProgressRail current={step} {...(props.completedSteps === undefined ? {} : { completedSteps: props.completedSteps })} />
+        <ProgressRail current={step} />
       </header>
       <div data-paimind-proposal-body data-preview={hasPreview}>
         <div data-paimind-proposal-options data-stage={stage} role={question.multiSelect === true ? 'group' : 'radiogroup'}>
@@ -574,9 +357,8 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
       <footer data-paimind-proposal-utility><button type="button" aria-label="Cancel proposal question" disabled={busy} onClick={cancel}>Cancel intake</button></footer>
     </section>
 
-  if (props.inline === true) return card
   return <div data-paimind-proposal-frame data-question-key={matched.key}>
-    <div data-paimind-proposal-thread data-mode="native-question"><ProposalSpeaker />{card}</div>
+    <div data-paimind-proposal-thread data-mode="ai-tool-question" data-trigger="ask-user-question"><ProposalSpeaker />{card}</div>
   </div>
 }
 
@@ -584,15 +366,7 @@ export function ProposalQuestionComposer({ matched }: { readonly matched: Harnes
   return <ProposalQuestionCard matched={matched} />
 }
 
-interface ProposalExperienceClientContext extends PaimindClientContext {
-  readonly sessions: HarnessSessionService
-}
-
-interface ProposalComposerOwner extends ComposerOwner {
-  readonly session?: { readonly sessionId: string; readonly running: boolean; readonly removed?: boolean }
-}
-
-export function apply(ctx: ProposalExperienceClientContext): void {
+export function apply(ctx: PaimindClientContext): void {
   contributePaimindExtension(ctx.slots, {
     id: 'paimind:proposal-experience', packageName: '@paimind/proposal-experience', category: 'agents',
     nameZh: '提案助手交互', nameEn: 'Proposal Assistant Experience',
@@ -606,22 +380,4 @@ export function apply(ctx: ProposalExperienceClientContext): void {
     priority: -20,
     select: selectProposalQuestion,
   }, ProposalQuestionComposer))
-  const demoMatches = new Map<string, ProposalDemoMatch>()
-  ctx.slots.inject('conversation.composer', () => ctx.slots.register({
-    name: 'conversation.composer',
-    priority: -19,
-    select: (owner: ProposalComposerOwner): ProposalDemoMatch | null => {
-      if (owner.interactions.some(interaction => (interaction as { readonly kind?: string }).kind === 'question')) return null
-      const session = owner.session
-      if (session === undefined || session.running || session.removed === true) return null
-      const presetId = ctx.sessions.list.getSnapshot().byId[session.sessionId]?.agentPreset
-      if (presetId !== 'proposal-assistant') return null
-      let match = demoMatches.get(session.sessionId)
-      if (match === undefined) {
-        match = Object.freeze({ kind: 'proposal-demo', key: `proposal-demo:${session.sessionId}`, sessionId: session.sessionId })
-        demoMatches.set(session.sessionId, match)
-      }
-      return match
-    },
-  }, ProposalGuidedDemo))
 }
