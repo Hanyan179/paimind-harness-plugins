@@ -135,6 +135,7 @@ afterEach(() => {
   cleanup()
   document.body.innerHTML = ''
   document.head.innerHTML = ''
+  document.documentElement.removeAttribute('lang')
 })
 
 describe('PAIMind visual experience client', () => {
@@ -171,9 +172,11 @@ describe('PAIMind visual experience client', () => {
     const trigger = document.querySelector<HTMLButtonElement>('[data-paimind-agent-picker-trigger]')
     if (trigger === null) throw new Error('visual Agent picker trigger is missing')
     fireEvent.click(trigger)
-    expect(await screen.findByRole('dialog', { name: '选择 Agent 或平台模式' })).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog', { name: '选择 Agent 或平台模式' })
+    expect(dialog).toBeInTheDocument()
     expect(screen.getAllByText('推荐 Agent').length).toBeGreaterThan(0)
     expect(screen.getAllByText('平台模式').length).toBeGreaterThan(0)
+    expect(dialog).toHaveTextContent('方向键浏览 · Enter 选择 · Esc 返回')
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
 
@@ -264,6 +267,31 @@ describe('PAIMind visual experience client', () => {
     fixture.disposeEffects()
   })
 
+  it('presents native Context candidates with the shared picker density and restores their exact labels', async () => {
+    document.documentElement.lang = 'zh-CN'
+    const { fixture, scope } = setup()
+    const overlay = document.querySelector<HTMLElement>("[data-slot='conversation.input.overlay']")
+    if (overlay === null) throw new Error('composer overlay fixture is missing')
+    overlay.innerHTML = `<div role="listbox" aria-activedescendant="dsh-slash-option-paimind-context-0"><div><div role="presentation">Files & folders</div><button id="dsh-slash-option-paimind-context-0" role="option" aria-selected="true"><span class="fixture_itemName">Folder · artifacts/</span><span class="fixture_itemDescription">artifacts</span></button></div></div>`
+
+    await waitFor(() => expect(overlay.querySelector('[data-paimind-candidate-name]')).toHaveTextContent('artifacts/'))
+    expect(overlay.querySelector('[data-paimind-context-kind-label]')).toHaveTextContent('文件夹')
+    expect(overlay.querySelector('[data-paimind-composer-disclosure]')).toHaveTextContent('将这个文件夹“artifacts/”添加到当前对话上下文。')
+    expect(overlay.querySelector('[data-paimind-composer-disclosure]')).toHaveTextContent('方向键浏览 · Enter 选择 · Esc 返回')
+
+    const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@paimind/visual-experience"]')?.textContent ?? ''
+    expect(style).toContain('width:min(590px,100%)!important')
+    expect(style).toContain('height:min(360px,var(--paimind-composer-overlay-room,360px))!important')
+    expect(style).toContain('grid-template-columns:minmax(190px,42%) minmax(240px,1fr)')
+    expect(style).toContain('min-height:36px;padding:7px 8px;border-radius:10px')
+
+    await act(async () => { scope.push('native') })
+    await waitFor(() => expect(overlay.querySelector('[data-paimind-composer-disclosure]')).toBeNull())
+    expect(overlay.querySelector('.fixture_itemName')).toHaveTextContent('Folder · artifacts/')
+    expect(overlay.querySelector('[data-paimind-context-kind-label]')).toBeNull()
+    fixture.disposeEffects()
+  })
+
   it('commits direct Settings radio clicks and reverses PAIMind semantics in both directions', async () => {
     const current = setup(successfulApi(), 'paimind')
     await waitFor(() => expect(current.triggerSources.some(source => source.name === 'paimind-agent')).toBe(true))
@@ -320,6 +348,13 @@ describe('PAIMind visual experience client', () => {
     )).resolves.toEqual([])
 
     const agent = triggerSources.find(source => source.name === 'paimind-agent')!
+    const allAgents = await agent.candidates(
+      { sessionId: 'session-1' },
+      { query: '', position: 'leading', signal: new AbortController().signal },
+    )
+    expect(allAgents[0]?.section).toBe('推荐 Agent')
+    expect(allAgents.find(candidate => candidate.value === 'standard')?.section).toBe('平台模式')
+    expect(allAgents.find(candidate => candidate.value === 'paimind')?.section).toBe('推荐 Agent')
     const agents = await agent.candidates(
       { sessionId: 'session-1' },
       { query: 'Paramont', position: 'leading', signal: new AbortController().signal },
@@ -461,6 +496,7 @@ describe('PAIMind visual experience client', () => {
     )).not.toBeNull())
     const menuAvatar = overlay.querySelector<HTMLImageElement>('img[data-paimind-agent-avatar-id="paimind"]')
     await waitFor(() => expect(menuAvatar?.src).toBe(quickParamont?.src))
+    await waitFor(() => expect(overlay.querySelector('[data-paimind-composer-disclosure-avatar]')).not.toBeNull())
 
     await act(async () => { scope.push('native') })
     await waitFor(() => expect(overlay.querySelector('[data-paimind-agent-avatar]')).toBeNull())
@@ -488,11 +524,11 @@ describe('PAIMind visual experience client', () => {
     expect(style).toContain('textarea[data-phase]{background:transparent!important;color:transparent!important')
     expect(style).not.toContain("[data-phase]{background:var(--paimind-canvas)!important}")
     expect(style).toContain("bottom:calc(100% + 8px)!important")
-    expect(style).toContain('background:color-mix(in srgb,var(--paimind-canvas) 94%,white 6%)!important')
+    expect(style).toContain('background:var(--paimind-glass-strong)!important')
     expect(style).not.toContain("body[data-paimind-experience='paimind'] [data-paimind-agent-center]")
     expect(style).toContain("body[data-paimind-experience='paimind'] [data-paimind-skill-center]")
     expect(style).toContain('[data-paimind-composer-disclosure]')
-    expect(style).toContain('grid-template-columns:minmax(250px,42%) minmax(0,1fr)')
+    expect(style).toContain('grid-template-columns:minmax(190px,42%) minmax(240px,1fr)')
     expect(style).toContain('[data-paimind-candidate-description]{display:none!important}')
     expect(style).toContain('[data-paimind-agent-avatar]{display:block')
     expect(style).toContain('@media(prefers-reduced-motion:reduce)')

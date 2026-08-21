@@ -217,26 +217,28 @@ body[data-paimind-experience='paimind'] [data-composer-card] button[aria-haspopu
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor]{z-index:180}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [data-slot='conversation.input.overlay']{display:contents!important}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox']{
-  box-sizing:border-box!important;top:auto!important;right:auto!important;bottom:calc(100% + 8px)!important;left:0!important;width:min(720px,100%)!important;min-width:0!important;max-width:100%!important;
-  max-height:min(360px,var(--paimind-composer-overlay-room,360px))!important;padding:6px!important;border:1px solid color-mix(in srgb,var(--paimind-line) 82%,white 18%)!important;
-  border-radius:16px!important;background:color-mix(in srgb,var(--paimind-canvas) 94%,white 6%)!important;box-shadow:0 22px 62px rgba(17,39,63,.18)!important;
+  box-sizing:border-box!important;top:auto!important;right:auto!important;bottom:calc(100% + 8px)!important;left:0!important;width:min(590px,100%)!important;min-width:0!important;max-width:100%!important;
+  height:min(360px,var(--paimind-composer-overlay-room,360px))!important;max-height:min(360px,var(--paimind-composer-overlay-room,360px))!important;padding:0!important;border:1px solid var(--paimind-line)!important;
+  border-radius:18px!important;background:var(--paimind-glass-strong)!important;box-shadow:0 24px 72px rgba(17,39,63,.2)!important;
   backdrop-filter:blur(24px) saturate(1.12);-webkit-backdrop-filter:blur(24px) saturate(1.12);animation:paimind-composer-menu-in .18s ease-out;
 }
-body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox']:has(>[data-paimind-composer-disclosure]){display:grid!important;grid-template-columns:minmax(250px,42%) minmax(0,1fr);grid-template-rows:minmax(0,1fr);overflow:hidden!important}
-body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox']:has(>[data-paimind-composer-disclosure])>:first-child{min-width:0;overflow:auto;border-right:1px solid var(--paimind-line)}
-body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox'] [role='option']{display:flex!important;align-items:center;gap:9px;min-width:0;min-height:44px;padding:8px 11px;border-radius:11px;color:var(--paimind-ink);font-size:13px;line-height:20px}
-body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox'] [role='option'][aria-selected='true']{background:color-mix(in srgb,var(--paimind-accent) 15%,transparent)!important;box-shadow:inset 3px 0 0 color-mix(in srgb,var(--paimind-accent) 74%,transparent)}
+body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox']:has(>[data-paimind-composer-disclosure]){display:grid!important;grid-template-columns:minmax(190px,42%) minmax(240px,1fr);grid-template-rows:minmax(0,1fr);overflow:hidden!important}
+body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox']:has(>[data-paimind-composer-disclosure])>:first-child{min-width:0;min-height:0;padding:8px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;border-right:1px solid var(--paimind-line)}
+body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox'] [role='option']{display:flex!important;align-items:center;gap:8px;min-width:0;min-height:36px;padding:7px 8px;border-radius:10px;color:var(--paimind-ink);font-size:12px;line-height:18px}
+body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox'] [role='option'][aria-selected='true']{background:color-mix(in srgb,var(--paimind-accent) 10%,transparent)!important;box-shadow:none}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox'] [role='option']>[aria-hidden]{display:inline-flex;flex:none;width:22px;height:22px;align-items:center;justify-content:center;border-radius:50%;background:color-mix(in srgb,var(--paimind-accent) 9%,transparent)}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox'] [role='option']>[data-paimind-agent-avatar-host]{width:30px;height:30px;overflow:hidden;background:transparent}
-body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [data-paimind-candidate-name]{display:-webkit-box;min-width:0;overflow:hidden;overflow-wrap:anywhere;white-space:normal;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [data-paimind-candidate-name]{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [data-paimind-candidate-description]{display:none!important}
-body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure]{display:grid;align-content:start;gap:9px;min-width:0;overflow:auto;padding:20px 22px;color:var(--paimind-ink)}
-body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] small{color:var(--paimind-accent);font-size:10px;font-weight:750;line-height:15px;letter-spacing:.08em;text-transform:uppercase}
-body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] strong{font-size:16px;line-height:23px;overflow-wrap:anywhere}
+body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [data-paimind-context-kind-label]{flex:none;min-width:38px;color:var(--paimind-accent);font-size:9px;font-weight:700;line-height:14px;letter-spacing:.04em;text-transform:uppercase}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure]{display:grid;align-content:start;gap:9px;min-width:0;overflow:auto;padding:22px;color:var(--paimind-ink)}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] [data-paimind-composer-disclosure-avatar]{width:32px;height:32px}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] small{color:var(--paimind-accent);font-size:10px;font-weight:700;line-height:15px;letter-spacing:.08em;text-transform:uppercase}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] strong{font-size:16px;line-height:22px;overflow-wrap:anywhere}
 body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] p{margin:0;color:var(--paimind-muted);font-size:12px;line-height:19px;overflow-wrap:anywhere}
-body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] span{align-self:end;color:var(--paimind-muted);font-size:10px;line-height:15px}
-body[data-paimind-experience='paimind'][data-ds-dark-theme] [data-paimind-composer-overlay-anchor] [role='listbox']{background:color-mix(in srgb,var(--paimind-canvas) 94%,#233149 6%)!important}
-body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='presentation']{min-height:24px;padding:6px 11px 2px;color:var(--paimind-muted);font-size:10px;font-weight:700;line-height:16px;letter-spacing:.06em;text-transform:uppercase}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] span{margin-top:4px;color:var(--paimind-muted);font-size:10px;line-height:15px}
+body[data-paimind-experience='paimind'][data-ds-dark-theme] [data-paimind-composer-overlay-anchor] [role='listbox']{background:var(--paimind-glass-strong)!important}
+body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='presentation']{min-height:23px;padding:4px 8px;color:var(--paimind-muted);font-size:10px;font-weight:700;line-height:15px;letter-spacing:.08em;text-transform:uppercase}
 [data-paimind-agent-avatar]{display:block;flex:none;width:30px;height:30px;border:1px solid color-mix(in srgb,var(--paimind-line) 72%,white 28%);border-radius:50%;object-fit:cover;background:var(--paimind-glass-strong);box-shadow:0 1px 4px rgba(15,40,68,.12)}
 [data-paimind-context-launcher]{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:5px 9px;border:0;border-radius:999px;color:var(--paimind-muted);background:transparent;font:inherit;font-size:12px;line-height:18px;cursor:pointer}
 [data-paimind-context-launcher]:hover,[data-paimind-context-launcher]:focus-visible,[data-paimind-context-launcher][aria-expanded='true']{color:var(--paimind-navy);background:color-mix(in srgb,var(--paimind-accent) 11%,transparent);outline:none}
@@ -273,6 +275,7 @@ body[data-paimind-experience='paimind'][data-paimind-composer-overlay='open'] [d
 [data-paimind-agent-picker-detail] small{color:var(--paimind-accent);font-size:10px;font-weight:700;line-height:15px;letter-spacing:.08em;text-transform:uppercase}
 [data-paimind-agent-picker-detail] strong{color:var(--paimind-ink);font-size:16px;line-height:22px}
 [data-paimind-agent-picker-detail] p{margin:0;color:var(--paimind-muted);font-size:12px;line-height:19px;overflow-wrap:anywhere}
+[data-paimind-agent-picker-hint]{margin-top:4px;color:var(--paimind-muted);font-size:10px;line-height:15px}
 [data-paimind-agent-picker-error]{grid-column:1/-1;margin:0;padding:7px 12px;border-top:1px solid var(--paimind-line);color:var(--dsw-alias-state-error-primary,#c64d4d);font-size:11px;line-height:17px}
 body[data-paimind-experience='paimind'][data-paimind-density='focus'] [data-variant][aria-expanded='false'],
 body[data-paimind-experience='paimind'][data-paimind-density='focus'] [data-variant]:has(> [data-disclosure-row][aria-expanded='false']),
@@ -475,6 +478,7 @@ export class PaimindComposerOverlayPresenter {
     const description = children.find(child => child.className.includes('itemDescription'))
     if (name !== undefined && !name.hasAttribute('data-paimind-candidate-name')) name.setAttribute('data-paimind-candidate-name', '')
     if (description !== undefined && !description.hasAttribute('data-paimind-candidate-description')) description.setAttribute('data-paimind-candidate-description', '')
+    if (name !== undefined && option.id.includes('paimind-context')) this.annotateContextName(option, name)
   }
 
   private renderDisclosure(option: HTMLElement): void {
@@ -482,7 +486,8 @@ export class PaimindComposerOverlayPresenter {
       ?? option.textContent?.trim() ?? ''
     const description = option.querySelector<HTMLElement>('[data-paimind-candidate-description]')?.textContent?.trim() ?? ''
     const section = this.sectionFor(option)
-    const signature = `${option.id}|${section}|${name}|${description}`
+    const avatarKey = option.querySelector<HTMLElement>('[data-paimind-agent-avatar]')?.dataset.paimindAgentAvatarKey ?? ''
+    const signature = `${option.id}|${section}|${name}|${description}|${avatarKey}`
     if (signature === this.disclosureSignature && this.disclosure?.isConnected === true) return
     this.disclosureSignature = signature
     const disclosure = this.disclosure ?? this.doc.createElement('aside')
@@ -491,14 +496,56 @@ export class PaimindComposerOverlayPresenter {
     disclosure.setAttribute('aria-atomic', 'true')
     const kind = this.doc.createElement('small'); kind.textContent = section
     const title = this.doc.createElement('strong'); title.textContent = name
-    const copy = this.doc.createElement('p'); copy.textContent = description || this.emptyDescription(section)
+    const copy = this.doc.createElement('p')
+    copy.textContent = option.dataset.paimindContextKind === undefined
+      ? description || this.emptyDescription(section)
+      : this.contextDescription(option.dataset.paimindContextKind, name)
     const hint = this.doc.createElement('span')
-    hint.textContent = this.isChinese() ? '悬停或使用方向键查看完整信息 · Enter 选择' : 'Hover or use arrow keys for full details · Enter to select'
-    disclosure.replaceChildren(kind, title, copy, hint)
+    hint.textContent = this.isChinese() ? '方向键浏览 · Enter 选择 · Esc 返回' : 'Arrow keys to browse · Enter to select · Esc to return'
+    const avatarSource = option.querySelector<HTMLImageElement>('[data-paimind-agent-avatar]')
+    const avatar = avatarSource?.cloneNode(true) as HTMLImageElement | undefined
+    if (avatar !== undefined) {
+      avatar.dataset.paimindComposerDisclosureAvatar = ''
+      avatar.removeAttribute('data-paimind-agent-avatar-owner')
+      disclosure.replaceChildren(avatar, kind, title, copy, hint)
+    } else {
+      disclosure.replaceChildren(kind, title, copy, hint)
+    }
     if (this.disclosure !== disclosure) {
       this.disclosure = disclosure
       this.disclosureList?.append(disclosure)
     }
+  }
+
+  private annotateContextName(option: HTMLElement, name: HTMLElement): void {
+    if (name.dataset.paimindCandidateOriginalName !== undefined) return
+    const original = name.textContent?.trim() ?? ''
+    const match = /^(Folder|File|Session)\s*·\s*(.+)$/u.exec(original)
+    if (match === null) return
+    const kind = match[1]!.toLowerCase()
+    const label = match[2]!.trim()
+    name.dataset.paimindCandidateOriginalName = original
+    name.textContent = label
+    option.dataset.paimindContextKind = kind
+    const kindLabel = this.doc.createElement('span')
+    kindLabel.dataset.paimindContextKindLabel = ''
+    kindLabel.textContent = this.contextKindLabel(kind)
+    option.insertBefore(kindLabel, name)
+  }
+
+  private contextKindLabel(kind: string): string {
+    const zh = this.isChinese()
+    if (kind === 'folder') return zh ? '文件夹' : 'Folder'
+    if (kind === 'file') return zh ? '文件' : 'File'
+    if (kind === 'session') return zh ? '会话' : 'Session'
+    return zh ? '上下文' : 'Context'
+  }
+
+  private contextDescription(kind: string, name: string): string {
+    const label = this.contextKindLabel(kind)
+    return this.isChinese()
+      ? `将这个${label}“${name}”添加到当前对话上下文。`
+      : `Add this ${label.toLowerCase()} “${name}” to the current conversation context.`
   }
 
   private sectionFor(option: HTMLElement): string {
@@ -534,7 +581,14 @@ export class PaimindComposerOverlayPresenter {
       this.disclosureList.removeEventListener('pointerleave', this.onPointerLeave)
       for (const option of this.disclosureList.querySelectorAll<HTMLElement>('[data-paimind-candidate-option]')) {
         option.removeAttribute('data-paimind-candidate-option')
-        option.querySelector('[data-paimind-candidate-name]')?.removeAttribute('data-paimind-candidate-name')
+        option.removeAttribute('data-paimind-context-kind')
+        option.querySelector('[data-paimind-context-kind-label]')?.remove()
+        const name = option.querySelector<HTMLElement>('[data-paimind-candidate-name]')
+        if (name?.dataset.paimindCandidateOriginalName !== undefined) {
+          name.textContent = name.dataset.paimindCandidateOriginalName
+          name.removeAttribute('data-paimind-candidate-original-name')
+        }
+        name?.removeAttribute('data-paimind-candidate-name')
         option.querySelector('[data-paimind-candidate-description]')?.removeAttribute('data-paimind-candidate-description')
       }
     }
@@ -914,6 +968,7 @@ export function AgentChoiceSeat({ bridge, mode, locale }: {
         <small>{focused === undefined ? '' : categoryLabel(focused.category, zh)}</small>
         <strong>{focused?.name}</strong>
         <p>{focused?.description}</p>
+        <span data-paimind-agent-picker-hint>{zh ? '方向键浏览 · Enter 选择 · Esc 返回' : 'Arrow keys to browse · Enter to select · Esc to return'}</span>
       </aside>
       {snapshot.error === null ? null : <p data-paimind-agent-picker-error role="status">{snapshot.error}</p>}
     </div>
@@ -1050,12 +1105,15 @@ function installAgentExperience(
                 ? '使用 Harness 原生创造模式创建和配置个人智能体。'
                 : 'Use the native Harness Creator mode to create and configure a personal Agent.',
             } : choice)
+            .sort((left, right) => Number(right.category === 'recommended') - Number(left.category === 'recommended'))
             .filter(choice => includes(`${choice.name} ${choice.description}`, request.query))
             .map(choice => ({
               name: choice.name,
               description: choice.description,
               icon: paimindAgentAvatarIcon(choice.id),
-              section: language() ? 'Agent（智能体）' : 'Agents',
+              section: choice.category === 'recommended'
+                ? (language() ? '推荐 Agent' : 'Recommended Agents')
+                : (language() ? '平台模式' : 'Platform Modes'),
               value: choice.id,
             }))
         },
