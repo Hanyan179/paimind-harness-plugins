@@ -130,6 +130,23 @@ describe('Proposal Assistant Experience', () => {
     }))
   })
 
+  it('returns an explicit cancel intent to the AI instead of surfacing a native question error', async () => {
+    const pending = wait({
+      id: PROPOSAL_QUESTION_IDS.department, question: 'Which departments should this deck support?',
+      options: [{ label: 'Merchandising' }, { label: 'Sales' }], multiSelect: true,
+    })
+    render(<ProposalQuestionComposer matched={pending} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel proposal question' }))
+    await waitFor(() => expect(pending.respond).toHaveBeenCalledWith({
+      ok: true,
+      value: { sessionId: 'session-one', answer: { answers: [{
+        id: PROPOSAL_QUESTION_IDS.department,
+        selected: [],
+        custom: 'PAIMIND_PROPOSAL_NAVIGATION:CANCEL',
+      }] } },
+    }))
+  })
+
   it('keeps multi-select departments in one native structured answer', async () => {
     const pending = wait({
       id: PROPOSAL_QUESTION_IDS.department, question: 'Which departments should this deck support?', multiSelect: true,

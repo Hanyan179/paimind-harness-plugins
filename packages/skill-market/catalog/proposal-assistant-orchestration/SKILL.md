@@ -22,7 +22,7 @@ Use the native question Tool for exactly one decision at a time. Keep all visibl
    - Paramont Signature — `paramont-mountain` plus `paramont-signature`.
    - Playful Storybook — `storybook-cutpaper` plus `playful-storybook`.
 
-Do not ask for Horizon during intake and do not add a separate Confirm step. The final Deck Style answer is the human confirmation that starts execution. Persist confirmed choices in `proposal-context.md`. If the user says Back, Edit, Change, or names an earlier field, revise the working file and return to that decision; never force a restart.
+Do not ask for Horizon during intake and do not add a separate Confirm step. The final Deck Style answer is the human confirmation that starts execution. Persist confirmed choices in `proposal-context.md`. If the user says Back, Edit, Change, or names an earlier field, revise the working file and return to that decision; never force a restart. Treat `PAIMIND_PROPOSAL_NAVIGATION:BACK:<question-id>` as a navigation control result rather than a business answer: preserve earlier confirmed fields, invalidate the target and later fields, then immediately issue the canonical target question. Treat `PAIMIND_PROPOSAL_NAVIGATION:CANCEL` as a request to pause the intake: acknowledge it briefly, do not mutate confirmed context, do not run downstream skills, and do not ask another question until the user resumes.
 
 ## Execution
 

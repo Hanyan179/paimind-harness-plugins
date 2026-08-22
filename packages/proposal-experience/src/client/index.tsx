@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
   answerHarnessQuestion,
-  cancelHarnessQuestion,
   contributePaimindExtension,
   selectHarnessNamespacedQuestion,
   type HarnessQuestionItem,
@@ -287,6 +286,8 @@ const PROPOSAL_STEPS = Object.freeze([
   { id: PROPOSAL_QUESTION_IDS.deckStyle, label: 'Deck style', stage: 'deck-style' },
 ] as const)
 
+const PROPOSAL_CANCEL_INTENT = 'PAIMIND_PROPOSAL_NAVIGATION:CANCEL'
+
 function ProposalSpeaker(): React.JSX.Element {
   return <div data-paimind-proposal-speaker>
     <span data-paimind-proposal-avatar-seat data-paimind-agent-avatar-seat="" data-paimind-agent-id="proposal-assistant" aria-hidden="true">
@@ -337,6 +338,7 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
   const [focused, setFocused] = useState(() => options.find(option => optionPresentation(option.label).recommended)?.label ?? options[0]?.label ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pendingAction, setPendingAction] = useState<string | null>(null)
   const step = questionStep(question)
   const stage = stageKey(question)
   const previousStep = step > 0 ? PROPOSAL_STEPS[step - 1] : undefined
@@ -345,8 +347,8 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
   const hasPreview = hasDeckTypePreview || hasDeckStylePreview
   const focusedOption = useMemo(() => options.find(option => option.label === focused) ?? options[0], [focused, options])
 
-  const answer = async (labels: readonly string[], customAnswer = ''): Promise<void> => {
-    setBusy(true); setError(null)
+  const answer = async (labels: readonly string[], customAnswer = '', action = 'Sending your answer to Proposal Assistant…'): Promise<void> => {
+    setBusy(true); setError(null); setPendingAction(action)
     try {
       await answerHarnessQuestion(matched, [{
         id: question.id,
@@ -355,6 +357,7 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
       }])
     } catch (cause) {
       setBusy(false)
+      setPendingAction(null)
       setError(cause instanceof Error ? cause.message : String(cause))
     }
   }
@@ -372,16 +375,13 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
   }
 
   const cancel = (): void => {
-    setBusy(true); setError(null)
-    void cancelHarnessQuestion(matched).catch(cause => {
-      setBusy(false)
-      setError(cause instanceof Error ? cause.message : String(cause))
-    })
+    if (busy) return
+    void answer([], PROPOSAL_CANCEL_INTENT, 'Proposal Assistant is pausing this intake…')
   }
 
   const navigateBack = (): void => {
     if (previousStep === undefined || busy) return
-    void answer([], `PAIMIND_PROPOSAL_NAVIGATION:BACK:${previousStep.id}`)
+    void answer([], `PAIMIND_PROPOSAL_NAVIGATION:BACK:${previousStep.id}`, `Proposal Assistant is returning to ${previousStep.label}…`)
   }
 
   const actionLabel = hasDeckStylePreview ? 'Use this deck style' : hasDeckTypePreview ? 'Use this deck type' : 'Continue'
@@ -449,7 +449,7 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
           <div data-paimind-proposal-actions data-kind={hasPreview ? 'deck' : question.multiSelect === true ? 'multi-select' : 'single-select'}>
             <div data-paimind-proposal-action-leading>
               {previousStep === undefined ? null : <button type="button" data-paimind-proposal-back data-navigation="ai-request" disabled={busy} onClick={navigateBack}>Back to {previousStep.label}</button>}
-              <span>{actionStatus}</span>
+              <span aria-live="polite">{pendingAction ?? actionStatus}</span>
             </div>
             <button type="button" data-paimind-proposal-submit disabled={busy || (selected.length === 0 && custom.trim() === '')} onClick={() => { void answer(selected, custom.trim()) }}>{actionLabel}</button>
           </div>

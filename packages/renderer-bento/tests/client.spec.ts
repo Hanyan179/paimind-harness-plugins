@@ -21,6 +21,7 @@ describe('FP07 Bento preview client store', () => {
     expect(registerTab).toHaveBeenCalledWith(expect.objectContaining({
       id: 'paimind:bento-preview', hidden: true, single: true,
     }))
+    expect(document.getElementById('@paimind/renderer-bento')?.textContent).toContain("@container paimind-bento (max-width:900px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(280px,58%) minmax(0,42%)")
     expect(fixture.services.has('paimindBentoPreview')).toBe(true)
     fixture.disposeEffects()
     expect(fixture.services.has('paimindBentoPreview')).toBe(false)
