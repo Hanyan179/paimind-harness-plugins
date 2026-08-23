@@ -5,6 +5,7 @@
   "references": [
     { "path": "../contracts" },
     { "path": "../harness-compat" },
+    { "path": "../ui-foundation" },
     { "path": "../better-sidebar-adapter" },
     { "path": "../artifacts" }
   ]

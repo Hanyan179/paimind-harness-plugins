@@ -19,7 +19,7 @@ Role: **Client plugin**. It contributes a `sidebar.footer.action` entry and `she
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/agent-builder` (`workspace:^`), `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`), `@paimind/skill-market` (`workspace:^`).
+- Internal runtime dependencies: `@paimind/agent-builder` (`workspace:^`), `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`), `@paimind/skill-market` (`workspace:^`), `@paimind/ui-foundation` (`workspace:^`).
 - External runtime or peer dependencies: `react` (`>=18.0.0 <20.0.0`).
 - Client service injection: `@deepseek-ai/dsh-client-connection`, `@deepseek-ai/dsh-client-locale`, `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-api-remotes`, `@deepseek-ai/dsh-client-ui-conversation`, `@deepseek-ai/dsh-client-ui-primitives`, `@deepseek-ai/dsh-client-ui-settings`, `@deepseek-ai/dsh-client-ui-slots`, `@deepseek-ai/dsh-client-ui-workspaces`.
 

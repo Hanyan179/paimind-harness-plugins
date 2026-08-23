@@ -1,0 +1,16 @@
+{
+  "name": "@paimind/ui-foundation",
+  "version": "0.1.0-alpha.0",
+  "description": "Shared PAIMind client tokens and lightweight UI primitives over Harness theme variables",
+  "license": "UNLICENSED",
+  "engines": { "node": "^22.19.0 || >=24.0.0" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" }
+  },
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
+  "paimindBuild": { "node": ["src/index.ts"] },
+  "scripts": { "typecheck": "tsc -b --pretty false" }
+}

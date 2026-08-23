@@ -78,6 +78,7 @@ import {
   type AgentProductMode,
 } from '../index.js'
 import { AGENT_CENTER_STYLE } from './styles.js'
+import { PAIMIND_UI_FOUNDATION_CSS } from '@paimind/ui-foundation'
 
 const BASE_INJECT = ['slots', 'locale', 'remote', 'sessions', 'workspaces', 'conversation'] as const
 export const inject = [...BASE_INJECT]
@@ -86,7 +87,7 @@ const STYLE_ID = '@paimind/agent-market'
 function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
-  style.id = STYLE_ID; style.dataset.paimindPlugin = STYLE_ID; style.textContent = AGENT_CENTER_STYLE
+  style.id = STYLE_ID; style.dataset.paimindPlugin = STYLE_ID; style.textContent = `${PAIMIND_UI_FOUNDATION_CSS}\n${AGENT_CENTER_STYLE}`
   document.head.append(style)
   return () => { style.remove() }
 }
@@ -295,9 +296,13 @@ function parseAuthoringTurn(text: string): { readonly text: string; readonly pro
   }
   const visibleText = text.replace(match[0], '').trim()
   if (/PAIMIND_AGENT_DRAFT/i.test(visibleText)) throw new Error('Harness cordis 返回的说明书提案标记不完整')
-  if (/[?？]/u.test(visibleText)) throw new Error('创建助手的澄清问题必须通过 Harness 原生提问组件提出')
+  // Older model replies occasionally combined a prose question with a valid
+  // proposal. Recover the durable draft, but never project that non-native
+  // question back into the product conversation. New Turns are prevented by
+  // the authoring prompt contract above; this branch is backward compatibility.
+  const safeVisibleText = /[?？]/u.test(visibleText) ? '' : visibleText
   return Object.freeze({
-    text: visibleText,
+    text: safeVisibleText,
     proposal: Object.freeze(proposal) as AgentAuthoringProposal,
   })
 }
@@ -867,7 +872,9 @@ export class AgentCenterRuntime {
 
   /** Clear a manual browse intent after its Center surface has unmounted. */
   endAgentCenterBrowse(): void {
+    if (!this.agentCenterBrowseActive) return
     this.agentCenterBrowseActive = false
+    for (const listener of this.sessionListeners) listener()
   }
 
   private rawCurrentAuthoringSessionId(): string | null {
@@ -1317,13 +1324,30 @@ function installAgentAuthoringMessageProjection(root: HTMLElement, locale: strin
       const original = node.data
       const complete = AUTHORING_CONTROL_PAYLOAD.test(original)
       AUTHORING_CONTROL_PAYLOAD.lastIndex = 0
+      const container = node.parentElement
+      const containerVisible = complete
+        ? (container?.textContent ?? original).replace(AUTHORING_CONTROL_PAYLOAD, '').trim()
+        : ''
+      AUTHORING_CONTROL_PAYLOAD.lastIndex = 0
+      const recoveredQuestion = /[?？]/u.test(containerVisible)
+      if (recoveredQuestion && container !== null) {
+        const visibleWalker = document.createTreeWalker(container, view.NodeFilter.SHOW_TEXT)
+        let visibleCandidate = visibleWalker.nextNode()
+        while (visibleCandidate !== null) {
+          const visibleNode = visibleCandidate as Text
+          visibleCandidate = visibleWalker.nextNode()
+          if (visibleNode === node || visibleNode.data === '') continue
+          restoredText.set(visibleNode, Object.freeze({ original: visibleNode.data, projected: '' }))
+          visibleNode.data = ''
+        }
+        container.dataset.paimindAgentDraftQuestionRecovered = 'true'
+      }
       const projected = complete
-        ? original.replace(AUTHORING_CONTROL_PAYLOAD, '').trim()
+        ? (recoveredQuestion ? '' : original.replace(AUTHORING_CONTROL_PAYLOAD, '').trim())
         : original.slice(0, marker.index).trim()
       AUTHORING_CONTROL_PAYLOAD.lastIndex = 0
       restoredText.set(node, Object.freeze({ original, projected }))
       node.data = projected
-      const container = node.parentElement
       if (!complete || container === null || container.querySelector('[data-paimind-agent-draft-projection]') !== null) continue
       container.dataset.paimindAgentDraftMessage = 'projected'
       const status = document.createElement('span')
@@ -1360,7 +1384,40 @@ function installAgentAuthoringMessageProjection(root: HTMLElement, locale: strin
     for (const [node, value] of restoredText) {
       if (root.contains(node) && node.data === value.projected) node.data = value.original
       delete node.parentElement?.dataset.paimindAgentDraftMessage
+      delete node.parentElement?.dataset.paimindAgentDraftQuestionRecovered
     }
+  }
+}
+
+/**
+ * Keep PAIMind's machine envelope hidden for the complete lifetime of the
+ * selected authoring Session, including when another Harness overlay closes the
+ * Agent Center. The underlying Session and transcript remain Harness-owned.
+ */
+function installAgentAuthoringProjectionLifecycle(
+  runtime: AgentCenterRuntime,
+  locale: PaimindLocaleSource,
+): () => void {
+  let projectedSessionId: string | null = null
+  let projectedLocale = ''
+  let disposeProjection = (): void => {}
+  const synchronize = (): void => {
+    const sessionId = runtime.currentAuthoringSessionId()
+    const activeLocale = locale.getLocale().active
+    if (sessionId === projectedSessionId && (sessionId === null || activeLocale === projectedLocale)) return
+    disposeProjection()
+    disposeProjection = (): void => {}
+    projectedSessionId = sessionId
+    projectedLocale = activeLocale
+    if (sessionId !== null) disposeProjection = installAgentAuthoringMessageProjection(document.body, activeLocale)
+  }
+  const offSessions = runtime.subscribeSessions(synchronize)
+  const offLocale = locale.subscribe(synchronize)
+  synchronize()
+  return () => {
+    offLocale()
+    offSessions()
+    disposeProjection()
   }
 }
 
@@ -2540,7 +2597,7 @@ export function AgentCenterSurface(props: AgentCenterSurfaceProps): ReactNode {
   }, [host, props.controller, props.runtime, snapshot.open])
 
   if (!snapshot.open || host === null) return null
-  return createPortal(<div ref={root} data-paimind-product-surface="agent-center" role="main" aria-labelledby="paimind-agent-center-title">
+  return createPortal(<div ref={root} data-paimind-product-surface="agent-center" data-paimind-ui-scope role="main" aria-labelledby="paimind-agent-center-title">
     <div data-paimind-product-body><AgentCenterSection
       {...props}
       onNativeConversationChange={handleNativeConversationChange}
@@ -2586,6 +2643,10 @@ export async function apply(ctx: AgentCenterClientContext): Promise<() => Promis
     scope.effect(
       () => installAgentAuthoringSessionNavigation(runtime, surfaceController),
       'paimind-agent-market: native authoring Session navigation',
+    )
+    scope.effect(
+      () => installAgentAuthoringProjectionLifecycle(runtime, scope.locale),
+      'paimind-agent-market: authoring Session message projection',
     )
     contributePaimindExtension(scope.slots, {
       id: 'paimind:agent-market', packageName: '@paimind/agent-market', category: 'agents',

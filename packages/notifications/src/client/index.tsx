@@ -21,6 +21,7 @@ import {
 import type { NotificationRecord } from '@paimind/contracts'
 import type { PaimindArtifactService } from '@paimind/artifacts'
 import type { PaimindSidebarService } from '@paimind/better-sidebar-adapter'
+import { PAIMIND_UI_FOUNDATION_CSS } from '@paimind/ui-foundation'
 import type {
   PaimindNotificationListValue,
   PaimindNotificationMarkReadRequest,
@@ -205,7 +206,7 @@ export class NotificationCenterController {
 }
 
 const STYLE_ID = '@paimind/notifications'
-const STYLE = `
+const STYLE = `${PAIMIND_UI_FOUNDATION_CSS}
 [data-paimind-notification-trigger] {
   position: relative; box-sizing: border-box; width: calc(100% + 8px); min-height: 34px; margin: 4px -4px;
   padding: 6px 8px 6px 10px; display: flex; align-items: center; gap: 8px; border: 0; border-radius: 12px;
@@ -222,40 +223,42 @@ const STYLE = `
 }
 [data-paimind-notification-trigger][data-wide='false'] [data-paimind-notification-badge] { position: absolute; top: -2px; right: -3px; }
 [data-paimind-notification-overlay] { position: fixed; inset: 0; z-index: 2147483000; display: flex; justify-content: flex-end; pointer-events: auto; }
-[data-paimind-notification-mask] { position: absolute; inset: 0; background: var(--dsw-alias-bg-mask-1, rgba(0,0,0,.32)); backdrop-filter: blur(4px); }
+[data-paimind-notification-mask] { position: absolute; inset: 0; background: var(--dsw-alias-bg-mask-1, rgba(0,0,0,.28)); }
 [data-paimind-notification-panel] {
-  position: relative; z-index: 1; width: min(430px, 100vw); height: 100%; box-sizing: border-box; display: grid;
-  grid-template-rows: auto auto minmax(0,1fr); color: var(--dsw-alias-label-primary, #202124);
-  background: var(--dsw-alias-bg-layer-1, #fff); border-left: 1px solid var(--dsw-alias-border-l1, rgba(128,128,128,.18));
-  box-shadow: -16px 0 48px rgba(0,0,0,.18);
+  position: relative; z-index: 1; width: min(420px, 100vw); height: 100%; box-sizing: border-box; display: grid;
+  grid-template-rows: auto auto minmax(0,1fr); color: var(--paimind-ui-text);
+  background: var(--paimind-ui-panel); border: 0; border-left: 1px solid var(--paimind-ui-border); border-radius: 0;
+  box-shadow: var(--paimind-ui-shadow-overlay);
 }
-[data-paimind-notification-header] { display: flex; align-items: flex-start; gap: 12px; padding: 18px 18px 12px; }
+[data-paimind-notification-header] { display: flex; align-items: flex-start; gap: 12px; padding: 20px 20px 12px; }
 [data-paimind-notification-heading] { min-width: 0; flex: 1; }
-[data-paimind-notification-heading] h2 { margin: 0; font-size: 17px; line-height: 24px; font-weight: 600; }
-[data-paimind-notification-heading] p { margin: 3px 0 0; color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 11px; line-height: 17px; }
+[data-paimind-notification-heading] h2 { margin: 0; font-size: 18px; line-height: 25px; font-weight: 650; letter-spacing: -.01em; }
+[data-paimind-notification-heading] p { margin: 4px 0 0; color: var(--paimind-ui-muted); font-size: 12px; line-height: 18px; }
 [data-paimind-notification-close], [data-paimind-notification-mark-all] { border: 0; color: inherit; background: transparent; font: inherit; cursor: pointer; }
-[data-paimind-notification-close] { width: 32px; height: 32px; border-radius: 50%; font-size: 22px; }
+[data-paimind-notification-close] { width: 34px; height: 34px; padding: 0; border-radius: 50%; font-size: 22px; }
 [data-paimind-notification-close]:hover, [data-paimind-notification-mark-all]:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.1)); }
-[data-paimind-notification-toolbar] { display: flex; align-items: center; gap: 6px; padding: 0 18px 12px; border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(128,128,128,.15)); }
-[data-paimind-notification-filter] { min-height: 30px; padding: 4px 10px; border: 0; border-radius: 8px; color: var(--dsw-alias-label-secondary, #626872); background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
-[data-paimind-notification-filter][aria-pressed='true'] { color: var(--dsw-alias-label-primary, #202124); background: var(--dsw-alias-bg-layer-2, rgba(128,128,128,.1)); }
-[data-paimind-notification-mark-all] { margin-left: auto; padding: 5px 8px; border-radius: 7px; color: var(--dsw-alias-state-business-primary, #4f7ff8); font-size: 10px; }
-[data-paimind-notification-body] { overflow: auto; padding: 12px 14px 24px; }
-[data-paimind-notification-list] { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-[data-paimind-notification-row] { position: relative; padding: 12px; border: 1px solid var(--dsw-alias-border-l1, rgba(128,128,128,.15)); border-radius: 12px; background: var(--dsw-alias-bg-layer-2, rgba(128,128,128,.04)); }
+[data-paimind-notification-toolbar] { display: flex; align-items: center; gap: 6px; padding: 0 20px 12px; border-bottom: 1px solid var(--paimind-ui-border); }
+[data-paimind-notification-filter] { min-height: 32px; padding: 5px 11px; border: 0; border-radius: var(--paimind-ui-radius-sm); color: var(--paimind-ui-muted); background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
+[data-paimind-notification-filter][aria-pressed='true'] { color: var(--paimind-ui-text); background: var(--paimind-ui-subtle); }
+[data-paimind-notification-mark-all] { margin-left: auto; min-height: 32px; padding: 5px 8px; border-radius: var(--paimind-ui-radius-sm); color: var(--paimind-ui-accent); font-size: 11px; }
+[data-paimind-notification-body] { overflow: auto; padding: 12px 14px 28px; }
+[data-paimind-notification-list] { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+[data-paimind-notification-row] { position: relative; padding: 12px 12px 10px; background: var(--paimind-ui-panel); }
 [data-paimind-notification-row][data-unread='true'] { border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary, #4f7ff8) 38%, transparent); }
 [data-paimind-notification-row][data-unread='true']::before { content: ''; position: absolute; top: 15px; left: -4px; width: 7px; height: 7px; border-radius: 50%; background: var(--dsw-alias-state-business-primary, #4f7ff8); }
-[data-paimind-notification-row-head] { display: flex; align-items: center; gap: 8px; color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 10px; }
+[data-paimind-notification-row-head] { display: flex; align-items: center; gap: 7px; color: var(--paimind-ui-faint); font-size: 11px; line-height: 16px; }
 [data-paimind-notification-source] { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-paimind-notification-level='success'] { color: var(--dsw-alias-state-success-primary, #2b8a57); }
-[data-paimind-notification-level='error'] { color: var(--dsw-alias-state-error-primary, #d04444); }
-[data-paimind-notification-level='warning'] { color: var(--dsw-alias-state-warning-primary, #b7791f); }
-[data-paimind-notification-title] { margin: 7px 0 0; font-size: 13px; line-height: 19px; font-weight: 600; overflow-wrap: anywhere; }
-[data-paimind-notification-text] { margin: 5px 0 0; color: var(--dsw-alias-label-secondary, #626872); font-size: 11px; line-height: 17px; white-space: pre-wrap; overflow-wrap: anywhere; }
-[data-paimind-notification-actions] { display: flex; justify-content: flex-end; gap: 6px; margin-top: 9px; }
-[data-paimind-notification-action] { min-height: 28px; padding: 4px 9px; border: 0; border-radius: 8px; color: var(--dsw-alias-state-business-primary, #4f7ff8); background: color-mix(in srgb, currentColor 10%, transparent); font: inherit; font-size: 10px; cursor: pointer; }
-[data-paimind-notification-empty], [data-paimind-notification-error] { padding: 28px 12px; color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 12px; line-height: 19px; text-align: center; }
-[data-paimind-notification-error] { color: var(--dsw-alias-state-error-primary, #d04444); }
+[data-paimind-notification-level='success'] { color: var(--paimind-ui-success); }
+[data-paimind-notification-level='error'] { color: var(--paimind-ui-danger); }
+[data-paimind-notification-level='warning'] { color: var(--paimind-ui-warning); }
+[data-paimind-notification-title] { margin: 6px 0 0; font-size: 13px; line-height: 19px; font-weight: 650; overflow-wrap: anywhere; }
+[data-paimind-notification-summary] { display: -webkit-box; margin: 4px 0 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+[data-paimind-notification-details] { max-height: 220px; margin: 9px 0 0; padding: 10px; overflow: auto; border-radius: var(--paimind-ui-radius-sm); color: var(--paimind-ui-muted); background: var(--paimind-ui-subtle); font: 11px/17px ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+[data-paimind-notification-actions] { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 8px; }
+[data-paimind-notification-action] { min-height: 30px; padding: 4px 8px; border-color: transparent; color: var(--paimind-ui-accent); background: transparent; font-size: 11px; }
+[data-paimind-notification-action]:hover { background: color-mix(in srgb, var(--paimind-ui-accent) 9%, transparent); }
+[data-paimind-notification-empty], [data-paimind-notification-error] { padding: 28px 12px; color: var(--paimind-ui-faint); font-size: 12px; line-height: 19px; text-align: center; }
+[data-paimind-notification-error] { color: var(--paimind-ui-danger); }
 @media (max-width: 640px) { [data-paimind-notification-panel] { width: 100vw; } }
 `
 
@@ -316,6 +319,24 @@ function levelCopy(level: NotificationRecord['level'], zh: boolean): string {
   return copy[level][zh ? 'zh' : 'en']
 }
 
+function notificationSummary(body: string, zh: boolean): string {
+  const localPath = /(?:\/[\w .@+~-]+){3,}|[A-Za-z]:\\(?:[^\\\s]+\\){2,}[^\s]*/g
+  const normalized = body
+    .replace(/```[\s\S]*?```/g, ' ')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line !== '' && !/^at\s+\S+/i.test(line) && !/^```/.test(line))
+    .join(' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/[`*_>#]+/g, '')
+    .replace(localPath, zh ? '本地路径' : 'local path')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (normalized === '') return zh ? '打开详情查看完整信息。' : 'Open details for the complete message.'
+  return normalized.length <= 180 ? normalized : `${normalized.slice(0, 177).trimEnd()}…`
+}
+
 export function NotificationOverlay(props: {
   readonly controller: NotificationCenterController
   readonly locale: PaimindLocaleSource
@@ -324,8 +345,10 @@ export function NotificationOverlay(props: {
   const locale = useSyncExternalStore(props.locale.subscribe.bind(props.locale), () => props.locale.getLocale().active)
   const zh = locale.startsWith('zh')
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set())
   const close = useRef<HTMLButtonElement>(null)
   const rows = useMemo(() => filter === 'all' ? snapshot.items : snapshot.items.filter(item => item.readAt === undefined), [filter, snapshot.items])
+  const unread = snapshot.items.filter(item => item.readAt === undefined).length
 
   useEffect(() => {
     if (!snapshot.open) return
@@ -336,12 +359,12 @@ export function NotificationOverlay(props: {
   }, [props.controller, snapshot.open])
 
   if (!snapshot.open) return null
-  return createPortal(<div data-paimind-notification-overlay>
+  return createPortal(<div data-paimind-notification-overlay data-paimind-ui-scope>
     <div data-paimind-notification-mask onMouseDown={() => { props.controller.close() }} />
-    <section role="dialog" aria-modal="true" aria-label={zh ? '通知中心' : 'Notification Center'} data-paimind-notification-panel>
+    <section role="dialog" aria-modal="true" aria-label={zh ? '通知中心' : 'Notification Center'} data-paimind-notification-panel data-paimind-ui-panel>
       <header data-paimind-notification-header>
-        <div data-paimind-notification-heading><h2>{zh ? '通知中心' : 'Notification Center'}</h2><p>{zh ? '查看来自各业务应用的消息与相关操作。' : 'Messages and related actions from your business applications.'}</p></div>
-        <button ref={close} type="button" data-paimind-notification-close aria-label={zh ? '关闭通知中心' : 'Close Notification Center'} onClick={() => { props.controller.close() }}>×</button>
+        <div data-paimind-notification-heading><h2>{zh ? '通知中心' : 'Notification Center'}</h2><p>{unread > 0 ? (zh ? `${unread} 条未读；详情按需展开。` : `${unread} unread; details stay collapsed.`) : (zh ? '已处理全部消息。' : 'You are all caught up.')}</p></div>
+        <button ref={close} type="button" data-paimind-notification-close data-paimind-ui-button data-variant="quiet" aria-label={zh ? '关闭通知中心' : 'Close Notification Center'} onClick={() => { props.controller.close() }}>×</button>
       </header>
       <div data-paimind-notification-toolbar>
         <button type="button" data-paimind-notification-filter aria-pressed={filter === 'all'} onClick={() => { setFilter('all') }}>{zh ? '全部' : 'All'}</button>
@@ -352,15 +375,20 @@ export function NotificationOverlay(props: {
         {snapshot.error !== null && <div role="alert" data-paimind-notification-error>{snapshot.error}</div>}
         {snapshot.loading && snapshot.items.length === 0 ? <div data-paimind-notification-empty>{zh ? '正在加载…' : 'Loading…'}</div>
           : rows.length === 0 ? <div data-paimind-notification-empty>{zh ? '这里暂时没有通知。' : 'No notifications here yet.'}</div>
-            : <ul data-paimind-notification-list>{rows.map(item => <li key={item.id} data-paimind-notification-row data-unread={item.readAt === undefined}>
+            : <ul data-paimind-notification-list>{rows.map(item => {
+              const detailOpen = expanded.has(item.id)
+              const detailId = `paimind-notification-detail-${item.id.replace(/[^a-z0-9_-]/gi, '-')}`
+              return <li key={item.id} data-paimind-notification-row data-paimind-ui-card data-unread={item.readAt === undefined}>
               <div data-paimind-notification-row-head><span data-paimind-notification-source>{zh ? item.source.nameZh : item.source.nameEn}</span><span data-paimind-notification-level={item.level}>{levelCopy(item.level, zh)}</span><time dateTime={new Date(item.createdAt).toISOString()}>{relativeTime(item.createdAt, zh)}</time></div>
               <h3 data-paimind-notification-title>{item.title}</h3>
-              {item.body !== undefined && <p data-paimind-notification-text>{item.body}</p>}
+              {item.body !== undefined && <p data-paimind-notification-summary data-paimind-ui-summary>{notificationSummary(item.body, zh)}</p>}
+              {item.body !== undefined && detailOpen && <div id={detailId} data-paimind-notification-details>{item.body}</div>}
               <div data-paimind-notification-actions>
-                {item.readAt === undefined && <button type="button" data-paimind-notification-action onClick={() => { void props.controller.markRead(item) }}>{zh ? '标为已读' : 'Mark read'}</button>}
-                {item.target !== undefined && <button type="button" data-paimind-notification-action onClick={() => { void props.controller.follow(item) }}>{actionCopy(item, zh)}</button>}
+                {item.body !== undefined && <button type="button" data-paimind-notification-action data-paimind-ui-button data-variant="quiet" aria-expanded={detailOpen} aria-controls={detailId} onClick={() => { setExpanded(current => { const next = new Set(current); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next }) }}>{detailOpen ? (zh ? '收起消息' : 'Collapse message') : (zh ? '展开消息' : 'Expand message')}</button>}
+                {item.readAt === undefined && <button type="button" data-paimind-notification-action data-paimind-ui-button data-variant="quiet" onClick={() => { void props.controller.markRead(item) }}>{zh ? '标为已读' : 'Mark read'}</button>}
+                {item.target !== undefined && <button type="button" data-paimind-notification-action data-paimind-ui-button data-variant="quiet" onClick={() => { void props.controller.follow(item) }}>{actionCopy(item, zh)}</button>}
               </div>
-            </li>)}</ul>}
+            </li>})}</ul>}
       </div>
     </section>
   </div>, document.body)

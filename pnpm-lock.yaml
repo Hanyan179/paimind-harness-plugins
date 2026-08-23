@@ -81,6 +81,9 @@ importers:
       '@paimind/skill-market':
         specifier: workspace:^
         version: link:../skill-market
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
     devDependencies:
       '@paimind/testkit':
         specifier: workspace:^
@@ -463,6 +466,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -785,6 +791,8 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+
+  packages/ui-foundation: {}
 
   packages/user-settings:
     dependencies:

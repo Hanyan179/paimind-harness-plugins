@@ -33,6 +33,7 @@
     { "name": "@paimind/skill-market", "path": "packages/skill-market", "role": "client-plugin" },
     { "name": "@paimind/task-monitor", "path": "packages/task-monitor", "role": "client-plugin" },
     { "name": "@paimind/testkit", "path": "packages/testkit", "role": "shared-support" },
+    { "name": "@paimind/ui-foundation", "path": "packages/ui-foundation", "role": "shared-support" },
     { "name": "@paimind/user-settings", "path": "packages/user-settings", "role": "client-plugin" },
     { "name": "@paimind/visual-experience", "path": "packages/visual-experience", "role": "client-plugin" },
     { "name": "@paimind/workspace-project", "path": "packages/workspace-project", "role": "client-plugin" },

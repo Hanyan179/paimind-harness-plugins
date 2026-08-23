@@ -51,13 +51,13 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 }
 
 [data-paimind-product-surface='agent-center'] {
-  --paimind-agent-bg: var(--paimind-canvas, var(--dsw-alias-bg-base, #f4f7fb));
-  --paimind-agent-panel: var(--paimind-glass-strong, var(--dsw-alias-bg-layer-1, #fff));
-  --paimind-agent-soft: var(--paimind-glass, var(--dsw-alias-bg-layer-2, #eef2f7));
-  --paimind-agent-line: var(--paimind-line, var(--dsw-alias-border-l1, rgba(110, 128, 154, .18)));
-  --paimind-agent-ink: var(--paimind-ink, var(--dsw-alias-label-primary, #17223a));
-  --paimind-agent-muted: var(--paimind-muted, var(--dsw-alias-label-secondary, #65718a));
-  --paimind-agent-accent: var(--paimind-accent, var(--dsw-alias-state-business-primary, #3471f5));
+  --paimind-agent-bg: var(--paimind-ui-canvas);
+  --paimind-agent-panel: var(--paimind-ui-panel);
+  --paimind-agent-soft: var(--paimind-ui-subtle);
+  --paimind-agent-line: var(--paimind-ui-border);
+  --paimind-agent-ink: var(--paimind-ui-text);
+  --paimind-agent-muted: var(--paimind-ui-muted);
+  --paimind-agent-accent: var(--paimind-ui-accent);
   position: absolute;
   inset: 0;
   z-index: 80;
@@ -244,6 +244,9 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-button]:disabled {
   opacity: .45;
   cursor: not-allowed;
+}
+[data-paimind-agent-draft-question-recovered] > :not([data-paimind-agent-draft-projection]) {
+  display: none !important;
 }
 
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-tabs-shell] {

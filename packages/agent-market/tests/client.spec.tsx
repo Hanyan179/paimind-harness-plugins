@@ -641,8 +641,16 @@ describe('Agent Center business UI', () => {
       prompt: '创建一个销售助手',
       skills: [],
       locale: 'zh-CN',
-    })).rejects.toThrow('Harness 原生提问组件')
+    })).resolves.toMatchObject({
+      sessionId: first.sessionId,
+      text: '',
+      proposal: { name: '销售助手', role: '销售顾问' },
+    })
     expect(authoringApi.prompt).toHaveBeenCalledTimes(3)
+    await expect(runtime.resumeAuthoringSession(first.sessionId, draft, [])).resolves.toMatchObject({
+      cursor: 33,
+      draft: { name: '销售助手', role: '销售顾问' },
+    })
 
     vi.mocked(authoringApi.prompt).mockImplementationOnce(async () => {
       turn += 1
@@ -1161,7 +1169,7 @@ describe('Agent Center business UI', () => {
     assistantRow.dataset.chatFlowKind = 'assistant-step'
     const markdown = document.createElement('div')
     const visibleReply = document.createElement('p')
-    visibleReply.textContent = 'I prepared a focused Agent brief for review.'
+    visibleReply.textContent = 'Should this Agent focus on new customers?'
     const rawPayload = '\n<!--PAIMIND_AGENT_DRAFT\n{"name":"Internal draft name","goal":"Internal draft goal"}\n-->'
     markdown.append(visibleReply, document.createTextNode(rawPayload))
     assistantRow.append(markdown)
@@ -1198,7 +1206,8 @@ describe('Agent Center business UI', () => {
     expect(contextRow.style.getPropertyValue('display')).toBe('none')
     expect(contextRow.style.getPropertyPriority('display')).toBe('important')
     expect(thinkRow.style.getPropertyValue('display')).toBe('none')
-    expect(markdown).toHaveTextContent('I prepared a focused Agent brief for review.')
+    expect(markdown).not.toHaveTextContent('Should this Agent focus on new customers?')
+    expect(markdown).toHaveAttribute('data-paimind-agent-draft-question-recovered', 'true')
     expect(markdown).not.toHaveTextContent('PAIMIND_AGENT_DRAFT')
     expect(markdown).not.toHaveTextContent('Internal draft name')
     fireEvent.keyDown(builder, { key: 'Escape' })
@@ -1210,6 +1219,7 @@ describe('Agent Center business UI', () => {
     expect(contextRow.style.getPropertyValue('display')).toBe('')
     expect(thinkRow.style.getPropertyValue('display')).toBe('')
     expect(markdown).toHaveTextContent('PAIMIND_AGENT_DRAFT')
+    expect(markdown).toHaveTextContent('Should this Agent focus on new customers?')
     expect(markdown.querySelector('[data-paimind-agent-draft-projection]')).toBeNull()
     expect(screen.getByRole('main', { name: 'Agent Center' })).toBeInTheDocument()
 
@@ -1299,8 +1309,8 @@ describe('Agent Center business UI', () => {
   })
 
   it('uses PAIMind tokens and includes responsive and reduced-motion treatments', () => {
-    expect(AGENT_CENTER_STYLE).toContain('--paimind-canvas')
-    expect(AGENT_CENTER_STYLE).toContain('--paimind-glass-strong')
+    expect(AGENT_CENTER_STYLE).toContain('--paimind-ui-canvas')
+    expect(AGENT_CENTER_STYLE).toContain('--paimind-ui-panel')
     expect(AGENT_CENTER_STYLE).toMatch(/\[data-paimind-product-surface='agent-center'\][\s\S]*z-index: 80;/)
     expect(AGENT_CENTER_STYLE).toMatch(/\[data-paimind-product-surface='agent-center'\] \[data-paimind-agent-builder-layer\] \{[\s\S]*overflow: clip;/)
     expect(AGENT_CENTER_STYLE).toContain('grid-template-rows: auto auto auto minmax(0, 1fr) auto;')
@@ -1308,6 +1318,7 @@ describe('Agent Center business UI', () => {
     expect(AGENT_CENTER_STYLE).toContain('@media(max-width:680px)')
     expect(AGENT_CENTER_STYLE).toContain('@media(prefers-reduced-motion:reduce)')
     expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-splitter]')
+    expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-draft-question-recovered] > :not([data-paimind-agent-draft-projection])')
     expect(AGENT_CENTER_STYLE).toContain('cursor: col-resize;')
     expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-avatar-seat]')
     expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-avatar]')

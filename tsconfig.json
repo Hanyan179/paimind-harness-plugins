@@ -5,6 +5,7 @@
     { "path": "packages/presentation-contracts" },
     { "path": "packages/harness-compat" },
     { "path": "packages/testkit" },
+    { "path": "packages/ui-foundation" },
     { "path": "packages/extension-center" },
     { "path": "packages/branding" },
     { "path": "packages/visual-experience" },
