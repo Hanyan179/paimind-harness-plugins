@@ -58,6 +58,10 @@ const STYLE = `
 [data-paimind-proposal-indicator]{display:grid;place-items:center;flex:0 0 27px;width:27px;height:27px;border:1px solid var(--dsw-alias-border-l3,rgba(110,120,135,.34));border-radius:8px;color:var(--dsw-alias-label-secondary,#667085);font-size:11px;font-weight:760}
 [data-paimind-proposal-indicator] svg{width:13px;height:13px}
 [data-paimind-proposal-option][aria-checked='true'] [data-paimind-proposal-indicator]{border-color:var(--dsw-alias-brand-primary,#356fa8);background:var(--dsw-alias-brand-primary,#356fa8);color:#fff}
+[data-paimind-department-code]{position:relative;display:grid;place-items:center;flex:0 0 52px;width:52px;height:48px;border:1px solid color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 25%,transparent);border-radius:14px;background:color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 8%,var(--dsw-specific-input-major,#fff));color:var(--dsw-alias-brand-primary,#24567f);font-size:14px;font-weight:800;letter-spacing:.04em;box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+[data-paimind-department-code][data-selected='true']{border-color:var(--dsw-alias-brand-primary,#356fa8);background:var(--dsw-alias-brand-primary,#356fa8);color:#fff;box-shadow:0 7px 18px color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 22%,transparent)}
+[data-paimind-department-check]{position:absolute;right:-4px;top:-5px;display:grid;place-items:center;width:18px;height:18px;border:2px solid var(--dsw-specific-input-major,#fff);border-radius:999px;background:#fff;color:var(--dsw-alias-brand-primary,#24567f);box-shadow:0 3px 9px rgba(12,31,55,.2)}
+[data-paimind-department-check] svg{width:10px;height:10px}
 [data-paimind-deck-style-thumb-shell]{position:relative;display:block;flex:0 0 72px;width:72px;height:48px;border:1px solid rgba(31,43,62,.13);border-radius:10px;background:#fff;overflow:hidden;box-shadow:0 5px 14px rgba(26,42,61,.09)}
 [data-paimind-deck-style-thumb]{display:block;width:100%;height:100%;object-fit:cover}
 [data-paimind-deck-style-check]{position:absolute;right:4px;bottom:4px;display:grid;place-items:center;width:18px;height:18px;border-radius:6px;background:#174a76;color:#fff;box-shadow:0 3px 8px rgba(12,31,55,.2)}
@@ -140,11 +144,9 @@ function optionPresentation(label: string): { readonly label: string; readonly r
 const OPTION_DETAILS: Readonly<Record<string, string>> = Object.freeze({
   'Dollar General': 'Value retail · U.S. mass-market footprint',
   Walmart: 'Omnichannel retail · enterprise scale',
-  Merchandising: 'Assortment, pricing and item strategy',
-  'Category Management': 'Category performance and growth priorities',
-  Sales: 'Commercial story and customer commitments',
-  'Executive Leadership': 'Decision, investment and risk framing',
-  Marketing: 'Shopper story and activation plan',
+  '102 · Beauty Care': 'Cosmetics & Cosmetic Tools',
+  '140 · Stationery': 'Stickers & Creative Crafts',
+  '410 · Holiday Events': 'Party Favors & Balloons',
   'Category Analysis': 'Performance data, opportunity gaps and annual direction',
   'Internal Kick Off': 'Internal alignment for Sales, Category and Product Development',
   'Line Review Proposal': 'Formal category and line recommendation for customer buyers',
@@ -152,6 +154,16 @@ const OPTION_DETAILS: Readonly<Record<string, string>> = Object.freeze({
   'Paramont Signature': 'Official mountain identity with a confident enterprise system',
   'Playful Storybook': 'Colorful illustrated storytelling for family and youth audiences',
 })
+
+interface DepartmentOptionPresentation {
+  readonly code: string
+  readonly name: string
+}
+
+function departmentOptionPresentation(label: string): DepartmentOptionPresentation | null {
+  const match = /^(\d{3})\s*[·—-]\s*(.+)$/.exec(label.trim())
+  return match === null ? null : { code: match[1]!, name: match[2]!.trim() }
+}
 
 interface DeckTypePreviewSpec {
   readonly title: string
@@ -409,6 +421,7 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
             const active = selected.includes(option.label)
             const display = optionPresentation(option.label)
             const logo = stage === 'customer' ? brandLogo(option.label) : null
+            const department = stage === 'department' ? departmentOptionPresentation(display.label) : null
             const detail = optionDetail(option)
             return <button
               type="button"
@@ -423,14 +436,19 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
               onFocus={() => { setFocused(option.label) }}
               onClick={() => { choose(option.label) }}
             >
-              {logo ?? (hasDeckStylePreview
+              {logo ?? (department !== null
+                ? <span data-paimind-department-code data-selected={active} aria-hidden="true">
+                    {department.code}
+                    {active ? <span data-paimind-department-check><PaimindCheckIcon /></span> : null}
+                  </span>
+                : hasDeckStylePreview
                 ? <span data-paimind-deck-style-thumb-shell aria-hidden="true">
                     <img data-paimind-deck-style-thumb src={deckPreviewFor(option).image} alt="" />
                     {active ? <span data-paimind-deck-style-check><PaimindCheckIcon /></span> : null}
                   </span>
                 : <span data-paimind-proposal-indicator aria-hidden="true">{active ? <PaimindCheckIcon /> : index + 1}</span>)}
               <span data-paimind-proposal-option-copy>
-                <span data-paimind-proposal-option-line><strong>{display.label}</strong>{display.recommended ? <em data-paimind-proposal-recommended>Recommended</em> : null}</span>
+                <span data-paimind-proposal-option-line><strong>{department?.name ?? display.label}</strong>{display.recommended ? <em data-paimind-proposal-recommended>Recommended</em> : null}</span>
                 {detail === undefined ? null : <small>{detail}</small>}
               </span>
             </button>

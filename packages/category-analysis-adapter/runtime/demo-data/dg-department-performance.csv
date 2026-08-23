@@ -1,6 +1,6 @@
 department_id,category_name,current_sales_m,current_units_m,prior_sales_m,prior_units_m,stores,wos,growth_role
 102,Kids Beauty & Cosmetic Tools,11.1000,5.5000,10.0362,4.7251,2453,18.8,Build + extend
-140,Party Favors & Balloons,3.9200,1.8500,2.9518,1.3065,409,38.6,Expand selectively
-210,Stickers & Creative Crafts,0.0900,0.0600,0.0000,0.0000,214,28.5,Develop
-340,Seasonal Craft Kits,0.0500,0.0560,0.0249,0.0109,101,0.0,Monitor
-410,Legacy Exit Items,0.0001,0.0002,0.0500,0.0222,3,12.6,Review lifecycle
+140,Stickers & Creative Crafts,0.0900,0.0600,0.0000,0.0000,214,28.5,Develop
+210,Domestics,0.0500,0.0560,0.0249,0.0109,101,0.0,Monitor
+340,Accessories,0.0001,0.0002,0.0500,0.0222,3,12.6,Review lifecycle
+410,Party Favors & Balloons,3.9200,1.8500,2.9518,1.3065,409,38.6,Expand selectively

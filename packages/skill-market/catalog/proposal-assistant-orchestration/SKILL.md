@@ -11,18 +11,24 @@ You own the workflow. Native Tools own deterministic data, validation, rendering
 
 Use the native question Tool for exactly one decision at a time. Keep all visible copy in English.
 
-1. Customer: Dollar General, Walmart, or Target.
-2. Department: Sales, Category Management, Product Development, or Executive Leadership.
-3. Deck Type:
+1. Customer: use id `paimind.proposal.customer/v1`, header `Customer`, question "Which customer are you preparing this proposal for?", and exactly these options:
+   - Dollar General — Value-retail proposal intake using verified Workspace sources.
+   - Walmart — Mass-retail proposal intake when a verified PAIMind data path is available.
+2. Department: use id `paimind.proposal.departments/v1`, header `Department`, question "Which Dollar General department(s) should this deck cover?", multi-select enabled, and the detail "Select all departments whose performance and opportunities should appear in the analysis."
+   - 102 · Beauty Care — Cosmetics & Cosmetic Tools.
+   - 140 · Stationery — Stickers & Creative Crafts.
+   - 410 · Holiday Events — Party Favors & Balloons.
+   Preserve the exact department code and name in `proposal-context.md`. Do not substitute internal stakeholder roles such as Sales, Category Management, Product Development, or Executive Leadership for this field.
+3. Deck Type: use id `paimind.proposal.deck-type/v1`, header `Deck type`, and question "What type of deck would you like to create?"
    - Category Analysis — performance, mix, momentum, and opportunity evidence.
    - Internal Kick Off — aligns sales, category, and product-development teams around priorities.
    - Line Review Proposal — formal buyer-facing recommendation and decision ask.
-4. Deck Style:
+4. Deck Style: use id `paimind.proposal.deck-style/v1`, header `Deck style`, and question "Which visual style should shape this deck?"
    - Strategy Consulting — `strategy-grid` plus `strategy-consulting`.
    - Paramont Signature — `paramont-mountain` plus `paramont-signature`.
    - Playful Storybook — `storybook-cutpaper` plus `playful-storybook`.
 
-Do not ask for Horizon during intake and do not add a separate Confirm step. The final Deck Style answer is the human confirmation that starts execution. Persist confirmed choices in `proposal-context.md`. If the user says Back, Edit, Change, or names an earlier field, revise the working file and return to that decision; never force a restart. Treat `PAIMIND_PROPOSAL_NAVIGATION:BACK:<question-id>` as a navigation control result rather than a business answer: preserve earlier confirmed fields, invalidate the target and later fields, then immediately issue the canonical target question. Treat `PAIMIND_PROPOSAL_NAVIGATION:CANCEL` as a request to pause the intake: acknowledge it briefly, do not mutate confirmed context, do not run downstream skills, and do not ask another question until the user resumes.
+Never alter these four ids or labels and never merge decisions into one Tool call. Do not ask for Horizon during intake and do not add a separate Confirm step. The final Deck Style answer is the human confirmation that starts execution. Persist confirmed choices in `proposal-context.md`. If the user says Back, Edit, Change, or names an earlier field, revise the working file and return to that decision; never force a restart. Treat `PAIMIND_PROPOSAL_NAVIGATION:BACK:<question-id>` as a navigation control result rather than a business answer: preserve earlier confirmed fields, invalidate the target and later fields, then immediately issue the canonical target question. Treat `PAIMIND_PROPOSAL_NAVIGATION:CANCEL` as a request to pause the intake: acknowledge it briefly, do not mutate confirmed context, do not run downstream skills, and do not ask another question until the user resumes.
 
 ## Execution
 
@@ -36,7 +42,7 @@ After Deck Style is confirmed, immediately execute this Tool chain:
 6. Build a concise five-to-seven slide `paimind.presentation-outline-blueprint/v1` story:
    - Cover: momentum and next growth opportunity.
    - Momentum: total sales, units, average price, and weekly comparison.
-   - Department roles: performance table with Cosmetics, Party Favors, Stickers & Craft Kits, and supporting departments.
+   - Department roles: performance table scoped to 102 Beauty Care, 140 Stationery, and 410 Holiday Events, with the corresponding Cosmetics, Stickers & Creative Crafts, and Party Favors & Balloons evidence.
    - Opportunity priorities: Build, Expand, and Develop recommendations.
    - Action path: Momentum -> Whitespace -> Market Signal -> Growth Action.
    Add a decision/ask slide only when the selected Deck Type needs it.

@@ -132,8 +132,8 @@ describe('Proposal Assistant Experience', () => {
 
   it('returns an explicit cancel intent to the AI instead of surfacing a native question error', async () => {
     const pending = wait({
-      id: PROPOSAL_QUESTION_IDS.department, question: 'Which departments should this deck support?',
-      options: [{ label: 'Merchandising' }, { label: 'Sales' }], multiSelect: true,
+      id: PROPOSAL_QUESTION_IDS.department, question: 'Which Dollar General department(s) should this deck cover?',
+      options: [{ label: '102 · Beauty Care' }, { label: '140 · Stationery' }], multiSelect: true,
     })
     render(<ProposalQuestionComposer matched={pending} />)
     fireEvent.click(screen.getByRole('button', { name: 'Cancel proposal question' }))
@@ -149,18 +149,29 @@ describe('Proposal Assistant Experience', () => {
 
   it('keeps multi-select departments in one native structured answer', async () => {
     const pending = wait({
-      id: PROPOSAL_QUESTION_IDS.department, question: 'Which departments should this deck support?', multiSelect: true,
-      options: [{ label: 'Merchandising' }, { label: 'Executive Leadership' }],
+      id: PROPOSAL_QUESTION_IDS.department,
+      question: 'Which Dollar General department(s) should this deck cover?',
+      detail: 'Select all departments whose performance and opportunities should appear in the analysis.',
+      multiSelect: true,
+      options: [
+        { label: '102 · Beauty Care' },
+        { label: '140 · Stationery' },
+        { label: '410 · Holiday Events' },
+      ],
     })
-    render(<ProposalQuestionComposer matched={pending} />)
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Merchandising' }))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Executive Leadership' }))
+    const { container } = render(<ProposalQuestionComposer matched={pending} />)
+    expect(Array.from(container.querySelectorAll('[data-paimind-department-code]')).map(node => node.textContent)).toEqual(['102', '140', '410'])
+    expect(screen.getByText('Cosmetics & Cosmetic Tools')).toBeInTheDocument()
+    expect(screen.getByText('Stickers & Creative Crafts')).toBeInTheDocument()
+    expect(screen.getByText('Party Favors & Balloons')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: '102 · Beauty Care' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: '410 · Holiday Events' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     await waitFor(() => expect(pending.respond).toHaveBeenCalledWith({
       ok: true,
       value: { sessionId: 'session-one', answer: { answers: [{
         id: PROPOSAL_QUESTION_IDS.department,
-        selected: ['Merchandising', 'Executive Leadership'],
+        selected: ['102 · Beauty Care', '410 · Holiday Events'],
       }] } },
     }))
   })
