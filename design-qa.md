@@ -28,6 +28,67 @@ The source and implementation crops were normalized to the same 536px row-region
 
 final result: passed
 
+---
+
+# Proposal Assistant Dark Department Avatars Design QA
+
+## Source visual truth
+
+- Dark Harness palette reference: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-6213a9ae-8f52-4661-b343-8f451d88479a.png` (`2424 x 752`).
+- Department-card reference inside the meeting screenshot: `/tmp/codex-remote-attachments/01a02235-d603-7fa2-99cd-eb6be47193c0/C1850EB8-DF64-4541-B133-B7B006B13316/1-照片-1.jpg` (`590 x 1280`).
+- Normalized source card crop: `/tmp/paimind-proposal-dark-departments-20260824/source-dark-card.png` (`1000 x 620`).
+
+## Rendered implementation
+
+- Browser-rendered selected state: `/tmp/paimind-proposal-dark-departments-20260824/department-dark-selected-final-v2.png` (`1864 x 905`, device scale factor `1`).
+- Normalized implementation crop: `/tmp/paimind-proposal-dark-departments-20260824/implementation-dark-card-v2.png` (`1000 x 620`).
+- Same-input comparison: `/tmp/paimind-proposal-dark-departments-20260824/design-comparison-v2.png` (`2000 x 620`).
+
+The reference crop and implementation crop were normalized to equal `1000 x 620`
+regions and reviewed together. The implementation preserves the reference's dark
+enterprise decision surface while replacing low-information numbered markers with
+real category avatar assets. Department codes remain visible as small metadata so
+the business identifier is preserved without becoming the main visual identity.
+
+## Comparison history
+
+1. P1 observed: the live proposal card used a light surface while the selected product direction and earlier Harness reference used a dark enterprise surface.
+2. P1 fix: card, header, options, preview panels, controls and selected states now use one dark navy surface hierarchy with restrained blue emphasis.
+3. P2 observed: `102`, `140` and `410` occupied the primary visual slot but did not help users distinguish Beauty Care, Stationery and Holiday Events at a glance.
+4. P2 fix: generated and installed three category-specific `256 x 256` WebP avatars; each department code moved into a compact `DG ###` metadata pill.
+5. P2 observed: the default Deck Type preview focus used nearly the same border emphasis as a confirmed selection, and the narrow action buttons could wrap onto two lines.
+6. P2 fix: passive preview focus now uses a quieter surface, while hover, keyboard focus and selected states retain progressively stronger emphasis; navigation and primary actions remain single-line.
+7. P2 observed: a real model run enriched option labels with a second em-dash description, which duplicated that description in the visible title and detail.
+8. P2 fix: Department presentation parsing now extracts the canonical name for display while preserving the model's exact enriched option label in the native answer returned to the agent.
+9. Post-fix browser verification exercised the real AI-driven Customer-to-Department flow and selected 102 plus 410. No actionable P0, P1 or P2 mismatch remained.
+
+## Required fidelity surfaces
+
+- Fonts and typography: the native Harness sans-serif stack, heading hierarchy and compact progress labels are preserved. White primary text and cool-gray secondary text remain legible on the dark card.
+- Spacing and layout rhythm: the existing two-column Department grid, `52px` avatar slot, card radius, option padding and action placement are preserved; the identity change does not increase card height.
+- Colors and tokens: the live card measured `rgb(16, 25, 37)` with `rgb(238, 243, 249)` text and a restrained `rgba(133, 159, 190, 0.26)` border. Selected rows use blue emphasis without a debug-style hard outline.
+- Image quality and asset fidelity: all three avatars decoded successfully at `256 x 256`, use the same navy, steel-blue and champagne-gold art direction, and are rendered as real WebP assets rather than text glyphs, emoji, CSS art or placeholders.
+- Copy and content: Beauty Care, Stationery and Holiday Events remain the primary labels. Cosmetics & Cosmetic Tools, Stickers & Creative Crafts and Party Favors & Balloons remain visible descriptions, while exact native answer labels still include 102, 140 and 410.
+
+## Verified behavior
+
+- The model loaded `proposal-assistant-orchestration`, displayed visible Think and Skill activity, asked Customer, consumed Dollar General, and then emitted the native Department question.
+- Selecting Beauty Care and Holiday Events produced `aria-checked=true` for their exact model-authored labels; Stationery remained unselected. The renderer also has a regression test for enriched labels such as `102 · Beauty Care — Cosmetics & Cosmetic Tools`, including exact answer preservation.
+- The three avatar assets completed with natural size `256 x 256`; no broken-image fallback appeared.
+- The live component width was `920px` in an `1864 x 905` external Chrome viewport with device scale factor `1`.
+- Document horizontal overflow was `0`.
+- Browser logs emitted one informational GenUI compatibility message after the final reload and no new warning or error entries during the accepted flow. The retained tab log still contains expected reconnect warnings and terminal-connection errors from the two intentional isolated Harness restarts performed before that reload.
+- Targeted verification passed: `9` proposal-experience tests, package TypeScript typecheck and full repository build.
+
+## Findings
+
+- P0: none.
+- P1: none after the dark-surface conversion.
+- P2: none after replacing numbered identity blocks with category avatars and demoting codes to metadata.
+- P3: the proposal decision card intentionally remains dark when the surrounding Harness shell is light; this is the user-selected branded presentation treatment, not a missing theme fallback.
+
+final result: passed
+
 # Proposal Assistant Slide Rail and Three-page Trace Design QA
 
 ## Comparison input

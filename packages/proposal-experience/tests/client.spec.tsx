@@ -21,6 +21,7 @@ describe('Proposal Assistant Experience', () => {
     const entry = entries[0]
     expect(entry?.options).toMatchObject({ name: 'conversation.composer', priority: -20 })
     expect(document.getElementById('@paimind/proposal-experience')).not.toBeNull()
+    expect(document.getElementById('@paimind/proposal-experience')?.textContent).toContain('background:#101925')
     fixture.disposeEffects()
     expect(entry?.disposed()).toBe(true)
     expect(document.getElementById('@paimind/proposal-experience')).toBeNull()
@@ -154,24 +155,28 @@ describe('Proposal Assistant Experience', () => {
       detail: 'Select all departments whose performance and opportunities should appear in the analysis.',
       multiSelect: true,
       options: [
-        { label: '102 · Beauty Care' },
-        { label: '140 · Stationery' },
-        { label: '410 · Holiday Events' },
+        { label: '102 · Beauty Care — Cosmetics & Cosmetic Tools' },
+        { label: '140 · Stationery — Stickers & Creative Crafts' },
+        { label: '410 · Holiday Events — Party Favors & Balloons' },
       ],
     })
     const { container } = render(<ProposalQuestionComposer matched={pending} />)
-    expect(Array.from(container.querySelectorAll('[data-paimind-department-code]')).map(node => node.textContent)).toEqual(['102', '140', '410'])
+    expect(container.querySelectorAll('[data-paimind-department-avatar] img')).toHaveLength(3)
+    expect(Array.from(container.querySelectorAll('[data-paimind-department-meta]')).map(node => node.textContent)).toEqual(['DG 102', 'DG 140', 'DG 410'])
     expect(screen.getByText('Cosmetics & Cosmetic Tools')).toBeInTheDocument()
     expect(screen.getByText('Stickers & Creative Crafts')).toBeInTheDocument()
     expect(screen.getByText('Party Favors & Balloons')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('checkbox', { name: '102 · Beauty Care' }))
-    fireEvent.click(screen.getByRole('checkbox', { name: '410 · Holiday Events' }))
+    expect(screen.getByText('Beauty Care')).toBeInTheDocument()
+    expect(screen.getByText('Stationery')).toBeInTheDocument()
+    expect(screen.getByText('Holiday Events')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: '102 · Beauty Care — Cosmetics & Cosmetic Tools' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: '410 · Holiday Events — Party Favors & Balloons' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     await waitFor(() => expect(pending.respond).toHaveBeenCalledWith({
       ok: true,
       value: { sessionId: 'session-one', answer: { answers: [{
         id: PROPOSAL_QUESTION_IDS.department,
-        selected: ['102 · Beauty Care', '410 · Holiday Events'],
+        selected: ['102 · Beauty Care — Cosmetics & Cosmetic Tools', '410 · Holiday Events — Party Favors & Balloons'],
       }] } },
     }))
   })
