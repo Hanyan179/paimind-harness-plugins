@@ -114,12 +114,6 @@ const STYLE = `
 [data-paimind-trace] { --paimind-trace-accent:var(--dsw-alias-state-business-primary,#2f6df6); --paimind-trace-surface:var(--dsw-alias-bg-layer-1,#fff); --paimind-trace-surface-subtle:var(--dsw-alias-bg-layer-2,#f5f7fa); --paimind-trace-surface-raised:var(--dsw-alias-bg-layer-3,#eef2f7); --paimind-trace-border:var(--dsw-alias-border-l1,#dce3ec); --paimind-trace-ink:var(--dsw-alias-label-primary,#142944); --paimind-trace-muted:var(--dsw-alias-label-secondary,#61738a); --paimind-trace-faint:var(--dsw-alias-label-tertiary,#7a8ca4); width:100%; height:100%; min-height:0; min-width:0; display:flex; flex-direction:column; overflow:hidden; isolation:isolate; container-name:paimind-trace-panel; container-type:inline-size; color:var(--paimind-trace-ink); background:var(--paimind-trace-surface-subtle); color-scheme:light dark; font:inherit; }
 [data-paimind-trace] h2,[data-paimind-trace] h3,[data-paimind-trace] h4,[data-paimind-trace] p { margin:0; }
 [data-paimind-trace] button:focus-visible { outline:2px solid color-mix(in srgb,var(--paimind-trace-accent) 72%,#fff); outline-offset:2px; }
-[data-paimind-trace-header] { flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 16px 13px; border-bottom:1px solid var(--paimind-trace-border); background:color-mix(in srgb,var(--paimind-trace-surface) 97%,transparent); backdrop-filter:blur(18px); }
-[data-paimind-trace-title] { min-width:0; display:grid; gap:3px; }
-[data-paimind-trace-eyebrow] { color:var(--paimind-trace-accent); font-size:10px; line-height:14px; font-weight:750; letter-spacing:.12em; text-transform:uppercase; }
-[data-paimind-trace-header] h2 { overflow:hidden; font-size:16px; line-height:21px; letter-spacing:-.02em; text-overflow:ellipsis; white-space:nowrap; }
-[data-paimind-trace-meta] { flex:0 0 auto; display:flex; align-items:center; gap:7px; color:var(--paimind-trace-faint); font-size:11px; line-height:16px; white-space:nowrap; }
-[data-paimind-trace-badge] { padding:3px 8px; border:1px solid color-mix(in srgb,var(--dsw-alias-state-success-primary,#27946b) 42%,var(--paimind-trace-border)); border-radius:99px; color:var(--dsw-alias-state-success-primary,#27946b); background:color-mix(in srgb,var(--dsw-alias-state-success-primary,#27946b) 10%,var(--paimind-trace-surface)); font-weight:700; }
 [data-paimind-trace-nav] { flex:0 0 auto; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; padding:10px 12px; border-bottom:1px solid var(--paimind-trace-border); background:var(--paimind-trace-surface); }
 [data-paimind-trace-nav] button { min-width:0; min-height:44px; display:flex; align-items:center; justify-content:center; gap:7px; padding:8px 7px; border:1px solid var(--paimind-trace-border); border-radius:11px; color:var(--paimind-trace-muted); background:var(--paimind-trace-surface-subtle); font:inherit; cursor:pointer; transition:border-color .16s ease,background .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease; }
 [data-paimind-trace-nav] button span { width:20px; height:20px; display:grid; place-items:center; flex:0 0 auto; border-radius:99px; color:var(--paimind-trace-faint); background:var(--paimind-trace-surface-raised); font-size:8px; line-height:11px; font-weight:750; letter-spacing:.04em; }
@@ -129,22 +123,22 @@ const STYLE = `
 [data-paimind-trace-nav] button[aria-current='page'] span { color:var(--paimind-trace-accent); background:var(--dsw-alias-label-primary-inverted,#fff); }
 [data-paimind-trace-nav] button:disabled { opacity:.38; cursor:not-allowed; }
 [data-paimind-trace-page] { min-height:0; flex:1 1 auto; display:flex; flex-direction:column; padding:17px 16px 24px; overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
-[data-paimind-trace-page-head] { flex:0 0 auto; display:grid; gap:5px; padding:0 1px 16px; }
-[data-paimind-trace-page-head] span { color:var(--paimind-trace-accent); font-size:10px; line-height:14px; font-weight:750; letter-spacing:.12em; text-transform:uppercase; }
-[data-paimind-trace-page-head] h3 { font-size:21px; line-height:27px; letter-spacing:-.025em; }
-[data-paimind-trace-page-head] p { max-width:48ch; color:var(--paimind-trace-faint); font-size:12px; line-height:18px; }
-[data-paimind-trace-overview] { display:grid; gap:11px; margin-bottom:4px; padding:14px; border:1px solid var(--paimind-trace-border); border-radius:14px; background:var(--paimind-trace-surface); box-shadow:0 8px 24px color-mix(in srgb,var(--paimind-trace-ink) 4%,transparent); }
-[data-paimind-trace-overview] > span { color:var(--paimind-trace-accent); font-size:10px; line-height:14px; font-weight:750; letter-spacing:.1em; text-transform:uppercase; }
-[data-paimind-trace-overview] h4 { font-size:14px; line-height:20px; letter-spacing:-.01em; }
-[data-paimind-trace-overview-stats] { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-[data-paimind-trace-overview-stats] div { display:grid; gap:2px; padding:9px 10px; border-radius:10px; background:var(--paimind-trace-surface-subtle); }
-[data-paimind-trace-overview-stats] dt { color:var(--paimind-trace-faint); font-size:10px; line-height:14px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; }
-[data-paimind-trace-overview-stats] dd { margin:0; color:var(--paimind-trace-accent); font-size:17px; line-height:21px; font-weight:750; }
 [data-paimind-trace-section] { display:grid; gap:9px; padding:15px 0; }
 [data-paimind-trace-section] + [data-paimind-trace-section] { border-top:1px solid var(--paimind-trace-border); }
 [data-paimind-trace-section] h3 { color:var(--paimind-trace-muted); font-size:10px; line-height:15px; font-weight:750; text-transform:uppercase; letter-spacing:.11em; }
 [data-paimind-trace-section] > p { color:var(--paimind-trace-muted); font-size:12px; line-height:18px; }
 [data-paimind-trace-grid],[data-paimind-trace-list] { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; margin:0; padding:0; list-style:none; }
+[data-page='directory'] { gap:12px; }
+[data-page='directory'] [data-paimind-trace-section] { padding:0; }
+[data-paimind-trace-category] { min-width:0; min-height:108px; display:grid; align-content:start; gap:6px; padding:15px; border:1px solid var(--paimind-trace-border); border-radius:14px; color:var(--paimind-trace-ink); background:var(--paimind-trace-surface); box-shadow:0 8px 24px color-mix(in srgb,var(--paimind-trace-ink) 4%,transparent); font:inherit; text-align:left; cursor:pointer; transition:border-color .16s ease,background .16s ease,transform .16s ease,box-shadow .16s ease; }
+[data-paimind-trace-category]:hover { border-color:color-mix(in srgb,var(--paimind-trace-accent) 55%,var(--paimind-trace-border)); transform:translateY(-1px); box-shadow:0 11px 28px color-mix(in srgb,var(--paimind-trace-accent) 10%,transparent); }
+[data-paimind-trace-category] strong { font-size:14px; line-height:20px; letter-spacing:-.01em; }
+[data-paimind-trace-category] p { color:var(--paimind-trace-muted); font-size:11px; line-height:16px; }
+[data-paimind-trace-category] span { margin-top:auto; color:var(--paimind-trace-accent); font-size:10px; line-height:14px; font-weight:750; letter-spacing:.07em; text-transform:uppercase; }
+[data-paimind-trace-context] { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:12px 13px; border:1px solid color-mix(in srgb,var(--paimind-trace-accent) 38%,var(--paimind-trace-border)); border-radius:12px; background:color-mix(in srgb,var(--paimind-trace-accent) 8%,var(--paimind-trace-surface)); }
+[data-paimind-trace-context] div { min-width:0; display:grid; gap:2px; text-align:right; }
+[data-paimind-trace-context] strong { overflow:hidden; color:var(--paimind-trace-ink); font-size:12px; line-height:17px; text-overflow:ellipsis; white-space:nowrap; }
+[data-paimind-trace-context] span { color:var(--paimind-trace-faint); font-size:10px; line-height:14px; }
 [data-paimind-trace-button],[data-paimind-trace-row] { min-width:0; min-height:44px; padding:11px 12px; border:1px solid var(--paimind-trace-border); border-radius:11px; color:var(--paimind-trace-ink); background:var(--paimind-trace-surface); font:inherit; cursor:pointer; text-align:left; transition:border-color .16s ease,background .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease; }
 [data-paimind-trace-button] { font-size:12px; line-height:18px; }
 [data-paimind-trace-button][aria-pressed='true'] { border-color:var(--paimind-trace-accent); background:color-mix(in srgb,var(--paimind-trace-accent) 10%,var(--paimind-trace-surface)); box-shadow:inset 3px 0 0 var(--paimind-trace-accent),0 6px 16px color-mix(in srgb,var(--paimind-trace-accent) 8%,transparent); }
@@ -172,7 +166,7 @@ button[data-paimind-trace-row] { width:100%; }
 [data-paimind-trace-empty],[data-paimind-trace-error] { padding:20px 14px; color:var(--paimind-trace-faint); font-size:12px; line-height:19px; text-align:center; }
 [data-paimind-trace-error] { color:var(--dsw-alias-state-error-primary,#d04444); }
 @container paimind-trace-panel (min-width:720px){[data-paimind-trace-page]{padding:19px 18px 26px}[data-paimind-trace-business-hero]{grid-template-columns:minmax(148px,.72fr) minmax(0,1.28fr)}[data-paimind-trace-business-fields],[data-paimind-trace-sheet][data-layout='technical'] [data-paimind-trace-list],[data-paimind-trace-sheet][data-layout='technical'] dl[data-paimind-trace-sheet]{grid-template-columns:repeat(2,minmax(0,1fr))}[data-paimind-trace-business-fields] [data-paimind-trace-field]:last-child{grid-column:1/-1}[data-page='directory'] [data-paimind-trace-grid]{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@container paimind-trace-panel (max-width:430px){[data-paimind-trace-header]{align-items:flex-start;flex-direction:column}[data-paimind-trace-meta]{width:100%;justify-content:space-between}[data-paimind-trace-nav] button{gap:3px}[data-paimind-trace-nav] button span{display:none}[data-paimind-trace-page]{padding-inline:12px}}
+@container paimind-trace-panel (max-width:430px){[data-paimind-trace-nav] button{gap:3px}[data-paimind-trace-nav] button span{display:none}[data-paimind-trace-page]{padding-inline:12px}[data-paimind-trace-context]{align-items:stretch;flex-direction:column}[data-paimind-trace-context] div{text-align:left}}
 @media(prefers-reduced-motion:reduce){[data-paimind-trace] *,[data-paimind-trace] *::before,[data-paimind-trace] *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 `
 
@@ -182,7 +176,6 @@ function installStyle(): () => void {
   return () => { style.remove() }
 }
 
-const statusCopy = (status: string, zh: boolean): string => ({ generated: zh ? '已生成' : 'Generated', reviewed: zh ? '已审核' : 'Reviewed', verified: zh ? '已验证' : 'Verified' }[status] ?? status)
 const missing = (zh: boolean): string => zh ? '未登记' : 'Not registered'
 
 type TracePage = 'directory' | 'business' | 'technical'
@@ -191,15 +184,6 @@ interface DirectoryFactEntry {
   readonly metric: PaimindTraceMetric
   readonly fact: PaimindTraceFact
   readonly groupLabel: string
-}
-
-function directoryFactGroupLabel(fact: PaimindTraceFact, zh: boolean): string {
-  const department = fact.dimensions.find(dimension => dimension.key === 'department')?.value
-  const category = fact.dimensions.find(dimension => dimension.key === 'category')?.value
-  if (department !== undefined && category !== undefined) return `${department} · ${category}`
-  if (category !== undefined) return category
-  if (department !== undefined) return `${zh ? '部门' : 'Department'} ${department}`
-  return fact.dimensions[0]?.value ?? (zh ? '通用事实' : 'General evidence')
 }
 
 function priorityDirectoryFacts(entries: readonly DirectoryFactEntry[], limit = 4): readonly DirectoryFactEntry[] {
@@ -241,7 +225,7 @@ function BusinessSheet(props: { readonly fact: PaimindTraceFact; readonly docume
   const sources = props.document.sources.filter(source => props.fact.sourceIds.includes(source.id))
   const sourceSummary = sources.map(source => `${source.name} · ${source.role}${source.sha256 ? ` · SHA-256 ${source.sha256.slice(0, 12)}…` : ''}`).join('\n') || missing(props.zh)
   return <div data-paimind-trace-sheet data-layout="business">
-    <button type="button" data-paimind-trace-back onClick={props.onDirectory}>← {props.zh ? '返回目录' : 'Back to directory'}</button>
+    <button type="button" data-paimind-trace-back onClick={props.onDirectory}>{props.zh ? '返回指标' : 'Back to metrics'}</button>
     <div data-paimind-trace-business-hero>
       <div data-paimind-trace-value><span>{props.zh ? '已验证事实' : 'Verified fact'}</span>{props.fact.displayValue}</div>
       <div data-paimind-trace-field data-field="source" title={sourceSummary}><dt>{props.zh ? '来源文件' : 'Source files'}</dt><dd>{sourceSummary}</dd></div>
@@ -258,7 +242,7 @@ function BusinessSheet(props: { readonly fact: PaimindTraceFact; readonly docume
 function TechnicalSheet(props: { readonly fact: PaimindTraceFact; readonly zh: boolean; readonly onBusiness: () => void }): React.JSX.Element {
   const technical = props.fact.technical
   return <div data-paimind-trace-sheet data-layout="technical">
-    <button type="button" data-paimind-trace-back onClick={props.onBusiness}>← {props.zh ? '返回业务溯源' : 'Back to business trace'}</button>
+    <button type="button" data-paimind-trace-back onClick={props.onBusiness}>{props.zh ? '返回业务溯源' : 'Back to business trace'}</button>
     <section data-paimind-trace-section><h3>{props.zh ? '数据链路' : 'Data Lineage'}</h3>{technical?.lineage?.length ? <ol data-paimind-trace-list>{technical.lineage.map(step => <li key={step.stepId} data-paimind-trace-row><strong>{step.label}</strong><p>{step.operation}</p></li>)}</ol> : <p>{missing(props.zh)}</p>}</section>
     <section data-paimind-trace-section><h3>{props.zh ? '计算逻辑' : 'Calculation Logic'}</h3><dl data-paimind-trace-sheet><div data-paimind-trace-field><dt>{props.zh ? '计算' : 'Calculation'}</dt><dd>{technical?.calculation ?? missing(props.zh)}</dd></div><div data-paimind-trace-field><dt>{props.zh ? '聚合' : 'Aggregation'}</dt><dd>{technical?.aggregation ?? missing(props.zh)}</dd></div><div data-paimind-trace-field><dt>{props.zh ? '源字段' : 'Source fields'}</dt><dd>{technical?.sourceFields?.join(' · ') ?? missing(props.zh)}</dd></div><div data-paimind-trace-field><dt>{props.zh ? '连接键' : 'Join keys'}</dt><dd>{technical?.joinKeys?.join(' · ') ?? missing(props.zh)}</dd></div></dl></section>
     <section data-paimind-trace-section><h3>{props.zh ? '代码与运行' : 'Code & Runtime'}</h3><dl data-paimind-trace-sheet><div data-paimind-trace-field><dt>{props.zh ? '代码文件' : 'Code file'}</dt><dd>{technical?.codeFile ?? missing(props.zh)}</dd></div><div data-paimind-trace-field><dt>{props.zh ? '运行时长' : 'Execution duration'}</dt><dd>{technical?.executionDurationMs === undefined ? missing(props.zh) : `${technical.executionDurationMs} ms`}</dd></div></dl></section>
@@ -301,11 +285,11 @@ export function PresentationTracePanel(props: { readonly service: PaimindPresent
   if (snapshot.selection === null) return <section data-paimind-trace aria-label={zh ? '演示追溯' : 'Presentation Trace'}><div data-paimind-trace-empty>{zh ? '请从 PAIMind 产物中选择“追溯”。' : 'Choose Trace from a PAIMind artifact.'}</div></section>
   if (trace === null) return <section data-paimind-trace aria-label={zh ? '演示追溯' : 'Presentation Trace'}><div role="alert" data-paimind-trace-error>{zh ? '关联的追溯记录不可用；原生预览与会话不受影响。' : 'The associated trace is unavailable; native preview and conversation remain available.'}</div></section>
   const slide = trace.document.slides[Math.min(slideIndex, trace.document.slides.length - 1)] as PaimindTraceSlide
-  const activeBlock = slide.businessBlocks.find(block => block.blockId === blockId) ?? slide.businessBlocks[0]
+  const activeBlock = slide.businessBlocks.find(block => block.blockId === blockId)
   const metrics = slide.metrics.filter(metric => metric.businessBlockId === activeBlock?.blockId)
-  const metric = metrics.find(row => row.metricId === metricId) ?? metrics[0]
-  const fact = metric?.facts.find(row => row.factId === factId) ?? metric?.facts[0]
-  const allDirectoryFacts = metrics.flatMap(row => row.facts.map(rowFact => ({ metric: row, fact: rowFact, groupLabel: directoryFactGroupLabel(rowFact, zh) })))
+  const metric = slide.metrics.find(row => row.metricId === metricId)
+  const fact = metric?.facts.find(row => row.factId === factId)
+  const allDirectoryFacts = metrics.flatMap(row => row.facts.map(rowFact => ({ metric: row, fact: rowFact, groupLabel: row.label })))
   const directoryFacts = showAllFacts ? allDirectoryFacts : priorityDirectoryFacts(allDirectoryFacts)
   const directoryFactGroups = groupDirectoryFacts(directoryFacts)
   const focusFact = (targetSlide: PaimindTraceSlide, targetFactId: string): void => {
@@ -316,31 +300,25 @@ export function PresentationTracePanel(props: { readonly service: PaimindPresent
       if (binding !== undefined) { props.bento.focus({ slideId: targetSlide.slideId, objectId: visual.objectId, selector: binding.selector.kind === 'chart-point' ? { kind: 'chart-point', seriesKey: binding.selector.seriesKey ?? '', categoryKey: binding.selector.categoryKey ?? '' } : binding.selector.kind === 'table-cell' ? { kind: 'table-cell', rowKey: binding.selector.rowKey ?? '', columnKey: binding.selector.columnKey ?? '' } : { kind: 'object' } }); return }
     }
   }
-  const selectSlide = (index: number): void => {
-    const target = trace.document.slides[index]
-    if (target === undefined) return
-    setSlideIndex(index); setBlockId(''); setMetricId(''); setFactId(''); setPage('directory'); setShowAllFacts(false)
-    props.bento.navigate({ slideId: target.slideId, slide: index + 1 })
-  }
   const selectFact = (targetMetric: PaimindTraceMetric, targetFact: PaimindTraceFact): void => {
     setBlockId(targetMetric.businessBlockId); setMetricId(targetMetric.metricId); setFactId(targetFact.factId); setPage('business'); focusFact(slide, targetFact.factId)
   }
   return <section data-paimind-trace aria-label={zh ? '演示追溯' : 'Presentation Trace'}>
-    <header data-paimind-trace-header><div data-paimind-trace-title><span data-paimind-trace-eyebrow>{zh ? '实时证据' : 'Live evidence'}</span><h2>{snapshot.selection.title}</h2></div><div data-paimind-trace-meta><span data-paimind-trace-badge>{statusCopy(trace.document.reviewStatus, zh)}</span><span>{zh ? `${slideIndex + 1} / ${trace.document.slides.length} 页` : `${slideIndex + 1} / ${trace.document.slides.length}`}</span></div></header>
     <TracePageNav page={page} hasFact={fact !== undefined} zh={zh} onNavigate={setPage} />
     {page === 'directory' && <main data-paimind-trace-page data-page="directory">
-      <header data-paimind-trace-page-head><span>{zh ? '溯源目录' : 'Trace Directory'}</span><h3>{zh ? '这份演示中的证据地图' : 'Evidence map for this deck'}</h3><p>{zh ? '选择页面、业务区块或事实，进入对应溯源。' : 'Choose a slide, business block, or verified fact to inspect its evidence.'}</p></header>
-      <section data-paimind-trace-overview><span>{zh ? `当前第 ${slideIndex + 1} 页` : `Current slide · ${String(slideIndex + 1).padStart(2, '0')}`}</span><h4>{slide.explanation}</h4><dl data-paimind-trace-overview-stats><div><dt>{zh ? '业务区块' : 'Business blocks'}</dt><dd>{slide.businessBlocks.length}</dd></div><div><dt>{zh ? '已验证事实' : 'Verified facts'}</dt><dd>{slide.metrics.reduce((total, row) => total + row.facts.length, 0)}</dd></div></dl></section>
-      <section data-paimind-trace-section><h3>{zh ? '页面目录' : 'Slide Directory'}</h3><div data-paimind-trace-grid>{trace.document.slides.map((row, index) => <button key={row.slideId} type="button" data-paimind-trace-button aria-pressed={index === slideIndex} onClick={() => { selectSlide(index) }}>{String(index + 1).padStart(2, '0')} · {row.explanation}</button>)}</div></section>
-      <section data-paimind-trace-section><h3>{zh ? '业务区块' : 'Business Blocks'}</h3><div data-paimind-trace-grid>{slide.businessBlocks.map(block => <button key={block.blockId} type="button" data-paimind-trace-button aria-pressed={block.blockId === activeBlock?.blockId} onClick={() => { setBlockId(block.blockId); setMetricId(''); setFactId(''); setShowAllFacts(false) }}><strong>{block.label}</strong>{block.description ? <><br />{block.description}</> : null}</button>)}</div></section>
-      <section data-paimind-trace-section><h3>{zh ? '已验证事实' : 'Verified Facts'}</h3>{directoryFactGroups.map(group => <div key={group.label} data-paimind-trace-group><span data-paimind-trace-group-label>{group.label}</span><ul data-paimind-trace-list>{group.entries.map(entry => <li key={entry.fact.factId}><button type="button" data-paimind-trace-row onClick={() => { selectFact(entry.metric, entry.fact) }}><strong>{entry.metric.label} · {entry.fact.displayValue}</strong><span>{entry.fact.dimensions.map(dimension => dimension.value).join(' · ') || entry.fact.business.scope.period}</span></button></li>)}</ul></div>)}{allDirectoryFacts.length > 4 && <button type="button" data-paimind-trace-more aria-expanded={showAllFacts} onClick={() => { setShowAllFacts(value => !value) }}>{showAllFacts ? (zh ? '仅显示重点事实' : 'Show priority facts') : (zh ? `查看全部 ${allDirectoryFacts.length} 条事实` : `View all ${allDirectoryFacts.length} facts`)}</button>}</section>
+      {activeBlock === undefined ? <section data-paimind-trace-section><h3>{zh ? '证据分类' : 'Evidence Categories'}</h3><div data-paimind-trace-grid>{slide.businessBlocks.map(block => {
+        const blockMetrics = slide.metrics.filter(row => row.businessBlockId === block.blockId)
+        const blockFactCount = blockMetrics.reduce((total, row) => total + row.facts.length, 0)
+        return <button key={block.blockId} type="button" data-paimind-trace-category onClick={() => { setBlockId(block.blockId); setMetricId(''); setFactId(''); setShowAllFacts(false) }}><strong>{block.label}</strong><p>{block.description}</p><span>{zh ? `${blockMetrics.length} 个指标 · ${blockFactCount} 条事实` : `${blockMetrics.length} ${blockMetrics.length === 1 ? 'metric' : 'metrics'} · ${blockFactCount} ${blockFactCount === 1 ? 'fact' : 'facts'}`}</span></button>
+      })}</div></section> : <>
+        <div data-paimind-trace-context><button type="button" data-paimind-trace-back onClick={() => { setBlockId(''); setMetricId(''); setFactId(''); setShowAllFacts(false) }}>{zh ? '返回分类' : 'Back to categories'}</button><div><strong>{activeBlock.label}</strong><span>{zh ? `${metrics.length} 个指标 · ${allDirectoryFacts.length} 条事实` : `${metrics.length} ${metrics.length === 1 ? 'metric' : 'metrics'} · ${allDirectoryFacts.length} ${allDirectoryFacts.length === 1 ? 'fact' : 'facts'}`}</span></div></div>
+        <section data-paimind-trace-section><h3>{zh ? '指标与事实' : 'Metrics & Facts'}</h3>{directoryFactGroups.map(group => <div key={group.label} data-paimind-trace-group><span data-paimind-trace-group-label>{group.label}</span><ul data-paimind-trace-list>{group.entries.map(entry => <li key={entry.fact.factId}><button type="button" data-paimind-trace-row onClick={() => { selectFact(entry.metric, entry.fact) }}><strong>{entry.fact.displayValue}</strong><span>{entry.fact.dimensions.map(dimension => dimension.value).join(' · ') || entry.fact.business.scope.period}</span></button></li>)}</ul></div>)}{allDirectoryFacts.length > 4 && <button type="button" data-paimind-trace-more aria-expanded={showAllFacts} onClick={() => { setShowAllFacts(value => !value) }}>{showAllFacts ? (zh ? '仅显示重点事实' : 'Show priority facts') : (zh ? `查看全部 ${allDirectoryFacts.length} 条事实` : `View all ${allDirectoryFacts.length} facts`)}</button>}</section>
+      </>}
     </main>}
     {page === 'business' && fact !== undefined && <main data-paimind-trace-page data-page="business">
-      <header data-paimind-trace-page-head><span>{zh ? '业务溯源' : 'Business Trace'}</span><h3>{zh ? '是什么支撑了这个结论？' : 'What supports this result?'}</h3><p>{metric?.label} · {zh ? '面向业务用户解释结论、口径、范围与来源。' : 'Conclusion, method, scope, and registered source.'}</p></header>
       <BusinessSheet fact={fact} document={trace.document} zh={zh} onDirectory={() => { setPage('directory') }} onTechnical={() => { setPage('technical') }} />
     </main>}
     {page === 'technical' && fact !== undefined && <main data-paimind-trace-page data-page="technical">
-      <header data-paimind-trace-page-head><span>{zh ? '技术溯源' : 'Technical Trace'}</span><h3>{zh ? '这个事实是如何生成的？' : 'How was this fact produced?'}</h3><p>{metric?.label} · {zh ? '数据链路、计算逻辑、代码与执行证据。' : 'Lineage, calculation logic, code, and execution evidence.'}</p></header>
       <TechnicalSheet fact={fact} zh={zh} onBusiness={() => { setPage('business') }} />
     </main>}
   </section>

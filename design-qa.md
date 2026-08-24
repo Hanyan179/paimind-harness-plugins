@@ -30,6 +30,72 @@ final result: passed
 
 ---
 
+# Proposal Trace Current-slide Classification Design QA
+
+## Source visual truth
+
+- User-reported directory state: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-b28a6c28-8b51-4870-b979-756440f7f7f2.png` (`916 x 2674`).
+- The source shows a deck-level header, a second directory introduction, a current-slide summary, a five-slide directory, a business block, and fact cards competing inside one narrow Trace inspector.
+
+## Rendered implementation
+
+- Directory categories: `/tmp/paimind-trace-classification-20260824/01-directory-categories-panel.jpg` (`411 x 1326`).
+- Selected category metrics: `/tmp/paimind-trace-classification-20260824/02-directory-metrics-panel.jpg` (`411 x 1326`).
+- Business Trace: `/tmp/paimind-trace-classification-20260824/03-business-panel.jpg` (`411 x 1326`).
+- Technical Trace: `/tmp/paimind-trace-classification-20260824/04-technical-panel.jpg` (`411 x 1326`).
+- Four-stage interaction comparison: `/tmp/paimind-trace-classification-20260824/trace-four-stage-contact-sheet.jpg` (`1740 x 1326`).
+- Full external-Chrome capture: `/tmp/paimind-trace-classification-20260824/01-directory-categories-full.jpg` (`2768 x 1461`).
+
+The live browser used the mainline `http://localhost:3080/` Harness at a
+`2768 x 1461` CSS viewport. The Trace inspector measured `411 x 1326` CSS px;
+the screenshot pixels matched the CSS geometry at the captured density.
+
+## Normalization and comparison input
+
+- The source's `84px` deck sliver was cropped away, then the remaining Trace panel was normalized from `832 x 2674` to `411 x 1326`.
+- Full-height same-input comparison: `/tmp/paimind-trace-classification-20260824/directory-before-after.jpg` (`822 x 1326`).
+- Focused top-region comparison: `/tmp/paimind-trace-classification-20260824/directory-top-before-after.jpg` (`822 x 620`).
+- The normalized source and the final Directory implementation were opened together before this report was written.
+
+## Comparison history
+
+1. P1 observed: the source repeated deck identity, generation status, current-slide summary, and all-slide navigation inside the inspector even though the slide rail already owned deck navigation.
+2. P1 fix: removed the Trace header, summary card, and five-slide directory. Directory now starts with evidence categories for the currently visible slide only.
+3. P1 observed: business blocks and all facts were expanded simultaneously, so a dense slide would become a long undifferentiated list.
+4. P1 fix: added a staged hierarchy: current-slide category -> metrics and facts -> Business Trace -> Technical Trace. Business and Technical navigation remain disabled until a fact is selected.
+5. P2 observed: `What supports this result?` and `How was this fact produced?` repeated the meaning of their active navigation tabs and delayed the evidence.
+6. P2 fix: removed both explanatory headers. Business opens directly on verified value, registered source, definition, method, and scope; Technical opens directly on lineage, calculation, source fields, code, and runtime.
+7. Post-fix external-Chrome interaction and visual comparison found no remaining P0, P1, or P2 issue.
+
+## Required fidelity surfaces
+
+- Fonts and typography: the Harness font stack and existing optical weights are preserved. Functional labels, category titles, metric labels, fact values, and evidence fields have distinct hierarchy without adding marketing copy.
+- Spacing and layout rhythm: the fixed three-tab navigation is followed by one compact category card or one metric list. Repeated `11–15px` card padding and `7–12px` gaps replace the previous nested long-form stack.
+- Colors and visual tokens: all surfaces, borders, text, active states, and buttons continue to resolve from the existing Harness semantic Light/Dark tokens.
+- Image and asset quality: no visible product asset was replaced or simulated. The real Playful Storybook Bento slide remains in the workbench; Trace is native UI.
+- Copy and content: removed `Live evidence`, the deck title/status/page count, `Evidence map for this deck`, the current-slide overview, `Slide Directory`, and both explanatory question headers. Remaining copy labels actual categories, metrics, facts, sources, calculations, and lineage.
+
+## Verified behavior
+
+- Directory initially exposed one current-slide evidence category and no fact rows.
+- Selecting the category exposed four facts grouped under its registered metric; no other slide conclusions were present.
+- Selecting `+32.8%` opened Business Trace and focused the corresponding deck evidence.
+- `View technical trace` opened lineage and calculation evidence; both removed question headers stayed absent.
+- Legacy-copy counts in the live DOM were zero for `Live evidence`, `Evidence map`, `Slide Directory`, `What supports this result?`, and `How was this fact produced?`.
+- Trace geometry measured `clientWidth=411`, `scrollWidth=411`, `clientHeight=1326`, and `scrollHeight=1326`; the Technical page measured `clientHeight=1261`, `scrollHeight=1261`.
+- The captured live interaction produced zero browser warnings and zero browser errors.
+
+## Findings
+
+- P0: none.
+- P1: none after removing deck-level duplication and introducing staged current-slide classification.
+- P2: none after removing explanatory headers and verifying all four interaction stages.
+- P3: a slide with only one registered category intentionally leaves open space; dense slides use the same grid for multiple categories and defer fact density until selection.
+
+final result: passed
+
+---
+
 # Proposal Trace Readability and Hierarchy Design QA
 
 ## Comparison input

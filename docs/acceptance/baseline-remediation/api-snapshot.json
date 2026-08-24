@@ -187,7 +187,7 @@
       "path": "packages/presentation-trace",
       "contractSha256": "714238113af9bd792b662d703c8723d2fb9f9d055124720325364b423a84df2b",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "74c5d0eaa8edfbc94d751d23884af5a7de39f59f4cbab455940dcd27755a0072",
+      "runtimeExportSha256": "4ff70ea02646ed98adaf942d1c59d9757b20e0fcf0d82d91ab4dc9baf990efa1",
       "declarationCount": 4,
       "declarationSha256": "359560ff64a7a97dd1b3ce38510e74da51751aed35346de1b141d9e839091253",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -268,7 +268,7 @@
       "path": "packages/skill-market",
       "contractSha256": "da1db1016c1f79da6274ae21e3a03b946d3aa900cbc013756f3736e18250745f",
       "runtimeExportCount": 7,
-      "runtimeExportSha256": "862d99f31f46225f697c6ae7cb081dab52003131d01b2c8ccee03421dfb765a6",
+      "runtimeExportSha256": "4e754a6f74c8cca6dc4a010efa6b12e49d0e2511374d848c5c8c4dc6236db3d3",
       "declarationCount": 9,
       "declarationSha256": "816ee03b326abb77e77177ea3a60a73be2f5e92e6f9c6c6d8ecfa3a056aa53ce",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
