@@ -121,6 +121,7 @@ metadata:
     expect(proposalSkill).toContain('102 · Beauty Care')
     expect(proposalSkill).toContain('140 · Stationery')
     expect(proposalSkill).toContain('410 · Holiday Events')
+    expect(proposalSkill).toContain('never emit it as a second question')
     expect(proposalSkill).not.toContain('Time horizon')
   })
 

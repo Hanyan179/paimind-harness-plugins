@@ -14,7 +14,7 @@ Use the native question Tool for exactly one decision at a time. Keep all visibl
 1. Customer: use id `paimind.proposal.customer/v1`, header `Customer`, question "Which customer are you preparing this proposal for?", and exactly these options:
    - Dollar General — Value-retail proposal intake using verified Workspace sources.
    - Walmart — Mass-retail proposal intake when a verified PAIMind data path is available.
-2. Department: use id `paimind.proposal.departments/v1`, header `Department`, question "Which Dollar General department(s) should this deck cover?", multi-select enabled, and the detail "Select all departments whose performance and opportunities should appear in the analysis."
+2. Department: make exactly one question object with id `paimind.proposal.departments/v1`, header `Department`, question "Which Dollar General department(s) should this deck cover?", multi-select enabled, and its `detail` field set to "Select all departments whose performance and opportunities should appear in the analysis." The detail is metadata on this same question object; never emit it as a second question.
    - 102 · Beauty Care — Cosmetics & Cosmetic Tools.
    - 140 · Stationery — Stickers & Creative Crafts.
    - 410 · Holiday Events — Party Favors & Balloons.
