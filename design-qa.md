@@ -30,6 +30,58 @@ final result: passed
 
 ---
 
+# Proposal Trace Readability and Hierarchy Design QA
+
+## Comparison input
+
+- Source visual truth: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-0a8134b8-018b-437c-be7e-d4a94f0dc13d.png` (`5210 x 3084`, Retina capture). The user identified the compressed right Trace panel in this real mainline state as the defect to correct.
+- Browser-rendered implementation: `/tmp/paimind-trace-panel-fix-20260824/01-directory-full.jpg` (`2608 x 1461`, external Chrome, CSS viewport `2608 x 1461`, screenshot normalized to `1x`, browser device scale factor `2`).
+- Business state: `/tmp/paimind-trace-panel-fix-20260824/02-business-full.jpg` (`2608 x 1461`).
+- Technical state: `/tmp/paimind-trace-panel-fix-20260824/03-technical-full.jpg` (`2608 x 1461`).
+- Full-view comparison: `/tmp/paimind-trace-panel-fix-20260824/04-full-comparison.jpg` (`5216 x 1461`).
+- Focused same-input Trace comparison: `/tmp/paimind-trace-panel-fix-20260824/05-panel-comparison.jpg` (`1118 x 1326`).
+
+The source was downsampled from its Retina capture to the implementation's CSS width, top-cropped to the same `2608 x 1461` state, and then compared beside the browser implementation. The focused comparison uses equal `559 x 1326` Trace-panel crops from the source and implementation.
+
+## Comparison history
+
+1. P1 observed: the Directory intentionally compressed navigation rows to `25px`, fact labels to `7px`, fact values to `8px`, and placed twelve facts into two columns. The panel had enough width, but the hierarchy was illegible.
+2. P1 fix: restored `44px` interactive rows, `10px` labels, `11–12px` secondary/body copy, `16–21px` headings, a vertical slide directory, and one-column fact cards at the actual `559px` panel width.
+3. P1 observed: Business used `minmax(0,1fr)` to stretch definition cards through the remaining viewport, while Technical compressed rows and hid supporting copy to force everything above the fold.
+4. P1 fix: both pages now use content-height cards and let only the content body scroll. The artifact header and Directory/Business/Technical navigation remain fixed.
+5. P2 observed: Directory gave all twelve facts equal priority, so the evidence map had no scannable first layer.
+6. P2 fix: the initial state now chooses four facts round-robin across business-dimension groups, labels each group, and exposes an explicit `View all 12 facts` / `Show priority facts` interaction.
+7. Post-fix external Chrome evidence showed no actionable P0, P1 or P2 issue across Directory, Business and Technical states.
+
+## Required fidelity surfaces
+
+- Fonts and typography: the implementation keeps the native Harness font stack. The visible Trace panel now measures `21px/27px` for the page title, `12px/18px` for field body text, `10px/15px` for field labels, and `11px/15px` for navigation labels.
+- Spacing and layout rhythm: the Trace panel remains `559 x 1326` CSS pixels inside the existing three-column workbench. Header (`67px`) and three-page navigation (`65px`) are fixed; the content body owns scrolling. Navigation and fact actions are at least `44px` tall.
+- Colors and visual tokens: surfaces, borders, text, success and active states continue to consume Harness theme aliases. The repair strengthens surface separation and spacing without introducing a hard-coded light-only Trace theme.
+- Image quality and asset fidelity: this change adds no image assets and leaves the real Bento deck, thumbnails, Paramont branding and artifact rendering untouched.
+- Copy and content: all visible Proposal demo copy remains English. Dynamic fact labels, values, sources, formulas, filters and lineage remain sourced from the structured Trace document.
+
+## Verified behavior
+
+- Directory shows four priority facts across `102 · Kids Beauty & Cosmetic Tools` and `410 · Party Favors & Balloons`, then expands to all twelve and collapses again.
+- Selecting a priority fact opens Business Trace and focuses the corresponding `$11.10M` deck cell.
+- `View technical trace` opens Technical Trace; Back actions and the three fixed page tabs remain functional.
+- The content body scrolls independently while the artifact header and three-page navigation retain their viewport positions.
+- At `2608 x 1461`, the document has `0px` horizontal overflow. The Trace panel is `559px` wide; responsive one-column rules are applied from the Trace panel's own container, not from the wider Bento workbench.
+- External Chrome console contained zero error entries. Informational GenUI output, an upstream LaTeX strict-mode warning from existing transcript content, and two expected connection warnings from the intentional Harness restart remain unrelated to the Trace repair.
+- Repository TypeScript typecheck, full build, all `14` presentation-trace tests, and all `371` repository tests passed. The suite retains the known upstream missing `@deepseek-ai/dsh-client-ui-primitives/lib/index.js.map` warning.
+
+## Findings
+
+- P0: none.
+- P1: none after restoring readable typography and content-height page layouts.
+- P2: none after the responsive one-column directory and progressive fact disclosure.
+- P3: Directory intentionally scrolls inside its body when all facts are expanded. This preserves readable cards and fixed navigation instead of recompressing the evidence map.
+
+final result: passed
+
+---
+
 # Proposal Assistant Dark Department Avatars Design QA
 
 ## Source visual truth

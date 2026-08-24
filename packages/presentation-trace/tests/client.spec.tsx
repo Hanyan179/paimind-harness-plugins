@@ -57,4 +57,36 @@ describe('FP08 presentation trace client', () => {
     expect(screen.getByText('Registered margin conclusion')).toBeInTheDocument()
     expect(screen.getByText('Not registered')).toBeInTheDocument()
   })
+
+  it('shows a balanced priority subset before expanding a dense fact directory', () => {
+    const denseDocument = structuredClone(document)
+    denseDocument.slides[0]!.metrics[0]!.label = 'Metric'
+    denseDocument.slides[0]!.metrics[0]!.facts = Array.from({ length: 6 }, (_, index) => ({
+      factId: `fact-${index + 1}`,
+      displayValue: `$${index + 1}`,
+      dimensions: [
+        { key: 'department', label: 'Department', value: index < 3 ? '102' : '410' },
+        { key: 'category', label: 'Category', value: index < 3 ? 'Beauty Care' : 'Holiday Events' },
+      ],
+      business: { explanation: `Conclusion ${index + 1}`, scope: { period: 'FY2026', filters: [] } },
+      sourceIds: ['sales'],
+      factValuesChanged: false,
+    }))
+    const registry = new PresentationTraceRegistry()
+    registry.registerSource({ id: 'producer', getSnapshot: () => ({ traces: [{ id: 'record', traceId: 'trace-1', document: denseDocument }] }), subscribe: () => () => {} })
+    registry.selectArtifact(artifact)
+    render(<PresentationTracePanel service={registry} bento={new BentoMock()} scope={scope} />)
+
+    expect(screen.getAllByText('102 · Beauty Care')).toHaveLength(3)
+    expect(screen.getAllByText('410 · Holiday Events')).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: /Metric · \$3/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Metric · \$6/ })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'View all 6 facts' }))
+    expect(screen.getByRole('button', { name: /Metric · \$3/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Metric · \$6/ })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show priority facts' }))
+    expect(screen.queryByRole('button', { name: /Metric · \$3/ })).not.toBeInTheDocument()
+  })
 })
