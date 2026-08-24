@@ -21,6 +21,18 @@ describe('category analysis adapter', () => {
       expect(result.sources).toHaveLength(2)
       expect(result.facts).toHaveLength(66)
       expect(result.facts.find(fact => fact.factId === 'performance.total-sales')).toMatchObject({ displayValue: '$15.2M', factValuesChanged: false, sourceIds: ['dg-department-performance'] })
+      expect(result.facts.find(fact => fact.factId === 'dept-140.sales')).toMatchObject({
+        definition: 'Stickers & Creative Crafts current sales',
+        dimensions: [{ key: 'department', label: 'Department', value: '140' }, { key: 'category', label: 'Category', value: 'Stickers & Creative Crafts' }],
+      })
+      expect(result.facts.find(fact => fact.factId === 'dept-410.sales')).toMatchObject({
+        definition: 'Party Favors & Balloons current sales',
+        dimensions: [{ key: 'department', label: 'Department', value: '410' }, { key: 'category', label: 'Category', value: 'Party Favors & Balloons' }],
+      })
+      await run(process.execPath, [runner, 'opportunity', '--manifest', `${relative}/frozen/source-manifest.json`, '--output', `${relative}/opportunity.data-result.json`], { cwd: process.cwd() })
+      const opportunity = defineAnalysisDataResult(JSON.parse(await readFile(resolve(temp, 'opportunity.data-result.json'), 'utf8')))
+      expect(opportunity.facts.find(fact => fact.factId === 'category-140.opportunity-score')).toMatchObject({ definition: 'Stickers & Creative Crafts composite opportunity score' })
+      expect(opportunity.facts.find(fact => fact.factId === 'category-410.opportunity-score')).toMatchObject({ definition: 'Party Favors & Balloons composite opportunity score' })
       await writeFile(resolve(temp, 'frozen/dg-department-performance.csv'), 'tampered')
       await expect(run(process.execPath, [runner, 'performance', '--manifest', `${relative}/frozen/source-manifest.json`, '--output', `${relative}/tampered.data-result.json`], { cwd: process.cwd() })).rejects.toThrow(/source hash mismatch/)
     } finally {

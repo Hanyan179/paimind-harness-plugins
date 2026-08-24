@@ -114,6 +114,14 @@ metadata:
     expect(bentoSkill).toContain('create_fact_bound_presentation_outline')
     expect(bentoSkill).toContain('generate_traceable_bento_from_outline')
     await expect(readFile(join(root, 'bento-ppt', 'LICENSE.txt'), 'utf8')).resolves.toContain('Internal Use Only')
+    const proposal = await service.inspectCatalog({ catalogId: 'proposal-assistant-orchestration', version: '1.0.0' })
+    await service.installUpload({ uploadId: proposal.uploadId, digest: proposal.digest })
+    const proposalSkill = await readFile(join(root, 'proposal-assistant-orchestration', 'SKILL.md'), 'utf8')
+    expect(proposalSkill).toContain('paimind.proposal.departments/v1')
+    expect(proposalSkill).toContain('102 · Beauty Care')
+    expect(proposalSkill).toContain('140 · Stationery')
+    expect(proposalSkill).toContain('410 · Holiday Events')
+    expect(proposalSkill).not.toContain('Time horizon')
   })
 
   it('rejects traversal, absolute and backslash archive paths', () => {
