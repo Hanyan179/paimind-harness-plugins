@@ -30,6 +30,57 @@ final result: passed
 
 ---
 
+# Proposal Trace Adaptive Category Hierarchy Design QA
+
+## Source visual truth
+
+- Previous single-category directory: `/tmp/paimind-trace-classification-20260824/01-directory-categories-panel.jpg` (`411 x 1326`).
+- Product rule confirmed by the user: a current slide with one evidence category must skip category selection and open its metrics and facts directly; two or more categories keep the category directory.
+
+## Rendered implementation
+
+- Mainline in-app-browser capture: `/tmp/paimind-trace-adaptive-20260825/single-category-full.png` (`1280 x 720`, CSS viewport `1280 x 720`, device scale factor `1`).
+- Focused single-category metrics region: `/tmp/paimind-trace-adaptive-20260825/single-category-metrics-panel.png` (`448 x 258`).
+- Same-input before/after comparison: `/tmp/paimind-trace-adaptive-20260825/single-category-before-after.png` (`896 x 258`).
+
+The previous panel was cropped to its top `411 x 258` region and normalized to
+`448 x 258`; the implementation was cropped from the live mainline Browser at
+the same visible Trace state and size. The combined comparison was opened before
+this report was written.
+
+## Comparison history
+
+1. P1 observed: a slide with one registered category showed a category card whose only action was to reveal the facts already implied by that slide.
+2. P1 fix: the current slide now derives its sole block automatically and renders `Metrics & Facts` immediately, with no category card and no `Back to categories` control.
+3. Regression protection: slides with two or more categories still start at `Evidence Categories`, reveal only the selected category's facts, and restore the category directory through the back action.
+
+## Required fidelity surfaces
+
+- Fonts and typography: unchanged Harness typography and metric hierarchy; no new font or optical-weight drift.
+- Spacing and layout rhythm: removing the redundant category card moves the first metric group directly under the persistent Trace navigation without introducing an empty context row.
+- Colors and visual tokens: existing semantic Light/Dark tokens, borders, active state, and fact-card surfaces are unchanged.
+- Image and asset quality: no image, icon, logo, or decorative asset changed; the change is information architecture only.
+- Copy and content: single-category pages expose only the real metric labels, fact values, dimensions, and periods. Multi-category pages retain the category labels and descriptions.
+
+## Verified behavior
+
+- Mainline Browser rendered `Metrics & Facts`, `$109.8M`, and `$12.6M` immediately on the one-category QA slide.
+- `Evidence Categories` and `Back to categories` were absent in that live state.
+- Business and Technical navigation remained disabled until a specific fact was selected.
+- Targeted tests passed for single-category direct entry, dense fact expansion, multi-category selection, category back navigation, and category fact isolation.
+- The multi-category browser layout is intentionally unchanged from the prior verified category directory; current generated DG decks contain one block per slide, so multi-category runtime behavior is covered by the dedicated component regression test.
+
+## Findings
+
+- P0: none.
+- P1: none after removing the redundant single-category hop.
+- P2: none; navigation state and responsive styles remain unchanged.
+- P3: none.
+
+final result: passed
+
+---
+
 # Proposal Trace Current-slide Classification Design QA
 
 ## Source visual truth
