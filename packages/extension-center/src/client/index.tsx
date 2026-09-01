@@ -1,7 +1,6 @@
 import {
   Component,
   useEffect,
-  useId,
   useMemo,
   useState,
   useSyncExternalStore,
@@ -10,7 +9,6 @@ import {
 } from 'react'
 import {
   PAIMIND_EXTENSION_CATEGORIES,
-  type PaimindExtensionCategory,
   type PaimindExtensionDescriptor,
 } from '@paimind/contracts'
 import {
@@ -24,16 +22,20 @@ import {
   projectHarnessPluginTechnicalState,
 } from '@paimind/harness-compat'
 import {
+  PaimindAgentIcon,
   PaimindCheckIcon,
-  PaimindChevronDownIcon,
+  PaimindChevronRightIcon,
+  PaimindDeveloperIcon,
+  PaimindExtensionIcon,
+  PaimindPersonalizationIcon,
   PaimindRefreshIcon,
+  PaimindSchedulerIcon,
   PaimindSearchIcon,
-  PaimindSettingsIcon,
+  PaimindSkillIcon,
   PaimindWarningIcon,
 } from '@paimind/harness-compat/client-icons'
 import {
   compareExtensionDescriptors,
-  projectExtensionTechnicalState,
   type ExtensionTechnicalState,
 } from '../projection.js'
 import type {
@@ -61,16 +63,6 @@ const SELF: PaimindExtensionDescriptor = {
   order: -100,
 }
 
-const CATEGORY_COPY: Readonly<Record<PaimindExtensionCategory, { readonly zh: string; readonly en: string }>> = {
-  experience: { zh: '体验', en: 'Experience' },
-  'content-rendering': { zh: '内容与渲染', en: 'Content & Rendering' },
-  agents: { zh: '智能体', en: 'Agents' },
-  'skills-tools': { zh: '技能与工具', en: 'Skills & Tools' },
-  automation: { zh: '自动化', en: 'Automation' },
-  governance: { zh: '治理', en: 'Governance' },
-  developer: { zh: '开发者', en: 'Developer' },
-}
-
 const TECHNICAL_COPY: Readonly<Record<ExtensionTechnicalState, { readonly zh: string; readonly en: string }>> = {
   active: { zh: '已加载', en: 'Active' },
   loading: { zh: '加载中', en: 'Loading' },
@@ -80,36 +72,10 @@ const TECHNICAL_COPY: Readonly<Record<ExtensionTechnicalState, { readonly zh: st
   unavailable: { zh: '注册表未发现', en: 'Not in registry' },
 }
 
-const MATURITY_COPY = {
-  available: { zh: '可用', en: 'Available' },
-  'technical-preview': { zh: '技术已验证', en: 'Technical preview' },
-  reopened: { zh: '纠偏中', en: 'Reopened' },
-} as const
-
-const SURFACE_COPY = {
-  shell: { zh: '应用外壳', en: 'App shell' },
-  conversation: { zh: '原生对话', en: 'Native conversation' },
-  settings: { zh: '设置', en: 'Settings' },
-  'header-button': { zh: '独立按钮', en: 'Independent button' },
-  'side-card': { zh: '侧卡', en: 'Side card' },
-  preview: { zh: '预览通道', en: 'Preview channel' },
-  headless: { zh: '无界面适配器', en: 'Headless adapter' },
-} as const
-
-const CATEGORY_DESCRIPTION_COPY: Readonly<Record<PaimindExtensionCategory, { readonly zh: string; readonly en: string }>> = {
-  experience: { zh: '品牌、主题与原生交互体验。', en: 'Brand, theme, and native interaction experience.' },
-  'content-rendering': { zh: '生成、预览与交付内容。', en: 'Generate, preview, and deliver content.' },
-  agents: { zh: '智能体发现、创建与治理入口。', en: 'Agent discovery, creation, and governance surfaces.' },
-  'skills-tools': { zh: '技能、工具与可复用执行能力。', en: 'Skills, tools, and reusable execution capabilities.' },
-  automation: { zh: '任务、通知与计划执行。', en: 'Tasks, notifications, and scheduled execution.' },
-  governance: { zh: '身份、权限与组织级控制。', en: 'Identity, permission, and organization controls.' },
-  developer: { zh: '集成、诊断与扩展开发能力。', en: 'Integration, diagnostics, and extension development.' },
-}
-
 const ATTENTION_STATES = new Set<ExtensionTechnicalState>(['failed', 'disabled', 'unavailable'])
 const CATEGORY_SET = new Set<string>(PAIMIND_EXTENSION_CATEGORIES)
-const MATURITY_SET = new Set<string>(Object.keys(MATURITY_COPY))
-const SURFACE_SET = new Set<string>(Object.keys(SURFACE_COPY))
+const MATURITY_SET = new Set<string>(['available', 'technical-preview', 'reopened'])
+const SURFACE_SET = new Set<string>(['shell', 'conversation', 'settings', 'header-button', 'side-card', 'preview', 'headless'])
 const BOOT_CLIENT_SENTINEL_BY_PACK_ID = Object.freeze<Record<string, `@paimind/${string}`>>({
   'paimind:pack:experience': '@paimind/branding',
   'paimind:pack:agents': '@paimind/agent-market',
@@ -136,22 +102,6 @@ export function findPaimindFeaturePackClientGaps(
       ? [pack.id]
       : []
   }))
-}
-
-function surfaceGuidance(
-  descriptor: Readonly<PaimindExtensionDescriptor>,
-  zh: boolean,
-): string {
-  const name = zh ? descriptor.nameZh : descriptor.nameEn
-  switch (descriptor.surface) {
-    case 'settings': return zh ? `Harness 设置 → ${name}` : `Harness Settings → ${name}`
-    case 'conversation': return zh ? 'Harness 原生对话与输入区' : 'Harness native conversation and Composer'
-    case 'header-button': return zh ? `对话页独立入口 → ${name}` : `Independent conversation action → ${name}`
-    case 'preview': return zh ? 'Harness 交付物与预览面板' : 'Harness deliverable and preview panel'
-    case 'shell': return zh ? 'Harness 应用外壳或该能力自有入口' : 'Harness app shell or the capability’s own surface'
-    case 'side-card': return zh ? 'Better Sidebar 侧卡' : 'Better Sidebar side card'
-    case 'headless': return zh ? '无独立界面，由依赖它的能力使用' : 'No standalone UI; consumed by dependent capabilities'
-  }
 }
 
 const STYLE = `
@@ -259,6 +209,49 @@ const STYLE = `
 @keyframes paimind-extension-loading{to{background-position:-220% 0}}
 @media(max-width:760px){[data-paimind-feature-pack-grid]{grid-template-columns:1fr}}
 @media(max-width:560px){[data-paimind-extension-center]{position:fixed;z-index:4;inset:72px 24px 24px;min-height:0;padding:16px;overflow:auto;border-radius:16px;background:var(--extension-canvas);box-shadow:var(--dsw-shadow-lv3,0 18px 60px rgba(0,0,0,.18))}[data-paimind-extension-header] h2{font-size:19px;line-height:26px}[data-paimind-extension-summary] div{padding:8px}[data-paimind-extension-summary] strong{font-size:14px}[data-paimind-extension-summary] span{font-size:10px}[data-paimind-extension-card-summary]{grid-template-columns:minmax(0,1fr);gap:8px}[data-paimind-extension-card-meta]{justify-content:flex-start;min-width:0}[data-paimind-extension-location]{grid-column:1}[data-paimind-extension-details] dl{grid-template-columns:minmax(0,1fr);gap:2px 0}[data-paimind-extension-details] dd{margin-bottom:7px}}
+[data-paimind-extension-center]{display:grid;align-content:start;gap:18px;min-height:720px;padding:28px 30px}
+[data-paimind-extension-header]{margin:0}
+[data-paimind-extension-header] h2{font-size:24px;line-height:32px}
+[data-paimind-pack-toolbar]{display:grid;grid-template-columns:minmax(240px,560px) auto;align-items:center;gap:18px}
+[data-paimind-pack-toolbar] [data-paimind-extension-search]{margin:0}
+[data-paimind-pack-filters]{display:flex;justify-content:flex-end;gap:20px;border-bottom:1px solid var(--extension-line)}
+[data-paimind-pack-filter]{position:relative;min-height:38px;padding:7px 0 10px;border:0;color:var(--extension-muted);background:transparent;font:inherit;font-size:12px;cursor:pointer}
+[data-paimind-pack-filter][aria-pressed='true']{color:var(--extension-accent);font-weight:650}
+[data-paimind-pack-filter][aria-pressed='true']::after{content:'';position:absolute;right:0;bottom:-1px;left:0;height:2px;border-radius:2px;background:var(--extension-accent)}
+[data-paimind-feature-pack-grid]{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+[data-paimind-feature-pack]{position:relative;display:grid;gap:14px;min-height:142px;padding:0;border-radius:16px;background:var(--extension-surface);transition:border-color 160ms ease,box-shadow 160ms ease}
+[data-paimind-feature-pack]:hover{border-color:color-mix(in srgb,var(--extension-accent) 28%,var(--extension-line));box-shadow:0 10px 30px rgba(37,58,92,.07)}
+[data-paimind-feature-pack][data-enabled='false']{opacity:.72;background:var(--extension-soft)}
+[data-paimind-feature-pack-open]{display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px;width:100%;padding:18px 70px 12px 18px;border:0;color:inherit;background:transparent;font:inherit;text-align:left;cursor:pointer}
+[data-paimind-feature-pack-icon]{display:grid;place-items:center;width:46px;height:46px;border-radius:13px;color:var(--extension-accent);background:color-mix(in srgb,var(--extension-accent) 10%,var(--extension-surface))}
+[data-paimind-feature-pack-icon] svg{width:21px;height:21px}
+[data-paimind-feature-pack-copy] h4{font-size:15px;line-height:22px}
+[data-paimind-feature-pack-copy] p{display:-webkit-box;margin-top:4px;overflow:hidden;font-size:12px;line-height:18px;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+[data-paimind-feature-pack]>[data-paimind-feature-switch]{position:absolute;top:22px;right:18px}
+[data-paimind-feature-pack-meta]{align-items:center;padding:0 18px 16px;font-size:11px}
+[data-paimind-pack-state]{display:inline-flex;align-items:center;gap:5px}
+[data-paimind-pack-state]::before{content:'';width:6px;height:6px;border-radius:50%;background:#2aa66d}
+[data-paimind-pack-state][data-state='attention']::before{background:#d38b25}
+[data-paimind-pack-state][data-state='disabled']::before{background:var(--extension-faint)}
+[data-paimind-pack-empty]{padding:56px 20px;color:var(--extension-muted);text-align:center}
+[data-paimind-pack-detail]{display:grid;gap:18px}
+[data-paimind-pack-back]{justify-self:start;display:inline-flex;align-items:center;gap:6px;padding:0;border:0;color:var(--extension-muted);background:transparent;font:inherit;font-size:12px;cursor:pointer}
+[data-paimind-pack-back] svg{transform:rotate(180deg)}
+[data-paimind-pack-detail-header]{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:14px;align-items:center;padding-bottom:18px;border-bottom:1px solid var(--extension-line)}
+[data-paimind-pack-detail-header] [data-paimind-feature-pack-icon]{width:52px;height:52px}
+[data-paimind-pack-detail-header] h3{margin:0;font-size:21px;line-height:29px}
+[data-paimind-pack-detail-header] p{margin:3px 0 0;color:var(--extension-muted);font-size:12px;line-height:18px}
+[data-paimind-pack-extensions]{overflow:hidden;border:1px solid var(--extension-line);border-radius:16px;background:var(--extension-surface)}
+[data-paimind-pack-extensions-header]{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--extension-line)}
+[data-paimind-pack-extensions-header] h4{margin:0;font-size:13px;line-height:20px}
+[data-paimind-pack-extensions-header] span{color:var(--extension-faint);font-size:11px}
+[data-paimind-pack-extension-row]{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:18px;align-items:center;min-height:66px;padding:11px 16px;border-bottom:1px solid var(--extension-line)}
+[data-paimind-pack-extension-row]:last-child{border-bottom:0}
+[data-paimind-pack-extension-row] strong{display:block;font-size:13px;line-height:19px}
+[data-paimind-pack-extension-row] code{display:block;margin-top:2px;color:var(--extension-faint);font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,monospace);font-size:10px;line-height:15px}
+[data-paimind-pack-extension-row] [data-paimind-extension-badge]{font-size:10px}
+@media(max-width:920px){[data-paimind-pack-toolbar]{grid-template-columns:1fr}[data-paimind-pack-filters]{justify-content:flex-start;overflow-x:auto}[data-paimind-feature-pack-grid]{grid-template-columns:1fr}}
+@media(max-width:560px){[data-paimind-extension-center]{position:static;inset:auto;min-height:100%;padding:18px;border-radius:0;box-shadow:none}[data-paimind-pack-detail-header]{grid-template-columns:44px minmax(0,1fr)}[data-paimind-pack-detail-header]>[data-paimind-feature-switch]{grid-column:1/-1}[data-paimind-pack-extension-row]{grid-template-columns:minmax(0,1fr) auto}[data-paimind-pack-extension-row]>[data-paimind-feature-switch]{grid-column:1/-1}}
 `
 
 function installStyle(): () => void {
@@ -326,6 +319,17 @@ type FeaturePackState =
   | { readonly status: 'unavailable' }
   | { readonly status: 'ready'; readonly view: Extract<PaimindFeaturePackView, { readonly status: 'ready' }> }
 
+type PackFilter = 'all' | 'enabled' | 'attention' | 'disabled'
+
+function FeaturePackIcon(props: { readonly id: string }): React.JSX.Element {
+  if (props.id === 'paimind:pack:experience') return <PaimindPersonalizationIcon aria-hidden="true" />
+  if (props.id === 'paimind:pack:agents') return <PaimindAgentIcon aria-hidden="true" />
+  if (props.id === 'paimind:pack:content') return <PaimindExtensionIcon aria-hidden="true" />
+  if (props.id === 'paimind:pack:proposal') return <PaimindSkillIcon aria-hidden="true" />
+  if (props.id === 'paimind:pack:automation') return <PaimindSchedulerIcon aria-hidden="true" />
+  return <PaimindDeveloperIcon aria-hidden="true" />
+}
+
 export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.Element {
   const extensions = useSyncExternalStore(
     props.subscribeExtensions,
@@ -339,15 +343,13 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
   )
   const zh = locale.startsWith('zh')
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState<PaimindExtensionCategory | 'all'>('all')
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [technicalOpen, setTechnicalOpen] = useState(false)
+  const [filter, setFilter] = useState<PackFilter>('all')
+  const [selectedPackId, setSelectedPackId] = useState<string | null>(null)
   const [request, setRequest] = useState(0)
   const [inventory, setInventory] = useState<InventoryState>({ status: 'loading' })
   const [featurePacks, setFeaturePacks] = useState<FeaturePackState>({ status: 'loading' })
   const [pendingToggle, setPendingToggle] = useState<string | null>(null)
   const [featurePackFeedback, setFeaturePackFeedback] = useState('')
-  const detailsBaseId = useId()
 
   useEffect(() => {
     let current = true
@@ -377,25 +379,10 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
   }, [props.describeFeaturePacks])
 
   const normalizedQuery = query.trim().toLocaleLowerCase(locale)
-  const queryMatched = useMemo(() => extensions.filter(extension => {
-    if (normalizedQuery.length === 0) return true
-    return [extension.nameZh, extension.nameEn, extension.packageName, extension.descriptionZh, extension.descriptionEn]
-      .some(value => value.toLocaleLowerCase(locale).includes(normalizedQuery))
-  }), [extensions, locale, normalizedQuery])
-  const visible = useMemo(() => queryMatched.filter(extension => (
-    category === 'all' || extension.category === category
-  )), [category, queryMatched])
-  const counts = useMemo(() => new Map(PAIMIND_EXTENSION_CATEGORIES.map(categoryId => [
-    categoryId,
-    queryMatched.filter(extension => extension.category === categoryId).length,
-  ])), [queryMatched])
-  const projections = useMemo(() => inventory.status === 'ready'
-    ? extensions.map(descriptor => projectExtensionTechnicalState(descriptor, inventory.snapshot))
-    : [], [extensions, inventory])
-  const projectionById = useMemo(() => new Map(projections.map(projection => [
-    projection.descriptor.id,
-    projection,
-  ])), [projections])
+  const extensionByPackageName = useMemo(() => new Map(extensions.map(extension => [
+    extension.packageName,
+    extension,
+  ])), [extensions])
   const packModuleStateByPackageName = useMemo(() => {
     if (inventory.status !== 'ready' || featurePacks.status !== 'ready') return new Map<string, ExtensionTechnicalState>()
     return new Map(featurePacks.view.packs.flatMap(pack => pack.packageNames).map(packageName => [
@@ -409,33 +396,36 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
       .flatMap(capability => capability.packageNames))
     return pack.packageNames.filter(packageName => !intentionallyDisabled.has(packageName))
   }
-  const activeCount = projections.filter(projection => projection.technicalState === 'active').length
-  const attentionPackageNames = new Set(projections
-    .filter(projection => ATTENTION_STATES.has(projection.technicalState))
-    .map(projection => projection.descriptor.packageName))
-  if (featurePacks.status === 'ready') {
-    for (const pack of featurePacks.view.packs) {
-      if (!(pack.desiredEnabled ?? pack.enabled)) continue
-      for (const packageName of expectedPackPackageNames(pack)) {
-        if (ATTENTION_STATES.has(packModuleStateByPackageName.get(packageName) ?? 'unavailable')) {
-          attentionPackageNames.add(packageName)
-        }
-      }
-    }
+  const packNeedsAttention = (pack: Readonly<PaimindFeaturePackState>): boolean => {
+    if (pack.failure !== undefined) return true
+    if (!(pack.desiredEnabled ?? pack.enabled) || inventory.status !== 'ready') return false
+    return expectedPackPackageNames(pack).some(packageName => (
+      ATTENTION_STATES.has(packModuleStateByPackageName.get(packageName) ?? 'unavailable')
+    ))
   }
-  const attentionCount = attentionPackageNames.size
-  const enabledPackCount = featurePacks.status === 'ready'
-    ? featurePacks.view.packs.filter(pack => pack.desiredEnabled ?? pack.enabled).length
-    : 0
-
-  useEffect(() => {
-    if (expandedId !== null && !visible.some(extension => extension.id === expandedId)) setExpandedId(null)
-  }, [expandedId, visible])
-
-  const clearFilters = (): void => {
-    setQuery('')
-    setCategory('all')
-  }
+  const visiblePacks = featurePacks.status === 'ready' ? featurePacks.view.packs.filter(pack => {
+    const desiredEnabled = pack.desiredEnabled ?? pack.enabled
+    const matchesQuery = normalizedQuery === '' || [
+      pack.nameZh,
+      pack.nameEn,
+      pack.descriptionZh,
+      pack.descriptionEn,
+      ...pack.packageNames,
+      ...pack.packageNames.flatMap(packageName => {
+        const descriptor = extensionByPackageName.get(packageName)
+        return descriptor === undefined ? [] : [descriptor.nameZh, descriptor.nameEn]
+      }),
+    ].some(value => value.toLocaleLowerCase(locale).includes(normalizedQuery))
+    if (!matchesQuery) return false
+    if (filter === 'enabled') return desiredEnabled && !packNeedsAttention(pack)
+    if (filter === 'attention') return packNeedsAttention(pack)
+    if (filter === 'disabled') return !desiredEnabled
+    return true
+  }) : []
+  const featurePackView = featurePacks.status === 'ready' ? featurePacks.view : undefined
+  const selectedPack = featurePackView !== undefined
+    ? featurePackView.packs.find(pack => pack.id === selectedPackId)
+    : undefined
 
   const toggleFeature = async (id: string, enabled: boolean): Promise<void> => {
     if (featurePacks.status !== 'ready' || props.mutateFeaturePack === undefined) return
@@ -473,26 +463,49 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
     }
   }
 
-  return <section data-paimind-extension-center aria-label={zh ? 'PAIMind 扩展中心' : 'PAIMind Extension Center'}>
+  const packStatus = (pack: Readonly<PaimindFeaturePackState>): { readonly state: 'enabled' | 'attention' | 'disabled'; readonly label: string } => {
+    const desiredEnabled = pack.desiredEnabled ?? pack.enabled
+    if (!desiredEnabled) return { state: 'disabled', label: zh ? '已关闭' : 'Disabled' }
+    if (inventory.status === 'loading') return { state: 'enabled', label: zh ? '同步中' : 'Syncing' }
+    if (inventory.status === 'error') return { state: 'attention', label: zh ? '状态不可用' : 'Status unavailable' }
+    if (packNeedsAttention(pack)) return { state: 'attention', label: pack.failure === undefined ? (zh ? '部分运行' : 'Partially running') : (zh ? '启动失败' : 'Failed') }
+    return { state: 'enabled', label: zh ? '运行中' : 'Running' }
+  }
+
+  return <section data-paimind-extension-center aria-label={zh ? '扩展中心' : 'Extension Center'}>
     <header data-paimind-extension-header>
-      <h2>{zh ? 'PAIMind 扩展中心' : 'PAIMind Extension Center'}</h2>
-      <p>{zh ? '按业务场景管理产品功能；技术模块、加载状态与兼容性信息收纳在高级明细中。' : 'Manage product features by business scenario. Module, loading, and compatibility details stay in Advanced details.'}</p>
+      <h2>{zh ? '扩展中心' : 'Extension Center'}</h2>
     </header>
-    <section data-paimind-feature-pack-section aria-label={zh ? '产品功能包' : 'Product Feature Packs'}>
-      <header data-paimind-feature-pack-heading><div><h3>{zh ? '产品功能包' : 'Product Feature Packs'}</h3><p>{zh ? '一个开关控制一组用户可感知的能力。依赖关系由平台自动处理。' : 'One switch controls one user-facing capability set. The platform handles dependencies.'}</p></div><span>{featurePacks.status === 'ready' ? (zh ? `${enabledPackCount} / ${featurePacks.view.packs.length} 已启用` : `${enabledPackCount} of ${featurePacks.view.packs.length} enabled`) : '—'}</span></header>
+    {selectedPack === undefined && <section data-paimind-feature-pack-section aria-label={zh ? '功能包' : 'Feature Packs'}>
+      <div data-paimind-pack-toolbar>
+        <label data-paimind-extension-search>
+          <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' }}>{zh ? '搜索功能包或扩展' : 'Search packs or extensions'}</span>
+          <PaimindSearchIcon aria-hidden="true" />
+          <input type="search" value={query} placeholder={zh ? '搜索功能包或扩展' : 'Search packs or extensions'} onChange={event => { setQuery(event.currentTarget.value) }} />
+        </label>
+        <nav data-paimind-pack-filters aria-label={zh ? '功能包筛选' : 'Feature Pack filters'}>
+          {(['all', 'enabled', 'attention', 'disabled'] as const).map(value => <button key={value} type="button" data-paimind-pack-filter aria-pressed={filter === value} onClick={() => { setFilter(value) }}>{value === 'all' ? (zh ? '全部' : 'All') : value === 'enabled' ? (zh ? '已启用' : 'Enabled') : value === 'attention' ? (zh ? '需关注' : 'Attention') : (zh ? '已关闭' : 'Disabled')}</button>)}
+        </nav>
+      </div>
       {featurePacks.status === 'loading' && <div data-paimind-extension-status aria-busy="true">{zh ? '正在读取功能包状态…' : 'Reading Feature Pack state…'}</div>}
       {featurePacks.status === 'error' && <div data-paimind-extension-status role="alert">{zh ? '暂时无法读取功能包状态。' : 'Feature Pack state is temporarily unavailable.'}</div>}
-      {featurePacks.status === 'unavailable' && <div data-paimind-extension-status role="note">{zh ? '当前组合尚未提供功能包控制接口；技术模块明细仍可查看。' : 'This composition does not expose Feature Pack controls yet. Technical module details remain available.'}</div>}
-      {featurePacks.status === 'ready' && <div data-paimind-feature-pack-grid>{featurePacks.view.packs.map(pack => {
+      {featurePacks.status === 'unavailable' && <div data-paimind-extension-status role="note">{zh ? '当前不可管理功能包。' : 'Feature Packs are unavailable.'}</div>}
+      {inventory.status === 'loading' && <div data-paimind-extension-status aria-busy="true" aria-live="polite"><PaimindRefreshIcon aria-hidden="true" /><p>{zh ? '正在同步扩展状态…' : 'Syncing extension status…'}</p></div>}
+      {inventory.status === 'error' && <div data-paimind-extension-status><PaimindWarningIcon aria-hidden="true" /><p role="alert">{zh ? '扩展状态暂时不可用。' : 'Extension status is temporarily unavailable.'}</p><button type="button" onClick={() => { setRequest(value => value + 1) }}><PaimindRefreshIcon aria-hidden="true" />{zh ? '重试' : 'Retry'}</button></div>}
+      {featurePacks.status === 'ready' && visiblePacks.length === 0 && <div data-paimind-pack-empty>{zh ? '没有匹配的功能包。' : 'No matching Feature Packs.'}</div>}
+      {featurePacks.status === 'ready' && visiblePacks.length > 0 && <div data-paimind-feature-pack-grid>{visiblePacks.map(pack => {
         const desiredEnabled = pack.desiredEnabled ?? pack.enabled
         const expectedPackageNames = expectedPackPackageNames(pack)
         const activePackageCount = expectedPackageNames.filter(packageName => (
           packModuleStateByPackageName.get(packageName) === 'active'
         )).length
         const complete = !desiredEnabled || (pack.failure === undefined && activePackageCount === expectedPackageNames.length)
+        const status = packStatus(pack)
         return <article key={pack.id} data-paimind-feature-pack data-enabled={pack.enabled ? 'true' : 'false'} data-complete={complete ? 'true' : 'false'}>
-        <div data-paimind-feature-pack-main>
-          <div data-paimind-feature-pack-copy><h4>{zh ? pack.nameZh : pack.nameEn}</h4><p>{zh ? pack.descriptionZh : pack.descriptionEn}</p></div>
+          <button type="button" data-paimind-feature-pack-open aria-label={`${zh ? '打开' : 'Open'} ${zh ? pack.nameZh : pack.nameEn}`} onClick={() => { setSelectedPackId(pack.id) }}>
+            <span data-paimind-feature-pack-icon><FeaturePackIcon id={pack.id} /></span>
+            <span data-paimind-feature-pack-copy><h4>{zh ? pack.nameZh : pack.nameEn}</h4><p>{zh ? pack.descriptionZh : pack.descriptionEn}</p></span>
+          </button>
           <button
             type="button" role="switch" data-paimind-feature-switch
             aria-label={`${zh ? pack.nameZh : pack.nameEn} · ${pack.failure === undefined ? (desiredEnabled ? (zh ? '已启用' : 'Enabled') : (zh ? '已关闭' : 'Disabled')) : (zh ? '启用失败' : 'Failed to enable')}`}
@@ -500,87 +513,48 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
             disabled={!pack.installed || !featurePacks.view.writable || pendingToggle !== null}
             onClick={() => { void toggleFeature(pack.id, !desiredEnabled) }}
           />
-        </div>
-        <div data-paimind-feature-pack-meta>
-          <span>{desiredEnabled ? (complete ? expectedPackageNames.length : `${activePackageCount} / ${expectedPackageNames.length}`) : pack.packageNames.length} {zh ? '个内部模块' : 'internal modules'}</span>
-          <span>{pack.installed ? (pack.failure !== undefined ? (zh ? '启动失败' : 'Failed to start') : (desiredEnabled ? (complete ? (zh ? '运行中' : 'Running') : (zh ? '部分运行' : 'Partially running')) : (zh ? '已关闭' : 'Disabled'))) : (zh ? '待应用新组合' : 'Composition update required')}</span>
-          {pack.requiredPackIds.length > 0 && <span>{zh ? `依赖 ${pack.requiredPackIds.length} 个功能包` : `${pack.requiredPackIds.length} required pack(s)`}</span>}
-        </div>
+          <div data-paimind-feature-pack-meta><span>{desiredEnabled && !complete ? `${activePackageCount} / ${expectedPackageNames.length}` : pack.packageNames.length} {zh ? '个扩展' : 'extensions'}</span><span data-paimind-pack-state data-state={status.state}>{status.label}</span></div>
         {pack.failure !== undefined && <p data-paimind-feature-pack-error role="alert">{pack.failure}</p>}
-        {pack.capabilities.length > 0 && <div data-paimind-feature-capabilities>{pack.capabilities.map(capability => <div key={capability.id} data-paimind-feature-capability>
-          <div><strong>{zh ? capability.nameZh : capability.nameEn}</strong><span>{zh ? capability.descriptionZh : capability.descriptionEn}</span></div>
-          <button
-            type="button" role="switch" data-paimind-feature-switch
-            aria-label={`${zh ? capability.nameZh : capability.nameEn} · ${capability.failure === undefined ? ((capability.desiredEnabled ?? capability.enabled) ? (zh ? '已启用' : 'Enabled') : (zh ? '已关闭' : 'Disabled')) : (zh ? '启用失败' : 'Failed to enable')}`}
-            aria-checked={capability.desiredEnabled ?? capability.enabled}
-            disabled={!pack.enabled || pack.failure !== undefined || !capability.installed || !featurePacks.view.writable || pendingToggle !== null}
-            onClick={() => { void toggleFeature(capability.id, !(capability.desiredEnabled ?? capability.enabled)) }}
-          />
-        </div>)}</div>}
       </article>
       })}</div>}
       {featurePackFeedback !== '' && <div data-paimind-feature-pack-feedback role="status">{featurePackFeedback}</div>}
-    </section>
-    <details data-paimind-technical-catalog open={technicalOpen} onToggle={event => { setTechnicalOpen(event.currentTarget.open) }}>
-      <summary><span><strong>{zh ? '高级明细' : 'Advanced details'}</strong><small>{inventory.status === 'ready'
-        ? (zh ? `${extensions.length} 个模块 · ${attentionCount} 项需关注` : `${extensions.length} modules · ${attentionCount} need attention`)
-        : (zh ? '模块清单、加载状态与兼容性诊断' : 'Module catalog, loading state, and compatibility diagnostics')}</small></span><PaimindChevronDownIcon aria-hidden="true" /></summary>
-      <div data-paimind-technical-catalog-body>
-    <div data-paimind-extension-summary aria-label={zh ? '扩展概览' : 'Extension overview'}>
-      <div><strong>{extensions.length}</strong><span>{zh ? '产品能力' : 'Product capabilities'}</span></div>
-      <div><strong>{inventory.status === 'ready' ? activeCount : '—'}</strong><span>{zh ? 'Harness 已加载' : 'Active in Harness'}</span></div>
-      <div><strong>{inventory.status === 'ready' ? attentionCount : '—'}</strong><span>{zh ? '技术状态需关注' : 'Need technical attention'}</span></div>
-    </div>
-    <label data-paimind-extension-search>
-      <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' }}>{zh ? '搜索扩展' : 'Search extensions'}</span>
-      <PaimindSearchIcon aria-hidden="true" />
-      <input type="search" value={query} placeholder={zh ? '搜索名称、包或能力' : 'Search name, package, or capability'} onChange={event => { setQuery(event.currentTarget.value) }} />
-    </label>
-    <nav data-paimind-extension-categories aria-label={zh ? '扩展类别' : 'Extension categories'}>
-      <button type="button" data-paimind-extension-category-button aria-pressed={category === 'all'} onClick={() => { setCategory('all') }}>{zh ? '全部' : 'All'} <small>{queryMatched.length}</small></button>
-      {PAIMIND_EXTENSION_CATEGORIES.map(id => <button key={id} type="button" data-paimind-extension-category-button aria-pressed={category === id} onClick={() => { setCategory(id) }}>{zh ? CATEGORY_COPY[id].zh : CATEGORY_COPY[id].en} <small>{counts.get(id) ?? 0}</small></button>)}
-    </nav>
-    <div data-paimind-extension-results aria-live="polite"><span>{zh ? `显示 ${visible.length} / ${extensions.length} 项能力` : `Showing ${visible.length} of ${extensions.length} capabilities`}</span><span>{category === 'all' ? (zh ? '全部类别' : 'All categories') : (zh ? CATEGORY_COPY[category].zh : CATEGORY_COPY[category].en)}</span></div>
-    {inventory.status === 'loading' && <div data-paimind-extension-status aria-busy="true" aria-live="polite"><PaimindRefreshIcon aria-hidden="true" /><p>{zh ? '正在读取 Harness 技术状态…' : 'Reading Harness technical state…'}</p><div data-paimind-extension-skeletons aria-hidden="true"><div data-paimind-extension-skeleton /><div data-paimind-extension-skeleton /><div data-paimind-extension-skeleton /></div></div>}
-    {inventory.status === 'error' && <div data-paimind-extension-status><PaimindWarningIcon aria-hidden="true" /><h3>{zh ? '暂时无法读取技术状态' : 'Technical state is temporarily unavailable'}</h3><p role="alert">{zh ? 'Harness Plugin Registry 没有返回结果；本页不会回退到缓存或猜测状态。' : 'Harness Plugin Registry returned no result; this page does not fall back to cached or inferred state.'}</p><button type="button" onClick={() => { setRequest(value => value + 1) }}><PaimindRefreshIcon aria-hidden="true" />{zh ? '重新读取' : 'Read again'}</button></div>}
-    {inventory.status === 'ready' && visible.length === 0 && <div data-paimind-extension-status role="status"><PaimindSearchIcon aria-hidden="true" /><h3>{zh ? '没有匹配的能力' : 'No matching capabilities'}</h3><p>{category === 'governance' && normalizedQuery.length === 0
-      ? (zh
-          ? '当前没有可信身份提供方，因此不展示治理扩展；Harness Full Access 不等于企业管理员权限。'
-          : 'No trusted identity provider is configured, so no governance extension is shown. Harness Full Access is not enterprise administrator authority.')
-      : (zh ? '请调整搜索词或类别筛选。' : 'Adjust the search term or category filter.')}</p><button type="button" onClick={clearFilters}>{zh ? '清除筛选' : 'Clear filters'}</button></div>}
-    {inventory.status === 'ready' && <div data-paimind-extension-groups>{PAIMIND_EXTENSION_CATEGORIES.map(categoryId => {
-      const rows = visible.filter(extension => extension.category === categoryId)
-      if (rows.length === 0) return null
-      return <section key={categoryId} data-paimind-extension-group>
-        <header data-paimind-extension-group-header><div><h3>{zh ? CATEGORY_COPY[categoryId].zh : CATEGORY_COPY[categoryId].en}</h3><p>{zh ? CATEGORY_DESCRIPTION_COPY[categoryId].zh : CATEGORY_DESCRIPTION_COPY[categoryId].en}</p></div><span>{rows.length}</span></header>
-        <div data-paimind-extension-grid>{rows.map(descriptor => {
-          const projection = projectionById.get(descriptor.id) ?? projectExtensionTechnicalState(descriptor, inventory.snapshot)
-          const open = expandedId === descriptor.id
-          const detailsId = `${detailsBaseId}-${descriptor.id.replace(':', '-')}`
-          const TechnicalIcon = projection.technicalState === 'active' ? PaimindCheckIcon : ATTENTION_STATES.has(projection.technicalState) ? PaimindWarningIcon : null
-          return <article key={descriptor.id} data-paimind-extension-card data-open={open ? 'true' : 'false'}>
-            <button type="button" data-paimind-extension-card-summary aria-expanded={open} aria-controls={detailsId} onClick={() => { setExpandedId(current => current === descriptor.id ? null : descriptor.id) }}>
-              <div data-paimind-extension-card-copy><h4>{zh ? descriptor.nameZh : descriptor.nameEn}</h4><p>{zh ? descriptor.descriptionZh : descriptor.descriptionEn}</p></div>
-              <span data-paimind-extension-card-meta><span data-paimind-extension-badge>{zh ? MATURITY_COPY[descriptor.maturity].zh : MATURITY_COPY[descriptor.maturity].en}</span><span data-paimind-extension-badge data-state={projection.technicalState}>{TechnicalIcon !== null && <TechnicalIcon aria-hidden="true" />}{zh ? TECHNICAL_COPY[projection.technicalState].zh : TECHNICAL_COPY[projection.technicalState].en}</span><PaimindChevronDownIcon aria-hidden="true" /></span>
-              <span data-paimind-extension-location><PaimindSettingsIcon aria-hidden="true" /><span>{surfaceGuidance(descriptor, zh)}</span></span>
-            </button>
-            {open && <div id={detailsId} data-paimind-extension-details>
-              <dl>
-                <div><dt>{zh ? '产品成熟度' : 'Product maturity'}</dt><dd>{zh ? MATURITY_COPY[descriptor.maturity].zh : MATURITY_COPY[descriptor.maturity].en}</dd></div>
-                <div><dt>{zh ? 'Harness 技术状态' : 'Harness technical state'}</dt><dd>{zh ? TECHNICAL_COPY[projection.technicalState].zh : TECHNICAL_COPY[projection.technicalState].en}</dd></div>
-                <div><dt>{zh ? '使用与配置' : 'Use and configure'}</dt><dd>{surfaceGuidance(descriptor, zh)}</dd></div>
-                <div><dt>{zh ? '入口类型' : 'Surface type'}</dt><dd>{zh ? SURFACE_COPY[descriptor.surface].zh : SURFACE_COPY[descriptor.surface].en}</dd></div>
-                <div><dt>{zh ? '包标识' : 'Package id'}</dt><dd><code>{descriptor.packageName}</code></dd></div>
-              </dl>
-              <p data-paimind-extension-technical-note>{zh ? '版本、依赖、启停、安装与更新仍由 Harness Plugin Registry 管理；无真实接口的数据不会在此推断。' : 'Version, dependencies, enablement, installation, and updates remain managed by Harness Plugin Registry; unavailable facts are not inferred here.'}</p>
-            </div>}
-          </article>
-        })}</div>
+    </section>}
+    {selectedPack !== undefined && <section data-paimind-pack-detail>
+      <button type="button" data-paimind-pack-back onClick={() => { setSelectedPackId(null) }}><PaimindChevronRightIcon aria-hidden="true" />{zh ? '返回扩展中心' : 'Back to Extension Center'}</button>
+      <header data-paimind-pack-detail-header>
+        <span data-paimind-feature-pack-icon><FeaturePackIcon id={selectedPack.id} /></span>
+        <div><h3>{zh ? selectedPack.nameZh : selectedPack.nameEn}</h3><p>{zh ? selectedPack.descriptionZh : selectedPack.descriptionEn}</p></div>
+        <button
+          type="button" role="switch" data-paimind-feature-switch
+          aria-label={`${zh ? selectedPack.nameZh : selectedPack.nameEn} · ${(selectedPack.desiredEnabled ?? selectedPack.enabled) ? (zh ? '已启用' : 'Enabled') : (zh ? '已关闭' : 'Disabled')}`}
+          aria-checked={selectedPack.desiredEnabled ?? selectedPack.enabled}
+          disabled={!selectedPack.installed || featurePackView?.writable !== true || pendingToggle !== null}
+          onClick={() => { void toggleFeature(selectedPack.id, !(selectedPack.desiredEnabled ?? selectedPack.enabled)) }}
+        />
+      </header>
+      {selectedPack.failure !== undefined && <p data-paimind-feature-pack-error role="alert">{selectedPack.failure}</p>}
+      <section data-paimind-pack-extensions aria-label={zh ? '包内扩展' : 'Extensions in this pack'}>
+        <header data-paimind-pack-extensions-header><h4>{zh ? '包内扩展' : 'Extensions'}</h4><span>{selectedPack.packageNames.length}</span></header>
+        {selectedPack.packageNames.map(packageName => {
+          const descriptor = extensionByPackageName.get(packageName)
+          const technicalState = inventory.status === 'ready' ? (packModuleStateByPackageName.get(packageName) ?? 'unavailable') : 'loading'
+          const capability = selectedPack.capabilities.find(item => item.packageNames.includes(packageName))
+          const TechnicalIcon = technicalState === 'active' ? PaimindCheckIcon : ATTENTION_STATES.has(technicalState) ? PaimindWarningIcon : null
+          return <div key={packageName} data-paimind-pack-extension-row>
+            <div><strong>{descriptor === undefined ? packageName.replace('@paimind/', '') : (zh ? descriptor.nameZh : descriptor.nameEn)}</strong><code>{packageName}</code></div>
+            <span data-paimind-extension-badge data-state={technicalState}>{TechnicalIcon !== null && <TechnicalIcon aria-hidden="true" />}{zh ? TECHNICAL_COPY[technicalState].zh : TECHNICAL_COPY[technicalState].en}</span>
+            {capability !== undefined && <button
+              type="button" role="switch" data-paimind-feature-switch
+              aria-label={`${zh ? capability.nameZh : capability.nameEn} · ${capability.failure === undefined ? ((capability.desiredEnabled ?? capability.enabled) ? (zh ? '已启用' : 'Enabled') : (zh ? '已关闭' : 'Disabled')) : (zh ? '启用失败' : 'Failed to enable')}`}
+              aria-checked={capability.desiredEnabled ?? capability.enabled}
+              disabled={!selectedPack.enabled || selectedPack.failure !== undefined || !capability.installed || featurePackView?.writable !== true || pendingToggle !== null}
+              onClick={() => { void toggleFeature(capability.id, !(capability.desiredEnabled ?? capability.enabled)) }}
+            />}
+          </div>
+        })}
       </section>
-    })}</div>}
-    <div data-paimind-extension-note role="note"><PaimindSettingsIcon aria-hidden="true" /><span>{zh ? '功能包开关调用 Harness Loader 并保存到 Harness Settings；安装、卸载和版本升级仍由 Harness Plugin Registry 统一管理。' : 'Feature Pack switches call the Harness Loader and persist to Harness Settings. Installation, removal, and upgrades remain managed by the Harness Plugin Registry.'}</span></div>
-    </div>
-    </details>
+      {featurePackFeedback !== '' && <div data-paimind-feature-pack-feedback role="status">{featurePackFeedback}</div>}
+    </section>}
   </section>
 }
 

@@ -40,10 +40,10 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
   pack({
     id: 'paimind:pack:experience', loaderEntryId: 'paimind-pack-experience', order: 10,
     nameZh: '产品体验', nameEn: 'Product Experience', defaultEnabled: true,
-    descriptionZh: 'Paramont 品牌界面、视觉体验、运行状态提示和个性化。',
-    descriptionEn: 'Paramont branding, visual experience, runtime presence, and personalization.',
+    descriptionZh: 'Paramont 品牌界面、视觉体验、对话命名、运行状态提示和个性化。',
+    descriptionEn: 'Paramont branding, visual experience, conversation naming, runtime presence, and personalization.',
     requiredPackIds: [],
-    packageNames: ['@paimind/branding', '@paimind/visual-experience', '@paimind/runtime-orbs', '@paimind/user-settings'],
+    packageNames: ['@paimind/branding', '@paimind/visual-experience', '@paimind/conversation-title', '@paimind/runtime-orbs', '@paimind/user-settings'],
     capabilities: [{
       id: 'paimind:capability:runtime-orbs', loaderEntryId: 'paimind-capability-runtime-orbs',
       packageNames: ['@paimind/runtime-orbs'],

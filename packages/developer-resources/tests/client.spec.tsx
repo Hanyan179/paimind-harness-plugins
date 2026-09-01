@@ -35,9 +35,9 @@ describe('Developer Resources client', () => {
     expect(fixture.slots.find(entry => entry.injectedName === 'paimind.extension')).toMatchObject({
       options: { id: 'paimind:developer-resources' },
     })
-    expect(document.getElementById('@paimind/developer-resources')?.textContent).toContain(
-      ":has([data-paimind-developer-resources])>nav",
-    )
+    const style = document.getElementById('@paimind/developer-resources')?.textContent ?? ''
+    expect(style).toContain('@media(max-width:600px){[data-paimind-developer-tabs]')
+    expect(style).not.toContain(":has([data-paimind-developer-resources])>nav")
     fixture.disposeEffects()
   })
 

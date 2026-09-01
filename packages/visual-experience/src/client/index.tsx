@@ -41,6 +41,7 @@ import {
   PaimindChevronRightIcon,
   PaimindDeveloperIcon,
   PaimindExtensionIcon,
+  PaimindNewConversationIcon,
   PaimindPersonalizationIcon,
   PaimindPlusIcon,
   PaimindSchedulerIcon,
@@ -312,6 +313,8 @@ body[data-paimind-experience='paimind'][data-paimind-density='workbench'] [data-
 [data-paimind-experience-mode] input:focus-visible+span{outline:2px solid color-mix(in srgb,var(--paimind-accent,#4f83b8) 42%,transparent);outline-offset:1px}
 [data-paimind-experience-mode] input:disabled+span{opacity:.5;cursor:not-allowed}
 [data-paimind-experience-mode] input:disabled{cursor:not-allowed}
+@media(min-width:761px){body[data-paimind-experience='paimind'] [role='dialog'][aria-modal='true']:has(>nav button[data-paimind-settings-navigation-icon]){width:min(1480px,calc(100vw - 48px))!important;height:min(920px,calc(100vh - 48px))!important;max-width:none!important}}
+@media(max-width:600px){body[data-paimind-experience='paimind'] [role='dialog'][aria-modal='true']:has(>nav button[data-paimind-settings-navigation-icon]){width:calc(100vw - 16px)!important;height:calc(100vh - 16px)!important;max-width:none!important;max-height:none!important;flex-direction:column!important}body[data-paimind-experience='paimind'] [role='dialog'][aria-modal='true']:has(>nav button[data-paimind-settings-navigation-icon])>nav{width:100%!important;max-width:none!important;max-height:60px;box-sizing:border-box;padding:8px 12px!important;border-right:0!important;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.16));overflow:hidden}body[data-paimind-experience='paimind'] [role='dialog'][aria-modal='true']:has(>nav button[data-paimind-settings-navigation-icon])>nav>:first-child{display:none!important}body[data-paimind-experience='paimind'] [role='dialog'][aria-modal='true']:has(>nav button[data-paimind-settings-navigation-icon])>nav>:last-child{display:flex!important;flex-direction:row!important;gap:6px;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:none}body[data-paimind-experience='paimind'] [role='dialog'][aria-modal='true']:has(>nav button[data-paimind-settings-navigation-icon])>nav>:last-child::-webkit-scrollbar{display:none}body[data-paimind-experience='paimind'] [role='dialog'][aria-modal='true']:has(>nav button[data-paimind-settings-navigation-icon])>nav>:last-child>*{flex:0 0 auto}body[data-paimind-experience='paimind'] [role='dialog'][aria-modal='true']:has(>nav button[data-paimind-settings-navigation-icon])>nav+*{width:100%!important;min-width:0!important;flex:1 1 auto!important}}
 body[data-paimind-experience='paimind'] [data-paimind-skill-center],body[data-paimind-experience='paimind'] [data-paimind-extension-center],body[data-paimind-experience='paimind'] [data-paimind-notifications],body[data-paimind-experience='paimind'] [data-paimind-user-settings]{--paimind-surface:var(--paimind-glass-strong);background:color-mix(in srgb,var(--paimind-canvas) 92%,var(--paimind-accent) 8%)}
 @keyframes paimind-pop-in{from{opacity:0;transform:translateY(-4px) scale(.988)}to{opacity:1;transform:none}}
 @keyframes paimind-composer-menu-in{from{opacity:0;transform:translateY(-5px) scale(.992)}to{opacity:1;transform:none}}
@@ -1262,6 +1265,7 @@ export function apply(ctx: VisualExperienceClientContext): void {
   ctx.effect(() => installHarnessSettingsTriggerAccessibility(document), 'paimind-visual-experience: Settings trigger accessibility')
   ctx.effect(() => installHarnessSettingsNavigationIcons(ctx.slots, [
     { id: 'paimind-extensions', mount(container) { const root = createRoot(container); root.render(<PaimindExtensionIcon />); return () => { root.unmount() } } },
+    { id: 'paimind-model-services', mount(container) { const root = createRoot(container); root.render(<PaimindNewConversationIcon />); return () => { root.unmount() } } },
     { id: 'paimind-platform-scheduler', mount(container) { const root = createRoot(container); root.render(<PaimindSchedulerIcon />); return () => { root.unmount() } } },
     { id: 'paimind-user-settings', mount(container) { const root = createRoot(container); root.render(<PaimindPersonalizationIcon />); return () => { root.unmount() } } },
     { id: 'paimind-developer-resources', mount(container) { const root = createRoot(container); root.render(<PaimindDeveloperIcon />); return () => { root.unmount() } } },

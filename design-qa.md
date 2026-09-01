@@ -30,6 +30,101 @@ final result: passed
 
 ---
 
+# Conversation Auto-naming Model Service Design QA
+
+## Comparison input
+
+- Source reference: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-389e7726-4e5f-43f1-a305-ac1de5ebc68a.jpg` (`3574 x 2382`).
+- Browser implementation: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/conversation-title-model-services.png` (`1766 x 1226`).
+- Same-input comparison: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/conversation-title-reference-vs-implementation.png` (`2400 x 800`).
+- Compact window captures: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/conversation-title-model-services-640.png` and `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/conversation-title-model-services-420.png`.
+
+The reference and live implementation were normalized onto equal `1200 x 800` canvases and reviewed side by side. The implementation intentionally keeps only the currently delivered service instead of reproducing the reference's speculative service list.
+
+## Comparison history
+
+1. P1 observed in the reference: model utilities are called assistants and presented as a long future-service catalog.
+2. P1 fix: the live product uses one native Settings section named `模型服务`, one wide service card named `对话自动命名`, and no assistant terminology.
+3. P2 observed: a single generic dropdown would not communicate whether the service can be stopped.
+4. P2 fix: the service header owns an explicit switch; disabling it immediately disables the model selector, and enabling it restores the selected route.
+5. P2 observed: fixed two-column rows would compress at a narrow window.
+6. P2 fix: below `680px`, the model row becomes one column; the `420 x 900` capture keeps the title, switch, label and selector readable without page-level horizontal overflow.
+
+## Verified behavior
+
+- The service switch persisted off and on states; the final state is enabled.
+- The model selector persisted an explicit DeepSeek route and then restored `跟随当前对话模型`.
+- A real new Session immediately showed the exact 36-character temporary title `请分析当前产品版插件生态的兼容性风险，并给出下一阶段最优先的三个验证任务`.
+- The same Session replaced it in the background with `分析插件生态兼容性风险` after about one second.
+- The persisted Session log contains one fallback title event and one provider title event bound to the same user-message sequence; no shadow Session or visible title-generation message was created.
+- Browser logs contain no application error. The recorded warnings are expected connection retries from the deliberate Runtime restarts used to load the rebuilt plugin.
+- Repository verification passed: `94` test files / `446` tests, Build, Type Check, API Snapshot, package-pack, bundle-budget, documentation and framework gates.
+
+## Findings
+
+- P0: none.
+- P1: none after replacing the generic service catalog with one real, controllable service.
+- P2: none after responsive reflow and real title lifecycle verification.
+- P3: the service is a plugin-native Settings section adjacent to `模型`; the upstream Models page has no nested extension slot, so no Harness source modification was introduced.
+
+final result: passed
+
+---
+
+# Settings Extension Center and Scheduler Design QA
+
+## Source visual truth
+
+- Selected style reference: `/Users/hansen/.codex/generated_images/01a05baf-4a20-7701-bab4-2773d9c3c65e/exec-27a520c9-9913-4e31-aea2-765b475d638d.png` (`1571 x 1001`).
+- Product correction: remove the bottom `查看更多扩展` action; treat each visible card as a composition pack containing individually identifiable extensions.
+
+## Browser-rendered implementation
+
+- Extension Center: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/paimind-settings-audit/08-extension-center-pack-ui.png` (`1597 x 1226`, CSS viewport `1597 x 1226`, device scale factor `2`).
+- Pack detail: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/paimind-settings-audit/09-extension-center-pack-detail.png` (`1597 x 1226`).
+- Scheduler: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/paimind-settings-audit/10-scheduler-agenda-ui.png` (`1597 x 1226`).
+- Same-input comparison: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/paimind-settings-audit/11-reference-vs-implementation.png`.
+- Global wide Settings: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/paimind-settings-audit/12-settings-global-wide.png` (`1597 x 1226`).
+- Global wide same-input comparison: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/paimind-settings-audit/13-global-wide-reference-vs-implementation.png`.
+- Mobile source captures: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/paimind-settings-responsive-audit/mobile-通用设置.png` and `mobile-扩展中心.png` (`480 x 844`, device scale factor `1`).
+- Mobile implementation captures: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/paimind-settings-responsive-audit/mobile-after-通用设置.png` and `mobile-after-扩展中心.png` (`480 x 844`, device scale factor `1`).
+- Responsive same-input comparison: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/paimind-settings-responsive-audit/responsive-before-after.png`.
+
+## Comparison history
+
+1. P1 observed: the old Extension Center exposed internal module inventory as a long technical dashboard instead of a product-facing extension surface.
+2. P1 fix: replaced it with six compact composition-pack cards and a pack-detail level that identifies the actual extensions inside each pack.
+3. P1 observed: Scheduler controls were visually mixed with overview and configuration fields, so recurring work did not scan like an agenda.
+4. P1 fix: replaced the dashboard layout with status tabs, grouped time rows and direct run, edit and pause actions.
+5. P2 observed: descriptive fields such as entry location, value, steps and stop impact made the settings surface read like documentation.
+6. P2 fix: removed those fields and the `查看更多扩展` action. Visible copy now describes only the feature pack, extension count, runtime state and task schedule.
+7. P2 observed: only Extension Center and Scheduler owned the wide-dialog rule, so switching to General, Models, Plugins, Personalization or Developer Resources returned to the narrow layout.
+8. P2 fix: moved the desktop wide-dialog rule into the reversible PAIMind Visual Experience layer and removed both feature-specific copies.
+9. P1 observed: at `480 x 844`, General, Extension Center and Personalization retained the `188px` vertical settings rail, reducing content to roughly `244px`; labels wrapped one character per line and core controls were partially hidden.
+10. P1 fix: the shared Visual Experience layer now turns the settings rail into a horizontally scrollable `56px` navigation row below `600px`, expands content to the full dialog width, and keeps each plugin's own card/grid reflow.
+
+## Verified behavior
+
+- Search and four status filters remain available in both settings surfaces.
+- Selecting a feature pack opens its extension list; independent switches appear only for extensions with an explicit runtime capability contract.
+- Scheduler status filtering was exercised in the live Browser without mutating task data.
+- General, Models, Plugins, Extension Center, Scheduler, Personalization and Developer Resources all measured `1480 x 920` in the same `1597 x 1226` viewport.
+- At `760 x 900`, all seven pages measured `712 x 800` with zero dialog overflow and no visible-width offenders.
+- At `480 x 844`, all seven pages measured `464 x 828`; the navigation measured `464 x 56`, content remained readable and no page produced dialog-level horizontal overflow.
+- Browser console reported zero warnings and zero errors for the verified flow.
+- Targeted TypeScript checks, `43` component tests and the repository build passed.
+
+## Findings
+
+- P0: none.
+- P1: none after restoring pack hierarchy, agenda hierarchy and narrow-screen reflow.
+- P2: none after removing documentation-style fields, the extra discovery action and feature-owned shell width duplication.
+- P3: the existing Harness settings dialog remains the host surface; PAIMind Visual Experience supplies one reversible desktop width rule without modifying upstream Harness source. Mobile keeps the native responsive width.
+
+final result: passed
+
+---
+
 # Proposal Trace Adaptive Category Hierarchy Design QA
 
 ## Source visual truth

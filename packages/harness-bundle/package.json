@@ -26,6 +26,7 @@
     "@paimind/renderer-pdf": "workspace:^",
     "@paimind/artifacts": "workspace:^",
     "@paimind/conversation-artifact-renderer": "workspace:^",
+    "@paimind/conversation-title": "workspace:^",
     "@paimind/presentation-trace": "workspace:^",
     "@paimind/proposal-experience": "workspace:^",
     "@paimind/walmart-proposal-adapter": "workspace:^",

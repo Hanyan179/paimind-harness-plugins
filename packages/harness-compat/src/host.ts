@@ -1,5 +1,5 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import { BlockAssembler, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
 import Schema from '@deepseek-ai/schemastery'
 import { Service, type Context } from '@deepseek-ai/cordis'
@@ -216,6 +216,240 @@ export function registerPaimindHostSettings<T extends object>(
     Schema.object(shape),
     options,
   ) as unknown as PaimindHostSettingsScope<T>
+}
+
+/** One exact model route used by the PAIMind auxiliary title call. */
+export interface PaimindConversationTitleModelRoute {
+  readonly provider: string
+  readonly model: string
+}
+
+/** Minimal native Session face used by conversation auto-naming. */
+export interface PaimindConversationTitleSession {
+  readonly id: string
+  append(type: 'session/title', data: {
+    readonly title: string
+    readonly messageSeqs: readonly number[]
+    readonly source:
+      | { readonly kind: 'fallback' }
+      | { readonly kind: 'provider'; readonly provider: string; readonly model: PaimindConversationTitleModelRoute }
+  }): unknown
+}
+
+/** Native event subset consumed without reading conversation history. */
+export type PaimindConversationTitleSessionEvent =
+  | {
+      readonly type: 'user/message'
+      readonly seq: number
+      readonly data: {
+        readonly source: { readonly kind: string }
+        readonly content: readonly { readonly type: string; readonly text?: string }[]
+      }
+    }
+  | {
+      readonly type: 'request/header'
+      readonly seq: number
+      readonly data: { readonly header: { readonly config: PaimindConversationTitleModelRoute } }
+    }
+  | { readonly type: string; readonly seq: number; readonly data: unknown }
+
+/** Current title snapshot needed for optimistic late-result protection. */
+export interface PaimindConversationTitleSnapshot {
+  readonly title: string
+  readonly eventSeq: number
+  readonly source: { readonly kind: 'fallback' | 'provider' | 'user' }
+}
+
+/** Structural Host services used by the version-isolated title adapter. */
+export interface PaimindConversationTitleAutomationContext {
+  readonly sessionTitle: {
+    get(session: PaimindConversationTitleSession): PaimindConversationTitleSnapshot | undefined
+  }
+  readonly llm: {
+    stream(options: {
+      readonly provider: string
+      readonly model: string
+      readonly messages: ReturnType<typeof createUserMessage>[]
+      readonly maxTokens: number
+      readonly sessionId: string
+      readonly purpose: 'session-title'
+      readonly signal: AbortSignal
+    }): AsyncIterable<unknown>
+  }
+  readonly logger: { warn(message: unknown): void }
+  on(
+    event: 'session/event',
+    listener: (session: PaimindConversationTitleSession, event: PaimindConversationTitleSessionEvent) => void,
+  ): () => void
+  on(
+    event: 'session/disposed',
+    listener: (session: PaimindConversationTitleSession) => void,
+  ): () => void
+}
+
+/** Product-owned policy callbacks; Harness-specific event and LLM shapes stay above. */
+export interface PaimindConversationTitleAutomationOptions {
+  readonly providerId: string
+  readonly enabled: () => boolean
+  readonly route: () => PaimindConversationTitleModelRoute | undefined
+  readonly temporaryTitle: (message: string) => string
+  readonly prompt: (message: string) => string
+  readonly finalizeTitle: (output: string) => string | undefined
+  readonly maxOutputTokens: number
+  readonly timeoutMs: number
+}
+
+interface PaimindConversationTitleWork {
+  readonly triggerSeq: number
+  readonly triggerText: string
+  readonly temporaryEventSeq: number
+  readonly temporaryTitle: string
+  controller?: AbortController
+  started: boolean
+}
+
+function titleMessageText(event: Extract<PaimindConversationTitleSessionEvent, { readonly type: 'user/message' }>): string {
+  return event.data.content
+    .filter(block => block.type === 'text' && typeof block.text === 'string')
+    .map(block => block.text ?? '')
+    .join('\n')
+}
+
+function titleRouteFromHeader(event: Extract<PaimindConversationTitleSessionEvent, { readonly type: 'request/header' }>): PaimindConversationTitleModelRoute | undefined {
+  const { provider, model } = event.data.header.config
+  return provider.length === 0 || model.length === 0 ? undefined : { provider, model }
+}
+
+/**
+ * Install PAIMind conversation auto-naming over the native Session title log.
+ * The exact triggering user event is retained in memory; no historical message
+ * collection or shadow Session is created. The generated result commits only
+ * while the same temporary title event remains current.
+ */
+export function installPaimindConversationTitleAutomation(
+  ctx: PaimindConversationTitleAutomationContext,
+  options: PaimindConversationTitleAutomationOptions,
+): () => void {
+  const workBySession = new Map<PaimindConversationTitleSession, PaimindConversationTitleWork>()
+  let disposed = false
+
+  const start = (
+    session: PaimindConversationTitleSession,
+    work: PaimindConversationTitleWork,
+    route: PaimindConversationTitleModelRoute,
+  ): void => {
+    if (disposed || work.started) return
+    work.started = true
+    const controller = new AbortController()
+    work.controller = controller
+    const timer = setTimeout(() => {
+      controller.abort(new Error('conversation title generation timed out'))
+    }, options.timeoutMs)
+
+    void (async () => {
+      const assembler = new BlockAssembler()
+      const prompt = options.prompt(work.triggerText)
+      const message = createUserMessage({
+        content: [{ type: 'text', text: prompt }],
+        source: { kind: 'plugin', plugin: options.providerId },
+      })
+      for await (const chunk of ctx.llm.stream({
+        provider: route.provider,
+        model: route.model,
+        messages: [message],
+        maxTokens: options.maxOutputTokens,
+        sessionId: session.id,
+        purpose: 'session-title',
+        signal: controller.signal,
+      })) {
+        assembler.push(chunk as Parameters<BlockAssembler['push']>[0])
+      }
+      if (assembler.finish.kind !== 'stop') throw new Error('conversation title model call did not finish normally')
+      const text = assembler.message({ kind: 'plugin', plugin: options.providerId }).content
+        .filter(block => block.type === 'text')
+        .map(block => block.text)
+        .join(' ')
+      const title = options.finalizeTitle(text)
+      if (title === undefined) throw new Error('conversation title model returned no valid title')
+      if (!options.enabled()) return
+      const current = ctx.sessionTitle.get(session)
+      if (current?.eventSeq !== work.temporaryEventSeq
+        || current.title !== work.temporaryTitle
+        || current.source.kind !== 'fallback') return
+      session.append('session/title', {
+        title,
+        messageSeqs: [work.triggerSeq],
+        source: { kind: 'provider', provider: options.providerId, model: route },
+      })
+    })().catch((error: unknown) => {
+      if (!controller.signal.aborted && !disposed) {
+        ctx.logger.warn(`conversation title generation failed for session "${session.id}": ${String(error)}`)
+      }
+    }).finally(() => {
+      clearTimeout(timer)
+      delete work.controller
+    })
+  }
+
+  const stopEvents = ctx.on('session/event', (session, rawEvent) => {
+    if (disposed || !options.enabled()) return
+    if (rawEvent.type === 'user/message') {
+      const event = rawEvent as Extract<PaimindConversationTitleSessionEvent, { readonly type: 'user/message' }>
+      if (event.data.source.kind !== 'user' || workBySession.has(session)) return
+      const triggerText = titleMessageText(event)
+      const temporaryTitle = options.temporaryTitle(triggerText)
+      if (temporaryTitle.length === 0) return
+      queueMicrotask(() => {
+        if (disposed || !options.enabled() || workBySession.has(session)) return
+        const before = ctx.sessionTitle.get(session)
+        // The native title service may have produced its deterministic fallback
+        // later in the same user-event dispatch. Replace only that same-event
+        // fallback; an older fallback or any provider/user title is already a
+        // real title and must never be treated as an untitled conversation.
+        if (before !== undefined && (before.source.kind !== 'fallback' || before.eventSeq <= event.seq)) return
+        session.append('session/title', {
+          title: temporaryTitle,
+          messageSeqs: [event.seq],
+          source: { kind: 'fallback' },
+        })
+        const current = ctx.sessionTitle.get(session)
+        if (current?.source.kind !== 'fallback' || current.title !== temporaryTitle) return
+        const work: PaimindConversationTitleWork = {
+          triggerSeq: event.seq,
+          triggerText,
+          temporaryEventSeq: current.eventSeq,
+          temporaryTitle,
+          started: false,
+        }
+        workBySession.set(session, work)
+        const explicit = options.route()
+        if (explicit !== undefined) queueMicrotask(() => { start(session, work, explicit) })
+      })
+      return
+    }
+    if (rawEvent.type !== 'request/header') return
+    const event = rawEvent as Extract<PaimindConversationTitleSessionEvent, { readonly type: 'request/header' }>
+    const work = workBySession.get(session)
+    if (work === undefined || work.started || event.seq <= work.triggerSeq) return
+    const route = options.route() ?? titleRouteFromHeader(event)
+    if (route !== undefined) queueMicrotask(() => { start(session, work, route) })
+  })
+  const stopDisposed = ctx.on('session/disposed', session => {
+    const work = workBySession.get(session)
+    work?.controller?.abort(new Error('session disposed during conversation title generation'))
+    workBySession.delete(session)
+  })
+
+  return () => {
+    if (disposed) return
+    disposed = true
+    stopEvents()
+    stopDisposed()
+    for (const work of workBySession.values()) {
+      work.controller?.abort(new Error('conversation title automation unloaded'))
+    }
+    workBySession.clear()
+  }
 }
 
 /** Consumer hooks for the native optional Settings lifecycle helper. */

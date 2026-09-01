@@ -1,3 +1,12 @@
+- id: session-title
+  config:
+    fallbackMaxWords: 36
+    fallbackMaxBytes: 144
+    maxTitleBytes: 960
+
+- id: session-title-llm
+  disabled: true
+
 - insert:
     # Always-on control plane. Product packs below can never disable their manager.
     - id: paimind-invariants
@@ -29,6 +38,11 @@
           inject: [invariants]
         - id: paimind-visual-experience
           name: '@paimind/visual-experience'
+        - id: paimind-conversation-title-invariant
+          name: '@paimind/conversation-title/invariant'
+          inject: [invariants]
+        - id: paimind-conversation-title
+          name: '@paimind/conversation-title'
         - id: paimind-capability-runtime-orbs
           name: cordis:group
           group: true

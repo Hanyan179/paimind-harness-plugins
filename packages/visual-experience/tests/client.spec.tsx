@@ -234,6 +234,8 @@ describe('PAIMind visual experience client', () => {
     expect(screen.getByRole('button', { name: '全部智能体' })).toBeInTheDocument()
     const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@paimind/visual-experience"]')?.textContent ?? ''
     expect(style).toContain('[data-paimind-quick-agents]{display:grid;gap:8px;width:calc(100% - 32px);margin-inline:16px')
+    expect(style).toContain("[role='dialog'][aria-modal='true']:has(>nav button[data-paimind-settings-navigation-icon]){width:min(1480px,calc(100vw - 48px))!important")
+    expect(style).toContain("@media(max-width:600px){body[data-paimind-experience='paimind'] [role='dialog'][aria-modal='true']:has(>nav button[data-paimind-settings-navigation-icon]){width:calc(100vw - 16px)!important")
     fireEvent.click(screen.getByRole('button', { name: /Paramont 助手/ }))
     await waitFor(() => expect(nativeSelect).toHaveBeenCalledWith('paimind'))
 

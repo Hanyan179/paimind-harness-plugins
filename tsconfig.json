@@ -23,6 +23,7 @@
     { "path": "packages/renderer-pdf" },
     { "path": "packages/artifacts" },
     { "path": "packages/conversation-artifact-renderer" },
+    { "path": "packages/conversation-title" },
     { "path": "packages/presentation-trace" },
     { "path": "packages/walmart-proposal-adapter" },
     { "path": "packages/proposal-experience" },

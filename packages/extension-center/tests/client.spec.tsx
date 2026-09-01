@@ -144,6 +144,7 @@ describe('Extension Center client contribution', () => {
       mutateFeaturePack={mutateFeaturePack}
       reloadApplication={reloadApplication}
     />)
+    fireEvent.click(await screen.findByRole('button', { name: '打开 产品体验' }))
     const orbSwitch = await screen.findByRole('switch', { name: /动态状态球 · 已启用/ })
     fireEvent.click(orbSwitch)
     await waitFor(() => expect(mutateFeaturePack).toHaveBeenCalledWith({
@@ -182,10 +183,10 @@ describe('Extension Center client contribution', () => {
       describeFeaturePacks={async () => ready}
       mutateFeaturePack={async () => ready}
     />)
-    await screen.findByRole('switch', { name: /动态状态球 · 已关闭/ })
-    expect(screen.getByText('运行中')).toBeInTheDocument()
+    expect(await screen.findByText('运行中')).toBeInTheDocument()
     expect(screen.queryByText('部分运行')).not.toBeInTheDocument()
-    expect(screen.getByText('技术状态需关注').parentElement).toHaveTextContent('0技术状态需关注')
+    fireEvent.click(await screen.findByRole('button', { name: '打开 产品体验' }))
+    await screen.findByRole('switch', { name: /动态状态球 · 已关闭/ })
   })
 
   it('shows an enabled Product Pack as partial when one internal module is absent', async () => {
@@ -212,9 +213,8 @@ describe('Extension Center client contribution', () => {
       describeFeaturePacks={async () => ready}
       mutateFeaturePack={async () => ready}
     />)
-    await waitFor(() => expect(screen.getByText('1 / 2 个内部模块')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('1 / 2 个扩展')).toBeInTheDocument())
     expect(screen.getByText('部分运行')).toBeInTheDocument()
-    expect(screen.getByText('技术状态需关注').parentElement).toHaveTextContent('1技术状态需关注')
   })
 
   it('shows desired-on Loader failure as failed instead of disabled or running', async () => {
@@ -245,60 +245,71 @@ describe('Extension Center client contribution', () => {
     expect(screen.getByText('启动失败')).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Cannot find package @paimind/proposal-experience')
     expect(screen.queryByText('运行中')).not.toBeInTheDocument()
-    expect(screen.queryByText('已关闭')).not.toBeInTheDocument()
   })
 
-  it('explains capability, availability, configuration location, and progressive details', async () => {
+  it('opens a Feature Pack and shows its individual extension system state', async () => {
     const locale = { getLocale: () => ({ active: 'zh-CN' }), subscribe: () => () => {} }
+    const ready = {
+      status: 'ready' as const, revision: 1, writable: true,
+      packs: [{
+        id: 'paimind:pack:experience' as const, loaderEntryId: 'paimind-pack-experience' as const,
+        nameZh: '产品体验', nameEn: 'Product Experience',
+        descriptionZh: '产品体验能力。', descriptionEn: 'Product experience capabilities.',
+        order: 10, defaultEnabled: true, requiredPackIds: [],
+        packageNames: ['@paimind/runtime-orbs' as const], installed: true, enabled: true, capabilities: [],
+      }],
+    }
     render(<ExtensionCenterSection
       close={() => {}}
       locale={locale}
       getExtensions={() => extensions}
       subscribeExtensions={() => () => {}}
       listInventory={async () => ({ entries: [{ entryId: 'orb', moduleName: '@paimind/runtime-orbs', enabled: true, fiberPhase: 'active' }] })}
+      describeFeaturePacks={async () => ready}
+      mutateFeaturePack={async () => ready}
     />)
-    await waitFor(() => expect(screen.getByText('已加载')).toBeInTheDocument())
-    expect(screen.getByText('可用')).toBeInTheDocument()
-    expect(screen.getByText('Harness 原生对话与输入区')).toBeInTheDocument()
-    expect(screen.getByText('产品能力').parentElement).toHaveTextContent('1产品能力')
-    const summary = screen.getByRole('button', { name: /运行状态球/ })
-    expect(summary).toHaveAttribute('aria-expanded', 'false')
-    fireEvent.click(summary)
-    expect(summary).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText('产品成熟度')).toBeInTheDocument()
-    expect(screen.getByText('Harness 技术状态')).toBeInTheDocument()
-    expect(screen.getByText('使用与配置')).toBeInTheDocument()
-    expect(screen.getByText('包标识')).toBeInTheDocument()
-    expect(screen.getByText('@paimind/runtime-orbs')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /自动化/ }))
-    expect(screen.queryByText('运行状态球')).not.toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('没有匹配的能力')
-    fireEvent.click(screen.getByRole('button', { name: /治理/ }))
-    expect(screen.getByRole('status')).toHaveTextContent('当前没有可信身份提供方')
-    expect(screen.queryByText(/管理员权限/, { selector: 'article *' })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '清除筛选' }))
+    fireEvent.click(await screen.findByRole('button', { name: '打开 产品体验' }))
+    expect(await screen.findByText('已加载')).toBeInTheDocument()
     expect(screen.getByText('运行状态球')).toBeInTheDocument()
+    expect(screen.getByText('@paimind/runtime-orbs')).toBeInTheDocument()
+    expect(screen.queryByText('使用与配置')).not.toBeInTheDocument()
+    expect(screen.queryByText('入口类型')).not.toBeInTheDocument()
   })
 
   it('searches bilingual metadata and package identity without inventing marketplace facts', async () => {
+    const ready = {
+      status: 'ready' as const, revision: 1, writable: true,
+      packs: [{
+        id: 'paimind:pack:experience' as const, loaderEntryId: 'paimind-pack-experience' as const,
+        nameZh: '产品体验', nameEn: 'Product Experience', descriptionZh: '产品体验能力。', descriptionEn: 'Product experience capabilities.',
+        order: 10, defaultEnabled: true, requiredPackIds: [], packageNames: ['@paimind/runtime-orbs' as const], installed: true, enabled: true, capabilities: [],
+      }],
+    }
     render(<ExtensionCenterSection
       close={() => {}}
       locale={{ getLocale: () => ({ active: 'en-US' }), subscribe: () => () => {} }}
       getExtensions={() => extensions}
       subscribeExtensions={() => () => {}}
       listInventory={async () => ({ entries: [] })}
+      describeFeaturePacks={async () => ready}
     />)
-    await waitFor(() => expect(screen.getByText('Not in registry')).toBeInTheDocument())
-    const search = screen.getByRole('searchbox', { name: 'Search extensions' })
+    const search = await screen.findByRole('searchbox', { name: 'Search packs or extensions' })
     fireEvent.change(search, { target: { value: '@paimind/runtime-orbs' } })
-    expect(screen.getByText('Runtime Orb')).toBeInTheDocument()
+    expect(screen.getByText('Product Experience')).toBeInTheDocument()
     fireEvent.change(search, { target: { value: 'no-such-marketplace-rating' } })
-    expect(screen.getByRole('status')).toHaveTextContent('No matching capabilities')
+    expect(screen.getByText('No matching Feature Packs.')).toBeInTheDocument()
     expect(screen.queryByText(/rating|download|verified|update/i)).not.toBeInTheDocument()
   })
 
   it('does not show stale technical truth when Harness inventory fails and can retry', async () => {
+    const ready = {
+      status: 'ready' as const, revision: 1, writable: true,
+      packs: [{
+        id: 'paimind:pack:experience' as const, loaderEntryId: 'paimind-pack-experience' as const,
+        nameZh: '产品体验', nameEn: 'Product Experience', descriptionZh: '产品体验能力。', descriptionEn: 'Product experience capabilities.',
+        order: 10, defaultEnabled: true, requiredPackIds: [], packageNames: ['@paimind/runtime-orbs' as const], installed: true, enabled: true, capabilities: [],
+      }],
+    }
     const listInventory = vi.fn()
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce({ entries: [{ entryId: 'orb', moduleName: '@paimind/runtime-orbs', enabled: true, fiberPhase: 'active' }] })
@@ -308,24 +319,34 @@ describe('Extension Center client contribution', () => {
       getExtensions={() => extensions}
       subscribeExtensions={() => () => {}}
       listInventory={listInventory}
+      describeFeaturePacks={async () => ready}
     />)
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('returned no result'))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('temporarily unavailable'))
     expect(screen.queryByText('Active')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Read again' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Open Product Experience' }))
     await waitFor(() => expect(screen.getByText('Active')).toBeInTheDocument())
     expect(listInventory).toHaveBeenCalledTimes(2)
   })
 
   it('contains loading state without rendering guessed technical status', () => {
+    const ready = {
+      status: 'ready' as const, revision: 1, writable: true,
+      packs: [{
+        id: 'paimind:pack:experience' as const, loaderEntryId: 'paimind-pack-experience' as const,
+        nameZh: '产品体验', nameEn: 'Product Experience', descriptionZh: '产品体验能力。', descriptionEn: 'Product experience capabilities.',
+        order: 10, defaultEnabled: true, requiredPackIds: [], packageNames: ['@paimind/runtime-orbs' as const], installed: true, enabled: true, capabilities: [],
+      }],
+    }
     render(<ExtensionCenterSection
       close={() => {}}
       locale={{ getLocale: () => ({ active: 'en-US' }), subscribe: () => () => {} }}
       getExtensions={() => extensions}
       subscribeExtensions={() => () => {}}
       listInventory={async () => await new Promise(() => {})}
+      describeFeaturePacks={async () => ready}
     />)
-    expect(screen.getByText('Reading Harness technical state…')).toBeInTheDocument()
-    expect(document.querySelectorAll('[data-paimind-extension-skeleton]')).toHaveLength(3)
+    expect(screen.getByText('Syncing extension status…')).toBeInTheDocument()
     expect(screen.queryByText('Active')).not.toBeInTheDocument()
   })
 

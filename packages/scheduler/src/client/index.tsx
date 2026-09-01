@@ -28,6 +28,13 @@ import {
   type PaimindLocaleSource,
 } from '@paimind/harness-compat'
 import { installHarnessScheduledSessionMarkers } from '@paimind/harness-compat/client-surface'
+import {
+  PaimindEditIcon,
+  PaimindPlayIcon,
+  PaimindPlusIcon,
+  PaimindSchedulerIcon,
+  PaimindSearchIcon,
+} from '@paimind/harness-compat/client-icons'
 import type {
   PaimindScheduleArchiveRequest,
   PaimindSchedulerSnapshot,
@@ -427,8 +434,43 @@ const STYLE = `
 @container(max-width:760px){[data-paimind-scheduler-settings] [data-paimind-scheduler-form]{grid-template-columns:1fr}[data-paimind-scheduler-settings] [data-paimind-scheduler-form] [data-wide='true']{grid-column:auto}[data-paimind-scheduler-settings] [data-paimind-scheduler-task-types]{grid-template-columns:repeat(3,minmax(0,1fr))}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] thead{display:none}[data-paimind-scheduler-settings] [data-paimind-scheduler-table],[data-paimind-scheduler-settings] [data-paimind-scheduler-table] tbody,[data-paimind-scheduler-settings] [data-paimind-scheduler-table] tr,[data-paimind-scheduler-settings] [data-paimind-scheduler-table] td{display:block;width:100%;box-sizing:border-box}[data-paimind-scheduler-settings] [data-paimind-scheduler-table]{border:0;background:transparent}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] tr{display:grid;gap:8px;margin-bottom:12px;padding:14px;border:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15));border-radius:16px;background:var(--dsw-alias-bg-layer-1,#fff)}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] td{display:grid;grid-template-columns:88px minmax(0,1fr);gap:10px;align-items:start;padding:0;border:0;line-height:20px}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] td:before{content:attr(data-label);color:var(--dsw-alias-label-tertiary,#78849a);font-size:11px;font-weight:700}[data-paimind-scheduler-settings] [data-paimind-scheduler-row-actions]{margin-top:2px}}
 @container(max-width:760px){[data-paimind-scheduler-settings] [data-paimind-scheduler-task-list]{grid-template-columns:1fr}}
 @container(max-width:480px){[data-paimind-scheduler-settings]{gap:14px;padding:16px}[data-paimind-scheduler-settings] [data-paimind-scheduler-toolbar]{flex-direction:column;align-items:stretch}[data-paimind-scheduler-settings] [data-paimind-scheduler-search]{width:100%;min-width:0}[data-paimind-scheduler-settings] [data-paimind-scheduler-primary]{width:100%;margin-left:0;white-space:nowrap}[data-paimind-scheduler-settings] [data-paimind-scheduler-task-types]{grid-template-columns:repeat(2,minmax(0,1fr))}[data-paimind-scheduler-settings] [data-paimind-scheduler-filters]{flex-wrap:wrap}[data-paimind-scheduler-settings] [data-paimind-scheduler-overview]{grid-template-columns:1fr}[data-paimind-scheduler-settings] [data-paimind-scheduler-overview]>div{border-right:0;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15))}[data-paimind-scheduler-settings] [data-paimind-scheduler-overview]>div:last-child{border-bottom:0}[data-paimind-scheduler-settings] [data-paimind-scheduler-detail-header]{flex-direction:column}[data-paimind-scheduler-settings] [data-paimind-scheduler-detail-summary]{grid-template-columns:1fr}}
-@media(max-width:600px){[role='dialog'][aria-modal='true']:has([data-paimind-scheduler-settings]){flex-direction:column!important}[role='dialog'][aria-modal='true']:has([data-paimind-scheduler-settings])>nav{width:100%!important;max-width:none!important;max-height:96px;box-sizing:border-box;padding:10px 12px!important;border-right:0!important;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.16));overflow:hidden}[role='dialog'][aria-modal='true']:has([data-paimind-scheduler-settings])>nav>:first-child{display:none!important}[role='dialog'][aria-modal='true']:has([data-paimind-scheduler-settings])>nav>:last-child{display:flex!important;flex-direction:row!important;gap:6px;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin}[role='dialog'][aria-modal='true']:has([data-paimind-scheduler-settings])>nav>:last-child>*{flex:0 0 auto}[role='dialog'][aria-modal='true']:has([data-paimind-scheduler-settings])>nav+*{width:100%!important;min-width:0!important;flex:1 1 auto!important}}
 @media(max-width:760px){[data-paimind-scheduler-panel]{padding:18px}[data-paimind-scheduler-task-types]{grid-template-columns:repeat(3,minmax(0,1fr))}[data-paimind-scheduler-form]{grid-template-columns:1fr}[data-paimind-scheduler-table] thead{display:none}[data-paimind-scheduler-table],[data-paimind-scheduler-table] tbody,[data-paimind-scheduler-table] tr,[data-paimind-scheduler-table] td{display:block;width:100%;box-sizing:border-box}[data-paimind-scheduler-table] tr{padding:10px 0;border-top:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.12))}[data-paimind-scheduler-table] td{padding:7px 14px;border:0}}
+[data-paimind-scheduler-settings]{align-content:start;gap:18px;min-height:720px;padding:28px 30px}
+[data-paimind-scheduler-settings-header] h2{font-size:24px;line-height:32px}
+[data-paimind-scheduler-toolbar]{display:grid;grid-template-columns:minmax(240px,560px) auto;gap:14px;margin:0}
+[data-paimind-scheduler-search]{position:relative;display:flex;align-items:center}
+[data-paimind-scheduler-search]>svg{position:absolute;left:13px;z-index:1;color:var(--dsw-alias-label-tertiary,#78849a);pointer-events:none}
+[data-paimind-scheduler-search] input{min-height:40px;padding:8px 14px 8px 38px;border-radius:11px}
+[data-paimind-scheduler-primary]{display:inline-flex;align-items:center;justify-content:center;gap:7px;justify-self:end;min-height:40px;border-radius:11px}
+[data-paimind-scheduler-primary] svg{width:16px;height:16px}
+[data-paimind-scheduler-filters]{gap:22px;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15))}
+[data-paimind-scheduler-filters] button{position:relative;min-height:38px;padding:7px 0 10px;border-radius:0;font-size:12px}
+[data-paimind-scheduler-filters] button[aria-selected='true']{color:var(--dsw-alias-state-business-primary,#326af5);background:transparent}
+[data-paimind-scheduler-filters] button[aria-selected='true']::after{content:'';position:absolute;right:0;bottom:-1px;left:0;height:2px;border-radius:2px;background:currentColor}
+[data-paimind-scheduler-task-groups]{display:grid;gap:20px}
+[data-paimind-scheduler-group]{display:grid;gap:8px}
+[data-paimind-scheduler-group-header]{display:flex;align-items:center;gap:8px;padding:0 2px}
+[data-paimind-scheduler-group-header] h3{margin:0;font-size:13px;line-height:20px}
+[data-paimind-scheduler-group-header] span{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;color:var(--dsw-alias-label-tertiary,#78849a);background:var(--dsw-alias-bg-layer-2,rgba(100,115,140,.08));font-size:10px}
+[data-paimind-scheduler-task-list]{display:block;overflow:hidden;border:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15));border-radius:16px;background:var(--dsw-alias-bg-layer-1,#fff)}
+[data-paimind-scheduler-task-card]{display:grid;grid-template-columns:82px minmax(220px,1fr) 120px auto;gap:18px;align-items:center;min-height:76px;padding:12px 14px;border:0;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.12));border-radius:0;background:transparent}
+[data-paimind-scheduler-task-card]:last-child{border-bottom:0}
+[data-paimind-scheduler-task-card][data-disabled='true']{opacity:.62;background:var(--dsw-alias-bg-layer-2,rgba(100,115,140,.025))}
+[data-paimind-scheduler-task-time]{display:grid;gap:2px}
+[data-paimind-scheduler-task-time] strong{font-size:14px;line-height:20px;font-variant-numeric:tabular-nums}
+[data-paimind-scheduler-task-time] span{overflow:hidden;color:var(--dsw-alias-label-tertiary,#78849a);font-size:9px;line-height:14px;text-overflow:ellipsis;white-space:nowrap}
+[data-paimind-scheduler-task-link] strong{display:block;overflow:hidden;font-size:13px;line-height:20px;text-overflow:ellipsis;white-space:nowrap}
+[data-paimind-scheduler-task-card-copy]{margin-top:1px;font-size:10px;line-height:16px}
+[data-paimind-scheduler-task-result]{display:grid;justify-items:start;gap:4px}
+[data-paimind-scheduler-task-result] small{color:var(--dsw-alias-label-tertiary,#78849a);font-size:9px;white-space:nowrap}
+[data-paimind-scheduler-task-card] [data-paimind-scheduler-row-actions]{flex-wrap:nowrap;justify-content:flex-end;padding:0;border:0}
+[data-paimind-scheduler-icon-action]{display:inline-grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.16));border-radius:10px;color:var(--dsw-alias-label-secondary,#56627a);background:transparent;cursor:pointer}
+[data-paimind-scheduler-icon-action]:hover{color:var(--dsw-alias-state-business-primary,#326af5);background:color-mix(in srgb,currentColor 7%,transparent)}
+[data-paimind-scheduler-icon-action]:disabled{opacity:.4;cursor:not-allowed}
+[data-paimind-scheduler-icon-action] svg{width:15px;height:15px}
+[data-paimind-scheduler-combobox]:after{content:none}
+@container(max-width:900px){[data-paimind-scheduler-task-card]{grid-template-columns:70px minmax(180px,1fr) auto}[data-paimind-scheduler-task-result]{display:none}}
+@container(max-width:620px){[data-paimind-scheduler-settings]{min-height:100%;padding:18px}[data-paimind-scheduler-toolbar]{grid-template-columns:1fr}[data-paimind-scheduler-primary]{justify-self:stretch}[data-paimind-scheduler-filters]{overflow-x:auto}[data-paimind-scheduler-task-card]{grid-template-columns:60px minmax(0,1fr);gap:10px}[data-paimind-scheduler-task-card] [data-paimind-scheduler-row-actions]{grid-column:1/-1;justify-content:flex-start;padding-top:8px;border-top:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.12))}}
 `
 
 function installStyle(): () => void {
@@ -447,10 +489,6 @@ function useZh(locale: PaimindLocaleSource): boolean {
     () => locale.getLocale().active.toLowerCase().startsWith('zh'),
     () => false,
   )
-}
-
-function ClockIcon(): React.JSX.Element {
-  return <svg viewBox="0 0 18 18" width="17" height="17" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="6.4" stroke="currentColor" strokeWidth="1.4"/><path d="M9 5.3v4l2.7 1.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
 }
 
 const COMMON_TIME_ZONES = Object.freeze([
@@ -531,7 +569,7 @@ export function SchedulerTrigger(props: {
   const snapshot = useSyncExternalStore(listener => props.controller.subscribe(listener), () => props.controller.getSnapshot())
   const zh = useZh(props.locale)
   const label = zh ? '平台定时任务' : 'Platform Scheduler'
-  return <button type="button" data-paimind-scheduler-trigger data-wide={props.wide} aria-label={zh ? '打开平台定时任务' : 'Open Platform Scheduler'} title={label} aria-expanded={snapshot.open} onClick={() => { props.controller.toggle() }}>{props.wide ? <><ClockIcon /><span>{label}</span></> : <span data-paimind-scheduler-compact-label>{zh ? '定时' : 'Timer'}</span>}</button>
+  return <button type="button" data-paimind-scheduler-trigger data-wide={props.wide} aria-label={zh ? '打开平台定时任务' : 'Open Platform Scheduler'} title={label} aria-expanded={snapshot.open} onClick={() => { props.controller.toggle() }}>{props.wide ? <><PaimindSchedulerIcon aria-hidden="true" /><span>{label}</span></> : <span data-paimind-scheduler-compact-label>{zh ? '定时' : 'Timer'}</span>}</button>
 }
 
 export function SchedulerSettingsEntry(props: {
@@ -545,7 +583,7 @@ export function SchedulerSettingsEntry(props: {
     return () => { props.controller.close() }
   }, [props.controller])
   return <section data-paimind-scheduler-settings aria-label={zh ? '平台定时任务' : 'Platform Scheduler'}>
-    <header data-paimind-scheduler-settings-header><h2>{zh ? '平台定时任务' : 'Platform Scheduler'}</h2><p>{zh ? '集中管理自动执行的智能任务、工作流与消息任务。' : 'Manage automatically executed AI tasks, workflows, and message tasks in one place.'}</p></header>
+    <header data-paimind-scheduler-settings-header><h2>{zh ? '平台定时任务' : 'Platform Scheduler'}</h2></header>
     <SchedulerWorkspace controller={props.controller} zh={zh} {...(props.close === undefined ? {} : { onLeave: props.close })} />
   </section>
 }
@@ -625,6 +663,31 @@ function ScheduleForm(props: ScheduleFormProps): React.JSX.Element {
   </form>
 }
 
+type ScheduleGroup = 'today' | 'week' | 'upcoming' | 'paused' | 'archived'
+
+function scheduleGroup(definition: PaimindScheduleDefinition, now = new Date()): ScheduleGroup {
+  if (definition.status === 'archived') return 'archived'
+  if (definition.status === 'paused') return 'paused'
+  if (definition.nextRunAt === undefined) return 'upcoming'
+  const next = new Date(definition.nextRunAt)
+  if (next.toDateString() === now.toDateString()) return 'today'
+  if (next.getTime() >= now.getTime() && next.getTime() < now.getTime() + 7 * 24 * 60 * 60 * 1_000) return 'week'
+  return 'upcoming'
+}
+
+function scheduleGroupLabel(group: ScheduleGroup, zh: boolean): string {
+  const labels = zh
+    ? { today: '今天', week: '本周', upcoming: '之后', paused: '已暂停', archived: '已归档' }
+    : { today: 'Today', week: 'This week', upcoming: 'Later', paused: 'Paused', archived: 'Archived' }
+  return labels[group]
+}
+
+function nextRunTime(definition: PaimindScheduleDefinition, zh: boolean): string {
+  if (definition.nextRunAt !== undefined) return new Date(definition.nextRunAt).toLocaleTimeString(zh ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+  if (definition.rule.kind === 'once') return new Date(definition.rule.at).toLocaleTimeString(zh ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+  return definition.rule.time
+}
+
 function TaskTable(props: {
   readonly snapshot: SchedulerClientSnapshot
   readonly definitions: readonly PaimindScheduleDefinition[]
@@ -635,23 +698,32 @@ function TaskTable(props: {
 }): React.JSX.Element {
   if (props.definitions.length === 0) return <div data-paimind-scheduler-empty>{props.zh ? '没有符合当前条件的平台定时任务。' : 'No platform scheduled tasks match the current filters.'}</div>
   const actionById = new Map(props.snapshot.actions.map(action => [action.actionId, action]))
-  return <ul data-paimind-scheduler-task-list>{props.definitions.map(definition => {
-    const action = actionById.get(definition.actionId)
-    const actionAvailable = action?.enabled === true
-    const latest = props.snapshot.runs.find(run => run.scheduleId === definition.scheduleId)
-    const active = props.snapshot.runs.some(run => run.scheduleId === definition.scheduleId && (run.status === 'queued' || run.status === 'running'))
-    const expiredOnce = definition.rule.kind === 'once' && Date.parse(definition.rule.at) <= Date.now()
-    const archived = definition.status === 'archived'
-    return <li key={definition.scheduleId} data-paimind-scheduler-task-card data-disabled={!actionAvailable || expiredOnce}>
-      <header data-paimind-scheduler-task-card-header><button type="button" aria-label={definition.name} data-paimind-scheduler-task-link onClick={() => { props.onOpen(definition) }}><strong>{definition.name}</strong><span data-paimind-scheduler-task-card-copy>{action === undefined ? (props.zh ? '能力不可用' : 'Unavailable') : `${actionTypeLabel(action.category, props.zh)} · ${props.zh ? action.nameZh : action.nameEn}`}</span></button><span data-paimind-scheduler-badge data-status={definition.status}>{scheduleStatus(definition, latest, props.zh)}</span></header>
-      <div data-paimind-scheduler-task-card-meta><div><span>{props.zh ? '执行计划' : 'Schedule'}</span><strong>{ruleLabel(definition.rule, props.zh)}</strong></div><div><span>{props.zh ? '下次执行' : 'Next run'}</span><strong>{definition.nextRunAt === undefined ? '—' : new Date(definition.nextRunAt).toLocaleString(props.zh ? 'zh-CN' : 'en-US')}</strong></div><div><span>{props.zh ? '最近结果' : 'Latest result'}</span><strong>{active ? (props.zh ? '执行中' : 'Running') : latest === undefined ? '—' : runStatus(latest.status, props.zh)}</strong></div><div><span>{props.zh ? '时区' : 'Time zone'}</span><strong>{definition.timeZone}</strong></div></div>
-      <div data-paimind-scheduler-row-actions>{archived
-        ? <button type="button" data-paimind-scheduler-row-action data-emphasis="true" disabled={props.snapshot.saving} onClick={() => { void props.controller.restore(definition) }}>{props.zh ? '恢复任务' : 'Restore'}</button>
-        : <><button type="button" data-paimind-scheduler-row-action data-emphasis="true" disabled={props.snapshot.saving || active || !actionAvailable} onClick={() => { void props.controller.runNow(definition) }}>{props.zh ? '立即运行' : 'Run now'}</button><button type="button" data-paimind-scheduler-row-action disabled={props.snapshot.saving} onClick={() => { props.onEdit(definition) }}>{props.zh ? '编辑' : 'Edit'}</button>{definition.status === 'enabled'
-          ? <button type="button" data-paimind-scheduler-row-action disabled={props.snapshot.saving} onClick={() => { void props.controller.setEnabled(definition, false) }}>{props.zh ? '暂停' : 'Pause'}</button>
-          : expiredOnce ? null : <button type="button" data-paimind-scheduler-row-action disabled={props.snapshot.saving} onClick={() => { void props.controller.setEnabled(definition, true) }}>{props.zh ? '恢复运行' : 'Resume'}</button>}</>}</div>
-    </li>
-  })}</ul>
+  const groupOrder: readonly ScheduleGroup[] = ['today', 'week', 'upcoming', 'paused', 'archived']
+  return <div data-paimind-scheduler-task-groups>{groupOrder.map(group => {
+    const definitions = props.definitions.filter(definition => scheduleGroup(definition) === group)
+    if (definitions.length === 0) return null
+    return <section key={group} data-paimind-scheduler-group>
+      <header data-paimind-scheduler-group-header><h3>{scheduleGroupLabel(group, props.zh)}</h3><span>{definitions.length}</span></header>
+      <ul data-paimind-scheduler-task-list>{definitions.map(definition => {
+        const action = actionById.get(definition.actionId)
+        const actionAvailable = action?.enabled === true
+        const latest = props.snapshot.runs.find(run => run.scheduleId === definition.scheduleId)
+        const active = props.snapshot.runs.some(run => run.scheduleId === definition.scheduleId && (run.status === 'queued' || run.status === 'running'))
+        const expiredOnce = definition.rule.kind === 'once' && Date.parse(definition.rule.at) <= Date.now()
+        const archived = definition.status === 'archived'
+        return <li key={definition.scheduleId} data-paimind-scheduler-task-card data-disabled={!actionAvailable || expiredOnce}>
+          <div data-paimind-scheduler-task-time><strong>{nextRunTime(definition, props.zh)}</strong><span>{definition.status === 'paused' ? (props.zh ? '暂停' : 'Paused') : definition.timeZone}</span></div>
+          <button type="button" aria-label={definition.name} data-paimind-scheduler-task-link onClick={() => { props.onOpen(definition) }}><strong>{definition.name}</strong><span data-paimind-scheduler-task-card-copy>{ruleLabel(definition.rule, props.zh)} · {action === undefined ? (props.zh ? '能力不可用' : 'Unavailable') : (props.zh ? action.nameZh : action.nameEn)}</span></button>
+          <div data-paimind-scheduler-task-result><span data-paimind-scheduler-badge data-status={active ? 'running' : definition.status}>{scheduleStatus(definition, latest, props.zh)}</span><small>{active ? (props.zh ? '执行中' : 'Running') : latest === undefined ? (props.zh ? '暂无结果' : 'No result') : runStatus(latest.status, props.zh)}</small></div>
+          <div data-paimind-scheduler-row-actions>{archived
+            ? <button type="button" data-paimind-scheduler-row-action data-emphasis="true" disabled={props.snapshot.saving} onClick={() => { void props.controller.restore(definition) }}>{props.zh ? '恢复任务' : 'Restore'}</button>
+            : <><button type="button" aria-label={props.zh ? '立即运行' : 'Run now'} title={props.zh ? '立即运行' : 'Run now'} data-paimind-scheduler-icon-action disabled={props.snapshot.saving || active || !actionAvailable} onClick={() => { void props.controller.runNow(definition) }}><PaimindPlayIcon aria-hidden="true" /></button><button type="button" aria-label={props.zh ? '编辑' : 'Edit'} title={props.zh ? '编辑' : 'Edit'} data-paimind-scheduler-icon-action disabled={props.snapshot.saving} onClick={() => { props.onEdit(definition) }}><PaimindEditIcon aria-hidden="true" /></button>{definition.status === 'enabled'
+              ? <button type="button" data-paimind-scheduler-row-action disabled={props.snapshot.saving} onClick={() => { void props.controller.setEnabled(definition, false) }}>{props.zh ? '暂停' : 'Pause'}</button>
+              : expiredOnce ? null : <button type="button" data-paimind-scheduler-row-action disabled={props.snapshot.saving} onClick={() => { void props.controller.setEnabled(definition, true) }}>{props.zh ? '恢复运行' : 'Resume'}</button>}</>}</div>
+        </li>
+      })}</ul>
+    </section>
+  })}</div>
 }
 
 function taskPrompt(definition: PaimindScheduleDefinition): string | undefined {
@@ -749,10 +821,6 @@ function SchedulerWorkspace(props: {
     if (filter === 'all' ? definition.status === 'archived' : definition.status !== filter) return false
     return normalizedQuery === '' || definition.name.toLocaleLowerCase().includes(normalizedQuery)
   })
-  const activeDefinitions = snapshot.definitions.filter(definition => definition.status !== 'archived')
-  const enabledCount = activeDefinitions.filter(definition => definition.status === 'enabled').length
-  const pausedCount = activeDefinitions.filter(definition => definition.status === 'paused').length
-  const runningCount = snapshot.runs.filter(run => run.status === 'queued' || run.status === 'running').length
   const saveEdit = (input: PaimindScheduleCreateInput): void => {
     const done = props.controller.update({ ...input, scheduleId: editing!.scheduleId, ifVersion: editing!.version })
     void done.then(ok => { if (ok) setEditing(null) })
@@ -764,7 +832,7 @@ function SchedulerWorkspace(props: {
     {(snapshot.loading || snapshot.error !== null || snapshot.notice !== null) && <div role="status" data-paimind-scheduler-status data-error={snapshot.error !== null}>{snapshot.error ?? (snapshot.loading ? (props.zh ? '正在刷新…' : 'Refreshing…') : noticeLabel(snapshot.notice!, props.zh))}</div>}
     {creating && <NewTaskEditor controller={props.controller} actions={snapshot.actions} saving={snapshot.saving} zh={props.zh} onCancel={() => { setCreating(false) }} onSave={saveCreate} {...(props.onLeave === undefined ? {} : { onLeave: props.onLeave })} />}
     {editing !== null && <section data-paimind-scheduler-editor><header data-paimind-scheduler-editor-header><button type="button" data-paimind-scheduler-secondary onClick={() => { setEditing(null) }}>{props.zh ? '返回' : 'Back'}</button><h3>{props.zh ? '编辑任务' : 'Edit task'}</h3></header><ScheduleForm key={editing.version} initial={editing} actions={snapshot.actions} saving={snapshot.saving} zh={props.zh} onCancel={() => { setEditing(null) }} onSave={saveEdit} /></section>}
-    {!creating && editing === null && selected === undefined && <><div data-paimind-scheduler-overview aria-label={props.zh ? '任务概览' : 'Task overview'}><div><strong>{enabledCount}</strong><span>{props.zh ? '自动运行' : 'Running automatically'}</span></div><div><strong>{pausedCount}</strong><span>{props.zh ? '已暂停' : 'Paused'}</span></div><div><strong>{runningCount}</strong><span>{props.zh ? '正在执行' : 'Running now'}</span></div></div><div data-paimind-scheduler-toolbar><div data-paimind-scheduler-search><input aria-label={props.zh ? '搜索平台定时任务' : 'Search platform scheduled tasks'} placeholder={props.zh ? '搜索任务名称' : 'Search task names'} value={query} onChange={event => { setQuery(event.target.value) }} /></div><button type="button" data-paimind-scheduler-primary disabled={snapshot.saving} onClick={() => { props.controller.clearFeedback(); setCreating(true) }}>{props.zh ? '新建任务' : 'New task'}</button></div>
+    {!creating && editing === null && selected === undefined && <><div data-paimind-scheduler-toolbar><label data-paimind-scheduler-search><PaimindSearchIcon aria-hidden="true" /><input aria-label={props.zh ? '搜索平台定时任务' : 'Search platform scheduled tasks'} placeholder={props.zh ? '搜索任务名称' : 'Search task names'} value={query} onChange={event => { setQuery(event.target.value) }} /></label><button type="button" data-paimind-scheduler-primary disabled={snapshot.saving} onClick={() => { props.controller.clearFeedback(); setCreating(true) }}><PaimindPlusIcon aria-hidden="true" />{props.zh ? '新建任务' : 'New task'}</button></div>
     <div role="tablist" aria-label={props.zh ? '任务状态筛选' : 'Task status filters'} data-paimind-scheduler-filters>{(['all', 'enabled', 'paused', 'archived'] as const).map(value => <button key={value} role="tab" type="button" aria-selected={filter === value} onClick={() => { setFilter(value) }}>{value === 'all' ? (props.zh ? '全部' : 'All') : value === 'enabled' ? (props.zh ? '已启用' : 'Enabled') : value === 'paused' ? (props.zh ? '已暂停' : 'Paused') : (props.zh ? '已归档' : 'Archived')}</button>)}</div>
     <TaskTable definitions={definitions} snapshot={snapshot} controller={props.controller} zh={props.zh} onOpen={definition => { props.controller.clearFeedback(); setSelectedId(definition.scheduleId) }} onEdit={definition => { props.controller.clearFeedback(); setEditing(definition) }} /></>}
     {!creating && editing === null && selected !== undefined && <TaskDetail definition={selected} snapshot={snapshot} controller={props.controller} zh={props.zh} onBack={() => { setSelectedId(null); setEditing(null) }} onEdit={() => { props.controller.clearFeedback(); setEditing(selected) }} />}

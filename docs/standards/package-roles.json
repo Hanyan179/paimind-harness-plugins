@@ -9,6 +9,7 @@
     { "name": "@paimind/branding", "path": "packages/branding", "role": "client-plugin" },
     { "name": "@paimind/category-analysis-adapter", "path": "packages/category-analysis-adapter", "role": "headless-plugin" },
     { "name": "@paimind/conversation-artifact-renderer", "path": "packages/conversation-artifact-renderer", "role": "client-plugin" },
+    { "name": "@paimind/conversation-title", "path": "packages/conversation-title", "role": "client-plugin" },
     { "name": "@paimind/contracts", "path": "packages/contracts", "role": "shared-support" },
     { "name": "@paimind/developer-resources", "path": "packages/developer-resources", "role": "client-plugin" },
     { "name": "@paimind/extension-center", "path": "packages/extension-center", "role": "client-plugin" },

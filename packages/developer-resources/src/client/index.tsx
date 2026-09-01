@@ -67,7 +67,7 @@ const STYLE = `
 [data-paimind-developer-state] p{margin:0 0 8px}
 @media(max-width:900px){[data-paimind-developer-summary]{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:760px){[data-paimind-developer-resources]{padding:16px 12px}[data-paimind-developer-summary]{grid-template-columns:repeat(2,minmax(0,1fr))}[data-paimind-developer-toolbar]{display:grid}[data-paimind-developer-toolbar] button{justify-self:start}}
-@media(max-width:600px){[role='dialog'][aria-modal='true']:has([data-paimind-developer-resources]){flex-direction:column!important}[role='dialog'][aria-modal='true']:has([data-paimind-developer-resources])>nav{width:100%!important;max-width:none!important;max-height:96px;box-sizing:border-box;padding:10px 12px!important;border-right:0!important;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.16));overflow:hidden}[role='dialog'][aria-modal='true']:has([data-paimind-developer-resources])>nav>:first-child{display:none!important}[role='dialog'][aria-modal='true']:has([data-paimind-developer-resources])>nav>:last-child{display:flex!important;flex-direction:row!important;gap:6px;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin}[role='dialog'][aria-modal='true']:has([data-paimind-developer-resources])>nav>:last-child>*{flex:0 0 auto}[role='dialog'][aria-modal='true']:has([data-paimind-developer-resources])>nav+*{width:100%!important;min-width:0!important;flex:1 1 auto!important}[data-paimind-developer-tabs]{flex-wrap:wrap;overflow:visible}}
+@media(max-width:600px){[data-paimind-developer-tabs]{flex-wrap:wrap;overflow:visible}}
 `
 
 function installStyle(): () => void {
