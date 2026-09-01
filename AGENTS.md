@@ -23,6 +23,14 @@
 - 用户可见能力必须完成定向测试、真实 Harness 组合和浏览器预验收，并保留验收证据。
 - 不提交凭证、本地 Harness Home、生成的构建产物或浏览器截图。
 
+## Product development model
+
+- 本仓库是 PAIMind Product Line（产品线）的长期开发基线；新能力、既有能力优化、Adapter（适配器）与组合验收都在这里完成。Enterprise Line（企业线）只有在用户明确恢复时才进入当前交付范围。
+- 新需求先判断是新增 Plugin（插件）、扩展既有 Plugin，还是只需修改共享 Adapter；不因页面相近就把不同 Domain（领域）的业务状态合并到一个包。
+- 每个用户入口、可写状态、Runtime Service（运行时服务）与持久化 Namespace（命名空间）必须有唯一 Owner（所有者）。跨包复用通过 Contract（契约）和 Service（服务）完成，不直接读写其他包的内部状态。
+- Harness 没有公开的稳定能力必须通过 `@paimind/harness-compat` 隔离；不允许多个功能包各自实现同一组 Harness DOM（页面结构）或版本兼容逻辑。
+- 新能力进入开发前按 [`docs/plans/plugin-product-roadmap.md`](docs/plans/plugin-product-roadmap.md) 完成 Ownership（所有权）与 Conflict Review（冲突评审），完成后再进入真实 Harness 组合和浏览器验收。
+
 ## Governance sources
 
 - [`docs/standards/plugin-authoring.md`](docs/standards/plugin-authoring.md) 是本仓库唯一的插件编写规范，定义 Package Role、Manifest、入口、依赖、发布内容、生命周期、失败与验证规则；其他文档只引用，不复制这些规则。
@@ -30,3 +38,4 @@
 - [`docs/migration/ledger.md`](docs/migration/ledger.md) 只记录迁移状态、历史证据和验收结论，不作为当前编写规范或版本来源。
 - [`docs/compatibility/matrix.md`](docs/compatibility/matrix.md) 是 Harness、Cordis、Better Sidebar、Office Viewer、Node.js 与 pnpm 组合的唯一版本来源。
 - [`docs/standards/package-roles.json`](docs/standards/package-roles.json) 是 Package Identity、目录和角色的机器可读登记；数量只作为当前验收快照，长期门禁验证角色、消费者和依赖图可达性，不固定包数。
+- [`docs/plans/plugin-product-roadmap.md`](docs/plans/plugin-product-roadmap.md) 记录 Product Line（产品线）基线、后续能力扩展顺序与跨插件冲突门禁；它不复制插件编写规范。

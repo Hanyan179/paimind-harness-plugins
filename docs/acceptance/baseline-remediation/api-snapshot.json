@@ -97,7 +97,7 @@
       "path": "packages/extension-center",
       "contractSha256": "b2cd9a9155d856bf0b14ee6c2c624f19c0f39a62571cee60bdf7dfca778e4c8c",
       "runtimeExportCount": 6,
-      "runtimeExportSha256": "731af429a8c43371c9177ee3d92b254eb10d82e9c69e15ea4dcdc3be8289f2dc",
+      "runtimeExportSha256": "5c5c03361949c13e209b4e08b2b8ffae935c329b2368612ad5a53dd1e58da72c",
       "declarationCount": 7,
       "declarationSha256": "8fbbcda62a921bbe2b606408d43358a871a16ce44aa6e3db0dc1a27cdea9c9e5",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -145,22 +145,22 @@
       "runtimeExportSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "declarationCount": 0,
       "declarationSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "bundleFileSha256": "d407485fe7a9b4ed3f0e92430bd306185f5254fb1f7c63c058e8f1f30b5fa1c7"
+      "bundleFileSha256": "20dbe8adff10b4e93aeb342c6e179d19f9789820507825f1a98fa44d662287cd"
     },
     "@paimind/harness-compat": {
       "path": "packages/harness-compat",
       "contractSha256": "f3ca6c9f62cd00b4ddcf6918c6a917d2d6d67265af445a3f4ffc0dba4fb22dfd",
       "runtimeExportCount": 5,
-      "runtimeExportSha256": "b17a3adc67c67849d7f9fd540db588d2187e37f5fa9e0a89de80a7f17962b339",
+      "runtimeExportSha256": "9be308dac7f85320c04c9f4a38495b3eb8c6a65bbbac2326b19762177ba8b966",
       "declarationCount": 5,
-      "declarationSha256": "0d45413b7cf12c25d6bfb6da68b7e2e07a08ecd6890bf6c47951861569dd64dc",
+      "declarationSha256": "2e696c0998131aec2e02de1a77837a75c2a3b88ff2dc9706bc2b27c17016c618",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@paimind/notifications": {
       "path": "packages/notifications",
       "contractSha256": "faeebf43bec910911088eb0f36e4db6054f607f547d2c29a118c65fdd974a0f2",
       "runtimeExportCount": 5,
-      "runtimeExportSha256": "efaca3c18e6225888cbc7a502af20e3b043755bb4af7bfb32777e619e8359be9",
+      "runtimeExportSha256": "4d14dc640a5a9c1f6adc5357d96503826487720c58135a2c138fc01c819add43",
       "declarationCount": 5,
       "declarationSha256": "3304e7fd237637b612741b15337076d3b287b24dbd55569da392572bea8deb11",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -241,7 +241,7 @@
       "path": "packages/scheduler",
       "contractSha256": "ec8ab0a7a3ec1adfbcbb22d99e050bba16a205bfbaaa5ec43fa9f8a80d8cceb7",
       "runtimeExportCount": 7,
-      "runtimeExportSha256": "b3c042601ef5c5f2d261a3dba1b8fd4f416e397de32b12c6aef62018f9ee00b9",
+      "runtimeExportSha256": "55b30e8ea63d71595bada982657c029b7c1cf2b8edb7131e8ad378d7d3989bbd",
       "declarationCount": 8,
       "declarationSha256": "841d0da0d32eb669b204b349483d3a29b0643b9c7511120682faa3e992a5b30a",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -322,7 +322,7 @@
       "path": "packages/visual-experience",
       "contractSha256": "8165bad6d7b11315c5b4ec5e09b96d71428127168aa69b16e4f7cd0acd3a0b26",
       "runtimeExportCount": 4,
-      "runtimeExportSha256": "051c8d05fc0233fd1debd99f8fd9533caa3d2dbaad045e390bebb0bd6789dc87",
+      "runtimeExportSha256": "1fef08d1bfe639f24a76c5aa66d63dbec4c23878522184220cc5eff1408300ef",
       "declarationCount": 5,
       "declarationSha256": "3a4487caa7fb1d2d239314a4e36499d2773fa671825ce767be6ef78a6a015718",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"

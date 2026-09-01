@@ -866,6 +866,84 @@ export interface HarnessAgentPresetSettingsNavigation {
   dispose(): void
 }
 
+export interface HarnessSettingsNavigationIconDefinition {
+  readonly id: string
+  readonly mount: (container: HTMLElement) => () => void
+}
+
+/**
+ * Reversibly replaces native fallback Settings icons for exact contributed
+ * sections. Harness does not currently expose an icon field on
+ * `settings.section`, so all DOM coupling stays inside this versioned adapter.
+ */
+export function installHarnessSettingsNavigationIcons(
+  slots: HarnessInspectableSlotRegistry,
+  definitions: readonly HarnessSettingsNavigationIconDefinition[],
+  doc: Document = document,
+): () => void {
+  const decorated = new Map<string, {
+    readonly button: HTMLButtonElement
+    readonly nativeIcon: SVGElement | null
+    readonly nativeDisplay: string
+    readonly nativeDisplayPriority: string
+    readonly container: HTMLElement
+    readonly unmount: () => void
+  }>()
+
+  const restore = (id: string): void => {
+    const current = decorated.get(id)
+    if (current === undefined) return
+    current.unmount()
+    current.container.remove()
+    if (current.nativeIcon !== null) {
+      if (current.nativeDisplay === '') current.nativeIcon.style.removeProperty('display')
+      else current.nativeIcon.style.setProperty('display', current.nativeDisplay, current.nativeDisplayPriority)
+    }
+    delete current.button.dataset.paimindSettingsNavigationIcon
+    decorated.delete(id)
+  }
+
+  const refresh = (): void => {
+    const dialog = doc.querySelector<HTMLElement>('[role="dialog"]')
+    for (const definition of definitions) {
+      const entries = slots.entries('settings.section').filter(entry => entry.options.id === definition.id)
+      const label = entries.length === 1 ? resolveHarnessSettingsLabel(entries[0]!) : undefined
+      const matches = label === undefined || dialog === null ? [] : [...dialog.querySelectorAll<HTMLButtonElement>('nav button')]
+        .filter(button => button.textContent?.trim() === label)
+      const button = matches.length === 1 ? matches[0]! : null
+      const current = decorated.get(definition.id)
+      if (current?.button === button && current.container.isConnected) continue
+      restore(definition.id)
+      if (button === null) continue
+      const nativeIcon = button.querySelector<SVGElement>('svg')
+      const nativeDisplay = nativeIcon?.style.getPropertyValue('display') ?? ''
+      const nativeDisplayPriority = nativeIcon?.style.getPropertyPriority('display') ?? ''
+      if (nativeIcon !== null) nativeIcon.style.setProperty('display', 'none', 'important')
+      const container = doc.createElement('span')
+      container.dataset.paimindSettingsNavigationIcon = definition.id
+      container.setAttribute('aria-hidden', 'true')
+      container.style.display = 'inline-grid'
+      container.style.placeItems = 'center'
+      container.style.flex = '0 0 auto'
+      button.prepend(container)
+      const unmount = definition.mount(container)
+      button.dataset.paimindSettingsNavigationIcon = definition.id
+      decorated.set(definition.id, { button, nativeIcon, nativeDisplay, nativeDisplayPriority, container, unmount })
+    }
+  }
+
+  const Observer = doc.defaultView?.MutationObserver ?? MutationObserver
+  const observer = new Observer(refresh)
+  observer.observe(doc.documentElement, { childList: true, subtree: true })
+  const offSlots = slots.subscribe('settings.section', refresh)
+  refresh()
+  return () => {
+    observer.disconnect()
+    offSlots()
+    for (const id of [...decorated.keys()]) restore(id)
+  }
+}
+
 function resolveHarnessSettingsLabel(entry: HarnessInspectableSlotEntry): string | undefined {
   const raw = entry.options.label
   try {

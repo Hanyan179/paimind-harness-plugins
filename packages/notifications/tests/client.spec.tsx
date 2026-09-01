@@ -150,7 +150,7 @@ describe('FP12 Notification Center client', () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null)
     render(<><NotificationTrigger wide controller={f.controller} locale={locale('zh')} /><NotificationOverlay controller={f.controller} locale={locale('zh')} /></>)
     fireEvent.click(screen.getByRole('button', { name: '打开通知中心' }))
-    expect(await screen.findByText('1 条未读；详情按需展开。')).toBeInTheDocument()
+    expect(await screen.findByText('1 条未读 · 共 1 条消息')).toBeInTheDocument()
     expect(screen.getByText('账单系统')).toBeInTheDocument()
     expect(screen.getByText('已完成')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '查看详情' }))

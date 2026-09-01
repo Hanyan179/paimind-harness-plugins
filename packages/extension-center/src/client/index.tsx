@@ -160,7 +160,7 @@ const STYLE = `
 [data-paimind-extension-header]{display:grid;gap:6px;margin-bottom:14px}
 [data-paimind-extension-header] h2{margin:0;font-size:20px;line-height:28px;font-weight:680;letter-spacing:-.02em}
 [data-paimind-extension-header] p{margin:0;max-width:680px;color:var(--extension-muted);font-size:13px;line-height:20px}
-[data-paimind-extension-note]{display:flex;gap:9px;align-items:flex-start;margin:0 0 14px;padding:9px 11px;border:1px solid var(--extension-line);border-radius:10px;background:var(--extension-soft);color:var(--extension-muted);font-size:12px;line-height:18px}
+[data-paimind-extension-note]{display:flex;gap:9px;align-items:flex-start;margin:12px 0 0;padding:9px 11px;border:1px solid var(--extension-line);border-radius:10px;background:var(--extension-soft);color:var(--extension-muted);font-size:12px;line-height:18px}
 [data-paimind-extension-note] svg{flex:none;margin-top:1px;color:var(--extension-accent)}
 [data-paimind-feature-pack-section]{display:grid;gap:10px;margin:0 0 18px}
 [data-paimind-feature-pack-heading]{display:flex;align-items:end;justify-content:space-between;gap:12px}
@@ -186,9 +186,17 @@ const STYLE = `
 [data-paimind-feature-capability] strong{display:block;font-size:11px;line-height:17px}
 [data-paimind-feature-capability] span{display:block;color:var(--extension-faint);font-size:10px;line-height:15px}
 [data-paimind-feature-pack-feedback]{min-height:17px;color:var(--extension-muted);font-size:11px;line-height:17px}
-[data-paimind-technical-catalog]{border-top:1px solid var(--extension-line);padding-top:12px}
-[data-paimind-technical-catalog]>summary{margin-bottom:12px;color:var(--extension-muted);font-size:12px;line-height:18px;cursor:pointer}
-[data-paimind-extension-summary]{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:hidden;margin-bottom:14px;border:1px solid var(--extension-line);border-radius:12px;background:color-mix(in srgb,var(--extension-surface) 90%,transparent)}
+[data-paimind-technical-catalog]{overflow:hidden;border:1px solid var(--extension-line);border-radius:14px;background:color-mix(in srgb,var(--extension-surface) 94%,transparent)}
+[data-paimind-technical-catalog]>summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;padding:14px 16px;color:var(--extension-muted);cursor:pointer;list-style:none}
+[data-paimind-technical-catalog]>summary::-webkit-details-marker{display:none}
+[data-paimind-technical-catalog]>summary:hover{background:var(--extension-soft)}
+[data-paimind-technical-catalog]>summary>span:first-child{display:grid;gap:2px}
+[data-paimind-technical-catalog]>summary strong{color:var(--extension-ink);font-size:14px;line-height:20px}
+[data-paimind-technical-catalog]>summary small{font-size:11px;line-height:17px}
+[data-paimind-technical-catalog]>summary svg{color:var(--extension-faint);transition:transform 160ms ease}
+[data-paimind-technical-catalog][open]>summary svg{transform:rotate(180deg)}
+[data-paimind-technical-catalog-body]{padding:0 16px 16px;border-top:1px solid var(--extension-line)}
+[data-paimind-extension-summary]{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:hidden;margin:14px 0;border:1px solid var(--extension-line);border-radius:12px;background:color-mix(in srgb,var(--extension-surface) 90%,transparent)}
 [data-paimind-extension-summary] div{min-width:0;padding:10px 12px;border-right:1px solid var(--extension-line)}
 [data-paimind-extension-summary] div:last-child{border-right:0}
 [data-paimind-extension-summary] strong{display:block;font-size:16px;line-height:20px;font-weight:680;font-variant-numeric:tabular-nums}
@@ -333,6 +341,7 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<PaimindExtensionCategory | 'all'>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [technicalOpen, setTechnicalOpen] = useState(false)
   const [request, setRequest] = useState(0)
   const [inventory, setInventory] = useState<InventoryState>({ status: 'loading' })
   const [featurePacks, setFeaturePacks] = useState<FeaturePackState>({ status: 'loading' })
@@ -415,6 +424,9 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
     }
   }
   const attentionCount = attentionPackageNames.size
+  const enabledPackCount = featurePacks.status === 'ready'
+    ? featurePacks.view.packs.filter(pack => pack.desiredEnabled ?? pack.enabled).length
+    : 0
 
   useEffect(() => {
     if (expandedId !== null && !visible.some(extension => extension.id === expandedId)) setExpandedId(null)
@@ -464,11 +476,10 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
   return <section data-paimind-extension-center aria-label={zh ? 'PAIMind 扩展中心' : 'PAIMind Extension Center'}>
     <header data-paimind-extension-header>
       <h2>{zh ? 'PAIMind 扩展中心' : 'PAIMind Extension Center'}</h2>
-      <p>{zh ? '按产品功能包启用所需能力；内部技术模块继续独立测试与故障隔离。' : 'Enable the Product Feature Packs you need while internal modules remain independently tested and isolated.'}</p>
+      <p>{zh ? '按业务场景管理产品功能；技术模块、加载状态与兼容性信息收纳在高级明细中。' : 'Manage product features by business scenario. Module, loading, and compatibility details stay in Advanced details.'}</p>
     </header>
-    <div data-paimind-extension-note role="note"><PaimindSettingsIcon aria-hidden="true" /><span>{zh ? '功能包开关直接调用 Harness Loader，并保存到 Harness Settings；安装、卸载和版本升级仍由 Harness Plugin Registry 管理。' : 'Feature Pack switches call the Harness Loader directly and persist in Harness Settings. Installation, removal, and upgrades remain owned by the Harness Plugin Registry.'}</span></div>
     <section data-paimind-feature-pack-section aria-label={zh ? '产品功能包' : 'Product Feature Packs'}>
-      <header data-paimind-feature-pack-heading><div><h3>{zh ? '产品功能包' : 'Product Feature Packs'}</h3><p>{zh ? '一个功能包对应一项可理解、可关闭的产品能力集合。' : 'Each Feature Pack is one understandable, switchable product capability set.'}</p></div><span>{featurePacks.status === 'ready' ? featurePacks.view.packs.length : '—'}</span></header>
+      <header data-paimind-feature-pack-heading><div><h3>{zh ? '产品功能包' : 'Product Feature Packs'}</h3><p>{zh ? '一个开关控制一组用户可感知的能力。依赖关系由平台自动处理。' : 'One switch controls one user-facing capability set. The platform handles dependencies.'}</p></div><span>{featurePacks.status === 'ready' ? (zh ? `${enabledPackCount} / ${featurePacks.view.packs.length} 已启用` : `${enabledPackCount} of ${featurePacks.view.packs.length} enabled`) : '—'}</span></header>
       {featurePacks.status === 'loading' && <div data-paimind-extension-status aria-busy="true">{zh ? '正在读取功能包状态…' : 'Reading Feature Pack state…'}</div>}
       {featurePacks.status === 'error' && <div data-paimind-extension-status role="alert">{zh ? '暂时无法读取功能包状态。' : 'Feature Pack state is temporarily unavailable.'}</div>}
       {featurePacks.status === 'unavailable' && <div data-paimind-extension-status role="note">{zh ? '当前组合尚未提供功能包控制接口；技术模块明细仍可查看。' : 'This composition does not expose Feature Pack controls yet. Technical module details remain available.'}</div>}
@@ -510,8 +521,11 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
       })}</div>}
       {featurePackFeedback !== '' && <div data-paimind-feature-pack-feedback role="status">{featurePackFeedback}</div>}
     </section>
-    <section data-paimind-technical-catalog aria-label={zh ? '技术模块明细' : 'Technical module details'}>
-      <h3>{zh ? '技术模块明细' : 'Technical module details'}</h3>
+    <details data-paimind-technical-catalog open={technicalOpen} onToggle={event => { setTechnicalOpen(event.currentTarget.open) }}>
+      <summary><span><strong>{zh ? '高级明细' : 'Advanced details'}</strong><small>{inventory.status === 'ready'
+        ? (zh ? `${extensions.length} 个模块 · ${attentionCount} 项需关注` : `${extensions.length} modules · ${attentionCount} need attention`)
+        : (zh ? '模块清单、加载状态与兼容性诊断' : 'Module catalog, loading state, and compatibility diagnostics')}</small></span><PaimindChevronDownIcon aria-hidden="true" /></summary>
+      <div data-paimind-technical-catalog-body>
     <div data-paimind-extension-summary aria-label={zh ? '扩展概览' : 'Extension overview'}>
       <div><strong>{extensions.length}</strong><span>{zh ? '产品能力' : 'Product capabilities'}</span></div>
       <div><strong>{inventory.status === 'ready' ? activeCount : '—'}</strong><span>{zh ? 'Harness 已加载' : 'Active in Harness'}</span></div>
@@ -564,7 +578,9 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
         })}</div>
       </section>
     })}</div>}
-    </section>
+    <div data-paimind-extension-note role="note"><PaimindSettingsIcon aria-hidden="true" /><span>{zh ? '功能包开关调用 Harness Loader 并保存到 Harness Settings；安装、卸载和版本升级仍由 Harness Plugin Registry 统一管理。' : 'Feature Pack switches call the Harness Loader and persist to Harness Settings. Installation, removal, and upgrades remain managed by the Harness Plugin Registry.'}</span></div>
+    </div>
+    </details>
   </section>
 }
 

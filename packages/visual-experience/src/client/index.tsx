@@ -7,8 +7,10 @@ import {
   type CSSProperties,
 } from 'react'
 import { createPortal } from 'react-dom'
+import { createRoot } from 'react-dom/client'
 import {
   contributePaimindExtension,
+  installHarnessSettingsNavigationIcons,
   resolveHarnessSettingsNamespace,
   resolveHarnessAgentPresetSeatControl,
   type HarnessAgentChoice,
@@ -37,7 +39,11 @@ import {
   PaimindCheckIcon,
   PaimindChevronDownIcon,
   PaimindChevronRightIcon,
+  PaimindDeveloperIcon,
+  PaimindExtensionIcon,
+  PaimindPersonalizationIcon,
   PaimindPlusIcon,
+  PaimindSchedulerIcon,
 } from '@paimind/harness-compat/client-icons'
 import HERO_LIGHT from '../../assets/hero-ridge-light.webp'
 import HERO_DARK from '../../assets/hero-ridge-dark.webp'
@@ -1254,6 +1260,12 @@ export function apply(ctx: VisualExperienceClientContext): void {
   const mode = new PaimindExperienceModeController(scope)
   ctx.effect(installStyle, 'paimind-visual-experience: style')
   ctx.effect(() => installHarnessSettingsTriggerAccessibility(document), 'paimind-visual-experience: Settings trigger accessibility')
+  ctx.effect(() => installHarnessSettingsNavigationIcons(ctx.slots, [
+    { id: 'paimind-extensions', mount(container) { const root = createRoot(container); root.render(<PaimindExtensionIcon />); return () => { root.unmount() } } },
+    { id: 'paimind-platform-scheduler', mount(container) { const root = createRoot(container); root.render(<PaimindSchedulerIcon />); return () => { root.unmount() } } },
+    { id: 'paimind-user-settings', mount(container) { const root = createRoot(container); root.render(<PaimindPersonalizationIcon />); return () => { root.unmount() } } },
+    { id: 'paimind-developer-resources', mount(container) { const root = createRoot(container); root.render(<PaimindDeveloperIcon />); return () => { root.unmount() } } },
+  ], document), 'paimind-visual-experience: Settings navigation icons')
   ctx.effect(() => () => { mode.dispose() }, 'paimind-visual-experience: mode controller')
   ctx.effect(() => installExperienceRuntime(ctx, mode), 'paimind-visual-experience: reversible runtime')
   ctx.effect(() => installAgentExperience(ctx, mode), 'paimind-visual-experience: native Agent bridge')

@@ -225,7 +225,7 @@ describe('conversational Scheduled Tasks client', () => {
     const f = fixture()
     render(<SchedulerSettingsEntry controller={f.controller} locale={locale('zh-CN')} />)
     const task = await screen.findByRole('button', { name: 'Weekly project brief' })
-    const row = task.closest('tr')
+    const row = task.closest('[data-paimind-scheduler-task-card]')
     expect(row).not.toBeNull()
     expect(row).toHaveTextContent('已启用')
     expect(row).not.toHaveTextContent('调度中')

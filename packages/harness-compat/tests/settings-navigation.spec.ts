@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   installHarnessAgentPresetSettingsNavigation,
+  installHarnessSettingsNavigationIcons,
   resolveHarnessAgentPresetSeatControl,
   type HarnessInspectableSlotRegistry,
 } from '../src/index.js'
@@ -69,6 +70,28 @@ describe('Harness native Agent Presets settings navigation', () => {
     expect(document.querySelector<HTMLButtonElement>('nav button')?.hidden).toBe(true)
 
     adapter.dispose()
+  })
+})
+
+describe('Harness contributed Settings navigation icons', () => {
+  it('decorates exact Settings sections and restores the native fallback icon', () => {
+    const button = settingsRow('扩展中心')
+    const native = button.querySelector('svg')!
+    const registry = slots('扩展中心', 'paimind-extensions')
+    const unmount = vi.fn()
+    const dispose = installHarnessSettingsNavigationIcons(registry, [{
+      id: 'paimind-extensions',
+      mount(container) { container.textContent = 'plugin-icon'; return unmount },
+    }], document)
+
+    expect(native.style.getPropertyValue('display')).toBe('none')
+    expect(button.dataset.paimindSettingsNavigationIcon).toBe('paimind-extensions')
+    expect(button.querySelector('[data-paimind-settings-navigation-icon]')).toHaveTextContent('plugin-icon')
+
+    dispose()
+    expect(unmount).toHaveBeenCalledOnce()
+    expect(native.style.getPropertyValue('display')).toBe('')
+    expect(button.dataset.paimindSettingsNavigationIcon).toBeUndefined()
   })
 })
 
