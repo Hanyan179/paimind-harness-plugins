@@ -116,6 +116,9 @@ for (const packId of ['experience', 'agents', 'content', 'proposal', 'automation
 for (const marker of ['paimind:capability:runtime-orbs', 'paimind-capability-runtime-orbs']) {
   if (!featurePackCatalog.includes(marker)) failures.push(`@paimind/extension-center: nested capability is missing ${marker}`)
 }
+if (!/id: paimind-capability-runtime-orbs\s+name: cordis:group\s+group: true\s+disabled: true/u.test(patch)) {
+  failures.push('@paimind/extension-center: nested capability must remain boot-disabled until Feature Pack reconciliation')
+}
 
 const brandingClient = await readFile(resolve(packagesRoot, 'branding/src/client/index.tsx'), 'utf8')
 const brandingCompat = await readFile(resolve(packagesRoot, 'harness-compat/src/index.ts'), 'utf8')

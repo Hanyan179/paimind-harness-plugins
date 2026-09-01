@@ -32,6 +32,7 @@
         - id: paimind-capability-runtime-orbs
           name: cordis:group
           group: true
+          disabled: true
           config:
             - id: paimind-runtime-orbs-invariant
               name: '@paimind/runtime-orbs/invariant'
