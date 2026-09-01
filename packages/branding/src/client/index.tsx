@@ -4,7 +4,6 @@ import {
   contributePaimindExtension,
   installHarnessDocumentBranding,
   locateHarnessBrandSeats,
-  type HarnessBrandSeat,
   type HarnessBrandSeats,
   type HarnessHeroBrandSeat,
   type PaimindClientContext,
@@ -25,14 +24,10 @@ const MANIFEST_HREF = `data:application/manifest+json,${encodeURIComponent(JSON.
 }))}`
 
 const STYLE = `
-[data-paimind-native-brand-art]{display:none!important}
 [data-paimind-native-hero-brand]{display:none!important}
-[data-paimind-brand-seat]{position:relative}
 [data-paimind-paramont-brand]{box-sizing:border-box;display:inline-flex;align-items:center;pointer-events:none;color:inherit}
-[data-paimind-paramont-brand='wordmark']{width:182px;height:24px;gap:7px;white-space:nowrap}
 [data-paimind-paramont-brand='name']{flex:1 1 158px;width:158px;min-width:0;max-width:100%;height:24px;gap:6px;overflow:hidden;white-space:nowrap}
 [data-paimind-paramont-brand='name'] [data-paimind-paramont-wordmark]{flex:1 1 103px;min-width:0;max-width:103px}
-[data-paimind-paramont-brand='compact']{width:24px;height:24px;justify-content:center}
 [data-paimind-paramont-mark]{display:block;flex:none;width:24px;height:24px;color:inherit}
 [data-paimind-paramont-slot-mark]{display:inline-flex;align-items:center;justify-content:center;overflow:visible;color:inherit}
 [data-paimind-paramont-slot-mark] [data-paimind-paramont-mark]{width:100%;height:100%}
@@ -64,14 +59,6 @@ function ParamontOfficialWordmark(): JSX.Element {
   </svg>
 }
 
-function ParamontWordmark(): JSX.Element {
-  return <span data-paimind-paramont-brand="wordmark" aria-label={PRODUCT_NAME}>
-    <ParamontMark />
-    <ParamontOfficialWordmark />
-    <span data-paimind-paramont-harness>HARNESS</span>
-  </span>
-}
-
 function ParamontSidebarName(): JSX.Element {
   return <span data-paimind-paramont-brand="name" aria-label={PRODUCT_NAME}>
     <ParamontOfficialWordmark />
@@ -88,20 +75,12 @@ function ParamontBrandMark({ size = 24, className }: { readonly size?: number; r
   ><ParamontMark /></span>
 }
 
-function ParamontCompactMark(): JSX.Element {
-  return <span data-paimind-paramont-brand="compact" aria-label={PRODUCT_NAME}><ParamontMark /></span>
-}
-
 function ParamontHero({ locale }: { readonly locale: HarnessHeroBrandSeat['locale'] }): JSX.Element {
   const headline = locale === 'zh' ? '共攀高山之巅' : 'Reach New Heights'
   return <>
     <span data-paimind-paramont-hero-mark aria-hidden="true"><ParamontMark /></span>
     <span data-paimind-paramont-hero-headline>{headline}</span>
   </>
-}
-
-function sameSeat(left: HarnessBrandSeat | null, right: HarnessBrandSeat | null): boolean {
-  return left?.host === right?.host && left?.nativeArt === right?.nativeArt
 }
 
 function sameSeats(left: HarnessBrandSeats, right: HarnessBrandSeats): boolean {
@@ -125,18 +104,6 @@ function useHarnessBrandSeats(): HarnessBrandSeats {
     return () => { observer.disconnect() }
   }, [])
   return seats
-}
-
-function useSeatMarker(seat: HarnessBrandSeat | null, kind: 'wordmark' | 'compact'): void {
-  useEffect(() => {
-    if (seat === null) return
-    seat.host.dataset.paimindBrandSeat = kind
-    seat.nativeArt.dataset.paimindNativeBrandArt = kind
-    return () => {
-      delete seat.host.dataset.paimindBrandSeat
-      delete seat.nativeArt.dataset.paimindNativeBrandArt
-    }
-  }, [seat, kind])
 }
 
 function useHeroSeatMarker(seat: HarnessHeroBrandSeat | null): void {

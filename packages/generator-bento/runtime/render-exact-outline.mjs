@@ -55,13 +55,19 @@ async function verifySourceHashes(outline) {
 async function main() {
   const input = args(process.argv.slice(2))
   const outlinePath = workspacePath(input.get('outline'), 'outline')
-  const factSetPath = workspacePath(input.get('fact-set'), 'fact-set')
+  const factSetInput = input.get('fact-set')
+  const factSetPath = factSetInput === undefined ? undefined : workspacePath(factSetInput, 'fact-set')
   const outputPath = workspacePath(input.get('output'), 'output')
   const factSetArtifactId = input.get('fact-set-artifact-id')
   const outlineArtifactId = input.get('outline-artifact-id')
   const outline = definePresentationOutline(JSON.parse(await readFile(outlinePath, 'utf8')))
-  const factSet = definePresentationFactSet(JSON.parse(await readFile(factSetPath, 'utf8')))
-  assertBoundToFactSet(outline, factSet, factSetArtifactId)
+  if ((factSetPath === undefined) !== (factSetArtifactId === undefined)) throw new Error('Fact Set path and Artifact ID must be provided together')
+  if (factSetPath !== undefined) {
+    const factSet = definePresentationFactSet(JSON.parse(await readFile(factSetPath, 'utf8')))
+    assertBoundToFactSet(outline, factSet, factSetArtifactId)
+  } else if (outline.factSetArtifactId !== undefined) {
+    throw new Error('a Fact Set-bound outline requires exact Fact Set Artifact resolution')
+  }
   await verifySourceHashes(outline)
   const trace = traceFromPresentationOutline(outline)
   const validation = validatePresentationTraceability(outline, true)

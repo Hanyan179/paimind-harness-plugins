@@ -79,6 +79,33 @@ interface DefinitionAgentPromptInput extends PaimindScheduleActionInput {
   readonly agentPreset?: string
 }
 
+interface DefinitionWorkspaceContextInput extends PaimindScheduleActionInput {
+  readonly kind: 'workspace-context'
+  readonly version: 1
+  readonly cwd: string
+  readonly agentPreset?: string
+}
+
+function definitionWorkspaceContextInput(
+  input: PaimindScheduleActionInput | undefined,
+): DefinitionWorkspaceContextInput {
+  if (input?.kind !== 'workspace-context' || input.version !== 1) {
+    throw new Error('Workspace scheduled task requires workspace-context actionInput version 1')
+  }
+  const cwd = input.cwd
+  const agentPreset = input.agentPreset
+  if (typeof cwd !== 'string' || cwd.trim() === '' || cwd.length > 2_000) {
+    throw new Error('Workspace scheduled task cwd is invalid')
+  }
+  if (agentPreset !== undefined && (typeof agentPreset !== 'string' || agentPreset.trim() === '' || agentPreset.length > 160)) {
+    throw new Error('Workspace scheduled task Agent Preset is invalid')
+  }
+  return Object.freeze({
+    kind: 'workspace-context', version: 1, cwd: cwd.trim(),
+    ...(agentPreset === undefined ? {} : { agentPreset: agentPreset.trim() }),
+  })
+}
+
 function definitionAgentPromptInput(input: PaimindScheduleActionInput | undefined): DefinitionAgentPromptInput {
   if (input?.kind !== 'agent-prompt' || input.version !== 1 || typeof input.prompt !== 'string') {
     throw new Error('Personal scheduled task requires agent-prompt actionInput version 1')
@@ -104,10 +131,19 @@ function executionInput(
   input: PaimindHarnessScheduleActionRegistration,
   request: PaimindScheduleTriggerRequest,
 ): { readonly prompt: string; readonly cwd?: string; readonly agentPreset?: string } {
-  if (input.prompt !== undefined) return {
-    prompt: input.prompt,
-    ...(input.cwd === undefined ? {} : { cwd: input.cwd }),
-    ...(input.agentPreset === undefined ? {} : { agentPreset: input.agentPreset }),
+  if (input.prompt !== undefined) {
+    const context = request.actionInput === undefined
+      ? undefined
+      : definitionWorkspaceContextInput(request.actionInput)
+    const cwd = input.cwd ?? context?.cwd
+    if (cwd === undefined) {
+      throw new Error('Workspace scheduled task is not bound to a Harness Workspace')
+    }
+    const agentPreset = input.agentPreset ?? context?.agentPreset
+    return {
+      prompt: input.prompt, cwd,
+      ...(agentPreset === undefined ? {} : { agentPreset }),
+    }
   }
   return definitionAgentPromptInput(request.actionInput)
 }
@@ -170,7 +206,15 @@ export class PaimindHarnessScheduleAdapterService
     return await this.adapterCtx.paimindScheduler.registerAction(
       descriptor,
       executor,
-      input.prompt === undefined ? { validateActionInput: definitionAgentPromptInput } : undefined,
+      input.prompt === undefined
+        ? { validateActionInput: definitionAgentPromptInput }
+        : {
+            validateActionInput: actionInput => (
+              actionInput === undefined && input.cwd !== undefined
+                ? undefined
+                : definitionWorkspaceContextInput(actionInput)
+            ),
+          },
     )
   }
 

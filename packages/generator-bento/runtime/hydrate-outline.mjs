@@ -138,11 +138,11 @@ function hydrateElement(value, facts, label) {
   }
 
   const fact = factFor(facts, input.factId, `${label}.factId`)
+  const authoredText = optionalText(input.text, `${label}.text`)
   return {
     objectId, type,
     ...(optionalText(input.title, `${label}.title`) === undefined ? {} : { title: optionalText(input.title, `${label}.title`) }),
-    ...(optionalText(input.text, `${label}.text`) === undefined ? {} : { text: optionalText(input.text, `${label}.text`) }),
-    ...(type === 'kpi' ? { displayValue: fact.displayValue } : {}),
+    ...(type === 'kpi' ? { displayValue: fact.displayValue } : { text: authoredText ?? fact.displayValue }),
     factIds: [fact.factId], bindings: [{ factId: fact.factId, selector: { kind: 'object' } }],
   }
 }

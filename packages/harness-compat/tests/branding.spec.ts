@@ -7,7 +7,7 @@ import {
 } from '../src/index.js'
 
 describe('Harness branding compatibility boundary', () => {
-  it('locates RC8 expanded and compact native brand seats', () => {
+  it('locates legacy expanded and compact native brand seats under jsdom 30', () => {
     document.body.innerHTML = `
       <button id="expanded"><svg viewBox="0 0 182 24"></svg></button>
       <button id="compact"><span><svg viewBox="0 0 23.16 17.04"></svg></span></button>

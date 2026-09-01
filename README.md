@@ -11,7 +11,7 @@ pnpm install
 pnpm run check
 ```
 
-The active compatibility matrix is exact npm `@deepseek-ai/dsh@0.1.0-rc.8`, `dsh-better-sidebar@0.14.0` and its external Office viewer `@huanlin/dsh-plugin-better-sidebar-plugin-office@0.1.0`. External provider upgrades are isolated and verified before the bundle pin moves; the suite never follows `latest` or an unverified branch.
+The active compatibility matrix is exact npm `@deepseek-ai/dsh@0.1.1-rc.2`, `dsh-better-sidebar@0.16.1` and its external Office viewer `@huanlin/dsh-plugin-better-sidebar-plugin-office@0.1.2`. External provider upgrades are isolated and verified before the bundle pin moves; the suite never follows `latest` or an unverified branch.
 
 The frozen PAIMind prototype is a specification and visual reference only. Its synthetic repositories and browser-local state are not production data sources.
 

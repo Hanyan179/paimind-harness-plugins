@@ -16,7 +16,7 @@ export interface PaimindBentoPreviewRequest {
 }
 
 export type PaimindBentoMode = 'preview' | 'edit' | 'trace'
-export type PaimindBentoRuntimeEventType = 'paimind:bento-ready' | 'paimind:bento-slide' | 'paimind:bento-select' | 'paimind:bento-exit'
+export type PaimindBentoRuntimeEventType = 'paimind:bento-ready' | 'paimind:bento-manifest' | 'paimind:bento-slide' | 'paimind:bento-select' | 'paimind:bento-exit'
 export type PaimindBentoSelector =
   | { readonly kind: 'object' }
   | { readonly kind: 'chart-point'; readonly seriesKey: string; readonly categoryKey: string }
@@ -30,6 +30,7 @@ export interface PaimindBentoRuntimeEvent {
   readonly objectId?: string
   readonly factId?: string
   readonly selector?: PaimindBentoSelector
+  readonly slides?: readonly PaimindBentoSlideNavigationItem[]
 }
 
 export interface PaimindBentoFocusTarget {
@@ -66,6 +67,7 @@ export interface PaimindBentoPreviewSnapshot {
   readonly requestRevision: number
   readonly request: PaimindBentoPreviewRequest | null
   readonly runtimeEvent: PaimindBentoRuntimeEvent | null
+  readonly slides: readonly PaimindBentoSlideNavigationItem[]
   readonly mode: PaimindBentoMode
   readonly focusRevision: number
   readonly focus: PaimindBentoFocusTarget | null

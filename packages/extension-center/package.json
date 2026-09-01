@@ -2,7 +2,7 @@
   "name": "@paimind/extension-center",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
-  "engines": { "node": "^22.19.0 || >=24.0.0" },
+  "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
   "description": "PAIMind product capability catalog projected over the native Harness Plugin Registry",
   "type": "module",
   "main": "lib/index.js",
@@ -15,6 +15,18 @@
     "./invariant": {
       "types": "./lib/types/invariant.d.ts",
       "default": "./lib/invariant.js"
+    },
+    "./feature-packs": {
+      "types": "./lib/types/feature-packs.d.ts",
+      "default": "./lib/feature-packs.js"
+    },
+    "./remote": {
+      "types": "./lib/types/remote.d.ts",
+      "default": "./lib/remote.js"
+    },
+    "./typert": {
+      "types": "./lib/types/typert.d.ts",
+      "default": "./lib/typert.js"
     },
     "./client": {
       "types": "./lib/types/client/index.d.ts",
@@ -37,7 +49,8 @@
   },
   "dependencies": {
     "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^"
+    "@paimind/harness-compat": "workspace:^",
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "react": ">=18.0.0 <20.0.0"
@@ -48,7 +61,7 @@
     "react-dom": "^18.3.1"
   },
   "paimindBuild": {
-    "node": ["src/index.ts", "src/invariant.ts"],
+    "node": ["src/index.ts", "src/invariant.ts", "src/feature-packs.ts", "src/remote.ts", "src/typert.ts"],
     "client": "src/client/index.tsx"
   },
   "scripts": { "typecheck": "tsc -b --pretty false" }

@@ -25,7 +25,7 @@ export function installPaimindAgentScheduleAction(ctx: PaimindAgentScheduleActio
     descriptionZh: '按时新建独立 Agent 会话，检查工作区并生成进展、风险和下一步简报。',
     descriptionEn: 'Create an independent Agent session on schedule and summarize workspace progress, risks, and next steps.',
     category: 'ai',
-    cwd: configuredCwd === undefined || configuredCwd === '' ? process.cwd() : configuredCwd,
+    ...(configuredCwd === undefined || configuredCwd === '' ? {} : { cwd: configuredCwd }),
     ...modelRoute,
     prompt: [
       'Review the current workspace and produce a concise workspace brief.',

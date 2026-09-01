@@ -6,6 +6,8 @@ describe('presentation Fact Layer', () => {
     const context = { signal: new AbortController().signal, writeText: vi.fn(), runWorkspaceCommand: vi.fn(async () => ({ stdout: 'success' })) }
     await factLayerProvider.generate({ analysis_artifact_ids: ['artifact:performance', 'artifact:opportunity'], __analysis_paths: ['results/performance.data-result.json', 'results/opportunity.data-result.json'], output_path: 'results/proposal.fact-set.json' }, context)
     expect(context.runWorkspaceCommand).toHaveBeenCalledWith(expect.objectContaining({ command: expect.stringMatching(/runner\.mjs.*build.*artifact:performance.*performance\.data-result\.json/), timeoutMs: 60_000 }))
+    expect(context.runWorkspaceCommand.mock.calls[0]?.[0].command).toContain(process.execPath)
+    expect(context.runWorkspaceCommand.mock.calls[0]?.[0].command).not.toMatch(/^'node'\s/)
   })
 
   it('rejects cross-Session inputs and passes exact current-Session analysis Artifact paths', async () => {

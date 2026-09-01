@@ -629,23 +629,34 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   display: grid;
   gap: 8px;
   color: var(--paimind-agent-muted);
-  font-size: 10px;
+  font-size: 11px;
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-starter-suggestions] > span {
+  color: var(--paimind-agent-ink);
+  font-weight: 680;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-starter-suggestions] > div {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-starter-suggestions] button {
-  min-height: 32px;
-  padding: 6px 9px;
+  min-height: 38px;
+  padding: 8px 10px;
   border: 1px solid var(--paimind-agent-line);
   border-radius: 9px;
   color: var(--paimind-agent-muted);
   background: var(--paimind-agent-panel);
   font: inherit;
-  font-size: 10px;
+  font-size: 11px;
+  line-height: 17px;
+  text-align: left;
   cursor: pointer;
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-starter-suggestions] button:hover {
+  border-color: color-mix(in srgb, var(--paimind-agent-accent) 38%, var(--paimind-agent-line));
+  color: var(--paimind-agent-ink);
+  background: var(--paimind-agent-soft);
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-starter-fields] {
   display: grid;
@@ -744,6 +755,16 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   overflow: clip;
   color: var(--paimind-agent-ink);
   background: var(--paimind-agent-bg);
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-form][data-mode='test'] {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-form][data-mode='test'] [data-paimind-agent-form-head] {
+  padding: 15px 16px;
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-form][data-mode='test'] h2 {
+  font-size: 18px;
+  line-height: 24px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-form-head] {
   display: flex;
@@ -1392,6 +1413,106 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-form][data-mode='test'] [data-paimind-agent-native-toolbar] {
+  padding: 10px 14px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 9px;
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-form][data-mode='test'] [data-paimind-agent-native-status] small {
+  white-space: normal;
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-mode] {
+  min-height: 0;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: auto;
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-profile] {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  border: 1px solid var(--paimind-agent-line);
+  border-radius: 12px;
+  background: var(--paimind-agent-panel);
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-profile] > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--paimind-agent-accent);
+  background: var(--paimind-agent-soft);
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-profile] strong {
+  color: var(--paimind-agent-ink);
+  font-size: 12px;
+  line-height: 18px;
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-profile] p {
+  margin: 3px 0 0;
+  color: var(--paimind-agent-muted);
+  font-size: 9px;
+  line-height: 15px;
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-mode] [data-paimind-agent-test-gate] {
+  min-height: 180px;
+  padding: 18px 8px;
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-mode] [data-paimind-agent-test-gate] [data-paimind-agent-button] {
+  margin-top: 12px;
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-mode] [data-paimind-agent-test-gate][data-tone='error'] svg,
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-mode] [data-paimind-agent-test-gate][data-tone='error'] p {
+  color: var(--dsw-alias-state-error-primary, #d04444);
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-ready] {
+  min-height: 180px;
+  padding: 20px 12px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  color: var(--paimind-agent-muted);
+  text-align: center;
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-ready] > svg {
+  margin-bottom: 9px;
+  color: var(--paimind-agent-accent);
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-ready] strong {
+  color: var(--paimind-agent-ink);
+  font-size: 13px;
+  line-height: 19px;
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-ready] p {
+  margin: 7px 0 0;
+  font-size: 10px;
+  line-height: 17px;
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-ready] small {
+  margin-top: 9px;
+  font-size: 8px;
+  line-height: 14px;
+}
+[data-paimind-product-surface='agent-center'] [data-paimind-agent-test-actions] {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+[data-paimind-agent-test-locked='true'] [data-paimind-agent-test-seat] {
+  cursor: default !important;
+}
+[data-paimind-agent-test-locked='true'] [data-paimind-agent-test-seat] svg:last-child {
+  display: none;
+}
+[data-paimind-agent-test-locked='true'] [data-paimind-quick-agents] {
+  display: none !important;
+}
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-conversation-messages] {
   flex: 1 1 0;
   min-height: 0;
@@ -1643,7 +1764,17 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 
 @media(max-width:680px) {
   [data-paimind-product-center-host][data-paimind-product-center-native-conversation] {
-    --paimind-agent-native-conversation-width: min(46vw, 320px);
+    --paimind-agent-native-conversation-height: clamp(260px, 44dvh, 420px);
+  }
+  [data-paimind-product-center-host][data-paimind-product-center-native-conversation] > [data-paimind-product-surface='agent-center'] {
+    inset: 0 0 var(--paimind-agent-native-conversation-height);
+    border-right: 0;
+    border-bottom: 1px solid var(--paimind-line, var(--dsw-alias-border-l1, rgba(110, 128, 154, .18)));
+  }
+  [data-paimind-product-center-host][data-paimind-product-center-native-conversation] [data-paimind-product-center-native-conversation-content] {
+    inset: auto 0 0 !important;
+    width: 100% !important;
+    height: var(--paimind-agent-native-conversation-height) !important;
   }
   [data-paimind-product-surface='agent-center'] [data-paimind-agent-center] {
     padding: 12px 10px 28px;
@@ -1663,8 +1794,15 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
     overflow: hidden;
   }
   [data-paimind-product-surface='agent-center'] [data-paimind-agent-tabs] {
-    overflow: auto;
-    scrollbar-width: thin;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
+  }
+  [data-paimind-product-surface='agent-center'] [data-paimind-agent-tab] {
+    min-width: 0;
+    padding: 7px 4px;
+    gap: 4px;
   }
   [data-paimind-product-surface='agent-center'] [data-paimind-agent-business-filter] {
     display: grid;
@@ -1712,6 +1850,9 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   [data-paimind-product-surface='agent-center'] [data-paimind-agent-starter-actions] {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  [data-paimind-product-surface='agent-center'] [data-paimind-agent-starter-suggestions] > div {
+    grid-template-columns: 1fr;
   }
   [data-paimind-product-surface='agent-center'] [data-paimind-agent-form-head] {
     padding: 13px 12px;

@@ -105,6 +105,8 @@ export interface PaimindArtifactService {
   registerAction(action: PaimindArtifactAction): () => void
   actionsFor(artifact: PaimindArtifactView): readonly PaimindArtifactActionView[]
   runAction(actionId: string, artifact: PaimindArtifactView): PaimindArtifactActionResult
+  /** Open a canonical registered Artifact through its owner-provided viewer, when available. */
+  open?(artifactId: string, sourceId?: string): PaimindArtifactActionResult
   /** Select a known Artifact for a safe cross-plugin deep link; this does not open bytes. */
   focus(artifactId: string): boolean
   dispose(): void
@@ -116,6 +118,8 @@ interface SourceEntry {
 }
 
 interface ActionEntry { readonly action: PaimindArtifactAction }
+
+export type PaimindArtifactOpenHandler = (artifact: PaimindArtifactView) => PaimindArtifactActionResult
 
 const KIND_SET = new Set<string>(PAIMIND_ARTIFACT_KINDS)
 const PREVIEW_KIND_SET = new Set<string>(PAIMIND_ARTIFACT_PREVIEW_KINDS)
@@ -320,6 +324,8 @@ export class ArtifactRegistry implements PaimindArtifactService {
   private readonly listeners = new Set<() => void>()
   private disposed = false
 
+  constructor(private readonly openHandler?: PaimindArtifactOpenHandler) {}
+
   getSnapshot(): PaimindArtifactSnapshot { return this.snapshot }
 
   subscribe(listener: () => void): () => void {
@@ -399,6 +405,21 @@ export class ArtifactRegistry implements PaimindArtifactService {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       return { state: 'failed', messageZh: `产物动作失败：${message}`, messageEn: `Artifact action failed: ${message}` }
+    }
+  }
+
+  open(artifactId: string, sourceId?: string): PaimindArtifactActionResult {
+    const artifact = this.snapshot.artifacts.find(candidate => (
+      candidate.id === artifactId && (sourceId === undefined || candidate.sourceId === sourceId)
+    ))
+    if (this.disposed || artifact === undefined || this.openHandler === undefined) return {
+      state: 'failed', messageZh: '这个产物暂时无法打开。', messageEn: 'This artifact cannot be opened right now.',
+    }
+    try {
+      return this.openHandler(artifact)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      return { state: 'failed', messageZh: `打开产物失败：${message}`, messageEn: `Failed to open artifact: ${message}` }
     }
   }
 

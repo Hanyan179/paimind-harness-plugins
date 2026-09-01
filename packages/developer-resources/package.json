@@ -2,7 +2,7 @@
   "name": "@paimind/developer-resources",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
-  "engines": { "node": "^22.19.0 || >=24.0.0" },
+  "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
   "description": "Read-only PAIMind runtime diagnostics, live surface catalog, and bundled integration reference",
   "type": "module",
   "main": "lib/index.js",

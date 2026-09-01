@@ -49,6 +49,8 @@ function PdfPage(props: { readonly document: PDFDocumentProxy; readonly pageNumb
 export function PdfPreview(props: { readonly title: string; readonly mediaUrl: string | undefined }): React.JSX.Element {
   const stageRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(720)
+  const [pageNumber, setPageNumber] = useState(1)
+  const [zoom, setZoom] = useState(1)
   const [state, setState] = useState<
     | { readonly status: 'loading' }
     | { readonly status: 'ready'; readonly document: PDFDocumentProxy }
@@ -66,10 +68,17 @@ export function PdfPreview(props: { readonly title: string; readonly mediaUrl: s
   }, [])
 
   useEffect(() => {
+    const element = stageRef.current
+    if (element !== null && typeof element.scrollTo === 'function') element.scrollTo({ top: 0, left: 0 })
+  }, [pageNumber])
+
+  useEffect(() => {
     const controller = new AbortController()
     let loading: ReturnType<typeof getDocument> | undefined
     let loaded: PDFDocumentProxy | undefined
     setState({ status: 'loading' })
+    setPageNumber(1)
+    setZoom(1)
     if (props.mediaUrl === undefined) {
       setState({ status: 'error', message: 'PDF media URL is unavailable.' })
       return () => { controller.abort() }
@@ -96,15 +105,41 @@ export function PdfPreview(props: { readonly title: string; readonly mediaUrl: s
   return <section data-paimind-pdf aria-label="PAIMind PDF Preview">
     <header data-paimind-pdf-toolbar>
       <strong>{props.title}</strong>
-      {state.status === 'ready' && <span>{state.document.numPages} {state.document.numPages === 1 ? 'page' : 'pages'}</span>}
+      {state.status === 'ready' && <div data-paimind-pdf-controls>
+        <button type="button" aria-label="上一页 / Previous page" disabled={pageNumber <= 1} onClick={() => { setPageNumber(current => Math.max(1, current - 1)) }}>‹</button>
+        <output aria-label="页码 / Page">{pageNumber} / {state.document.numPages}</output>
+        <button type="button" aria-label="下一页 / Next page" disabled={pageNumber >= state.document.numPages} onClick={() => { setPageNumber(current => Math.min(state.document.numPages, current + 1)) }}>›</button>
+        <button type="button" aria-label="缩小 / Zoom out" disabled={zoom <= 0.75} onClick={() => { setZoom(current => Math.max(0.75, current - 0.25)) }}>−</button>
+        <output aria-label="缩放 / Zoom">{Math.round(zoom * 100)}%</output>
+        <button type="button" aria-label="放大 / Zoom in" disabled={zoom >= 2} onClick={() => { setZoom(current => Math.min(2, current + 0.25)) }}>+</button>
+      </div>}
       {props.mediaUrl !== undefined && <a href={props.mediaUrl} download>{'下载 / Download'}</a>}
     </header>
-    <div ref={stageRef} data-paimind-pdf-stage>
+    <div
+      ref={stageRef}
+      data-paimind-pdf-stage
+      tabIndex={0}
+      aria-label="PDF page viewport"
+      onKeyDown={(event) => {
+        const element = event.currentTarget
+        const pageStep = Math.max(120, Math.round(element.clientHeight * 0.8))
+        const delta = event.key === 'PageDown' ? pageStep
+          : event.key === 'PageUp' ? -pageStep
+            : event.key === 'ArrowDown' ? 48
+              : event.key === 'ArrowUp' ? -48
+                : undefined
+        if (delta !== undefined) {
+          event.preventDefault()
+          element.scrollBy({ top: delta, left: 0 })
+        } else if (event.key === 'Home' || event.key === 'End') {
+          event.preventDefault()
+          element.scrollTo({ top: event.key === 'Home' ? 0 : element.scrollHeight, left: 0 })
+        }
+      }}
+    >
       {state.status === 'loading' && <div data-paimind-pdf-state>Loading PDF…</div>}
       {state.status === 'error' && <div role="alert" data-paimind-pdf-state>{state.message}</div>}
-      {state.status === 'ready' && Array.from({ length: state.document.numPages }, (_, index) => (
-        <PdfPage key={index + 1} document={state.document} pageNumber={index + 1} width={width} />
-      ))}
+      {state.status === 'ready' && <PdfPage key={pageNumber} document={state.document} pageNumber={pageNumber} width={width * zoom} />}
     </div>
   </section>
 }
@@ -123,10 +158,16 @@ const STYLE = `
 [data-paimind-pdf-toolbar] strong{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 [data-paimind-pdf-toolbar] span{color:var(--dsw-alias-label-tertiary,#7a808a)}
 [data-paimind-pdf-toolbar] a{color:var(--dsw-alias-state-business-primary,#4f7ff8);text-decoration:none}
+[data-paimind-pdf-controls]{display:flex;align-items:center;gap:4px;white-space:nowrap}
+[data-paimind-pdf-controls] button{width:26px;height:26px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.2));border-radius:6px;background:var(--dsw-alias-bg-layer-1,#fff);color:inherit;cursor:pointer}
+[data-paimind-pdf-controls] button:disabled{cursor:not-allowed;opacity:.38}
+[data-paimind-pdf-controls] output{min-width:42px;text-align:center;color:var(--dsw-alias-label-secondary,#5b6270);font-variant-numeric:tabular-nums}
 [data-paimind-pdf-stage]{min-width:0;min-height:0;overflow:auto;display:grid;align-content:start;justify-items:center;gap:14px;padding:16px;background:var(--dsw-alias-bg-layer-2,#eef0f3)}
-[data-paimind-pdf-page]{display:grid;place-items:center;max-width:100%;background:#fff;box-shadow:0 3px 14px rgba(0,0,0,.14)}
-[data-paimind-pdf-page] canvas{display:block;max-width:100%;height:auto}
+[data-paimind-pdf-stage]:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8);outline-offset:-2px}
+[data-paimind-pdf-page]{display:grid;place-items:center;background:#fff;box-shadow:0 3px 14px rgba(0,0,0,.14)}
+[data-paimind-pdf-page] canvas{display:block;height:auto}
 [data-paimind-pdf-state]{min-height:240px;display:grid;place-items:center;color:var(--dsw-alias-label-tertiary,#7a808a);font-size:12px}
+@media(max-width:680px){[data-paimind-pdf-toolbar]{align-items:flex-start;flex-wrap:wrap}[data-paimind-pdf-toolbar] strong{flex-basis:100%}[data-paimind-pdf-controls]{order:3;width:100%;justify-content:center}}
 `
 
 function installStyle(): () => void {

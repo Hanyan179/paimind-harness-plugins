@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { createClientContextFixture } from '@paimind/testkit'
@@ -47,6 +47,58 @@ describe('FP07 Bento preview client store', () => {
     expect(screen.getByRole('status')).toHaveTextContent('facts and derived metrics are locked')
   })
 
+  it('renders Preview as a clean slide player and reserves thumbnails for workbench modes', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ origin: 'http://127.0.0.1:49152', token: 'a'.repeat(24) }), { status: 200 })))
+    vi.stubGlobal('ResizeObserver', class { observe(): void {} disconnect(): void {} })
+    try {
+      const store = new BentoPreviewStore(sidebar())
+      store.open({ sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', path: '/workspace/deck.html', title: 'Deck' })
+      store.registerInspector({ id: 'trace', render: () => null })
+      store.publishRuntimeEvent({ type: 'paimind:bento-manifest', mode: 'preview', slide: 1, slideId: 'slide-1', slides: [{ slideId: 'slide-1', title: 'One' }, { slideId: 'slide-2', title: 'Two' }] })
+      const scope: PaimindSidebarTabScope = { sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', visible: true, locale: { getLocale: () => ({ active: 'en' }), subscribe: () => () => {} } }
+      render(createElement(BentoPreviewPanel, { store, scope }))
+      const controls = await screen.findByRole('group', { name: 'Slideshow controls' })
+      expect(screen.queryByLabelText('Slide thumbnails')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Previous slide' })).toBeDisabled()
+      fireEvent.click(screen.getByRole('button', { name: 'Next slide' }))
+      expect(store.getSnapshot()).toMatchObject({ slideTarget: { slideId: 'slide-2', slide: 2 } })
+      fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+      await waitFor(() => { expect(controls).not.toBeInTheDocument() })
+      expect(screen.getByLabelText('Slide thumbnails')).toBeInTheDocument()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('waits for an authenticated iframe runtime message before posting to its isolated origin', async () => {
+    const origin = 'http://127.0.0.1:49152'
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ origin, token: 'a'.repeat(24) }), { status: 200 })))
+    try {
+      const store = new BentoPreviewStore(sidebar())
+      store.open({ sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', path: '/workspace/deck.html', title: 'Deck' })
+      const scope: PaimindSidebarTabScope = { sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', visible: true, locale: { getLocale: () => ({ active: 'en' }), subscribe: () => () => {} } }
+      const { container } = render(createElement(BentoPreviewPanel, { store, scope }))
+      const iframe = await waitFor(() => {
+        const candidate = container.querySelector<HTMLIFrameElement>('iframe[title="Deck"]')
+        expect(candidate).not.toBeNull()
+        return candidate!
+      })
+      const postMessage = vi.spyOn(iframe.contentWindow!, 'postMessage')
+      fireEvent.load(iframe)
+      expect(postMessage).not.toHaveBeenCalled()
+      window.dispatchEvent(new MessageEvent('message', {
+        source: iframe.contentWindow,
+        origin,
+        data: { type: 'paimind:bento-manifest', mode: 'preview', slide: 1, slides: [{ slideId: 'slide-1', title: 'One' }] },
+      }))
+      await waitFor(() => {
+        expect(postMessage).toHaveBeenCalledWith({ type: 'paimind:bento-mode', mode: 'preview' }, origin)
+      })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('publishes one immutable request and opens only its independent Side Card tab', () => {
     const provider = sidebar()
     const store = new BentoPreviewStore(provider)
@@ -78,12 +130,17 @@ describe('FP07 Bento preview client store', () => {
   it('publishes only normalized allowlisted runtime facts without reloading the request', () => {
     const store = new BentoPreviewStore(sidebar())
     store.open({ sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', path: '/workspace/deck.html', title: 'Deck' })
+    store.setMode('edit')
     const event = normalizeBentoRuntimeMessage({ type: 'paimind:bento-slide', mode: 'edit', slide: 3, privatePayload: 'ignored' })
     expect(event).toEqual({ type: 'paimind:bento-slide', mode: 'edit', slide: 3 })
     store.publishRuntimeEvent(event!)
-    expect(store.getSnapshot()).toMatchObject({ revision: 2, requestRevision: 1, runtimeEvent: { slide: 3 } })
+    expect(store.getSnapshot()).toMatchObject({ revision: 3, requestRevision: 1, runtimeEvent: { slide: 3 } })
+    store.publishRuntimeEvent({ type: 'paimind:bento-slide', mode: 'trace', slide: 4 })
+    expect(store.getSnapshot()).toMatchObject({ revision: 3, runtimeEvent: { mode: 'edit', slide: 3 } })
     expect(normalizeBentoRuntimeMessage({ type: 'other', mode: 'edit', slide: 3 })).toBeNull()
     expect(normalizeBentoRuntimeMessage({ type: 'paimind:bento-slide', mode: 'trace', slide: 3 })).toEqual({ type: 'paimind:bento-slide', mode: 'trace', slide: 3 })
+    expect(normalizeBentoRuntimeMessage({ type: 'paimind:bento-manifest', mode: 'preview', slide: 1, slides: [{ slideId: 'slide-1', title: ' One ' }] })).toEqual({ type: 'paimind:bento-manifest', mode: 'preview', slide: 1, slides: [{ slideId: 'slide-1', title: 'One' }] })
+    expect(normalizeBentoRuntimeMessage({ type: 'paimind:bento-manifest', mode: 'preview', slide: 1, slides: [] })).toBeNull()
     expect(normalizeBentoRuntimeMessage({ type: 'paimind:bento-slide', mode: 'edit', slide: 0 })).toBeNull()
   })
 

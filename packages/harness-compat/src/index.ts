@@ -14,13 +14,13 @@ export const RUNTIME_ORB_STATES = [
 /** One concrete orb animation state. */
 export type RuntimeOrbState = typeof RUNTIME_ORB_STATES[number]
 
-/** RC8-native brand artwork isolated from PAIMind feature packages. */
+/** Legacy native brand artwork isolated from PAIMind feature packages. */
 export interface HarnessBrandSeat {
   readonly host: HTMLElement
   readonly nativeArt: SVGElement
 }
 
-/** RC8 new-session hero copy and artwork isolated from the branding package. */
+/** Native new-session hero copy and artwork isolated from the branding package. */
 export interface HarnessHeroBrandSeat {
   readonly host: HTMLElement
   readonly nativeIcon: HTMLElement
@@ -52,7 +52,10 @@ const HARNESS_HERO_COPY = {
 } as const
 
 const brandSeatForViewBox = (root: ParentNode, viewBox: string): HarnessBrandSeat | null => {
-  const nativeArt = root.querySelector<SVGElement>(`svg[viewBox="${viewBox}"]`)
+  // Attribute selector casing changed in jsdom 30 and differs between HTML and
+  // XML SVG documents. Compare the SVG-owned attribute value directly.
+  const nativeArt = [...root.querySelectorAll<SVGElement>('svg')]
+    .find(candidate => candidate.getAttribute('viewBox') === viewBox)
   const host = nativeArt?.closest('button')
   return nativeArt !== null && nativeArt !== undefined && host instanceof HTMLElement
     ? { host, nativeArt }
@@ -76,7 +79,7 @@ const heroBrandSeat = (root: ParentNode): HarnessHeroBrandSeat | null => {
 }
 
 /**
- * Locate the native expanded and collapsed brand seats without exposing RC8
+ * Locate legacy expanded and collapsed brand seats without exposing native
  * artwork selectors to the independently installable branding package.
  */
 export function locateHarnessBrandSeats(root: ParentNode): HarnessBrandSeats {
@@ -264,6 +267,47 @@ export interface HarnessTurnLocationData {
 export interface HarnessTurnLocation {
   readonly turn: number
   readonly data: HarnessTurnLocationData
+}
+
+/** Owner facts supplied by Harness's public conversation turn-tail chain. */
+export interface PaimindConversationTurnTailOwner {
+  readonly turn: HarnessTurnLocation
+  readonly seq: number
+  readonly openFile: (path: string) => void
+}
+
+interface HarnessDeliverablesTurnValue {
+  readonly produced?: readonly {
+    readonly seq?: unknown
+    readonly path?: unknown
+  }[]
+}
+
+/**
+ * Select native producer-declared files for one closing Turn. This mirrors the
+ * selected Harness generation while keeping its version-sensitive data shape
+ * inside the compatibility package. Paths are never inferred from prose.
+ */
+export function selectPaimindProducedFiles(
+  owner: PaimindConversationTurnTailOwner,
+): readonly string[] | null {
+  const value = owner.turn.data.get('deliverables') as HarnessDeliverablesTurnValue | undefined
+  if (!Array.isArray(value?.produced)) return null
+  const paths: string[] = []
+  const seen = new Set<string>()
+  for (const produced of value.produced) {
+    if (
+      typeof produced.path !== 'string'
+      || produced.path.trim() === ''
+      || typeof produced.seq !== 'number'
+      || !Number.isFinite(produced.seq)
+      || produced.seq > owner.seq
+      || seen.has(produced.path)
+    ) continue
+    seen.add(produced.path)
+    paths.push(produced.path)
+  }
+  return paths.length === 0 ? null : Object.freeze(paths)
 }
 
 /** Runtime status displayed beside one orb. */
@@ -953,6 +997,35 @@ export interface HarnessPluginInventoryEntry {
 /** Point-in-time technical inventory; Harness remains its only source of truth. */
 export interface HarnessPluginInventorySnapshot {
   readonly entries: readonly HarnessPluginInventoryEntry[]
+}
+
+/** Shared technical state derived only from native Loader inventory facts. */
+export type HarnessPluginTechnicalState =
+  | 'active'
+  | 'loading'
+  | 'failed'
+  | 'disabled'
+  | 'unobserved'
+  | 'unavailable'
+
+/** Project one exact package id without duplicating Loader precedence rules. */
+export function projectHarnessPluginTechnicalState(
+  packageName: string,
+  snapshot: HarnessPluginInventorySnapshot,
+): Readonly<{
+  readonly technicalState: HarnessPluginTechnicalState
+  readonly entries: readonly HarnessPluginInventoryEntry[]
+}> {
+  const entries = Object.freeze(snapshot.entries.filter(entry => entry.moduleName === packageName))
+  const loadingPhases: ReadonlySet<HarnessPluginFiberPhase> = new Set(['pending', 'loading', 'unloading'])
+  let technicalState: HarnessPluginTechnicalState
+  if (entries.length === 0) technicalState = 'unavailable'
+  else if (entries.some(entry => entry.enabled && entry.fiberPhase === 'failed')) technicalState = 'failed'
+  else if (entries.some(entry => entry.enabled && loadingPhases.has(entry.fiberPhase))) technicalState = 'loading'
+  else if (entries.some(entry => entry.enabled && entry.fiberPhase === 'active')) technicalState = 'active'
+  else if (entries.every(entry => !entry.enabled)) technicalState = 'disabled'
+  else technicalState = 'unobserved'
+  return Object.freeze({ technicalState, entries })
 }
 
 /** Generated Remote result shape exposed by the Harness client runtime. */

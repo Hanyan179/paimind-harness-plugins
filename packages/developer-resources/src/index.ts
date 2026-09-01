@@ -3,19 +3,15 @@ import type {
   HarnessPluginFiberPhase,
   HarnessPluginInventoryEntry,
   HarnessPluginInventorySnapshot,
+  HarnessPluginTechnicalState,
 } from '@paimind/harness-compat'
+import { projectHarnessPluginTechnicalState } from '@paimind/harness-compat'
 
 /** Host half is intentionally empty: every source on this page is read-only. */
 export const name = 'paimind-developer-resources'
 export function apply(): void {}
 
-export type DeveloperTechnicalState =
-  | 'active'
-  | 'loading'
-  | 'failed'
-  | 'disabled'
-  | 'unobserved'
-  | 'unavailable'
+export type DeveloperTechnicalState = HarnessPluginTechnicalState
 
 export interface PaimindInventorySummary {
   readonly total: number
@@ -62,15 +58,7 @@ export function projectDeveloperSurface(
   descriptor: Readonly<PaimindExtensionDescriptor>,
   snapshot: HarnessPluginInventorySnapshot,
 ): Readonly<DeveloperSurfaceProjection> {
-  const entries = Object.freeze(snapshot.entries.filter(entry => entry.moduleName === descriptor.packageName))
-  let technicalState: DeveloperTechnicalState
-  if (entries.length === 0) technicalState = 'unavailable'
-  else if (entries.some(entry => entry.enabled && entry.fiberPhase === 'failed')) technicalState = 'failed'
-  else if (entries.some(entry => entry.enabled && LOADING_PHASES.has(entry.fiberPhase))) technicalState = 'loading'
-  else if (entries.some(entry => entry.enabled && entry.fiberPhase === 'active')) technicalState = 'active'
-  else if (entries.every(entry => !entry.enabled)) technicalState = 'disabled'
-  else technicalState = 'unobserved'
-  return Object.freeze({ descriptor, technicalState, entries })
+  return Object.freeze({ descriptor, ...projectHarnessPluginTechnicalState(descriptor.packageName, snapshot) })
 }
 
 export type PaimindIntegrationReferenceKind = 'slot' | 'service' | 'adapter' | 'event' | 'projection'

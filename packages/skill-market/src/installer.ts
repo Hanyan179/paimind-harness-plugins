@@ -410,7 +410,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
   private readonly now: () => number
   private readonly uploads = new Map<string, UploadRecord>()
 
-  constructor(private readonly installerCtx: SkillInstallerHostContext, options: SkillInstallerOptions = {}) {
+  constructor(installerCtx: SkillInstallerHostContext, options: SkillInstallerOptions = {}) {
     super(installerCtx, 'paimindSkillInstaller')
     this.skillRoot = resolve(options.skillRoot ?? dshHomePath('skills'))
     this.stateRoot = resolve(options.stateRoot ?? dshHomePath('.paimind-skill-installer'))
@@ -499,37 +499,42 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
   async inspectUpload(input: { readonly uploadId: string }): Promise<Readonly<SkillUploadPreview>> {
     const upload = this.upload(input.uploadId)
     if (upload.preview !== undefined) return upload.preview
-    const extension = extname(upload.fileName).toLocaleLowerCase()
-    let metadata: SkillPackageMetadata
-    let fileCount: number
-    let expandedBytes: number
-    let warnings: readonly string[]
-    let runtimeRequirements: readonly SkillRuntimeRequirement[]
-    if (extension === '.zip') {
-      const inspection = await inspectZip(upload.path)
-      upload.archive = inspection
-      metadata = inspection.metadata
-      fileCount = inspection.fileCount
-      expandedBytes = inspection.expandedBytes
-      warnings = inspection.warnings
-      runtimeRequirements = inspection.runtimeRequirements
-    } else {
-      metadata = parseSkillMetadata(await readPrefix(upload.path))
-      fileCount = 1
-      expandedBytes = (await stat(upload.path)).size
-      warnings = Object.freeze([])
-      runtimeRequirements = Object.freeze([])
+    try {
+      const extension = extname(upload.fileName).toLocaleLowerCase()
+      let metadata: SkillPackageMetadata
+      let fileCount: number
+      let expandedBytes: number
+      let warnings: readonly string[]
+      let runtimeRequirements: readonly SkillRuntimeRequirement[]
+      if (extension === '.zip') {
+        const inspection = await inspectZip(upload.path)
+        upload.archive = inspection
+        metadata = inspection.metadata
+        fileCount = inspection.fileCount
+        expandedBytes = inspection.expandedBytes
+        warnings = inspection.warnings
+        runtimeRequirements = inspection.runtimeRequirements
+      } else {
+        metadata = parseSkillMetadata(await readPrefix(upload.path))
+        fileCount = 1
+        expandedBytes = (await stat(upload.path)).size
+        warnings = Object.freeze([])
+        runtimeRequirements = Object.freeze([])
+      }
+      await ensureDiskCapacity(this.stateRoot, expandedBytes)
+      const operation = await pathExists(join(this.skillRoot, metadata.name)) ? 'update' : 'install'
+      const preview = Object.freeze({
+        uploadId: upload.uploadId, digest: upload.digest, fileName: upload.fileName,
+        kind: extension === '.zip' ? 'zip' as const : 'skill-md' as const,
+        ...metadata, fileCount, compressedBytes: upload.compressedBytes, expandedBytes,
+        operation, warnings, runtimeRequirements,
+      })
+      upload.preview = preview
+      return preview
+    } catch (error) {
+      await this.cancelUpload(input.uploadId)
+      throw error
     }
-    await ensureDiskCapacity(this.stateRoot, expandedBytes)
-    const operation = await pathExists(join(this.skillRoot, metadata.name)) ? 'update' : 'install'
-    const preview = Object.freeze({
-      uploadId: upload.uploadId, digest: upload.digest, fileName: upload.fileName,
-      kind: extension === '.zip' ? 'zip' as const : 'skill-md' as const,
-      ...metadata, fileCount, compressedBytes: upload.compressedBytes, expandedBytes,
-      operation, warnings, runtimeRequirements,
-    })
-    upload.preview = preview
-    return preview
   }
 
   async installUpload(input: { readonly uploadId: string; readonly digest: string }): Promise<Readonly<SkillInstallResult>> {

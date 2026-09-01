@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { spawn, spawnSync } from 'node:child_process'
@@ -9,15 +9,43 @@ function option(name) {
   return index < 0 ? undefined : process.argv[index + 1]
 }
 
+async function exists(path) {
+  try {
+    await access(path)
+    return true
+  } catch {
+    return false
+  }
+}
+
+const repositoryRoot = resolve('.')
+const compatibilitySource = await readFile(resolve(repositoryRoot, 'docs/compatibility/matrix.md'), 'utf8')
+const compatibilityMatch = /<!-- compatibility-data:start -->\s*```json\s*([\s\S]*?)```\s*<!-- compatibility-data:end -->/.exec(compatibilitySource)
+if (compatibilityMatch === null) throw new Error('compatibility matrix is missing its machine-readable JSON block')
+const compatibility = JSON.parse(compatibilityMatch[1])
+const selectedProviderVersion = (name) => {
+  const provider = compatibility.providers.find(candidate => candidate.package === name)
+  if (provider === undefined) throw new Error(`compatibility matrix is missing provider ${name}`)
+  return provider.version
+}
+
 const harnessOption = option('--harness')
+const localRuntime = resolve(repositoryRoot, '.dsh-home/profiles')
+// An explicit source checkout must win over the persistent local profile;
+// otherwise release verification can silently test an older installed runtime.
 const runtimeOption = option('--runtime')
-const dshBinOption = option('--dsh-bin')
-const providerOption = option('--provider')
-const officeProviderOption = option('--office-provider')
-const upstreamOption = option('--upstream-checkout') ?? harnessOption
-const expectedDshVersion = option('--expected-dsh-version')
-const expectedProviderVersion = option('--expected-provider-version') ?? '0.14.0'
-const expectedOfficeProviderVersion = option('--expected-office-provider-version') ?? '0.1.0'
+  ?? (harnessOption === undefined && await exists(localRuntime) ? localRuntime : undefined)
+const inferredDshBin = runtimeOption === undefined ? undefined : resolve(runtimeOption, 'node_modules/@deepseek-ai/dsh/lib/bin.js')
+const dshBinOption = option('--dsh-bin') ?? (inferredDshBin !== undefined && await exists(inferredDshBin) ? inferredDshBin : undefined)
+const inferredProvider = runtimeOption === undefined ? undefined : resolve(runtimeOption, 'web/node_modules/dsh-better-sidebar')
+const providerOption = option('--provider') ?? (inferredProvider !== undefined && await exists(inferredProvider) ? inferredProvider : undefined)
+const inferredOfficeProvider = runtimeOption === undefined ? undefined : resolve(runtimeOption, 'web/node_modules/@huanlin/dsh-plugin-better-sidebar-plugin-office')
+const officeProviderOption = option('--office-provider') ?? (inferredOfficeProvider !== undefined && await exists(inferredOfficeProvider) ? inferredOfficeProvider : undefined)
+const localUpstream = resolve(repositoryRoot, '../../Deepseek harness')
+const upstreamOption = option('--upstream-checkout') ?? harnessOption ?? (await exists(resolve(localUpstream, '.git')) ? localUpstream : undefined)
+const expectedDshVersion = option('--expected-dsh-version') ?? compatibility.runtime.version
+const expectedProviderVersion = option('--expected-provider-version') ?? selectedProviderVersion('dsh-better-sidebar')
+const expectedOfficeProviderVersion = option('--expected-office-provider-version') ?? selectedProviderVersion('@huanlin/dsh-plugin-better-sidebar-plugin-office')
 
 if ((harnessOption === undefined && (runtimeOption === undefined || dshBinOption === undefined)) || providerOption === undefined) {
   console.error('usage: node scripts/verify-harness-composition.mjs (--harness <checkout> | --runtime <root> --dsh-bin <bin.js>) --provider <dsh-better-sidebar-root> [--office-provider <office-viewer-root>] [--expected-dsh-version <version>] [--expected-provider-version <version>] [--expected-office-provider-version <version>] [--upstream-checkout <checkout>]')
@@ -26,7 +54,6 @@ if ((harnessOption === undefined && (runtimeOption === undefined || dshBinOption
 
 const runtimeRoot = resolve(runtimeOption ?? harnessOption)
 const upstreamRoot = upstreamOption === undefined ? undefined : resolve(upstreamOption)
-const repositoryRoot = resolve('.')
 const bundleRoot = resolve(repositoryRoot, 'packages/harness-bundle')
 const extensionCenterRoot = resolve(repositoryRoot, 'packages/extension-center')
 const runtimeOrbsRoot = resolve(repositoryRoot, 'packages/runtime-orbs')
@@ -44,6 +71,7 @@ const factLayerRoot = resolve(repositoryRoot, 'packages/fact-layer')
 const rendererBentoRoot = resolve(repositoryRoot, 'packages/renderer-bento')
 const rendererPdfRoot = resolve(repositoryRoot, 'packages/renderer-pdf')
 const artifactsRoot = resolve(repositoryRoot, 'packages/artifacts')
+const conversationArtifactRendererRoot = resolve(repositoryRoot, 'packages/conversation-artifact-renderer')
 const presentationTraceRoot = resolve(repositoryRoot, 'packages/presentation-trace')
 const proposalExperienceRoot = resolve(repositoryRoot, 'packages/proposal-experience')
 const walmartProposalAdapterRoot = resolve(repositoryRoot, 'packages/walmart-proposal-adapter')
@@ -97,6 +125,29 @@ function dsh(args, label) {
   return run(process.execPath, [dshBin, ...args], label)
 }
 
+function withoutBundleEntries(patch, entryIds, label) {
+  const lines = patch.split('\n')
+  for (const entryId of entryIds) {
+    const entryIndex = lines.findIndex(line => line.trim() === `- id: ${entryId}`)
+    if (entryIndex < 0) throw new Error(`failed to derive ${label}: missing ${entryId}`)
+
+    const entryIndent = lines[entryIndex].length - lines[entryIndex].trimStart().length
+    let entryEnd = entryIndex + 1
+    while (entryEnd < lines.length) {
+      const line = lines[entryEnd]
+      if (line.trim() === '') {
+        entryEnd += 1
+        break
+      }
+      const indent = line.length - line.trimStart().length
+      if (indent <= entryIndent) break
+      entryEnd += 1
+    }
+    lines.splice(entryIndex, entryEnd - entryIndex)
+  }
+  return lines.join('\n')
+}
+
 function gitStatus() {
   if (upstreamRoot === undefined) return null
   const result = spawnSync('git', ['status', '--porcelain=v1'], {
@@ -134,7 +185,7 @@ async function bootAndProbe(expectedPackages, absentPackages = []) {
   console.log('start: boot isolated Web profile and probe PAIMind client manifests')
   const port = await freePort()
   const child = spawn(process.execPath, [
-    dshBin, '--profile', 'web', '--host', '127.0.0.1', '--port', String(port),
+    dshBin, '--profile', 'web', '--host', '127.0.0.1', '--port', String(port), '--no-open',
   ], { cwd: runtimeRoot, env, stdio: ['ignore', 'pipe', 'pipe'] })
   let output = ''
   child.stdout.setEncoding('utf8')
@@ -155,14 +206,28 @@ async function bootAndProbe(expectedPackages, absentPackages = []) {
         reject(new Error(`Harness exited before readiness (${String(code)})\n${output}`))
       })
     })
-    const response = await fetch(`http://127.0.0.1:${port}/`)
-    const html = await response.text()
-    if (!response.ok) throw new Error(`Harness readiness probe returned HTTP ${response.status}`)
-    for (const packageName of expectedPackages) {
-      if (!html.includes(packageName)) throw new Error(`Harness boot manifest is missing ${packageName}`)
-    }
-    for (const packageName of absentPackages) {
-      if (html.includes(packageName)) throw new Error(`Harness boot manifest unexpectedly contains ${packageName}`)
+    // The always-on Extension Center applies persisted Product Feature Pack
+    // switches after the Loader bootstrap barrier. The Web server can become
+    // reachable during that valid transition, so probe the settled manifest
+    // instead of treating the first HTTP 200 as lifecycle completion.
+    const manifestDeadline = Date.now() + 5_000
+    let missingPackages = [...expectedPackages]
+    let unexpectedPackages = []
+    do {
+      const response = await fetch(`http://127.0.0.1:${port}/`)
+      const html = await response.text()
+      if (!response.ok) throw new Error(`Harness readiness probe returned HTTP ${response.status}`)
+      missingPackages = expectedPackages.filter(packageName => !html.includes(packageName))
+      unexpectedPackages = absentPackages.filter(packageName => html.includes(packageName))
+      if (missingPackages.length === 0 && unexpectedPackages.length === 0) break
+      await new Promise(resolveWait => setTimeout(resolveWait, 50))
+    } while (Date.now() < manifestDeadline)
+    if (missingPackages.length > 0 || unexpectedPackages.length > 0) {
+      throw new Error([
+        'Harness boot manifest did not settle before timeout',
+        `missing: ${missingPackages.join(', ') || '(none)'}`,
+        `unexpected: ${unexpectedPackages.join(', ') || '(none)'}`,
+      ].join('\n'))
     }
     console.log('passed: boot isolated Web profile and probe PAIMind client manifests')
   } finally {
@@ -189,7 +254,7 @@ if (officeProviderManifest.name !== '@huanlin/dsh-plugin-better-sidebar-plugin-o
 }
 
 const runtimeVersion = dsh(['--version'], 'read Harness runtime version').trim()
-if (expectedDshVersion !== undefined && runtimeVersion !== expectedDshVersion) {
+if (runtimeVersion !== expectedDshVersion) {
   throw new Error(`Harness runtime version mismatch: expected ${expectedDshVersion}, received ${runtimeVersion}`)
 }
 
@@ -230,6 +295,8 @@ try {
       name: '@paimind/renderer-pdf'
     - id: paimind-artifacts
       name: '@paimind/artifacts'
+    - id: paimind-conversation-artifact-renderer
+      name: '@paimind/conversation-artifact-renderer'
     - id: paimind-presentation-trace
       name: '@paimind/presentation-trace'
     - id: paimind-agent-market
@@ -277,6 +344,8 @@ try {
       name: '@paimind/renderer-pdf'
     - id: paimind-artifacts
       name: '@paimind/artifacts'
+    - id: paimind-conversation-artifact-renderer
+      name: '@paimind/conversation-artifact-renderer'
     - id: paimind-presentation-trace
       name: '@paimind/presentation-trace'
     - id: paimind-agent-market
@@ -324,6 +393,8 @@ try {
       name: '@paimind/renderer-pdf'
     - id: paimind-artifacts
       name: '@paimind/artifacts'
+    - id: paimind-conversation-artifact-renderer
+      name: '@paimind/conversation-artifact-renderer'
     - id: paimind-presentation-trace
       name: '@paimind/presentation-trace'
     - id: paimind-agent-builder
@@ -369,6 +440,8 @@ try {
       name: '@paimind/renderer-pdf'
     - id: paimind-artifacts
       name: '@paimind/artifacts'
+    - id: paimind-conversation-artifact-renderer
+      name: '@paimind/conversation-artifact-renderer'
     - id: paimind-presentation-trace
       name: '@paimind/presentation-trace'
     - id: paimind-agent-market
@@ -414,6 +487,8 @@ try {
       name: '@paimind/renderer-pdf'
     - id: paimind-artifacts
       name: '@paimind/artifacts'
+    - id: paimind-conversation-artifact-renderer
+      name: '@paimind/conversation-artifact-renderer'
     - id: paimind-presentation-trace
       name: '@paimind/presentation-trace'
     - id: paimind-agent-market
@@ -459,6 +534,8 @@ try {
       name: '@paimind/renderer-pdf'
     - id: paimind-artifacts
       name: '@paimind/artifacts'
+    - id: paimind-conversation-artifact-renderer
+      name: '@paimind/conversation-artifact-renderer'
     - id: paimind-presentation-trace
       name: '@paimind/presentation-trace'
     - id: paimind-agent-market
@@ -507,21 +584,28 @@ try {
     - id: paimind-visual-experience
       name: '@paimind/visual-experience'
 `)
-  const isolationPatchWithoutVisualExperience = fullPatch.replace(
-    /\n    - id: paimind-visual-experience\n      name: '@paimind\/visual-experience'\n?/,
-    '\n',
-  )
-  if (isolationPatchWithoutVisualExperience === fullPatch) throw new Error('failed to derive legacy feature-isolation patch without Visual Experience')
-  const isolationPatch = isolationPatchWithoutVisualExperience.replace(
-    /\n    - id: paimind-proposal-experience\n      name: '@paimind\/proposal-experience'\n\n    - id: paimind-proposal-experience-invariant\n      name: '@paimind\/proposal-experience\/invariant'\n      inject: \[invariants\]\n?/,
-    '\n',
-  )
-  if (isolationPatch === isolationPatchWithoutVisualExperience) throw new Error('failed to derive legacy feature-isolation patch without Proposal Experience')
-  const withoutSchedulerPatch = isolationPatch.replace(
-    /\n    - id: paimind-platform-scheduler\n      name: '@paimind\/platform-scheduler'[\s\S]*?    - id: paimind-scheduler-adapter-feishu-bot-invariant\n      name: '@paimind\/scheduler-adapter-feishu-bot\/invariant'\n      inject: \[invariants\]\n?/,
-    '\n',
-  )
-  if (withoutSchedulerPatch === isolationPatch) throw new Error('failed to derive Scheduler isolation patch')
+  const isolationPatchWithoutVisualExperience = withoutBundleEntries(fullPatch, [
+    'paimind-visual-experience',
+    'paimind-visual-experience-invariant',
+  ], 'legacy feature-isolation patch without Visual Experience')
+  const isolationPatch = withoutBundleEntries(isolationPatchWithoutVisualExperience, [
+    'paimind-proposal-experience',
+    'paimind-proposal-experience-invariant',
+  ], 'legacy feature-isolation patch without Proposal Experience')
+  const withoutSchedulerPatch = withoutBundleEntries(isolationPatch, [
+    'paimind-platform-scheduler',
+    'paimind-scheduler-adapter-harness',
+    'paimind-scheduler-agent-action',
+    'paimind-scheduler-agent-tool',
+    'paimind-scheduler-adapter-http',
+    'paimind-platform-api',
+    'paimind-scheduler-adapter-feishu-bot',
+    'paimind-platform-scheduler-invariant',
+    'paimind-scheduler-adapter-harness-invariant',
+    'paimind-scheduler-adapter-http-invariant',
+    'paimind-platform-api-invariant',
+    'paimind-scheduler-adapter-feishu-bot-invariant',
+  ], 'Scheduler isolation patch')
   await writeFile(resolve(withoutSchedulerBundleRoot, 'cordis.patch.yml'), withoutSchedulerPatch)
   await mkdir(withoutUserSettingsBundleRoot, { recursive: true })
   await writeFile(resolve(withoutUserSettingsBundleRoot, 'package.json'), JSON.stringify({
@@ -533,11 +617,11 @@ try {
     dsh: { bundle: { patch: './cordis.patch.yml' } },
     dependencies: {},
   }, null, 2))
-  const withoutUserSettingsPatch = isolationPatch.replace(
-    /\n    - id: paimind-user-settings\n      name: '@paimind\/user-settings'\n?/,
-    '\n',
+  const withoutUserSettingsPatch = withoutBundleEntries(
+    isolationPatch,
+    ['paimind-user-settings'],
+    'User Settings isolation patch',
   )
-  if (withoutUserSettingsPatch === isolationPatch) throw new Error('failed to derive User Settings isolation patch')
   await writeFile(resolve(withoutUserSettingsBundleRoot, 'cordis.patch.yml'), withoutUserSettingsPatch)
   await mkdir(withoutDeveloperResourcesBundleRoot, { recursive: true })
   await writeFile(resolve(withoutDeveloperResourcesBundleRoot, 'package.json'), JSON.stringify({
@@ -549,11 +633,11 @@ try {
     dsh: { bundle: { patch: './cordis.patch.yml' } },
     dependencies: {},
   }, null, 2))
-  const withoutDeveloperResourcesPatch = isolationPatch.replace(
-    /\n    - id: paimind-developer-resources\n      name: '@paimind\/developer-resources'\n?/,
-    '\n',
+  const withoutDeveloperResourcesPatch = withoutBundleEntries(
+    isolationPatch,
+    ['paimind-developer-resources'],
+    'Developer Resources isolation patch',
   )
-  if (withoutDeveloperResourcesPatch === isolationPatch) throw new Error('failed to derive Developer Resources isolation patch')
   await writeFile(resolve(withoutDeveloperResourcesBundleRoot, 'cordis.patch.yml'), withoutDeveloperResourcesPatch)
   dsh([
     'plugin', '--profile', 'web', 'add', providerRoot,
@@ -578,6 +662,7 @@ try {
     rendererBentoRoot,
     rendererPdfRoot,
     artifactsRoot,
+    conversationArtifactRendererRoot,
     presentationTraceRoot,
     proposalExperienceRoot,
     walmartProposalAdapterRoot,
@@ -598,6 +683,10 @@ try {
     'better-sidebar', 'dsh-better-sidebar',
     'dsh-better-sidebar-plugin-office', '@huanlin/dsh-plugin-better-sidebar-plugin-office',
     'paimind-extension-center', '@paimind/extension-center',
+    'paimind-pack-experience', 'paimind-pack-agents',
+    'paimind-pack-content', 'paimind-pack-proposal',
+    'paimind-pack-automation', 'paimind-pack-operations',
+    'paimind-capability-runtime-orbs',
     'paimind-runtime-orbs', '@paimind/runtime-orbs',
     'paimind-branding', '@paimind/branding',
     'paimind-visual-experience', '@paimind/visual-experience',
@@ -613,6 +702,7 @@ try {
     'paimind-renderer-bento', '@paimind/renderer-bento',
     'paimind-renderer-pdf', '@paimind/renderer-pdf',
     'paimind-artifacts', '@paimind/artifacts',
+    'paimind-conversation-artifact-renderer', '@paimind/conversation-artifact-renderer',
     'paimind-presentation-trace', '@paimind/presentation-trace',
     'paimind-proposal-experience', '@paimind/proposal-experience',
     'paimind-walmart-proposal-adapter', '@paimind/walmart-proposal-adapter',
@@ -664,6 +754,7 @@ try {
     '@paimind/renderer-bento',
     '@paimind/renderer-pdf',
     '@paimind/artifacts',
+    '@paimind/conversation-artifact-renderer',
     '@paimind/presentation-trace',
     '@paimind/proposal-experience',
     '@paimind/agent-market',
@@ -697,6 +788,7 @@ try {
     '@paimind/renderer-bento',
     '@paimind/renderer-pdf',
     '@paimind/artifacts',
+    '@paimind/conversation-artifact-renderer',
     '@paimind/presentation-trace',
     '@paimind/proposal-experience',
     '@paimind/walmart-proposal-adapter',
@@ -729,6 +821,7 @@ try {
     || removed.includes('paimind-renderer-bento')
     || removed.includes('paimind-renderer-pdf')
     || removed.includes('paimind-artifacts')
+    || removed.includes('paimind-conversation-artifact-renderer')
     || removed.includes('paimind-presentation-trace')
     || removed.includes('paimind-proposal-experience')
     || removed.includes('paimind-walmart-proposal-adapter')
@@ -784,6 +877,7 @@ try {
     rendererBentoRoot,
     rendererPdfRoot,
     artifactsRoot,
+    conversationArtifactRendererRoot,
     presentationTraceRoot,
     agentMarketRoot,
     agentBuilderRoot,
@@ -856,6 +950,7 @@ try {
     rendererBentoRoot,
     rendererPdfRoot,
     artifactsRoot,
+    conversationArtifactRendererRoot,
     presentationTraceRoot,
     agentMarketRoot,
     agentBuilderRoot,
@@ -928,6 +1023,7 @@ try {
     rendererBentoRoot,
     rendererPdfRoot,
     artifactsRoot,
+    conversationArtifactRendererRoot,
     presentationTraceRoot,
     agentBuilderRoot,
     skillMarketRoot,
@@ -999,6 +1095,7 @@ try {
     rendererBentoRoot,
     rendererPdfRoot,
     artifactsRoot,
+    conversationArtifactRendererRoot,
     presentationTraceRoot,
     agentMarketRoot,
     skillMarketRoot,
@@ -1071,6 +1168,7 @@ try {
     rendererBentoRoot,
     rendererPdfRoot,
     artifactsRoot,
+    conversationArtifactRendererRoot,
     presentationTraceRoot,
     agentMarketRoot,
     agentBuilderRoot,
@@ -1142,6 +1240,7 @@ try {
     rendererBentoRoot,
     rendererPdfRoot,
     artifactsRoot,
+    conversationArtifactRendererRoot,
     presentationTraceRoot,
     agentMarketRoot,
     agentBuilderRoot,
@@ -1213,6 +1312,7 @@ try {
     rendererBentoRoot,
     rendererPdfRoot,
     artifactsRoot,
+    conversationArtifactRendererRoot,
     presentationTraceRoot,
     agentMarketRoot,
     agentBuilderRoot,
@@ -1300,6 +1400,7 @@ try {
     rendererBentoRoot,
     rendererPdfRoot,
     artifactsRoot,
+    conversationArtifactRendererRoot,
     presentationTraceRoot,
     agentMarketRoot,
     agentBuilderRoot,
@@ -1407,6 +1508,7 @@ try {
     rendererBentoRoot,
     rendererPdfRoot,
     artifactsRoot,
+    conversationArtifactRendererRoot,
     presentationTraceRoot,
     agentMarketRoot,
     agentBuilderRoot,

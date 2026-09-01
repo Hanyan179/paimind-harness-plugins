@@ -41,7 +41,7 @@ const STYLE = `
 [data-paimind-proposal-step-count]{color:#8796a9;font-size:11px;font-weight:680}
 [data-paimind-proposal-title]{margin:0;font-size:24px;line-height:31px;font-weight:700;letter-spacing:-.025em}
 [data-paimind-proposal-detail]{max-width:740px;margin:8px 0 0;color:#9ba9bb;font-size:13px;line-height:20px}
-[data-paimind-proposal-progress]{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:5px 0 0;padding:0;list-style:none}
+[data-paimind-proposal-progress]{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:5px 0 0;padding:0;list-style:none}
 [data-paimind-proposal-progress] li{position:relative;min-width:0;padding-top:10px;color:#758397;font-size:10px;font-weight:680;line-height:14px}
 [data-paimind-proposal-progress] li::before{content:'';position:absolute;inset:0 0 auto;height:2px;border-radius:999px;background:#29384a}
 [data-paimind-proposal-progress] li[data-state='complete'],[data-paimind-proposal-progress] li[data-state='current']{color:#dfe8f3}
@@ -54,6 +54,11 @@ const STYLE = `
 [data-paimind-proposal-options][data-stage='department']{grid-template-columns:repeat(2,minmax(0,1fr))}
 [data-paimind-proposal-options][data-stage='deck-type']{grid-template-columns:1fr}
 [data-paimind-proposal-options][data-stage='deck-style']{grid-template-columns:1fr}
+[data-paimind-proposal-options][data-stage='content-data']{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+[data-paimind-proposal-options][data-stage='content-data'] [data-paimind-proposal-option]{align-items:flex-start;min-height:108px;padding:16px;background:linear-gradient(145deg,#172334,#121c29)}
+[data-paimind-proposal-options][data-stage='content-data'] [data-paimind-proposal-option-copy]{gap:6px}
+[data-paimind-proposal-options][data-stage='content-data'] [data-paimind-proposal-option-copy] small{line-height:18px}
+[data-paimind-content-data-kind]{display:inline-flex;width:max-content;padding:2px 7px;border:1px solid #405167;border-radius:999px;color:#8eb8df;font-size:8px;font-weight:780;letter-spacing:.09em;text-transform:uppercase}
 [data-paimind-proposal-option]{display:flex;align-items:center;gap:13px;width:100%;min-height:68px;padding:13px 15px;border:1px solid #2b3a4d;border-radius:17px;background:#151f2e;color:inherit;text-align:left;cursor:pointer;transition:transform .16s ease,border-color .16s ease,background-color .16s ease,box-shadow .16s ease}
 [data-paimind-proposal-option]:hover,[data-paimind-proposal-option]:focus-visible{outline:none;border-color:#5e8fb9;background:#19283a;box-shadow:0 12px 30px rgba(2,8,16,.28);transform:translateY(-1px)}
 [data-paimind-proposal-option][data-focused='true']:not(:hover):not(:focus-visible):not([aria-checked='true']){border-color:#3d5066;background:#172334}
@@ -121,7 +126,7 @@ const STYLE = `
 [data-ds-dark-theme] [data-paimind-brand-logo-shell]{border-color:rgba(255,255,255,.18)}
 @container (max-width:760px){[data-paimind-proposal-body][data-preview='true']{grid-template-columns:1fr}[data-paimind-deck-preview],[data-paimind-deck-type-preview]{border-top:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.16));border-left:0}}
 @media(max-width:900px){[data-paimind-proposal-body][data-preview='true']{grid-template-columns:1fr}[data-paimind-deck-preview],[data-paimind-deck-type-preview]{border-top:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.16));border-left:0}}
-@media(max-width:620px){[data-paimind-proposal-frame]{padding-right:10px;padding-left:10px}[data-paimind-proposal-thread]{padding-right:0;padding-left:0}[data-paimind-proposal-card]{width:100%;margin-left:0}[data-paimind-proposal-head]{padding:16px 15px 13px}[data-paimind-proposal-progress] li{font-size:0}[data-paimind-proposal-progress] li::after{content:attr(data-step);font-size:9px}[data-paimind-proposal-options]{padding:12px}[data-paimind-proposal-options][data-stage='customer'],[data-paimind-proposal-options][data-stage='department']{grid-template-columns:1fr}}
+@media(max-width:620px){[data-paimind-proposal-frame]{padding-right:10px;padding-left:10px}[data-paimind-proposal-thread]{padding-right:0;padding-left:0}[data-paimind-proposal-card]{width:100%;margin-left:0}[data-paimind-proposal-head]{padding:16px 15px 13px}[data-paimind-proposal-progress] li{font-size:0}[data-paimind-proposal-progress] li::after{content:attr(data-step);font-size:9px}[data-paimind-proposal-options]{padding:12px}[data-paimind-proposal-options][data-stage='customer'],[data-paimind-proposal-options][data-stage='department'],[data-paimind-proposal-options][data-stage='content-data']{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){[data-paimind-proposal-option]{transition:none}}
 `
 
@@ -299,18 +304,12 @@ function DeckPreview({ option }: { readonly option: HarnessQuestionOption | unde
       <div><span>Best for</span><strong>{preview.bestFor}</strong></div>
       <div><span>Story rhythm</span><strong>{preview.story}</strong></div>
     </div>
-    <p data-paimind-preview-hint>Preview by hover or focus. Select a style, then use it to finish the intake.</p>
+    <p data-paimind-preview-hint>Preview by hover or focus. After style confirmation, the Agent matches capabilities and offers available content and data.</p>
   </aside>
 }
 
-const PROPOSAL_STEPS = Object.freeze([
-  { id: PROPOSAL_QUESTION_IDS.customer, label: 'Customer', stage: 'customer' },
-  { id: PROPOSAL_QUESTION_IDS.department, label: 'Department', stage: 'department' },
-  { id: PROPOSAL_QUESTION_IDS.deckType, label: 'Deck type', stage: 'deck-type' },
-  { id: PROPOSAL_QUESTION_IDS.deckStyle, label: 'Deck style', stage: 'deck-style' },
-] as const)
-
 const PROPOSAL_CANCEL_INTENT = 'PAIMIND_PROPOSAL_NAVIGATION:CANCEL'
+const PROPOSAL_BACK_INTENT = 'PAIMIND_PROPOSAL_NAVIGATION:BACK'
 
 function ProposalSpeaker(): React.JSX.Element {
   return <div data-paimind-proposal-speaker>
@@ -321,34 +320,23 @@ function ProposalSpeaker(): React.JSX.Element {
   </div>
 }
 
-function questionStep(question: HarnessQuestionItem): number {
-  const index = PROPOSAL_STEPS.findIndex(step => step.id === question.id)
-  return index < 0 ? 0 : index
-}
-
 function questionStage(question: HarnessQuestionItem): string {
-  return PROPOSAL_STEPS[questionStep(question)]?.label ?? question.header ?? 'Proposal setup'
+  return question.header ?? 'Proposal context'
 }
 
 function stageKey(question: HarnessQuestionItem): string {
-  return PROPOSAL_STEPS[questionStep(question)]?.stage ?? 'generic'
+  if (question.id === PROPOSAL_QUESTION_IDS.customer) return 'customer'
+  if (question.id === PROPOSAL_QUESTION_IDS.department) return 'department'
+  if (question.id === PROPOSAL_QUESTION_IDS.deckType) return 'deck-type'
+  if (question.id === PROPOSAL_QUESTION_IDS.deckStyle) return 'deck-style'
+  if (question.id === PROPOSAL_QUESTION_IDS.contentData) return 'content-data'
+  return 'generic'
 }
 
 function optionDetail(option: HarnessQuestionOption): string | undefined {
   const label = optionPresentation(option.label).label
   const department = departmentOptionPresentation(label)
   return option.description ?? OPTION_DETAILS[department === null ? label : `${department.code} · ${department.name}`]
-}
-
-function ProgressRail(props: { readonly current: number }): React.JSX.Element {
-  return <ol data-paimind-proposal-progress aria-label="Proposal setup progress">
-    {PROPOSAL_STEPS.map((step, index) => <li
-      key={step.id}
-      data-step={index + 1}
-      data-state={index < props.current ? 'complete' : index === props.current ? 'current' : 'upcoming'}
-      aria-current={index === props.current ? 'step' : undefined}
-    >{step.label}</li>)}
-  </ol>
 }
 
 interface ProposalQuestionComposerProps {
@@ -365,11 +353,10 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pendingAction, setPendingAction] = useState<string | null>(null)
-  const step = questionStep(question)
   const stage = stageKey(question)
-  const previousStep = step > 0 ? PROPOSAL_STEPS[step - 1] : undefined
   const hasDeckTypePreview = question.id === PROPOSAL_QUESTION_IDS.deckType
   const hasDeckStylePreview = question.id === PROPOSAL_QUESTION_IDS.deckStyle
+  const hasContentData = question.id === PROPOSAL_QUESTION_IDS.contentData
   const hasPreview = hasDeckTypePreview || hasDeckStylePreview
   const focusedOption = useMemo(() => options.find(option => option.label === focused) ?? options[0], [focused, options])
 
@@ -406,12 +393,14 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
   }
 
   const navigateBack = (): void => {
-    if (previousStep === undefined || busy) return
-    void answer([], `PAIMIND_PROPOSAL_NAVIGATION:BACK:${previousStep.id}`, `Proposal Assistant is returning to ${previousStep.label}…`)
+    if (busy) return
+    void answer([], PROPOSAL_BACK_INTENT, 'Proposal Assistant is deciding which earlier context to revisit…')
   }
 
-  const actionLabel = hasDeckStylePreview ? 'Use this deck style' : hasDeckTypePreview ? 'Use this deck type' : 'Continue'
-  const actionStatus = hasDeckStylePreview
+  const actionLabel = hasContentData ? 'Use selected content' : hasDeckStylePreview ? 'Use this deck style' : hasDeckTypePreview ? 'Use this deck type' : 'Continue'
+  const actionStatus = hasContentData
+    ? selected.length === 0 ? 'Select the content and data to include' : `${selected.length} content area${selected.length === 1 ? '' : 's'} selected`
+    : hasDeckStylePreview
     ? selected.length === 0 ? 'Preview and select one style' : `${optionPresentation(selected[0]!).label} selected`
     : hasDeckTypePreview
       ? selected.length === 0 ? 'Preview and select one deck type' : `${optionPresentation(selected[0]!).label} selected`
@@ -422,12 +411,11 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
         <div data-paimind-proposal-heading>
           <div data-paimind-proposal-kicker-row>
             <p data-paimind-proposal-kicker>Proposal setup · {questionStage(question)}</p>
-            <span data-paimind-proposal-step-count>Step {step + 1} of {PROPOSAL_STEPS.length}</span>
+            <span data-paimind-proposal-step-count>AI-selected question</span>
           </div>
           <h2 data-paimind-proposal-title id={`proposal-question-${matched.key}`}>{question.question}</h2>
           {question.detail === undefined ? null : <p data-paimind-proposal-detail>{question.detail}</p>}
         </div>
-        <ProgressRail current={step} />
       </header>
       <div data-paimind-proposal-body data-preview={hasPreview}>
         <div data-paimind-proposal-options data-stage={stage} role={question.multiSelect === true ? 'group' : 'radiogroup'}>
@@ -462,6 +450,7 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
                   </span>
                 : <span data-paimind-proposal-indicator aria-hidden="true">{active ? <PaimindCheckIcon /> : index + 1}</span>)}
               <span data-paimind-proposal-option-copy>
+                {hasContentData ? <span data-paimind-content-data-kind>Available from matched capability</span> : null}
                 <span data-paimind-proposal-option-line><strong>{department?.name ?? display.label}</strong>{department === null ? null : <span data-paimind-department-meta>DG {department.code}</span>}{display.recommended ? <em data-paimind-proposal-recommended>Recommended</em> : null}</span>
                 {detail === undefined ? null : <small>{detail}</small>}
               </span>
@@ -480,7 +469,7 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
           </label>
           <div data-paimind-proposal-actions data-kind={hasPreview ? 'deck' : question.multiSelect === true ? 'multi-select' : 'single-select'}>
             <div data-paimind-proposal-action-leading>
-              {previousStep === undefined ? null : <button type="button" data-paimind-proposal-back data-navigation="ai-request" disabled={busy} onClick={navigateBack}>Back to {previousStep.label}</button>}
+              <button type="button" data-paimind-proposal-back data-navigation="ai-request" disabled={busy} onClick={navigateBack}>Back</button>
               <span aria-live="polite">{pendingAction ?? actionStatus}</span>
             </div>
             <button type="button" data-paimind-proposal-submit disabled={busy || (selected.length === 0 && custom.trim() === '')} onClick={() => { void answer(selected, custom.trim()) }}>{actionLabel}</button>

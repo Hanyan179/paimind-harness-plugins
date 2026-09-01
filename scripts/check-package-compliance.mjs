@@ -17,6 +17,7 @@ const roles = await loadPackageRoles()
 const matrix = await loadCompatibilityMatrix()
 const retirement = await loadRetiredPackages()
 const rootManifest = await readJson(join(repositoryRoot, 'package.json'))
+const workspacePolicy = await readFile(join(repositoryRoot, 'pnpm-workspace.yaml'), 'utf8')
 const byName = new Map()
 
 const ignoredScanDirectories = new Set(['.git', 'node_modules', 'lib', 'coverage', '.tmp', '.dsh-home'])
@@ -198,11 +199,29 @@ for (const provider of matrix.providers) {
     }
   }
 }
+const sidebarProvider = matrix.providers.find(provider => provider.package === 'dsh-better-sidebar')
+const sidebarAdapterSource = await readFile(join(
+  repositoryRoot,
+  'packages/better-sidebar-adapter/src/index.ts',
+), 'utf8')
+const sidebarAdapterVersion = /VERIFIED_BETTER_SIDEBAR_VERSION = '([^']+)'/.exec(sidebarAdapterSource)?.[1]
+if (sidebarProvider === undefined || sidebarAdapterVersion !== sidebarProvider.version) {
+  fail(
+    'version',
+    `better-sidebar adapter contract must report the selected provider version ${sidebarProvider?.version ?? 'missing'}; found ${sidebarAdapterVersion ?? 'missing'}`,
+  )
+}
 if (rootManifest.engines?.node !== matrix.toolchain.node) {
   fail('version', 'root Node.js engine differs from the compatibility matrix')
 }
 if (rootManifest.packageManager !== `pnpm@${matrix.toolchain.pnpm}`) {
   fail('version', 'root pnpm version differs from the compatibility matrix')
+}
+if (!/^minimumReleaseAge:\s*1440\s*$/mu.test(workspacePolicy)) {
+  fail('supply-chain', 'pnpm-workspace.yaml must enforce minimumReleaseAge: 1440')
+}
+if (/^minimumReleaseAgeExclude:/mu.test(workspacePolicy)) {
+  fail('supply-chain', 'pnpm-workspace.yaml must not bypass package-age checks')
 }
 
 if (failures.length) {
@@ -214,5 +233,5 @@ if (failures.length) {
     counts[role.role] = (counts[role.role] ?? 0) + 1
     return counts
   }, {})
-  console.log(`package compliance passed: ${packages.length} package(s), ${JSON.stringify(roleCounts)}, unique identities, real consumers, reachable runtime graph, clean manifests and exact compatibility pins`)
+  console.log(`package compliance passed: ${packages.length} package(s), ${JSON.stringify(roleCounts)}, unique identities, real consumers, reachable runtime graph, clean manifests, exact compatibility pins and a 24-hour package-age gate`)
 }

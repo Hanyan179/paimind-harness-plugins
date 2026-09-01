@@ -18,14 +18,19 @@ describe('R2 HTML generator provider', () => {
 
   it('declares native edit intent and an exact location so successful calls join Harness Deliverables', () => {
     let definition: any
+    const section = vi.fn(() => () => {})
     apply({
       paimindArtifactGenerators: { register: vi.fn(() => () => {}), execute: vi.fn(), list: vi.fn(() => []) },
       tools: { register: vi.fn(value => { definition = value; return () => {} }), execute: vi.fn() },
-      systemPrompt: { section: vi.fn(() => () => {}), context: vi.fn(() => () => {}) },
+      systemPrompt: { section, context: vi.fn(() => () => {}) },
       effect(install) { install() },
     })
     expect(definition.presentCall({
       file_path: 'report.html', title: 'Report', html: '<!doctype html>',
     })).toMatchObject({ kind: 'edit', locations: [{ path: 'report.html' }] })
+    expect(section).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'tool:generate-html-artifact',
+      text: expect.stringMatching(/wrap long unbroken content.*420 CSS px/),
+    }))
   })
 })

@@ -259,7 +259,7 @@ export function openRegisteredBentoArtifact(
   if (project === undefined) return false
   const resolution = resolveArtifactPath(project.path, artifact.path)
   if (resolution.state !== 'safe' || resolution.kind !== 'html') return false
-  return bentoPreview.open({
+  const opened = bentoPreview.open({
     sessionId: artifact.sessionId,
     workspaceId: artifact.workspaceId,
     cwd: project.path,
@@ -269,6 +269,43 @@ export function openRegisteredBentoArtifact(
     artifactId: artifact.id,
     ...(artifact.traceId === undefined ? {} : { traceId: artifact.traceId }),
   })
+  if (opened) rememberBentoArtifactHistory(artifact)
+  return opened
+}
+
+const BENTO_ARTIFACT_HISTORY_KEY = 'paimindBentoArtifact'
+
+interface BentoArtifactHistoryLocator {
+  readonly schema: 'paimind.bento-artifact-history/v1'
+  readonly artifactId: string
+  readonly sourceId: string
+}
+
+function readBentoArtifactHistory(): BentoArtifactHistoryLocator | null {
+  if (typeof window === 'undefined' || window.history.state === null || typeof window.history.state !== 'object') return null
+  const candidate = (window.history.state as Record<string, unknown>)[BENTO_ARTIFACT_HISTORY_KEY]
+  if (candidate === null || typeof candidate !== 'object') return null
+  const locator = candidate as Partial<BentoArtifactHistoryLocator>
+  return locator.schema === 'paimind.bento-artifact-history/v1'
+    && typeof locator.artifactId === 'string' && locator.artifactId.trim() !== ''
+    && typeof locator.sourceId === 'string' && locator.sourceId.trim() !== ''
+    ? { schema: locator.schema, artifactId: locator.artifactId, sourceId: locator.sourceId }
+    : null
+}
+
+function rememberBentoArtifactHistory(artifact: Pick<PaimindArtifactView, 'id' | 'sourceId'>): void {
+  if (typeof window === 'undefined') return
+  const current = window.history.state !== null && typeof window.history.state === 'object'
+    ? window.history.state as Record<string, unknown>
+    : {}
+  window.history.replaceState({
+    ...current,
+    [BENTO_ARTIFACT_HISTORY_KEY]: {
+      schema: 'paimind.bento-artifact-history/v1',
+      artifactId: artifact.id,
+      sourceId: artifact.sourceId,
+    } satisfies BentoArtifactHistoryLocator,
+  }, '', window.location.href)
 }
 
 /** Resolve one chat/file link to its registered Bento Artifact in the active Session. */
@@ -333,8 +370,9 @@ export function installBentoArtifactDeepLink(
 ): () => void {
   if (typeof window === 'undefined') return () => {}
   const url = new URL(window.location.href)
-  const artifactId = url.searchParams.get(BENTO_ARTIFACT_DEEP_LINK_PARAM)
-  const sourceId = url.searchParams.get(BENTO_ARTIFACT_SOURCE_DEEP_LINK_PARAM)
+  const historyLocator = readBentoArtifactHistory()
+  const artifactId = url.searchParams.get(BENTO_ARTIFACT_DEEP_LINK_PARAM) ?? historyLocator?.artifactId ?? null
+  const sourceId = url.searchParams.get(BENTO_ARTIFACT_SOURCE_DEEP_LINK_PARAM) ?? historyLocator?.sourceId ?? null
   if (artifactId === null || artifactId.trim() === '') return () => {}
   let consumed = false
   const tryOpen = (): void => {
@@ -604,7 +642,18 @@ export function apply(ctx: ArtifactsClientContext): void {
   })
   ctx.effect(() => installStyle(), 'paimind-artifacts: style')
   ctx.effect(() => {
-    const registry = new ArtifactRegistry()
+    const registry = new ArtifactRegistry(artifact => {
+      if (openRegisteredBentoArtifact(
+        artifact,
+        ctx.paimindWorkspaceProject.getSnapshot().projects,
+        ctx.paimindBentoPreview,
+      )) return { state: 'opened' }
+      return {
+        state: 'failed',
+        messageZh: '这个产物没有可用的专属查看器。',
+        messageEn: 'No dedicated viewer is available for this artifact.',
+      }
+    })
     const nativeSource = new HarnessDeliverableArtifactSource(ctx.sessions, ctx.paimindWorkspaceProject)
     const projectedSource = new HarnessProjectedArtifactSource(ctx.sessions, ctx.paimindWorkspaceProject)
     const offNative = registry.registerSource(nativeSource)

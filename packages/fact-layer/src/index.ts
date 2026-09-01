@@ -1,12 +1,12 @@
 import { fileURLToPath } from 'node:url'
-import { isAbsolute, relative, resolve } from 'node:path'
+import { resolve } from 'node:path'
 import {
-  artifactToolMeta, presentArtifactToolResult,
+  artifactToolMeta, artifactWorkspaceRelativePath, presentArtifactToolResult, requireCurrentSessionArtifact,
   type PaimindArtifactGeneratorService, type PaimindGeneratorProvider,
 } from '@paimind/artifact-runtime'
 import {
-  defineArtifactProducedEnvelope, defineArtifactProjection,
-  type ArtifactProducedEnvelopeV1, type PaimindArtifactProjectionV1,
+  defineArtifactProducedEnvelope,
+  type ArtifactProducedEnvelopeV1,
 } from '@paimind/contracts'
 import {
   definePaimindHarnessTool,
@@ -39,15 +39,6 @@ function stringArray(value: unknown, label: string): readonly string[] {
   if (new Set(rows).size !== rows.length) throw new Error(`${label} contains duplicates`)
   return rows
 }
-function artifactWorkspacePath(value: unknown, exec: PaimindToolRunContext, label: string): string {
-  const path = text(value, label)
-  if (!isAbsolute(path)) return path
-  const cwd = exec.agent?.session.header.cwd
-  if (cwd === undefined) throw new Error(`${label} cannot be resolved without a Workspace root`)
-  const relativePath = relative(resolve(cwd), path)
-  if (relativePath === '' || isAbsolute(relativePath) || relativePath.split(/[\\/]+/).includes('..')) throw new Error(`${label} escapes the Workspace`)
-  return relativePath
-}
 function shellQuote(value: string): string { return `'${value.replaceAll("'", `'\\''`)}'` }
 
 interface FactLayerArgs { readonly outputPath: string; readonly artifactIds: readonly string[]; readonly paths: readonly string[] }
@@ -60,7 +51,7 @@ export const factLayerProvider: PaimindGeneratorProvider = {
   describe(input) { const value = args(input); return { path: value.outputPath, title: 'Proposal Fact Layer' } },
   async generate(input, context) {
     const value = args(input)
-    const command = ['node', `${runtimeDir()}/runner.mjs`, 'build', '--artifact-ids', JSON.stringify(value.artifactIds), '--paths', JSON.stringify(value.paths), '--output', value.outputPath].map(shellQuote).join(' ')
+    const command = [process.execPath, `${runtimeDir()}/runner.mjs`, 'build', '--artifact-ids', JSON.stringify(value.artifactIds), '--paths', JSON.stringify(value.paths), '--output', value.outputPath].map(shellQuote).join(' ')
     await context.runWorkspaceCommand({ command, description: 'Build immutable presentation Fact Set', timeoutMs: 60_000 })
     return { path: value.outputPath, title: 'Proposal Fact Layer' }
   },
@@ -78,16 +69,14 @@ const ARTIFACT_SCHEMA = { type: 'object', additionalProperties: false, propertie
   schema: { type: 'string', required: true }, artifactId: { type: 'string', required: true }, sessionId: { type: 'string', required: true }, workspaceId: { type: 'string', required: true }, path: { type: 'string', required: true }, title: { type: 'string', required: true }, kind: { type: 'string', required: true }, previewKind: { type: 'string', required: true }, revision: { type: 'number', required: true }, producerId: { type: 'string', required: true }, taskId: { type: 'string', required: true }, state: { type: 'string', required: true }, producedAt: { type: 'number', required: true }, error: { type: 'object', additionalProperties: false, properties: { code: { type: 'string', required: true }, message: { type: 'string', required: true } } },
 } } as const
 const TOOL_OUTPUT = { type: 'object', additionalProperties: false, properties: { artifact: { ...ARTIFACT_SCHEMA, required: true } } } as const
-function artifactsFor(ctx: FactLayerHostContext, exec: PaimindToolRunContext): readonly Readonly<ArtifactProducedEnvelopeV1>[] {
-  if (exec.agent === undefined) throw new Error('Fact Layer requires a live Harness Agent')
-  return defineArtifactProjection(ctx.sessionProjections.snapshot(exec.agent.session).values['paimind.artifacts'] as PaimindArtifactProjectionV1).artifacts
-}
 function resolveInputs(ctx: FactLayerHostContext, exec: PaimindToolRunContext, ids: readonly string[]): readonly string[] {
-  const artifacts = artifactsFor(ctx, exec)
+  if (exec.agent === undefined) throw new Error('Fact Layer requires a live Harness Agent')
+  const projection = ctx.sessionProjections.snapshot(exec.agent.session).values['paimind.artifacts']
   return ids.map(id => {
-    const artifact = artifacts.find(candidate => candidate.artifactId === id)
-    if (artifact === undefined || artifact.state !== 'available' || artifact.kind !== 'json' || artifact.sessionId !== exec.agent?.id || artifact.producerId === FACT_LAYER_PROVIDER_ID) throw new Error(`Artifact ${id} is not an available current-Session analysis data_result`)
-    return artifactWorkspacePath(artifact.path, exec, `resolved analysis Artifact ${id}`)
+    const artifact = requireCurrentSessionArtifact(projection, exec, id, {
+      description: 'an available current-Session analysis data_result', kind: 'json', excludedProducerIds: [FACT_LAYER_PROVIDER_ID],
+    })
+    return artifactWorkspaceRelativePath(artifact.path, exec, { label: `resolved analysis Artifact ${id}` })
   })
 }
 

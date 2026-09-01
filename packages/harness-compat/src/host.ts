@@ -284,6 +284,89 @@ export function markPaimindHostRemoteMethods(service: object, methods: readonly 
   }
 }
 
+/** Public Cordis Loader entry subset used by the product Feature Pack controller. */
+export interface PaimindHostLoaderEntry {
+  readonly id: string
+  readonly options: {
+    readonly id: string
+    readonly name: string
+    readonly group?: boolean | null
+    readonly disabled?: boolean | null
+  }
+  /** Runtime-only entry transition; unlike Loader.update this does not rewrite the file-backed tree. */
+  update?(
+    options: { readonly disabled?: boolean | null },
+    create?: boolean,
+    force?: boolean,
+  ): Promise<void>
+}
+
+/** Structural public Loader tree; version-specific classes stay behind this boundary. */
+export interface PaimindHostLoaderFacility {
+  entries(): Iterable<PaimindHostLoaderEntry>
+  await(): Promise<void>
+  resolve(id: string): PaimindHostLoaderEntry
+  update(
+    id: string,
+    options: { readonly disabled?: boolean | null },
+    parent?: string | null,
+    position?: number,
+  ): Promise<void>
+}
+
+export interface PaimindHostLoaderEntryState {
+  readonly entryId: string
+  readonly installed: boolean
+  readonly enabled: boolean
+}
+
+/** Resolve a stable product-owned id even when an Include subtree prefixes the runtime id. */
+function resolvePaimindHostLoaderEntry(
+  loader: PaimindHostLoaderFacility,
+  entryId: string,
+): PaimindHostLoaderEntry | undefined {
+  try {
+    return loader.resolve(entryId)
+  } catch {
+    const matches = [...loader.entries()].filter(entry => entry.options.id === entryId)
+    if (matches.length > 1) {
+      throw new Error(`PAIMind Loader entry "${entryId}" is ambiguous (${matches.length} matches)`)
+    }
+    return matches[0]
+  }
+}
+
+/** Read one exact composition-group row without inferring state from child packages. */
+export function describePaimindHostLoaderEntry(
+  loader: PaimindHostLoaderFacility,
+  entryId: string,
+): Readonly<PaimindHostLoaderEntryState> {
+  const entry = resolvePaimindHostLoaderEntry(loader, entryId)
+  if (entry === undefined) return Object.freeze({ entryId, installed: false, enabled: false })
+  return Object.freeze({
+    entryId,
+    installed: true,
+    enabled: entry.options.disabled !== true,
+  })
+}
+
+/** Toggle an exact public Loader entry and let Cordis own disposal, restore, and persistence. */
+export async function setPaimindHostLoaderEntryEnabled(
+  loader: PaimindHostLoaderFacility,
+  entryId: string,
+  enabled: boolean,
+): Promise<void> {
+  const entry = resolvePaimindHostLoaderEntry(loader, entryId)
+  if (entry === undefined) throw new Error(`PAIMind Loader entry "${entryId}" is not installed`)
+  if ((entry.options.disabled !== true) === enabled) return
+  const patch = { disabled: enabled ? null : true }
+  // Product switch persistence belongs to Harness Settings. Keep the file-backed
+  // Loader tree inert at bootstrap so a physically absent package can still boot
+  // when its owning Product Pack is off.
+  if (entry.update !== undefined) await entry.update(patch)
+  else await loader.update(entry.id, patch)
+}
+
 /** Public storage-domain helpers isolated from feature package manifests. */
 export function definePaimindStorageDomain(spec: Readonly<Record<string, unknown>>): unknown {
   return defineDomain(spec as never)
@@ -604,17 +687,21 @@ export function readPaimindScheduledHarnessResult(
   })
 }
 
-export interface PaimindSessionProjectionDefinition<State> {
+/** Harness 0.1.1 client-visible Session Projection registration shape. */
+export interface PaimindSessionProjectionDefinition<State, View = unknown> {
   readonly key: string
-  readonly schema: { parse(value: unknown): unknown }
+  readonly stateSchema: { parse(value: unknown): State }
   init(): State
   apply(state: State, event: PaimindSessionEvent): State
-  view(state: State): unknown
+  readonly wire: {
+    readonly viewSchema: { parse(value: unknown): View }
+    view(state: State): View
+  }
   readonly stateVersion: number
 }
 
 export interface PaimindHostSessionProjectionRegistry {
-  register<State>(definition: PaimindSessionProjectionDefinition<State>): () => void
+  register<State, View>(definition: PaimindSessionProjectionDefinition<State, View>): () => void
   snapshot(session: PaimindHostAgent['session']): {
     readonly asOfSeq: number
     readonly values: Readonly<Record<string, unknown>>

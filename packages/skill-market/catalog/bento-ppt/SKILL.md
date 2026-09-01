@@ -1,9 +1,9 @@
 ---
 name: bento-ppt
-description: Create an evidence-backed PAIMind Bento HTML presentation with a validated outline and object-level provenance. Use when the user asks for a Bento deck, traceable presentation, HTML PPT, buyer proposal deck, or wants sources and facts linked to slides, chart points, or table cells.
+description: Create an evidence-backed Bento presentation with a validated outline, object-level provenance, and an interactive editable Bento Artifact as the final deliverable. Use for proposal decks, buyer presentations, traceable slides, or sources and facts linked to slide objects.
 ---
 
-# Bento PPT for Harness
+# Traceable Bento Delivery for Harness
 
 Create the story and visual structure; leave validation, rendering, trace generation, and Artifact publication to Harness Tools.
 
@@ -16,7 +16,8 @@ Create the story and visual structure; leave validation, rendering, trace genera
 7. Select a registered HTML presentation design instead of inventing arbitrary CSS: use `generic-dark` with the general presets; `wmt-kids-mod` with `wmt-retail`; `strategy-grid` with `strategy-consulting`; `paramont-mountain` with `paramont-signature`; or `storybook-cutpaper` with `playful-storybook`. Always declare `aspectRatio: "16:9"`, `canvas: {"width":1280,"height":720}`, and a truthful density of `airy`, `balanced`, or `dense`.
 8. Keep a slide title decision-sized and its narrative to roughly two lines at 1280×720. Preserve longer definitions, dimensions, measures, formulas, filters, and technical lineage in the Fact Set; the hydrator carries them into Trace Mode without asking the Agent to reproduce them.
 9. Call `create_fact_bound_presentation_outline` with the exact `fact_set_artifact_id`, a `<name>.outline.json` path, and the compact blueprint.
-10. Call `generate_traceable_bento_from_outline` with `<name>.bento.html`, the exact returned Outline Artifact ID, and the same exact Fact Set Artifact ID. Do not read and resend the full generated Outline.
+10. Call `generate_traceable_bento_from_outline` with `<name>.bento.html`, the exact returned Outline Artifact ID, and the exact Fact Set Artifact ID when the Outline is Fact Set-backed. A trusted complete Outline producer such as the Walmart buyer-proposal Tool does not require a separate Fact Set argument. The Tool resolves the exact Artifact, verifies source hashes and Fact bindings, renders the registered Bento design, and publishes Trace and Validation sidecars. Do not read or resend the full generated Outline.
+11. Return the Bento Artifact as the single primary final deliverable. Its Preview, Edit, and Trace modes form one delivery workbench; do not substitute a generated PPTX or a separate optional preview. Only after Bento succeeds, and only when the current user explicitly requested an editable PPTX export, generate and return that Artifact as a secondary export.
 
 The Tool schema is authoritative. Use this compact blueprint field map when a Fact Set is available:
 
@@ -45,4 +46,4 @@ Do not search the Harness checkout for this contract. If a Tool rejects an inval
 
 Do not pre-create or transform the target Outline with Write, Edit, Bash, or another file mutation Tool. Submit the blueprint directly to `create_fact_bound_presentation_outline`; the deterministic Tool owns hydration, validation, and publication.
 
-Do not write HTML directly, recalculate or hand-copy verified facts, use `generate_bento_artifact` for traced work, or claim completion unless both compact-chain Tools return available Artifacts.
+Do not write HTML directly, generate an unrequested PPTX or substitute PPTX for Bento, recalculate or hand-copy verified facts, use `generate_bento_artifact` for traced work, or claim completion unless the Outline and final Bento Tools return available Artifacts with valid Trace and Validation evidence.

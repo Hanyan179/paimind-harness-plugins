@@ -1,3 +1,5 @@
+import { createElement } from 'react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { PaimindLocaleSource } from '@paimind/harness-compat'
 import type { PaimindWorkspaceProjectService, WorkspaceProjectSnapshot } from '@paimind/workspace-project'
@@ -7,10 +9,19 @@ import {
   PAIMIND_SIDEBAR_CONTRACT_VERSION,
   VERIFIED_BETTER_SIDEBAR_VERSION,
   type ExternalBetterSidebarService,
+  type ExternalSidebarFileViewerDescriptor,
+  type ExternalSidebarFileViewerProps,
   type ExternalSidebarTabDescriptor,
   type PaimindSidebarTabDefinition,
 } from '../src/index.ts'
-import { apply, inject, type BetterSidebarAdapterClientContext } from '../src/client/index.ts'
+import {
+  apply,
+  inject,
+  installOfficeDomCleanupGuard,
+  markOfficeLifecycleTree,
+  stabilizeOfficeFileViewerScopes,
+  type BetterSidebarAdapterClientContext,
+} from '../src/client/index.ts'
 
 function locale(initial = 'en'): PaimindLocaleSource & { set(value: string): void } {
   let active = initial
@@ -64,7 +75,7 @@ function definition(label: string): PaimindSidebarTabDefinition {
 
 describe('FP05 Better Sidebar adapter', () => {
   it('exposes a versioned active boundary and maps only stable render scope', () => {
-    expect(VERIFIED_BETTER_SIDEBAR_VERSION).toBe('0.14.0')
+    expect(VERIFIED_BETTER_SIDEBAR_VERSION).toBe('0.16.1')
     const external = provider()
     const language = locale('en')
     const adapter = new BetterSidebarAdapter(external.service, language, projects())
@@ -167,33 +178,188 @@ describe('FP05 Better Sidebar adapter', () => {
     expect(fixture.services.has('paimindSidebar')).toBe(false)
   })
 
-  it('opens only an enabled matching file viewer and refreshes the path-derived editor', () => {
+  it('keeps an Office editor bound to its mount scope across Harness Session changes', () => {
+    const listeners = new Set<() => void>()
+    const original = (props: ExternalSidebarFileViewerProps) => createElement(
+      'output',
+      { 'data-testid': 'office-scope' },
+      `${props.scope.sessionId}:${props.scope.cwd}`,
+    )
+    const officeViewer: ExternalSidebarFileViewerDescriptor = {
+      id: 'xlsx', exts: ['xlsx'], fetchStrategy: 'mediaUrl', component: original,
+    }
+    const providerService = {
+      registerTab: () => () => {},
+      openTab: vi.fn(),
+      getFileViewers: () => [officeViewer],
+      subscribe: (listener: () => void) => {
+        listeners.add(listener)
+        return () => { listeners.delete(listener) }
+      },
+    } satisfies ExternalBetterSidebarService
+
+    const dispose = stabilizeOfficeFileViewerScopes(providerService)
+    expect(officeViewer.component).not.toBe(original)
+    const mounted = render(createElement(officeViewer.component!, {
+      scope: { sessionId: 'session-1', cwd: '/workspace/one' },
+      path: '/workspace/report.xlsx', title: 'Report', viewerId: 'xlsx',
+    }))
+    expect(document.querySelector('[data-paimind-office-lifecycle-boundary="xlsx"]')).not.toBeNull()
+    expect(screen.getByTestId('office-scope')).toHaveTextContent('session-1:/workspace/one')
+
+    mounted.rerender(createElement(officeViewer.component!, {
+      scope: { sessionId: 'session-2', cwd: '/workspace/two' },
+      path: '/workspace/report.xlsx', title: 'Report', viewerId: 'xlsx',
+    }))
+    expect(screen.getByTestId('office-scope')).toHaveTextContent('session-1:/workspace/one')
+
+    mounted.unmount()
+    render(createElement(officeViewer.component!, {
+      scope: { sessionId: 'session-2', cwd: '/workspace/two' },
+      path: '/workspace/report.xlsx', title: 'Report', viewerId: 'xlsx',
+    }))
+    expect(screen.getByTestId('office-scope')).toHaveTextContent('session-2:/workspace/two')
+    cleanup()
+    dispose()
+    expect(officeViewer.component).toBe(original)
+    expect(listeners).toHaveLength(0)
+  })
+
+  it('makes only stale removals inside a tracked Office subtree idempotent', () => {
+    vi.useFakeTimers()
+    const dispose = installOfficeDomCleanupGuard()
+    try {
+      const officeParent = document.createElement('div')
+      const officeChild = document.createElement('span')
+      officeParent.appendChild(officeChild)
+      markOfficeLifecycleTree(officeParent)
+      expect(officeParent.removeChild(officeChild)).toBe(officeChild)
+      expect(officeParent.removeChild(officeChild)).toBe(officeChild)
+
+      const ordinaryParent = document.createElement('div')
+      const ordinaryChild = document.createElement('span')
+      ordinaryParent.appendChild(ordinaryChild)
+      ordinaryParent.removeChild(ordinaryChild)
+      expect(() => ordinaryParent.removeChild(ordinaryChild)).toThrow(/not a child/i)
+
+      dispose()
+      // The provider boundary unmounts before its parent React tree finishes
+      // deleting the tab subtree, so tracked removals remain guarded briefly.
+      expect(officeParent.removeChild(officeChild)).toBe(officeChild)
+      vi.runAllTimers()
+      expect(() => officeParent.removeChild(officeChild)).toThrow(/not a child/i)
+    } finally {
+      dispose()
+      vi.runAllTimers()
+      vi.useRealTimers()
+    }
+  })
+
+  it('opens only an enabled matching file viewer and refreshes the path-derived editor in a separate task', async () => {
+    vi.useFakeTimers()
     const closeTab = vi.fn()
     const openTab = vi.fn()
-    const adapter = new BetterSidebarAdapter({
-      registerTab: () => () => {},
-      openTab,
-      closeTab,
-      getTab: id => id === 'editor' ? {
-        id: 'editor', title: 'Editor', component: () => null,
-      } : undefined,
-      isTabEnabled: id => id === 'editor',
-      matchFileViewer: path => path.endsWith('.pdf') ? { id: 'pdf' } : path.endsWith('.pptx') ? { id: 'pptx' } : undefined,
-    }, locale(), projects())
+    try {
+      const adapter = new BetterSidebarAdapter({
+        registerTab: () => () => {},
+        openTab,
+        closeTab,
+        getTab: id => id === 'editor' ? {
+          id: 'editor', title: 'Editor', component: () => null,
+        } : undefined,
+        isTabEnabled: id => id === 'editor',
+        matchFileViewer: path => path.endsWith('.pdf') ? { id: 'pdf' } : path.endsWith('.pptx') ? { id: 'pptx' } : undefined,
+      }, locale(), projects())
 
-    expect(adapter.getFileCapability('/workspace/report.pdf', ['pdf'])).toEqual({
-      state: 'available', viewerId: 'pdf',
-    })
-    expect(adapter.getFileCapability('/workspace/report.pdf', ['pptx'])).toEqual({
-      state: 'viewer-unavailable', viewerId: null,
-    })
-    expect(adapter.openFile({
-      path: '/workspace/report.pdf', title: 'Report', allowedViewerIds: ['pdf'], refresh: true,
-    })).toEqual({ state: 'opened', viewerId: 'pdf' })
-    expect(closeTab).toHaveBeenCalledWith('editor:/workspace/report.pdf')
-    expect(openTab).toHaveBeenCalledWith({
-      type: 'editor', title: 'Report', path: '/workspace/report.pdf', id: 'editor:/workspace/report.pdf',
-    })
+      expect(adapter.getFileCapability('/workspace/report.pdf', ['pdf'])).toEqual({
+        state: 'available', viewerId: 'pdf',
+      })
+      expect(adapter.getFileCapability('/workspace/report.pdf', ['pptx'])).toEqual({
+        state: 'viewer-unavailable', viewerId: null,
+      })
+      expect(adapter.openFile({
+        path: '/workspace/report.pdf', title: 'Report', allowedViewerIds: ['pdf'], refresh: true,
+      })).toEqual({ state: 'opened', viewerId: 'pdf' })
+      expect(closeTab).toHaveBeenCalledWith('editor:/workspace/report.pdf')
+      expect(openTab).not.toHaveBeenCalled()
+      await vi.runAllTimersAsync()
+      expect(openTab).toHaveBeenCalledWith({
+        type: 'editor', title: 'Report', path: '/workspace/report.pdf', id: 'editor:/workspace/report.pdf',
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('cancels a pending refreshed file open during disposal', async () => {
+    vi.useFakeTimers()
+    const openTab = vi.fn()
+    try {
+      const adapter = new BetterSidebarAdapter({
+        registerTab: () => () => {}, openTab, closeTab: vi.fn(),
+        getTab: () => ({ id: 'editor', title: 'Editor', component: () => null }),
+        isTabEnabled: () => true, matchFileViewer: () => ({ id: 'pdf' }),
+      }, locale(), projects())
+      expect(adapter.openFile({ path: '/workspace/report.pdf', refresh: true }))
+        .toEqual({ state: 'opened', viewerId: 'pdf' })
+      adapter.dispose()
+      await vi.runAllTimersAsync()
+      expect(openTab).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('rehydrates a persisted editor once the late file-viewer registry is ready', async () => {
+    vi.useFakeTimers()
+    const openTab = vi.fn()
+    const closeTab = vi.fn()
+    const registryListeners = new Set<() => void>()
+    const stateListeners = new Set<() => void>()
+    let viewers: Array<{ id: string }> = []
+    let sessionId = 'session-1'
+    try {
+      const adapter = new BetterSidebarAdapter({
+        registerTab: () => () => {}, openTab, closeTab,
+        getFileViewers: () => viewers,
+        subscribe: listener => { registryListeners.add(listener); return () => { registryListeners.delete(listener) } },
+        subscribeState: listener => { stateListeners.add(listener); return () => { stateListeners.delete(listener) } },
+        getSnapshot: () => ({
+          sessionId,
+          state: {
+            splits: { kind: 'leaf', tabs: [{
+              id: 'editor:/workspace/deck.pptx', type: 'editor', title: 'Deck', path: '/workspace/deck.pptx',
+            }] },
+            bottomSplits: { kind: 'leaf', tabs: [] }, floats: [],
+          },
+        }),
+        matchFileViewer: path => viewers.length > 0 && path.endsWith('.pptx') ? { id: 'office-pptx' } : undefined,
+      }, locale(), projects())
+
+      await vi.runAllTimersAsync()
+      expect(closeTab).not.toHaveBeenCalled()
+      viewers = [{ id: 'office-pptx' }]
+      for (const listener of registryListeners) listener()
+      await vi.runAllTimersAsync()
+      expect(closeTab).toHaveBeenCalledWith('editor:/workspace/deck.pptx')
+      expect(openTab).toHaveBeenCalledWith({
+        type: 'editor', title: 'Deck', path: '/workspace/deck.pptx', id: 'editor:/workspace/deck.pptx',
+      })
+
+      for (const listener of stateListeners) listener()
+      await vi.runAllTimersAsync()
+      expect(closeTab).toHaveBeenCalledTimes(1)
+      sessionId = 'session-2'
+      for (const listener of stateListeners) listener()
+      await vi.runAllTimersAsync()
+      expect(closeTab).toHaveBeenCalledTimes(1)
+      expect(openTab).toHaveBeenCalledTimes(1)
+      adapter.dispose()
+      expect(registryListeners).toHaveLength(0)
+      expect(stateListeners).toHaveLength(0)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('registers and disposes one stable PAIMind file viewer through the provider adapter', () => {

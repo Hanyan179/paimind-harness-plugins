@@ -97,7 +97,7 @@ export function apply(ctx: GeneratorWebHostContext): void {
   ctx.systemPrompt.section({
     name: 'tool:generate-html-artifact',
     order: 112,
-    text: 'Use generate_html_artifact when the user asks for a standalone HTML page. Supply the complete HTML, a Workspace-relative file_path ending in .html, and a human title. The tool owns the Native Job, file publication and Artifact event; do not claim success before its structured result returns.',
+    text: 'Use generate_html_artifact when the user asks for a standalone HTML page. Supply the complete HTML, a Workspace-relative file_path ending in .html, and a human title. The HTML must include UTF-8 and viewport metadata, use a responsive layout, wrap long unbroken content, and avoid fixed viewport-wide dimensions or horizontal overflow at 420 CSS px. The tool owns the Native Job, file publication and Artifact event; do not claim success before its structured result returns.',
   })
   ctx.tools.register(definePaimindHarnessTool({
     name: HTML_GENERATOR_TOOL,
@@ -105,7 +105,7 @@ export function apply(ctx: GeneratorWebHostContext): void {
     parameters: {
       file_path: { type: 'string', required: true, description: 'Workspace-relative .html output path.' },
       title: { type: 'string', required: true, description: 'Human-readable artifact title.' },
-      html: { type: 'string', required: true, description: 'Complete standalone HTML document.' },
+      html: { type: 'string', required: true, description: 'Complete standalone responsive HTML document including UTF-8 and viewport metadata.' },
     },
     output: {
       schema: {

@@ -147,7 +147,13 @@ export class NotificationCenterController {
       this.sessions.open(target.sessionId)
     } else if (target.kind === 'artifact') {
       this.sessions.open(target.sessionId)
-      this.focusArtifact(target.artifactId)
+      if (!await this.focusArtifact(target.artifactId, target.sessionId)) {
+        this.publish({
+          ...this.snapshot,
+          error: 'The notification target is no longer available in the selected Session.',
+        })
+        return
+      }
     } else if (target.kind === 'surface') {
       this.sidebar.openTab(target.surfaceId)
     } else {
@@ -165,20 +171,46 @@ export class NotificationCenterController {
     this.listeners.clear()
   }
 
-  private focusArtifact(artifactId: string): void {
-    let off = (): void => {}
-    let timeout: number | undefined
-    const settle = (): boolean => {
-      const artifact = this.artifacts.getSnapshot().artifacts.find(candidate => candidate.id === artifactId)
-      if (artifact === undefined || !this.artifacts.focus(artifactId)) return false
-      void this.workspaces.openPath(artifact.path)
-      off()
-      if (timeout !== undefined) window.clearTimeout(timeout)
-      return true
-    }
-    if (settle()) return
-    off = this.artifacts.subscribe(() => { settle() })
-    timeout = window.setTimeout(() => { off() }, 3_000)
+  private focusArtifact(artifactId: string, sessionId: string): Promise<boolean> {
+    return new Promise(resolve => {
+      let offArtifacts = (): void => {}
+      let offSessions = (): void => {}
+      let timeout: number | undefined
+      let openTimer: number | undefined
+      let finished = false
+      const finish = (opened: boolean): void => {
+        if (finished) return
+        finished = true
+        offArtifacts()
+        offSessions()
+        if (timeout !== undefined) window.clearTimeout(timeout)
+        if (openTimer !== undefined) window.clearTimeout(openTimer)
+        resolve(opened)
+      }
+      const open = (): void => {
+        openTimer = undefined
+        if (this.sessions.list.getSnapshot().current !== sessionId) return
+        const artifact = this.artifacts.getSnapshot().artifacts.find(candidate => candidate.id === artifactId)
+        if (artifact === undefined || !this.artifacts.focus(artifactId)) {
+          settle()
+          return
+        }
+        const opened = this.sidebar.openFile({ path: artifact.path, refresh: true })
+        if (opened.state !== 'opened') void this.workspaces.openPath(artifact.path)
+        finish(true)
+      }
+      const settle = (): void => {
+        if (this.sessions.list.getSnapshot().current !== sessionId || openTimer !== undefined) return
+        // Native Session selection publishes before React commits the matching
+        // Better Sidebar scope. Defer one short task so openFile targets the new
+        // Session instead of whichever editor tab was active previously.
+        openTimer = window.setTimeout(open, 50)
+      }
+      offArtifacts = this.artifacts.subscribe(settle)
+      offSessions = this.sessions.list.subscribe(settle)
+      settle()
+      timeout = window.setTimeout(() => { finish(false) }, 3_000)
+    })
   }
 
   private replace(item: Readonly<NotificationRecord>): void {

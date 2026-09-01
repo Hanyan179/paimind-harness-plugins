@@ -2,7 +2,7 @@
   "name": "@paimind/better-sidebar-adapter",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
-  "engines": { "node": "^22.19.0 || >=24.0.0" },
+  "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
   "description": "Version-pinned PAIMind boundary for the external Better Sidebar provider",
   "type": "module",
   "main": "lib/index.js",
@@ -39,16 +39,18 @@
     "@paimind/workspace-project": "workspace:^"
   },
   "peerDependencies": {
-    "dsh-better-sidebar": "0.14.0",
-    "react": ">=18.0.0 <20.0.0"
+    "dsh-better-sidebar": "0.16.1",
+    "react": ">=18.0.0 <20.0.0",
+    "react-dom": ">=18.0.0 <20.0.0"
   },
   "peerDependenciesMeta": {
     "dsh-better-sidebar": { "optional": true }
   },
   "devDependencies": {
     "@paimind/testkit": "workspace:^",
-    "dsh-better-sidebar": "0.14.0",
-    "react": "^18.3.1"
+    "dsh-better-sidebar": "0.16.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "paimindBuild": {
     "node": ["src/index.ts", "src/invariant.ts"],

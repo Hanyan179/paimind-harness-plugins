@@ -14,6 +14,7 @@ export const TRACE_MAX_BYTES = 16 * 1024 * 1024
 export interface PresentationTraceHostContext {
   readonly webServer: PaimindHostWebServer
   readonly sessions: PaimindHostSessionService
+  effect(install: () => void | (() => void | Promise<void>), label?: string): void
 }
 
 function trustedRequest(request: Pick<IncomingMessage, 'headers'>): boolean {
@@ -48,8 +49,8 @@ function respond(response: ServerResponse, status: number, body: Buffer | string
 }
 
 /** Fail-closed Host loader for V2 sidecar references retained in the Session projection. */
-export function apply(ctx: PresentationTraceHostContext): () => void {
-  return ctx.webServer.register({
+export function apply(ctx: PresentationTraceHostContext): void {
+  ctx.effect(() => ctx.webServer.register({
     kind: 'exact', path: TRACE_DOCUMENT_PATH,
     async handler(request, response) {
       if (request.method !== 'GET' || !trustedRequest(request)) { respond(response, 403, 'Forbidden'); return }
@@ -72,5 +73,5 @@ export function apply(ctx: PresentationTraceHostContext): () => void {
         respond(response, 200, body)
       } catch { respond(response, 500, 'Trace load failed') }
     },
-  })
+  }), 'paimind-presentation-trace: sidecar route')
 }

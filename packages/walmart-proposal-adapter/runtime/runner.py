@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import re
@@ -11,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +65,146 @@ def output_file(value: str) -> Path:
     candidate.relative_to(WORKSPACE)
     candidate.parent.mkdir(parents=True, exist_ok=True)
     return candidate
+
+
+def output_directory(value: str) -> Path:
+    path = Path(value)
+    if path.is_absolute() or ".." in path.parts:
+        raise ValueError("output directory must be Workspace-relative")
+    candidate = (WORKSPACE / path).resolve()
+    candidate.relative_to(WORKSPACE)
+    candidate.mkdir(parents=True, exist_ok=True)
+    return candidate
+
+
+def write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) -> None:
+    with path.open("w", encoding="utf-8", newline="") as target:
+        writer = csv.DictWriter(target, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def prepare_demo(args: argparse.Namespace) -> None:
+    """Publish a deterministic Walmart fixture for the native demo chain."""
+    output = output_directory(args.output_dir)
+    finelines = [
+        ("KIDS PAINT", 1.18, 2650),
+        ("KIDS PAINT ACCESSORIES", 1.15, 2520),
+        ("STYROFOAM", 1.12, 2390),
+        ("GLITTER", 1.10, 2260),
+        ("PONY BEADS", 1.08, 2130),
+        ("MODELING CLAY", 1.04, 1040),
+        ("CRAFT KITS", 1.03, 980),
+        ("FOAM CRAFT", 1.02, 920),
+        ("KIDS BRUSHES", 1.01, 860),
+        ("CRAFT TOOLS", 1.00, 800),
+        ("WOOD CRAFT", 0.99, 740),
+        ("KIDS CANVAS", 0.98, 680),
+        ("CRAFT STORAGE", 0.97, 620),
+    ]
+    fineline_rows: list[dict[str, Any]] = []
+    performance_rows: list[dict[str, Any]] = []
+    assortment_rows: list[dict[str, Any]] = []
+    tag_rows: list[dict[str, Any]] = []
+    portfolio_rows: list[dict[str, Any]] = []
+    for line_index, (fineline, current_factor, sales_base) in enumerate(finelines):
+        for sku_index in range(10):
+            upc = f"810{line_index + 1:02d}{sku_index + 1:07d}"
+            for fiscal_year in (2024, 2025):
+                year_factor = current_factor if fiscal_year == 2025 else 1.0
+                for fiscal_week in range(31, 53):
+                    weekly_factor = 1 + (fiscal_week - 31) * 0.008
+                    sales_value = round((sales_base + sku_index * 23) * year_factor * weekly_factor, 2)
+                    sales_units = round(sales_value / (3.25 + line_index * 0.35 + sku_index * 0.04), 2)
+                    fineline_rows.append({
+                        "upc": upc,
+                        "sales_value": sales_value,
+                        "sales_units": sales_units,
+                        "category": "KIDS CRAFTS",
+                        "reviewed_fineline": fineline,
+                        "source_fineline": fineline,
+                        "fiscal_year": fiscal_year,
+                        "fiscal_week": fiscal_week,
+                        "item_name": f"Synthetic {fineline.title()} Item {sku_index + 1}",
+                    })
+                    if line_index < 5:
+                        performance_rows.append({
+                            "upc": upc,
+                            "week_date": date.fromisocalendar(fiscal_year, fiscal_week, 1).isoformat(),
+                            "fiscal_year": fiscal_year,
+                            "fiscal_week": fiscal_week,
+                            "sales_value": sales_value,
+                            "sales_units": sales_units,
+                            "stores_selling": 1250 + line_index * 145 + sku_index * 37,
+                        })
+            if line_index < 5:
+                assortment_rows.append({
+                    "upc": upc,
+                    "report_start_date": "2025-07-28",
+                    "report_end_date": "2025-12-28",
+                    "groups": "Total Assortment",
+                    "sales_value": round((sales_base + sku_index * 23) * current_factor * 22, 2),
+                    "sales_units": round((sales_base + sku_index * 23) * current_factor * 22 / 4.2, 2),
+                    "stores_selling": 1250 + line_index * 145 + sku_index * 37,
+                })
+                for attribute_name, attribute_value in (
+                    ("Color Family", "Bright" if sku_index < 5 else "Neutral"),
+                    ("Occasion", "Everyday" if sku_index % 2 == 0 else "Seasonal"),
+                ):
+                    tag_rows.append({
+                        "product_code": upc,
+                        "final_fineline": fineline,
+                        "attribute_name": attribute_name,
+                        "attribute_value": attribute_value,
+                        "is_primary": 1,
+                        "use_for_analysis": 1,
+                        "taxonomy_version": "synthetic-demo-v1",
+                        "generated_at": "2026-08-27T00:00:00Z",
+                    })
+                if sku_index < 2:
+                    portfolio_rows.append({"vendor_stock_id": f"DEMO-{line_index + 1}-{sku_index + 1}", "upc": upc})
+    portfolio_rows.append({"vendor_stock_id": "DEMO-WK31-NEW", "upc": ""})
+
+    definitions = [
+        ("fineline-source", "walmart-fineline.json", "json", "Fineline investment analysis input", fineline_rows),
+        ("white-space-performance", "walmart-white-space-performance.csv", "csv", "Weekly item performance input", performance_rows),
+        ("white-space-assortment", "walmart-white-space-assortment.csv", "csv", "Latest assortment snapshot", assortment_rows),
+        ("white-space-tags", "walmart-white-space-tags.csv", "csv", "Approved synthetic product tags", tag_rows),
+        ("white-space-portfolio", "walmart-white-space-portfolio.csv", "csv", "Synthetic Paramont portfolio mapping", portfolio_rows),
+    ]
+    source_fields = {
+        "walmart-white-space-performance.csv": ["upc", "week_date", "fiscal_year", "fiscal_week", "sales_value", "sales_units", "stores_selling"],
+        "walmart-white-space-assortment.csv": ["upc", "report_start_date", "report_end_date", "groups", "sales_value", "sales_units", "stores_selling"],
+        "walmart-white-space-tags.csv": ["product_code", "final_fineline", "attribute_name", "attribute_value", "is_primary", "use_for_analysis", "taxonomy_version", "generated_at"],
+        "walmart-white-space-portfolio.csv": ["vendor_stock_id", "upc"],
+    }
+    sources = []
+    for source_id, filename, source_format, purpose, rows in definitions:
+        path = output / filename
+        if source_format == "json":
+            path.write_text(canonical(rows), encoding="utf-8")
+        else:
+            write_csv(path, source_fields[filename], rows)
+        sources.append({
+            "sourceId": source_id,
+            "path": str(path.relative_to(WORKSPACE)),
+            "sha256": sha(path),
+            "bytes": path.stat().st_size,
+            "period": "Synthetic fiscal WK31-WK52, 2024-2025",
+            "format": source_format,
+            "purpose": purpose,
+            "summary": f"Deterministic synthetic fixture containing {len(rows)} rows.",
+            "redaction": "Synthetic demo data; contains no Walmart, consumer, vendor, or live business records.",
+        })
+    manifest = {
+        "schema": "paimind.analysis-source-manifest/v1",
+        "scenario": "Walmart D19 Kids Crafts synthetic end-to-end demonstration",
+        "synthetic": True,
+        "generatedBy": "paimind.walmart-demo.frozen-data/v1",
+        "sources": sources,
+    }
+    manifest_path = output / "source-manifest.json"
+    manifest_path.write_text(canonical(manifest), encoding="utf-8")
 
 
 def load_manifest(value: str) -> tuple[Path, dict[str, dict[str, Any]]]:
@@ -130,9 +272,13 @@ def analyze_white_space(args: argparse.Namespace) -> None:
     if missing:
         raise ValueError(f"White-space manifest lacks sourceIds: {missing}")
     output = output_file(args.output)
+    with Path(sources["white-space-tags"]["absolutePath"]).open("r", encoding="utf-8-sig", newline="") as source:
+        tagged_finelines = sorted({str(row.get("final_fineline") or "").strip().upper() for row in csv.DictReader(source) if str(row.get("final_fineline") or "").strip()})
+    if not tagged_finelines:
+        raise ValueError("White-space tag source contains no Final Finelines")
     with tempfile.TemporaryDirectory(prefix="paimind-white-space-") as temp:
         target = Path(temp)
-        run([sys.executable, str(ROOT / "white-space" / "scripts" / "run_white_space_analysis.py"), "--mode", "formal", "--performance-csv", sources[required[0]]["absolutePath"], "--assortment-csv", sources[required[1]]["absolutePath"], "--tags-csv", sources[required[2]]["absolutePath"], "--portfolio-csv", sources[required[3]]["absolutePath"], "--output-dir", str(target)])
+        run([sys.executable, str(ROOT / "white-space" / "scripts" / "run_white_space_analysis.py"), "--mode", "formal", "--performance-csv", sources[required[0]]["absolutePath"], "--assortment-csv", sources[required[1]]["absolutePath"], "--tags-csv", sources[required[2]]["absolutePath"], "--portfolio-csv", sources[required[3]]["absolutePath"], "--finelines", ",".join(tagged_finelines), "--output-dir", str(target)])
         data_result("white-space-analysis", manifest_path, sources, target / "white_space_analysis.json", output)
 
 
@@ -262,6 +408,8 @@ def build_outline(args: argparse.Namespace) -> None:
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(description=__doc__)
     commands = root.add_subparsers(dest="command", required=True)
+    prepare = commands.add_parser("prepare")
+    prepare.add_argument("--output-dir", required=True)
     for name in ("fineline", "white-space"):
         command_parser = commands.add_parser(name)
         command_parser.add_argument("--manifest", required=True)
@@ -279,7 +427,10 @@ def parser() -> argparse.ArgumentParser:
 def main() -> None:
     verify_runtime_sources()
     args = parser().parse_args()
-    if args.command == "fineline":
+    if args.command == "prepare":
+        prepare_demo(args)
+        args.output = str((output_directory(args.output_dir) / "source-manifest.json").relative_to(WORKSPACE))
+    elif args.command == "fineline":
         analyze_fineline(args)
     elif args.command == "white-space":
         analyze_white_space(args)

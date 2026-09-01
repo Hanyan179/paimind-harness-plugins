@@ -86,6 +86,11 @@ const EMPTY: SchedulerClientSnapshot = Object.freeze({
   notice: null,
 })
 
+const WORKSPACE_BOUND_AGENT_ACTIONS = new Set([
+  'paimind:agent-workspace-brief',
+  'paimind:agent-prompt',
+])
+
 function remoteValue<Value>(result: HarnessRemoteResult<Value>): Value {
   if (!result.ok) throw new Error(result.error.message)
   return result.value
@@ -149,7 +154,9 @@ export class SchedulerController {
   }
 
   async create(input: PaimindScheduleCreateInput): Promise<boolean> {
-    return await this.mutate(async () => { remoteValue(await this.remote.create(input)) }, 'Task created')
+    return await this.mutate(async () => {
+      remoteValue(await this.remote.create(this.bindCurrentWorkspace(input)))
+    }, 'Task created')
   }
 
   async startConversation(): Promise<boolean> {
@@ -181,7 +188,7 @@ export class SchedulerController {
 
   async update(input: PaimindScheduleUpdateInput): Promise<boolean> {
     return await this.mutate(async () => {
-      const result = remoteValue(await this.remote.update(input))
+      const result = remoteValue(await this.remote.update(this.bindCurrentWorkspace(input)))
       if (!result.ok) throw new Error(result.message)
     }, 'Task updated')
   }
@@ -274,6 +281,35 @@ export class SchedulerController {
       })
       return false
     }
+  }
+
+  private bindCurrentWorkspace<Input extends PaimindScheduleCreateInput>(input: Input): Input {
+    if (!WORKSPACE_BOUND_AGENT_ACTIONS.has(input.actionId)) return input
+    const existingCwd = input.actionInput?.cwd
+    const existingPreset = input.actionInput?.agentPreset
+    const sessionSnapshot = this.sessions.list.getSnapshot()
+    const current = sessionSnapshot.current
+    const currentRow = current === undefined ? undefined : sessionSnapshot.byId[current]
+    const hasExistingCwd = typeof existingCwd === 'string' && existingCwd.trim() !== ''
+    const cwd = hasExistingCwd
+      ? existingCwd.trim()
+      : currentRow?.cwd?.trim()
+    if (cwd === undefined || cwd === '') {
+      throw new Error('当前会话尚未绑定 Harness Workspace，无法创建定时任务')
+    }
+    const agentPreset = typeof existingPreset === 'string' && existingPreset.trim() !== ''
+      ? existingPreset.trim()
+      : hasExistingCwd ? undefined : currentRow?.agentPreset?.trim()
+    const actionInput = input.actionId === 'paimind:agent-workspace-brief'
+      ? {
+          kind: 'workspace-context', version: 1, cwd,
+          ...(agentPreset === undefined || agentPreset === '' ? {} : { agentPreset }),
+        }
+      : {
+          ...input.actionInput, kind: 'agent-prompt', version: 1, cwd,
+          ...(agentPreset === undefined || agentPreset === '' ? {} : { agentPreset }),
+        }
+    return Object.freeze({ ...input, actionInput })
   }
 
   private publish(snapshot: SchedulerClientSnapshot): void {
@@ -371,6 +407,7 @@ const STYLE = `
 [data-paimind-scheduler-detail-runs]{display:grid;gap:10px;margin-top:8px}
 @container(max-width:760px){[data-paimind-scheduler-settings] [data-paimind-scheduler-form]{grid-template-columns:1fr}[data-paimind-scheduler-settings] [data-paimind-scheduler-form] [data-wide='true']{grid-column:auto}[data-paimind-scheduler-settings] [data-paimind-scheduler-task-types]{grid-template-columns:repeat(3,minmax(0,1fr))}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] thead{display:none}[data-paimind-scheduler-settings] [data-paimind-scheduler-table],[data-paimind-scheduler-settings] [data-paimind-scheduler-table] tbody,[data-paimind-scheduler-settings] [data-paimind-scheduler-table] tr,[data-paimind-scheduler-settings] [data-paimind-scheduler-table] td{display:block;width:100%;box-sizing:border-box}[data-paimind-scheduler-settings] [data-paimind-scheduler-table]{border:0;background:transparent}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] tr{display:grid;gap:8px;margin-bottom:12px;padding:14px;border:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15));border-radius:16px;background:var(--dsw-alias-bg-layer-1,#fff)}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] td{display:grid;grid-template-columns:88px minmax(0,1fr);gap:10px;align-items:start;padding:0;border:0;line-height:20px}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] td:before{content:attr(data-label);color:var(--dsw-alias-label-tertiary,#78849a);font-size:11px;font-weight:700}[data-paimind-scheduler-settings] [data-paimind-scheduler-row-actions]{margin-top:2px}}
 @container(max-width:480px){[data-paimind-scheduler-settings]{gap:14px;padding:16px}[data-paimind-scheduler-settings] [data-paimind-scheduler-toolbar]{flex-direction:column;align-items:stretch}[data-paimind-scheduler-settings] [data-paimind-scheduler-search]{width:100%;min-width:0}[data-paimind-scheduler-settings] [data-paimind-scheduler-primary]{width:100%;margin-left:0;white-space:nowrap}[data-paimind-scheduler-settings] [data-paimind-scheduler-task-types]{grid-template-columns:repeat(2,minmax(0,1fr))}[data-paimind-scheduler-settings] [data-paimind-scheduler-filters]{flex-wrap:wrap}[data-paimind-scheduler-settings] [data-paimind-scheduler-detail-header]{flex-direction:column}[data-paimind-scheduler-settings] [data-paimind-scheduler-detail-summary]{grid-template-columns:1fr}}
+@media(max-width:600px){[role='dialog'][aria-modal='true']:has([data-paimind-scheduler-settings]){flex-direction:column!important}[role='dialog'][aria-modal='true']:has([data-paimind-scheduler-settings])>nav{width:100%!important;max-width:none!important;max-height:96px;box-sizing:border-box;padding:10px 12px!important;border-right:0!important;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.16));overflow:hidden}[role='dialog'][aria-modal='true']:has([data-paimind-scheduler-settings])>nav>:first-child{display:none!important}[role='dialog'][aria-modal='true']:has([data-paimind-scheduler-settings])>nav>:last-child{display:flex!important;flex-direction:row!important;gap:6px;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin}[role='dialog'][aria-modal='true']:has([data-paimind-scheduler-settings])>nav>:last-child>*{flex:0 0 auto}[role='dialog'][aria-modal='true']:has([data-paimind-scheduler-settings])>nav+*{width:100%!important;min-width:0!important;flex:1 1 auto!important}}
 @media(max-width:760px){[data-paimind-scheduler-panel]{padding:18px}[data-paimind-scheduler-task-types]{grid-template-columns:repeat(3,minmax(0,1fr))}[data-paimind-scheduler-form]{grid-template-columns:1fr}[data-paimind-scheduler-table] thead{display:none}[data-paimind-scheduler-table],[data-paimind-scheduler-table] tbody,[data-paimind-scheduler-table] tr,[data-paimind-scheduler-table] td{display:block;width:100%;box-sizing:border-box}[data-paimind-scheduler-table] tr{padding:10px 0;border-top:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.12))}[data-paimind-scheduler-table] td{padding:7px 14px;border:0}}
 `
 

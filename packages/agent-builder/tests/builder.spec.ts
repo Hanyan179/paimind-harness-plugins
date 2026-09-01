@@ -334,21 +334,25 @@ describe('headless Agent profile workflow', () => {
     const input = {
       agentId: 'stable-agent', presetId: 'stable-agent', name: 'Stable Agent', description: '',
       basePresetId: 'minimal', role: 'Stable owner', goal: 'Keep one identity', behavior: 'Use the original base',
-      preferredSkillNames: [], instructions: '',
+      preferredSkillNames: [], instructions: '', authoringSessionId: 'paimind-authoring-stable', authoringCursor: 12,
     } as const
 
     const created = await service.saveProfile(input)
-    expect(created).toMatchObject({ agentId: 'stable-agent', presetId: 'stable-agent', basePresetId: 'minimal', revision: 1 })
+    expect(created).toMatchObject({
+      agentId: 'stable-agent', presetId: 'stable-agent', basePresetId: 'minimal', revision: 1,
+      authoringSessionId: 'paimind-authoring-stable', authoringCursor: 12,
+    })
     await expect(service.saveProfile({
       ...input, basePresetId: 'standard', expectedVersion: created.configVersion,
     })).rejects.toThrow('基础能力模板不可修改')
 
+    const { authoringSessionId: _authoringSessionId, authoringCursor: _authoringCursor, ...inputWithoutAuthoringSession } = input
     const edited = await service.saveProfile({
-      ...input, behavior: 'Keep the original base and accept valid edits', expectedVersion: created.configVersion,
+      ...inputWithoutAuthoringSession, behavior: 'Keep the original base and accept valid edits', expectedVersion: created.configVersion,
     })
     expect(edited).toMatchObject({
       agentId: 'stable-agent', presetId: 'stable-agent', basePresetId: 'minimal', revision: 2,
-      behavior: 'Keep the original base and accept valid edits',
+      behavior: 'Keep the original base and accept valid edits', authoringSessionId: 'paimind-authoring-stable', authoringCursor: 12,
     })
     await expect(service.saveProfile({
       ...input, behavior: 'Overwrite from a stale edit', expectedVersion: created.configVersion,

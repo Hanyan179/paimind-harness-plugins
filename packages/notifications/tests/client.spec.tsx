@@ -36,9 +36,11 @@ function fixture(items: NotificationRecord[] = [record()]) {
     value: { items: items.map(item => ({ ...item, readAt: Date.now(), version: `${item.version}:read` })) },
   }))
   const listeners = new Set<() => void>()
+  let current = 'session-1'
   const sessions = {
-    list: { getSnapshot: () => ({ current: 'session-1', byId: {} }), subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } } },
+    list: { getSnapshot: () => ({ current, byId: {} }), subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } } },
     open: vi.fn(),
+    setCurrent(value: string) { current = value; for (const listener of listeners) listener() },
   }
   const artifacts = {
     getSnapshot: vi.fn(() => ({ revision: 0, artifacts: [{ id: 'artifact:one', path: '/workspace/report.bento.html' }], diagnostics: [] })),
@@ -47,14 +49,18 @@ function fixture(items: NotificationRecord[] = [record()]) {
   }
   const sidebar = {
     getStatus: vi.fn(), subscribe: vi.fn(() => () => {}), registerTab: vi.fn(), registerFileViewer: vi.fn(),
-    openTab: vi.fn(() => true), closeTab: vi.fn(() => true), getFileCapability: vi.fn(), openFile: vi.fn(), dispose: vi.fn(),
+    openTab: vi.fn(() => true), closeTab: vi.fn(() => true), getFileCapability: vi.fn(),
+    openFile: vi.fn(() => ({ state: 'opened' as const, viewerId: 'paimind:test' })), dispose: vi.fn(),
   }
   const workspaces = { openPath: vi.fn(async () => {}) }
   const controller = new NotificationCenterController({ list, markRead, markAllRead }, sessions as never, workspaces as never, artifacts as never, sidebar as never)
   return { controller, list, markRead, markAllRead, sessions, workspaces, artifacts, sidebar }
 }
 
-afterEach(() => { document.head.querySelectorAll('style[data-paimind-plugin]').forEach(node => { node.remove() }) })
+afterEach(() => {
+  vi.useRealTimers()
+  document.head.querySelectorAll('style[data-paimind-plugin]').forEach(node => { node.remove() })
+})
 
 describe('FP12 Notification Center client', () => {
   it('renders plain text, filters unread, and follows an exact Artifact target', async () => {
@@ -72,9 +78,53 @@ describe('FP12 Notification Center client', () => {
     expect(screen.queryByText('Already read')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'View artifact' }))
     await waitFor(() => { expect(f.sessions.open).toHaveBeenCalledWith('session-1') })
+    await waitFor(() => { expect(f.sidebar.openFile).toHaveBeenCalledWith({ path: '/workspace/report.bento.html', refresh: true }) })
     expect(f.artifacts.focus).toHaveBeenCalledWith('artifact:one')
-    expect(f.workspaces.openPath).toHaveBeenCalledWith('/workspace/report.bento.html')
+    expect(f.workspaces.openPath).not.toHaveBeenCalled()
     expect(f.sidebar.openTab).not.toHaveBeenCalled()
+    f.controller.dispose()
+  })
+
+  it('waits for the target Session before opening a cross-Session Artifact', async () => {
+    const target = record({
+      target: { kind: 'artifact', artifactId: 'artifact:one', sessionId: 'session-2', workspaceId: 'workspace-2' },
+    })
+    const f = fixture([target])
+    const follow = f.controller.follow(target)
+    await waitFor(() => { expect(f.sessions.open).toHaveBeenCalledWith('session-2') })
+    expect(f.artifacts.focus).not.toHaveBeenCalled()
+    expect(f.workspaces.openPath).not.toHaveBeenCalled()
+
+    f.sessions.setCurrent('session-2')
+    await follow
+    await waitFor(() => { expect(f.sidebar.openFile).toHaveBeenCalledWith({ path: '/workspace/report.bento.html', refresh: true }) })
+    expect(f.artifacts.focus).toHaveBeenCalledWith('artifact:one')
+    expect(f.workspaces.openPath).not.toHaveBeenCalled()
+    f.controller.dispose()
+  })
+
+  it('keeps the panel open and reports a stale Artifact target', async () => {
+    vi.useFakeTimers()
+    const f = fixture()
+    f.artifacts.getSnapshot.mockReturnValue({ revision: 1, artifacts: [], diagnostics: [] })
+    f.controller.open()
+    const follow = f.controller.follow(record())
+    await vi.advanceTimersByTimeAsync(3_100)
+    await follow
+    expect(f.controller.getSnapshot()).toMatchObject({
+      open: true,
+      error: 'The notification target is no longer available in the selected Session.',
+    })
+    expect(f.sidebar.openFile).not.toHaveBeenCalled()
+    f.controller.dispose()
+  })
+
+  it('falls back to the Host opener when no in-app Artifact viewer is available', async () => {
+    const f = fixture()
+    f.sidebar.openFile.mockReturnValueOnce({ state: 'viewer-unavailable', viewerId: null })
+    await f.controller.follow(record())
+    await waitFor(() => { expect(f.sidebar.openFile).toHaveBeenCalledWith({ path: '/workspace/report.bento.html', refresh: true }) })
+    await waitFor(() => { expect(f.workspaces.openPath).toHaveBeenCalledWith('/workspace/report.bento.html') })
     f.controller.dispose()
   })
 

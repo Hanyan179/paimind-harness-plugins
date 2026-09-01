@@ -1,12 +1,12 @@
 import { fileURLToPath } from 'node:url'
-import { isAbsolute, relative, resolve } from 'node:path'
+import { resolve } from 'node:path'
 import {
-  artifactToolMeta, presentArtifactToolResult,
+  artifactToolMeta, artifactWorkspaceRelativePath, presentArtifactToolResult, requireCurrentSessionArtifact,
   type PaimindArtifactGeneratorService, type PaimindGeneratorProvider,
 } from '@paimind/artifact-runtime'
 import {
-  defineArtifactProducedEnvelope, defineArtifactProjection,
-  type ArtifactProducedEnvelopeV1, type PaimindArtifactProjectionV1,
+  defineArtifactProducedEnvelope,
+  type ArtifactProducedEnvelopeV1,
 } from '@paimind/contracts'
 import {
   definePaimindHarnessTool,
@@ -37,15 +37,6 @@ function workspacePath(value: unknown, label: string, suffix?: string): string {
   if (path.startsWith('/') || path.startsWith('\\') || path.split(/[\\/]+/).includes('..') || (suffix !== undefined && !path.toLowerCase().endsWith(suffix))) throw new Error(`${label} must be a Workspace-relative${suffix === undefined ? '' : ` ${suffix}`} path`)
   return path.replace(/\/$/, '')
 }
-function artifactWorkspacePath(value: unknown, exec: PaimindToolRunContext, label: string): string {
-  const path = text(value, label)
-  if (!isAbsolute(path)) return workspacePath(path, label)
-  const cwd = exec.agent?.session.header.cwd
-  if (cwd === undefined) throw new Error(`${label} cannot be resolved without a Workspace root`)
-  const relativePath = relative(resolve(cwd), path)
-  if (relativePath === '' || isAbsolute(relativePath) || relativePath.split(/[\\/]+/).includes('..')) throw new Error(`${label} escapes the Workspace`)
-  return workspacePath(relativePath, label)
-}
 function shellQuote(value: string): string { return `'${value.replaceAll("'", `'\\''`)}'` }
 function command(parts: readonly string[]): string { return parts.map(shellQuote).join(' ') }
 
@@ -62,7 +53,7 @@ export const frozenDataProvider: PaimindGeneratorProvider = {
   describe(input) { const outputDir = workspacePath(input.output_dir, 'output_dir'); return { path: `${outputDir}/source-manifest.json`, title: 'DG Synthetic Category Data · Frozen Manifest' } },
   async generate(input, context) {
     const outputDir = workspacePath(input.output_dir, 'output_dir')
-    await context.runWorkspaceCommand({ command: command(['node', `${runtimeDir()}/runner.mjs`, 'prepare', '--output-dir', outputDir]), description: 'Prepare hash-locked synthetic DG category data', timeoutMs: 30_000 })
+    await context.runWorkspaceCommand({ command: command([process.execPath, `${runtimeDir()}/runner.mjs`, 'prepare', '--output-dir', outputDir]), description: 'Prepare hash-locked synthetic DG category data', timeoutMs: 30_000 })
     return { path: `${outputDir}/source-manifest.json`, title: 'DG Synthetic Category Data · Frozen Manifest' }
   },
 }
@@ -76,7 +67,7 @@ function analysisProvider(kind: 'performance' | 'opportunity'): PaimindGenerator
     async generate(input, context) {
       const output = workspacePath(input.output_path, 'output_path', suffix)
       const manifest = text(input.__manifest_path, 'resolved manifest Artifact path')
-      await context.runWorkspaceCommand({ command: command(['node', `${runtimeDir()}/runner.mjs`, kind, '--manifest', manifest, '--output', output]), description: `Run deterministic DG category ${kind} analysis`, timeoutMs: 60_000 })
+      await context.runWorkspaceCommand({ command: command([process.execPath, `${runtimeDir()}/runner.mjs`, kind, '--manifest', manifest, '--output', output]), description: `Run deterministic DG category ${kind} analysis`, timeoutMs: 60_000 })
       return { path: output, title: kind === 'performance' ? 'DG Category Performance Analysis' : 'DG Category Opportunity Analysis' }
     },
   }
@@ -91,15 +82,12 @@ const ARTIFACT_SCHEMA = { type: 'object', additionalProperties: false, propertie
 const TOOL_OUTPUT = { type: 'object', additionalProperties: false, properties: { artifact: { ...ARTIFACT_SCHEMA, required: true } } } as const
 function output(label: string) { return { schema: TOOL_OUTPUT, render(_args: JsonRecord, value: JsonRecord) { const artifact = artifactFromValue(value); return [{ type: 'text' as const, text: artifact.state === 'available' ? `<artifact path="${artifact.path}" id="${artifact.artifactId}" revision="${artifact.revision}">${label}</artifact>` : `<artifact-error code="${artifact.error?.code ?? 'analysis_failed'}">${artifact.error?.message ?? 'Analysis failed'}</artifact-error>` }] }, presentationMeta(_args: JsonRecord, value: JsonRecord) { return artifactToolMeta(artifactFromValue(value)) } } }
 
-function artifactsFor(ctx: CategoryAnalysisHostContext, exec: PaimindToolRunContext): readonly Readonly<ArtifactProducedEnvelopeV1>[] {
-  if (exec.agent === undefined) throw new Error('category analysis requires a live Harness Agent')
-  const value = ctx.sessionProjections.snapshot(exec.agent.session).values['paimind.artifacts']
-  return defineArtifactProjection(value as PaimindArtifactProjectionV1).artifacts
-}
 function manifestArtifact(ctx: CategoryAnalysisHostContext, exec: PaimindToolRunContext, artifactId: string): Readonly<ArtifactProducedEnvelopeV1> {
-  const artifact = artifactsFor(ctx, exec).find(candidate => candidate.artifactId === artifactId)
-  if (artifact === undefined || artifact.state !== 'available' || artifact.kind !== 'json' || artifact.producerId !== FROZEN_DATA_PROVIDER_ID || artifact.sessionId !== exec.agent?.id) throw new Error(`Artifact ${artifactId} is not the available current-Session frozen-data manifest`)
-  return artifact
+  if (exec.agent === undefined) throw new Error('category analysis requires a live Harness Agent')
+  return requireCurrentSessionArtifact(
+    ctx.sessionProjections.snapshot(exec.agent.session).values['paimind.artifacts'], exec, artifactId,
+    { description: 'the available current-Session frozen-data manifest', kind: 'json', producerIds: [FROZEN_DATA_PROVIDER_ID] },
+  )
 }
 
 export function apply(ctx: CategoryAnalysisHostContext): void {
@@ -112,5 +100,5 @@ export function apply(ctx: CategoryAnalysisHostContext): void {
   for (const definition of [
     { name: PERFORMANCE_ANALYSIS_TOOL, provider: PERFORMANCE_PROVIDER_ID, title: 'Analyze category performance', label: 'Generated performance data_result' },
     { name: OPPORTUNITY_ANALYSIS_TOOL, provider: OPPORTUNITY_PROVIDER_ID, title: 'Analyze category opportunity', label: 'Generated opportunity data_result' },
-  ] as const) ctx.tools.register(definePaimindHarnessTool({ name: definition.name, description: `Run the deterministic synthetic DG ${definition.title.toLowerCase()} Tool against one verified frozen-manifest Artifact.`, parameters: { manifest_artifact_id: { type: 'string', required: true }, output_path: { type: 'string', required: true } }, output: output(definition.label), async execute(args, exec) { const artifactId = text(args.manifest_artifact_id, 'manifest_artifact_id'); const manifest = manifestArtifact(ctx, exec, artifactId); return await ctx.paimindArtifactGenerators.execute(definition.provider, { ...args, __manifest_path: artifactWorkspacePath(manifest.path, exec, 'resolved manifest Artifact path') }, exec) }, presentCall: args => ({ card: 'generic', title: definition.title, kind: 'edit', rawInput: args.output_path }), presentResult(_args, result) { return presentArtifactToolResult(result) } }))
+  ] as const) ctx.tools.register(definePaimindHarnessTool({ name: definition.name, description: `Run the deterministic synthetic DG ${definition.title.toLowerCase()} Tool against one verified frozen-manifest Artifact.`, parameters: { manifest_artifact_id: { type: 'string', required: true }, output_path: { type: 'string', required: true } }, output: output(definition.label), async execute(args, exec) { const artifactId = text(args.manifest_artifact_id, 'manifest_artifact_id'); const manifest = manifestArtifact(ctx, exec, artifactId); return await ctx.paimindArtifactGenerators.execute(definition.provider, { ...args, __manifest_path: artifactWorkspaceRelativePath(manifest.path, exec, { label: 'resolved manifest Artifact path' }) }, exec) }, presentCall: args => ({ card: 'generic', title: definition.title, kind: 'edit', rawInput: args.output_path }), presentResult(_args, result) { return presentArtifactToolResult(result) } }))
 }

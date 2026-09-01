@@ -1,6 +1,6 @@
 import { readFile, readdir, rm } from 'node:fs/promises'
 import { createRequire } from 'node:module'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { build } from 'esbuild'
 
@@ -44,7 +44,9 @@ for (const entry of await readdir(packagesRoot, { withFileTypes: true })) {
   buildPackages.push({ packageRoot, manifest, spec })
 }
 
-const typescriptCli = require.resolve('typescript/bin/tsc')
+// TypeScript 7 no longer exports `typescript/bin/tsc` as a package subpath.
+// Resolve the public package manifest, then enter the package-owned bin path.
+const typescriptCli = resolve(dirname(require.resolve('typescript/package.json')), 'bin/tsc')
 const types = spawnSync(process.execPath, [typescriptCli, '-b', '--force', '--pretty', 'false'], {
   cwd: root,
   encoding: 'utf8',

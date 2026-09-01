@@ -14,7 +14,8 @@ describe('presentation trace V2 sidecar Host route', () => {
     const digest = createHash('sha256').update(body).digest('hex')
     let handler: any
     const unregister = vi.fn()
-    const dispose = apply({ webServer: { register: vi.fn(route => { handler = route.handler; return unregister }) }, sessions: { get: id => id === 'session-1' ? { header: { cwd: root } } : undefined } })
+    let dispose = (): void => {}
+    apply({ webServer: { register: vi.fn(route => { handler = route.handler; return unregister }) }, sessions: { get: id => id === 'session-1' ? { header: { cwd: root } } : undefined }, effect: install => { dispose = (install() ?? (() => {})) as () => void } })
     const chunks: unknown[] = []; let status = 0
     await handler({ method: 'GET', url: `${TRACE_DOCUMENT_PATH}?sessionId=session-1&path=deck.trace.json&schema=paimind.presentation-trace%2Fv3&sha256=${digest}&bytes=${Buffer.byteLength(body)}`, headers: { host: '127.0.0.1:3080', origin: 'http://127.0.0.1:3080' } }, { writeHead: (value: number) => { status = value }, end: (value: unknown) => { chunks.push(value) } })
     expect(status).toBe(200)
@@ -26,7 +27,7 @@ describe('presentation trace V2 sidecar Host route', () => {
     const root = await mkdtemp(join(tmpdir(), 'paimind-trace-'))
     const body = '{"schemaVersion":"paimind.presentation-trace/v3"}'
     await writeFile(join(root, 'deck.trace.json'), body)
-    let handler: any; apply({ webServer: { register: route => { handler = route.handler; return () => {} } }, sessions: { get: () => ({ header: { cwd: root } }) } })
+    let handler: any; apply({ webServer: { register: route => { handler = route.handler; return () => {} } }, sessions: { get: () => ({ header: { cwd: root } }) }, effect: install => { install() } })
     let status = 0
     await handler({ method: 'GET', url: `${TRACE_DOCUMENT_PATH}?sessionId=session-1&path=deck.trace.json&schema=paimind.presentation-trace%2Fv3&sha256=${'a'.repeat(64)}&bytes=${Buffer.byteLength(body)}`, headers: { host: '127.0.0.1:3080' } }, { writeHead: (value: number) => { status = value }, end: () => {} })
     expect(status).toBe(409)

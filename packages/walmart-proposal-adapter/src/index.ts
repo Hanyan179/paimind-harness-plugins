@@ -1,12 +1,12 @@
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 import {
-  artifactToolMeta, presentArtifactToolResult,
+  artifactToolMeta, artifactWorkspaceRelativePath, presentArtifactToolResult, requireCurrentSessionArtifact,
   type PaimindArtifactGeneratorService, type PaimindGeneratorProvider,
 } from '@paimind/artifact-runtime'
 import {
-  defineArtifactProducedEnvelope, defineArtifactProjection,
-  type ArtifactProducedEnvelopeV1, type PaimindArtifactProjectionV1,
+  defineArtifactProducedEnvelope,
+  type ArtifactProducedEnvelopeV1,
 } from '@paimind/contracts'
 import {
   definePaimindHarnessTool,
@@ -19,6 +19,8 @@ export const inject = ['paimindArtifactGenerators', 'tools', 'systemPrompt', 'se
 export const FINELINE_PROVIDER_ID = 'paimind.walmart.fineline-analysis'
 export const WHITE_SPACE_PROVIDER_ID = 'paimind.walmart.white-space-analysis'
 export const WALMART_OUTLINE_PROVIDER_ID = 'paimind.walmart.buyer-proposal-outline'
+export const WALMART_DEMO_DATA_PROVIDER_ID = 'paimind.walmart-demo.frozen-data'
+export const PREPARE_WALMART_DEMO_DATA_TOOL = 'prepare_walmart_demo_data'
 export const FINELINE_TOOL = 'analyze_fineline_investment'
 export const WHITE_SPACE_TOOL = 'analyze_white_space'
 export const WALMART_OUTLINE_TOOL = 'build_walmart_buyer_proposal_outline'
@@ -48,11 +50,32 @@ function relativeJsonPath(value: unknown, label: string, suffix = '.json'): stri
 }
 function shellQuote(value: string): string { return `'${value.replaceAll("'", `'\\''`)}'` }
 function command(parts: readonly string[]): string { return parts.map(shellQuote).join(' ') }
+function uvRunnerCommand(args: readonly string[]): string {
+  const workspaceEnvironment = 'UV_CACHE_DIR="$PWD/.paimind-runtime/uv-cache" UV_PROJECT_ENVIRONMENT="$PWD/.paimind-runtime/walmart-proposal-venv"'
+  return `${workspaceEnvironment} ${command([
+    'uv', 'run', '--project', runtimeDir(), '--locked', '--python', '3.12', 'python',
+    `${runtimeDir()}/runner.py`, ...args,
+  ])}`
+}
+
+export const walmartDemoDataProvider: PaimindGeneratorProvider = {
+  id: WALMART_DEMO_DATA_PROVIDER_ID, kind: 'json', previewKind: 'data-document',
+  describe(input) { const outputDir = relativeJsonPath(`${text(input.output_dir, 'output_dir').replace(/\/$/, '')}/source-manifest.json`, 'output_dir manifest'); return { path: outputDir, title: 'Walmart Synthetic Demo Data · Frozen Manifest' } },
+  async generate(input, context) {
+    const outputDir = text(input.output_dir, 'output_dir').replace(/\/$/, '')
+    relativeJsonPath(`${outputDir}/source-manifest.json`, 'output_dir manifest')
+    await context.runWorkspaceCommand({
+      command: uvRunnerCommand(['prepare', '--output-dir', outputDir]),
+      description: 'Prepare hash-locked synthetic Walmart demo data', timeoutMs: 120_000,
+    })
+    return { path: `${outputDir}/source-manifest.json`, title: 'Walmart Synthetic Demo Data · Frozen Manifest' }
+  },
+}
 
 interface AnalysisArgs { readonly manifestPath: string; readonly outputPath: string; readonly category: string }
 function analysisArgs(input: Readonly<JsonRecord>, suffix: string): AnalysisArgs {
   return {
-    manifestPath: relativeJsonPath(input.manifest_path, 'manifest_path'),
+    manifestPath: relativeJsonPath(input.__manifest_path ?? input.manifest_path, 'manifest_path'),
     outputPath: relativeJsonPath(input.output_path, 'output_path', suffix),
     category: input.category === undefined ? 'KIDS CRAFTS' : text(input.category, 'category'),
   }
@@ -67,7 +90,7 @@ function analysisProvider(kind: 'fineline' | 'white-space'): PaimindGeneratorPro
     async generate(input, context) {
       const value = analysisArgs(input, suffix)
       await context.runWorkspaceCommand({
-        command: command(['uv', 'run', '--project', runtimeDir(), '--locked', '--python', '3.12', 'python', `${runtimeDir()}/runner.py`, kind, '--manifest', value.manifestPath, '--output', value.outputPath, '--category', value.category]),
+        command: uvRunnerCommand([kind, '--manifest', value.manifestPath, '--output', value.outputPath, '--category', value.category]),
         description: `Run deterministic Walmart ${kind} analysis`, timeoutMs: 15 * 60_000,
       })
       return { path: value.outputPath, title: kind === 'fineline' ? 'Walmart Fineline Investment Analysis' : 'Walmart White-space Analysis' }
@@ -93,10 +116,10 @@ export const walmartOutlineProvider: PaimindGeneratorProvider = {
   async generate(input, context) {
     const value = outlineArgs(input)
     await context.runWorkspaceCommand({
-      command: command(['uv', 'run', '--project', runtimeDir(), '--locked', '--python', '3.12', 'python', `${runtimeDir()}/runner.py`, 'outline', '--fineline', value.finelinePath, '--white-space', value.whiteSpacePath, '--fineline-artifact-id', value.finelineArtifactId, '--white-space-artifact-id', value.whiteSpaceArtifactId, '--output', value.outputPath]),
+      command: uvRunnerCommand(['outline', '--fineline', value.finelinePath, '--white-space', value.whiteSpacePath, '--fineline-artifact-id', value.finelineArtifactId, '--white-space-artifact-id', value.whiteSpaceArtifactId, '--output', value.outputPath]),
       description: 'Build deterministic Walmart buyer proposal outline', timeoutMs: 10 * 60_000,
     })
-    await context.runWorkspaceCommand({ command: command(['node', `${runtimeDir()}/validate-outline.mjs`, value.outputPath, '18', '30']), description: 'Validate focused 18-30 slide Walmart presentation outline', timeoutMs: 30_000 })
+    await context.runWorkspaceCommand({ command: command([process.execPath, `${runtimeDir()}/validate-outline.mjs`, value.outputPath, '18', '30']), description: 'Validate focused 18-30 slide Walmart presentation outline', timeoutMs: 30_000 })
     return { path: value.outputPath, title: 'Walmart Buyer Proposal · Outline' }
   },
 }
@@ -108,15 +131,25 @@ const ARTIFACT_SCHEMA = { type: 'object', additionalProperties: false, propertie
 const TOOL_OUTPUT = { type: 'object', additionalProperties: false, properties: { artifact: { ...ARTIFACT_SCHEMA, required: true } } } as const
 function render(value: JsonRecord, label: string): { type: 'text'; text: string }[] { const artifact = artifactFromValue(value); return [{ type: 'text', text: artifact.state === 'available' ? `<artifact path="${artifact.path}" id="${artifact.artifactId}" revision="${artifact.revision}">${label}</artifact>` : `<artifact-error code="${artifact.error?.code ?? 'analysis_failed'}">${artifact.error?.message ?? 'Analysis failed'}</artifact-error>` }] }
 
-function artifactsFor(ctx: WalmartProposalHostContext, exec: PaimindToolRunContext): readonly Readonly<ArtifactProducedEnvelopeV1>[] {
-  if (exec.agent === undefined) throw new Error('Walmart outline generation requires a live Harness Agent')
-  const value = ctx.sessionProjections.snapshot(exec.agent.session).values['paimind.artifacts']
-  return defineArtifactProjection(value as PaimindArtifactProjectionV1).artifacts
-}
 function resolveAnalysisArtifact(ctx: WalmartProposalHostContext, exec: PaimindToolRunContext, artifactId: string, producerId: string): Readonly<ArtifactProducedEnvelopeV1> {
-  const artifact = artifactsFor(ctx, exec).find(candidate => candidate.artifactId === artifactId)
-  if (artifact === undefined || artifact.state !== 'available' || artifact.kind !== 'json' || artifact.producerId !== producerId || artifact.sessionId !== exec.agent?.id) throw new Error(`Artifact ${artifactId} is not an available current-Session ${producerId} data_result`)
-  return artifact
+  if (exec.agent === undefined) throw new Error('Walmart outline generation requires a live Harness Agent')
+  return requireCurrentSessionArtifact(
+    ctx.sessionProjections.snapshot(exec.agent.session).values['paimind.artifacts'], exec, artifactId,
+    { description: `an available current-Session ${producerId} data_result`, kind: 'json', producerIds: [producerId] },
+  )
+}
+
+function resolveDemoManifest(ctx: WalmartProposalHostContext, exec: PaimindToolRunContext, args: Readonly<JsonRecord>): Readonly<JsonRecord> {
+  const artifactId = typeof args.manifest_artifact_id === 'string' ? args.manifest_artifact_id.trim() : ''
+  const manifestPath = typeof args.manifest_path === 'string' ? args.manifest_path.trim() : ''
+  if ((artifactId === '') === (manifestPath === '')) throw new Error('provide exactly one of manifest_artifact_id or manifest_path')
+  if (manifestPath !== '') return args
+  if (exec.agent === undefined) throw new Error('Walmart demo analysis requires a live Harness Agent')
+  const manifest = requireCurrentSessionArtifact(
+    ctx.sessionProjections.snapshot(exec.agent.session).values['paimind.artifacts'], exec, artifactId,
+    { description: 'the available current-Session Walmart synthetic frozen-data manifest', kind: 'json', producerIds: [WALMART_DEMO_DATA_PROVIDER_ID] },
+  )
+  return { ...args, __manifest_path: artifactWorkspaceRelativePath(manifest.path, exec, { label: 'resolved Walmart demo manifest Artifact path' }) }
 }
 
 function commonOutput(label: string) {
@@ -125,11 +158,13 @@ function commonOutput(label: string) {
 
 export function apply(ctx: WalmartProposalHostContext): void {
   ctx.effect(() => {
-    const disposers = [ctx.paimindArtifactGenerators.register(finelineProvider), ctx.paimindArtifactGenerators.register(whiteSpaceProvider), ctx.paimindArtifactGenerators.register(walmartOutlineProvider)]
+    const disposers = [ctx.paimindArtifactGenerators.register(walmartDemoDataProvider), ctx.paimindArtifactGenerators.register(finelineProvider), ctx.paimindArtifactGenerators.register(whiteSpaceProvider), ctx.paimindArtifactGenerators.register(walmartOutlineProvider)]
     return () => { for (const dispose of disposers.reverse()) dispose() }
   }, 'paimind-walmart-proposal-adapter: providers')
-  ctx.systemPrompt.section({ name: 'tool:walmart-proposal-analysis', order: 115, text: 'For complete Walmart buyer proposals, use analyze_fineline_investment and analyze_white_space only with a hash-locked paimind.analysis-source-manifest/v1, then call build_walmart_buyer_proposal_outline with the two returned Artifact IDs. The validated buyer-proposal outline must retain 18-30 purposeful slides, cover the complete decision story, and avoid page-count padding. Never use live database credentials, substitute model calculations, or bypass these native Tools.' })
-  ctx.tools.register(definePaimindHarnessTool({ name: FINELINE_TOOL, description: 'Run the packaged Python 3.12 Fineline CLI against sourceId fineline-source in a verified frozen manifest and publish a SHA-256 data_result Artifact.', parameters: { manifest_path: { type: 'string', required: true }, output_path: { type: 'string', required: true }, category: { type: 'string' } }, output: commonOutput('Generated Fineline data_result'), async execute(args, exec) { return await ctx.paimindArtifactGenerators.execute(FINELINE_PROVIDER_ID, args, exec) }, presentCall: args => ({ card: 'generic', title: 'Analyze Fineline investment', kind: 'edit', rawInput: args.manifest_path }), presentResult(_args, result) { return presentArtifactToolResult(result) } }))
-  ctx.tools.register(definePaimindHarnessTool({ name: WHITE_SPACE_TOOL, description: 'Run the packaged Python 3.12 White-space CLI against performance, assortment, tags and portfolio sources in a verified frozen manifest and publish a SHA-256 data_result Artifact.', parameters: { manifest_path: { type: 'string', required: true }, output_path: { type: 'string', required: true }, category: { type: 'string' } }, output: commonOutput('Generated White-space data_result'), async execute(args, exec) { return await ctx.paimindArtifactGenerators.execute(WHITE_SPACE_PROVIDER_ID, args, exec) }, presentCall: args => ({ card: 'generic', title: 'Analyze White space', kind: 'edit', rawInput: args.manifest_path }), presentResult(_args, result) { return presentArtifactToolResult(result) } }))
+  ctx.systemPrompt.section({ name: 'tool:walmart-proposal-analysis', order: 115, text: 'For a synthetic Walmart demonstration, first call prepare_walmart_demo_data and pass its exact current-Session Artifact ID to both analysis Tools. For business-data work, use only an approved hash-locked paimind.analysis-source-manifest/v1 path. Then call build_walmart_buyer_proposal_outline with the two returned Artifact IDs. Always label synthetic data as demonstration data and never present it as Walmart market truth. Never use live database credentials, substitute model calculations, or bypass these native Tools.' })
+  ctx.tools.register(definePaimindHarnessTool({ name: PREPARE_WALMART_DEMO_DATA_TOOL, description: 'Create deterministic synthetic Walmart Kids Crafts source files in the current Workspace, hash every file and publish a frozen source-manifest Artifact for demo use only.', parameters: { output_dir: { type: 'string', required: true } }, output: commonOutput('Prepared synthetic Walmart frozen data'), async execute(args, exec) { return await ctx.paimindArtifactGenerators.execute(WALMART_DEMO_DATA_PROVIDER_ID, args, exec) }, presentCall: args => ({ card: 'generic', title: 'Prepare synthetic Walmart demo data', kind: 'edit', rawInput: args.output_dir }), presentResult(_args, result) { return presentArtifactToolResult(result) } }))
+  const analysisParameters = { manifest_artifact_id: { type: 'string' }, manifest_path: { type: 'string' }, output_path: { type: 'string', required: true }, category: { type: 'string' } } as const
+  ctx.tools.register(definePaimindHarnessTool({ name: FINELINE_TOOL, description: 'Run the packaged Python 3.12 Fineline CLI using either the exact current-Session synthetic manifest Artifact ID or an approved Workspace manifest path, then publish a SHA-256 data_result Artifact.', parameters: analysisParameters, output: commonOutput('Generated Fineline data_result'), async execute(args, exec) { return await ctx.paimindArtifactGenerators.execute(FINELINE_PROVIDER_ID, resolveDemoManifest(ctx, exec, args), exec) }, presentCall: args => ({ card: 'generic', title: 'Analyze Fineline investment', kind: 'edit', rawInput: args.manifest_artifact_id ?? args.manifest_path }), presentResult(_args, result) { return presentArtifactToolResult(result) } }))
+  ctx.tools.register(definePaimindHarnessTool({ name: WHITE_SPACE_TOOL, description: 'Run the packaged Python 3.12 White-space CLI using either the exact current-Session synthetic manifest Artifact ID or an approved Workspace manifest path, then publish a SHA-256 data_result Artifact.', parameters: analysisParameters, output: commonOutput('Generated White-space data_result'), async execute(args, exec) { return await ctx.paimindArtifactGenerators.execute(WHITE_SPACE_PROVIDER_ID, resolveDemoManifest(ctx, exec, args), exec) }, presentCall: args => ({ card: 'generic', title: 'Analyze White space', kind: 'edit', rawInput: args.manifest_artifact_id ?? args.manifest_path }), presentResult(_args, result) { return presentArtifactToolResult(result) } }))
   ctx.tools.register(definePaimindHarnessTool({ name: WALMART_OUTLINE_TOOL, description: 'Build a validated focused 18-30 slide paimind.presentation-outline/v1 from exactly one current-Session Fineline and one White-space data_result Artifact ID.', parameters: { fineline_artifact_id: { type: 'string', required: true }, white_space_artifact_id: { type: 'string', required: true }, output_path: { type: 'string', required: true } }, output: commonOutput('Generated Walmart proposal outline'), async execute(args, exec) { const finelineId = text(args.fineline_artifact_id, 'fineline_artifact_id'); const whiteSpaceId = text(args.white_space_artifact_id, 'white_space_artifact_id'); const fineline = resolveAnalysisArtifact(ctx, exec, finelineId, FINELINE_PROVIDER_ID); const whiteSpace = resolveAnalysisArtifact(ctx, exec, whiteSpaceId, WHITE_SPACE_PROVIDER_ID); return await ctx.paimindArtifactGenerators.execute(WALMART_OUTLINE_PROVIDER_ID, { ...args, __fineline_path: fineline.path, __white_space_path: whiteSpace.path }, exec) }, presentCall: args => ({ card: 'generic', title: 'Build Walmart buyer proposal outline', kind: 'edit', rawInput: args.output_path }), presentResult(_args, result) { return presentArtifactToolResult(result) } }))
 }

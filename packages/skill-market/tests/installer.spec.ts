@@ -113,6 +113,8 @@ metadata:
     const bentoSkill = await readFile(join(root, 'bento-ppt', 'SKILL.md'), 'utf8')
     expect(bentoSkill).toContain('create_fact_bound_presentation_outline')
     expect(bentoSkill).toContain('generate_traceable_bento_from_outline')
+    expect(bentoSkill).toContain('Bento Artifact as the single primary final deliverable')
+    expect(bentoSkill).toContain('only when the current user explicitly requested an editable PPTX export')
     await expect(readFile(join(root, 'bento-ppt', 'LICENSE.txt'), 'utf8')).resolves.toContain('Internal Use Only')
     const proposal = await service.inspectCatalog({ catalogId: 'proposal-assistant-orchestration', version: '1.0.0' })
     await service.installUpload({ uploadId: proposal.uploadId, digest: proposal.digest })
@@ -122,6 +124,8 @@ metadata:
     expect(proposalSkill).toContain('140 · Stationery')
     expect(proposalSkill).toContain('410 · Holiday Events')
     expect(proposalSkill).toContain('never emit it as a second question')
+    expect(proposalSkill).toContain('Call `generate_traceable_bento_from_outline`')
+    expect(proposalSkill).toContain('only when the current user explicitly requested an editable PPTX export')
     expect(proposalSkill).not.toContain('Time horizon')
   })
 
@@ -130,6 +134,14 @@ metadata:
     expect(() => validateSkillArchivePath('../SKILL.md')).toThrow(/路径穿越/)
     expect(() => validateSkillArchivePath('/tmp/SKILL.md')).toThrow(/不安全路径/)
     expect(() => validateSkillArchivePath('skill\\SKILL.md')).toThrow(/不安全路径/)
+  })
+
+  it('removes staged uploads when package inspection fails', async () => {
+    const { service, state } = await createInstaller()
+    const invalid = await upload(service, 'invalid-skill.md', '# Missing YAML frontmatter\n')
+
+    await expect(service.inspectUpload({ uploadId: invalid.uploadId })).rejects.toThrow('SKILL.md 缺少 YAML frontmatter')
+    await expect(readdir(join(state, 'uploads'))).resolves.toEqual([])
   })
 
   it('streams install, atomically updates, and recoverably uninstalls a managed Skill', async () => {

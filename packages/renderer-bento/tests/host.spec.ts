@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { BENTO_CSP, inject, isTrustedInfoRequest, resolveBentoFile } from '../src/index.ts'
+import { applyLegacyBentoModeCompatibility } from '../src/legacy-mode-compat.ts'
 
 describe('FP07 isolated Bento host', () => {
   it('declares every Harness host service it consumes', () => {
@@ -37,5 +38,20 @@ describe('FP07 isolated Bento host', () => {
     expect(BENTO_CSP).toContain("form-action 'none'")
     expect(BENTO_CSP).toContain("script-src 'self'")
     expect(BENTO_CSP).not.toContain('allow-same-origin')
+  })
+
+  it('adapts only legacy traceable documents to mutually-exclusive Edit and Trace modes', () => {
+    const legacy = '<html><head><meta name="paimind:presentation-schema" content="paimind.presentation/v1"></head><body data-mode="preview"></body></html>'
+    const adapted = applyLegacyBentoModeCompatibility(legacy)
+    expect(adapted).toContain('data-paimind-mode-compat="exclusive-selection-v1"')
+    expect(adapted).toContain('body:not([data-mode="trace"]) .trace-status{display:none!important}')
+    expect(adapted).toContain("if(mode==='trace'||(mode==='edit'")
+    expect(adapted).toContain("type:'paimind:bento-select',mode")
+    expect(adapted).toContain("type:'paimind:bento-manifest',mode")
+    expect(adapted).toContain("previewHint.textContent='← / → · Navigate slides'")
+    expect(adapted).toContain("if(mode==='preview'){event.stopImmediatePropagation();return}")
+    expect(applyLegacyBentoModeCompatibility(adapted)).toBe(adapted)
+    expect(applyLegacyBentoModeCompatibility('<html><body>Plain HTML</body></html>')).toBe('<html><body>Plain HTML</body></html>')
+    expect(applyLegacyBentoModeCompatibility(`<html><head><meta name="paimind:presentation-schema"></head><body data-paimind-mode-contract="exclusive-selection-v1"></body></html>`)).not.toContain('data-paimind-mode-compat=')
   })
 })

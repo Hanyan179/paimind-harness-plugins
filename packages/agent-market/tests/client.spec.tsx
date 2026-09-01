@@ -82,6 +82,7 @@ function services() {
         proposal: null,
       }}),
       prepareAuthoringContext: vi.fn().mockResolvedValue(undefined),
+      suppressAutomaticMigration: vi.fn(() => vi.fn()),
       watchAuthoringSession: vi.fn((_sessionId, _afterSeq, _skills, callbacks) => {
         authoringWatch = callbacks
         return () => { authoringWatch = null }
@@ -221,7 +222,10 @@ describe('Agent Center business UI', () => {
     )
     expect(within(builder).getByDisplayValue('Requirement Clarifier')).toBeInTheDocument()
     expect(within(builder).getByDisplayValue('Requirement analyst')).toBeInTheDocument()
-    await screen.findByText('Harness native configuration conversation connected')
+    const readyStatus = (await screen.findByText('Creation assistant is ready')).closest('[role="status"]')
+    expect(readyStatus).not.toBeNull()
+    expect(readyStatus?.querySelector('small')).toBeNull()
+    expect(screen.queryByText(/Harness exclusively owns|native message timeline/)).toBeNull()
 
     fireEvent.click(within(builder).getByRole('button', { name: 'Back to Agent Center' }))
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Create Agent' })).toBeNull())
@@ -231,6 +235,40 @@ describe('Agent Center business UI', () => {
     act(() => { fixture.runtime.openSession(authoringSessionId) })
     await screen.findByRole('region', { name: 'Create Agent' })
     expect(fixture.runtime.resumeAuthoringSession).toHaveBeenCalledTimes(2)
+  })
+
+  it('reconnects a resumed authoring Session to its saved Profile instead of presenting a new unsaved draft', async () => {
+    const fixture = services()
+    const presetApi = api()
+    const authoringSessionId = 'paimind-authoring-723e4567-e89b-42d3-a456-426614174000'
+    const linkedProfile = {
+      ...profile,
+      authoringSessionId,
+      authoringCursor: 13,
+      name: 'Requirement Clarifier',
+      description: 'Clarify one requirement at a time',
+      role: 'Requirement analyst',
+      goal: 'Produce an accepted brief',
+      behavior: 'Ask one focused question',
+    }
+    fixture.profiles.listProfiles.mockResolvedValue({ ok: true, value: { profiles: [linkedProfile] } })
+    vi.mocked(fixture.runtime.sessionState).mockReturnValue({ running: false, completed: true, error: null })
+    fixture.runtime.openSession(authoringSessionId)
+    render(<AgentCenterSection close={() => {}} api={presetApi} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
+    await screen.findByRole('tab', { name: 'My Agents' })
+    await screen.findByRole('heading', { name: 'Requirement Clarifier' })
+
+    const builder = await screen.findByRole('region', { name: 'Edit Agent' })
+    expect(within(builder).getByText('Saved')).toBeInTheDocument()
+    expect(within(builder).queryByText('Unsaved draft')).toBeNull()
+    expect(fixture.runtime.resumeAuthoringSession).toHaveBeenCalledWith(
+      authoringSessionId,
+      expect.objectContaining({ name: 'Requirement Clarifier', preferredSkillNames: ['web-research'] }),
+      expect.any(Array),
+      13,
+    )
+    expect(fixture.profiles.saveProfile).not.toHaveBeenCalled()
+    expect(presetApi.copy).not.toHaveBeenCalled()
   })
 
   it('switches the combined Builder to the clicked authoring history and resizes its native conversation pane', async () => {
@@ -277,7 +315,7 @@ describe('Agent Center business UI', () => {
     act(() => { fixture.runtime.openSession(firstSessionId) })
     const builder = await screen.findByRole('region', { name: 'Create Agent' })
     await waitFor(() => expect(within(builder).getByDisplayValue('First history Agent')).toBeInTheDocument())
-    await screen.findByText('Harness native configuration conversation connected')
+    await screen.findByText('Creation assistant is ready')
     expect(controller.getSnapshot().open).toBe(true)
     expect(nativeConversation).not.toHaveAttribute('inert')
 
@@ -347,6 +385,11 @@ describe('Agent Center business UI', () => {
     fireEvent.click(within(card).getByRole('button', { name: 'Create Personal Agent' }))
     expect(screen.getByRole('dialog', { name: 'Start with one sentence' })).toBeInTheDocument()
     expect(screen.getByLabelText('What Agent do you want to create?')).toBeInTheDocument()
+    const examples = screen.getByRole('group', { name: 'Creation examples' })
+    expect(within(examples).getAllByRole('button')).toHaveLength(4)
+    fireEvent.click(within(examples).getByRole('button', { name: 'Create an Agent that helps me check delivery risks.' }))
+    expect(screen.getByLabelText('What Agent do you want to create?')).toHaveValue('Create an Agent that helps me check delivery risks.')
+    expect(screen.getByText(/automatically sends this sentence as the first message/)).toBeInTheDocument()
     expect(screen.queryByLabelText('Agent name (editable later)')).toBeNull()
     expect(screen.queryByLabelText('Base mode')).toBeNull()
     expect(fixture.runtime.start).not.toHaveBeenCalled()
@@ -396,7 +439,144 @@ describe('Agent Center business UI', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'My Agents' }))
     fireEvent.click(screen.getByRole('button', { name: 'Start conversation' }))
     await waitFor(() => expect(fixture.runtime.start).toHaveBeenCalledWith('mine', profile))
-    expect(close).toHaveBeenCalledTimes(1)
+    expect(close).toHaveBeenCalledWith(false)
+  })
+
+  it('creates, names, binds, and opens Test Chat as a native Harness Session', async () => {
+    const rows: Record<string, { id: string; blank: boolean; agentPreset: string }> = {
+      'session-origin': { id: 'session-origin', blank: true, agentPreset: 'standard' },
+    }
+    let current = 'session-origin'
+    const listeners = new Set<() => void>()
+    const sessions = {
+      list: {
+        getSnapshot: () => ({ current, byId: rows }),
+        subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } },
+      },
+      open: vi.fn((sessionId: string) => { current = sessionId }),
+    }
+    const workspaces = {
+      startSession: vi.fn(() => {
+        rows['session-test-visible'] = { id: 'session-test-visible', blank: true, agentPreset: 'standard' }
+        current = 'session-test-visible'
+        listeners.forEach(listener => { listener() })
+      }),
+    }
+    let selected = 'standard'
+    const seat = {
+      getSnapshot: () => ({ current: selected, error: null, busy: false }),
+      select: vi.fn(async (presetId: string) => {
+        selected = presetId
+        rows[current]!.agentPreset = presetId
+        listeners.forEach(listener => { listener() })
+      }),
+    }
+    const bindSession = vi.fn().mockResolvedValue({ ok: true, value: {
+      sessionId: 'session-test-visible', agentId: 'mine', presetId: 'mine', configVersion: 'v1-a', boundAt: 1,
+    } })
+    const rename = vi.fn().mockResolvedValue({ result: { ok: true, value: { title: 'Test · Research Agent', seq: 1 } } })
+    const runtime = new AgentCenterRuntime(
+      seat as never,
+      {
+        bindSession,
+        listAudit: vi.fn().mockResolvedValue({ ok: true, value: { migrations: [], verifications: [] } }),
+        migrationPlan: vi.fn().mockResolvedValue({ ok: true, value: null }),
+      } as never,
+      sessions as never,
+      workspaces as never,
+      { input: { for: () => ({ setDraft: vi.fn() }) } } as never,
+      { rename } as never,
+    )
+
+    await expect(runtime.beginTest('mine', profile, 'Test · Research Agent')).resolves.toBe('session-test-visible')
+    expect(workspaces.startSession).toHaveBeenCalledOnce()
+    expect(rows['session-test-visible']).toMatchObject({ agentPreset: 'mine' })
+    expect(bindSession).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: 'session-test-visible', agentId: 'mine', presetId: 'mine', configVersion: 'v1-a',
+    }))
+    expect(rename).toHaveBeenCalledWith({ sessionId: 'session-test-visible', title: 'Test · Research Agent' })
+    expect(sessions.open).toHaveBeenCalledWith('session-test-visible')
+    runtime.dispose()
+  })
+
+  it('reclaims the current untouched blank Session when Harness deduplicates Test Chat creation', async () => {
+    const rows: Record<string, { id: string; blank: boolean; agentPreset: string }> = {
+      'session-test-previous': { id: 'session-test-previous', blank: true, agentPreset: 'mine' },
+    }
+    let current = 'session-test-previous'
+    const listeners = new Set<() => void>()
+    const notify = (): void => { listeners.forEach(listener => { listener() }) }
+    const sessions = {
+      list: {
+        getSnapshot: () => ({ current, byId: rows }),
+        subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } },
+      },
+      open: vi.fn((sessionId: string) => { current = sessionId; notify() }),
+    }
+    const workspaces = {
+      startSession: vi.fn(() => {
+        notify()
+      }),
+    }
+    let selected = 'standard'
+    const runtime = new AgentCenterRuntime(
+      {
+        getSnapshot: () => ({ current: selected, error: null, busy: false }),
+        select: vi.fn(async (presetId: string) => {
+          selected = presetId
+          rows[current]!.agentPreset = presetId
+          notify()
+        }),
+      } as never,
+      {
+        bindSession: vi.fn().mockImplementation(async input => ({ ok: true, value: { ...input, boundAt: 1 } })),
+        listAudit: vi.fn().mockResolvedValue({ ok: true, value: { migrations: [], verifications: [] } }),
+        migrationPlan: vi.fn().mockResolvedValue({ ok: true, value: null }),
+      } as never,
+      sessions as never,
+      workspaces as never,
+      { input: { for: () => ({ setDraft: vi.fn() }) } } as never,
+    )
+
+    await expect(runtime.beginTest('mine', profile)).resolves.toBe('session-test-previous')
+    expect(workspaces.startSession).toHaveBeenCalledOnce()
+    expect(rows['session-test-previous']).toMatchObject({ agentPreset: 'mine' })
+    expect(sessions.open).toHaveBeenLastCalledWith('session-test-previous')
+    runtime.dispose()
+  })
+
+  it('cancels an in-flight automatic migration when explicit Test Chat preparation takes ownership', async () => {
+    let resolveAudit: ((value: unknown) => void) | null = null
+    const listAudit = vi.fn(() => new Promise(resolve => { resolveAudit = resolve }))
+    const migrationPlan = vi.fn().mockResolvedValue({ ok: true, value: {
+      sourceSessionId: 'session-origin', agentId: 'mine', presetId: 'mine',
+      fromVersion: 'v1-a', toVersion: 'v2-a', summary: 'migrate',
+    } })
+    const workspaces = { startSession: vi.fn() }
+    const runtime = new AgentCenterRuntime(
+      null,
+      { listAudit, migrationPlan } as never,
+      {
+        list: {
+          getSnapshot: () => ({ current: 'session-origin', byId: {
+            'session-origin': { id: 'session-origin', blank: false, agentPreset: 'mine' },
+          } }),
+          subscribe: () => () => {},
+        },
+      } as never,
+      workspaces as never,
+      { input: { for: () => ({ setDraft: vi.fn() }) } } as never,
+    )
+
+    await waitFor(() => expect(listAudit).toHaveBeenCalledOnce())
+    const release = runtime.suppressAutomaticMigration()
+    resolveAudit?.({ ok: true, value: { migrations: [], verifications: [] } })
+    await act(async () => { await Promise.resolve(); await Promise.resolve() })
+
+    expect(migrationPlan).not.toHaveBeenCalled()
+    expect(workspaces.startSession).not.toHaveBeenCalled()
+    release()
+    runtime.dispose()
   })
 
   it('reuses the current blank conversation and keeps the native selector on the chosen Agent', async () => {
@@ -664,6 +844,8 @@ describe('Agent Center business UI', () => {
     })
     await expect(runtime.author({ sessionId: first.sessionId, draft, prompt: '这轮会被中止', skills: [], locale: 'zh-CN' }))
       .rejects.toThrow('未正常完成：aborted')
+    await expect(runtime.resumeAuthoringSession(first.sessionId, draft, []))
+      .resolves.toMatchObject({ cursor: 42 })
     runtime.dispose()
   })
 
@@ -835,6 +1017,38 @@ describe('Agent Center business UI', () => {
     }))
   })
 
+  it('accepts only one Save action before the busy render commits', async () => {
+    const fixture = services()
+    const presetApi = api()
+    let copiedPresetId = ''
+    vi.mocked(presetApi.copy).mockImplementation(async payload => {
+      copiedPresetId = payload.agentPreset
+      return { result: { ok: true, value: { agentPreset: payload.agentPreset } } }
+    })
+    vi.mocked(presetApi.list).mockImplementation(async () => ({ result: { ok: true, value: {
+      ...roster,
+      presets: copiedPresetId === '' ? roster.presets : [...roster.presets, { id: copiedPresetId, trust: 'user' as const, isDefault: false, name: 'One Save Agent' }],
+    } } }))
+    fixture.profiles.saveProfile.mockImplementation(async input => ({ ok: true, value: {
+      ...input, revision: 1, configVersion: 'v1-one-save', updatedAt: 1, health: 'healthy' as const,
+    } }))
+    render(<AgentCenterSection close={() => {}} api={presetApi} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
+    await screen.findByRole('heading', { name: 'Research Agent' })
+    fireEvent.click(screen.getByRole('tab', { name: 'Platform modes' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Copy and edit' })[0]!)
+    fireEvent.change(screen.getByLabelText('Agent name'), { target: { value: 'One Save Agent' } })
+    fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Product analyst' } })
+    fireEvent.change(screen.getByLabelText('Goal'), { target: { value: 'Save exactly once' } })
+    fireEvent.change(screen.getByLabelText('Behavior'), { target: { value: 'Ignore repeated activation' } })
+    const saveButton = screen.getByRole('button', { name: 'Save Personal Agent' })
+
+    fireEvent.click(saveButton)
+    fireEvent.click(saveButton)
+
+    await waitFor(() => expect(fixture.profiles.saveProfile).toHaveBeenCalledOnce())
+    expect(presetApi.copy).toHaveBeenCalledOnce()
+  })
+
   it('creates a classified Business Agent through the native Preset and Profile services', async () => {
     const fixture = services()
     const presetApi = api()
@@ -867,7 +1081,7 @@ describe('Agent Center business UI', () => {
     fireEvent.change(screen.getByLabelText('What Agent do you want to create?'), { target: { value: 'Maintain product decisions with evidence' } })
     fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
     expect(screen.getByRole('region', { name: 'Create Agent' })).not.toHaveAttribute('aria-modal')
-    await screen.findByText('Harness native configuration conversation connected')
+    await screen.findByText('Creation assistant is ready')
     await waitFor(() => expect(fixture.runtime.watchAuthoringSession).toHaveBeenCalledWith(
       'session-authoring', 3, expect.any(Array), expect.any(Object),
     ))
@@ -887,11 +1101,11 @@ describe('Agent Center business UI', () => {
     await waitFor(() => expect(screen.getByLabelText('Role')).toHaveValue('PDM analyst'))
     expect(screen.getByLabelText('Goal')).toHaveValue('Maintain product decisions')
     expect(screen.getByLabelText('Behavior')).toHaveValue('Use product evidence')
-    const draftReview = screen.getByRole('region', { name: 'Agent draft ready' })
-    expect(within(draftReview).getByText(/prefilled 3 suggested changes/)).toBeInTheDocument()
+    const draftReview = screen.getByRole('region', { name: 'Agent draft updated' })
+    expect(within(draftReview).getByText(/applied 3 suggested changes to the same draft/)).toBeInTheDocument()
     expect(within(draftReview).getByLabelText('Updated fields')).toHaveTextContent('RoleGoalBehavior')
-    expect(screen.getByRole('button', { name: 'Save Business Agent' })).toBeDisabled()
-    fireEvent.click(within(draftReview).getByRole('button', { name: 'Confirm and apply' }))
+    expect(within(draftReview).queryByRole('button', { name: 'Confirm and apply' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Save Business Agent' })).toBeEnabled()
     fireEvent.click(screen.getByRole('button', { name: 'Save Business Agent' }))
 
     await waitFor(() => expect(presetApi.copy).toHaveBeenCalledWith(expect.objectContaining({ from: 'standard' })))
@@ -899,6 +1113,25 @@ describe('Agent Center business UI', () => {
       presetId: copiedPresetId, productKind: 'business', businessCategory: 'Product & PDM', basePresetId: 'standard',
     }))
     expect(screen.getByRole('button', { name: 'Saved' })).toBeDisabled()
+
+    fixture.emitAuthoringTurn({
+      sessionId: 'session-authoring',
+      turn: 3,
+      endSeq: 11,
+      text: 'I refined the same Agent without creating another one.',
+      proposal: { goal: 'Maintain product decisions and revisions' },
+    })
+    await waitFor(() => expect(screen.getByLabelText('Goal')).toHaveValue('Maintain product decisions and revisions'))
+    expect(screen.queryByRole('button', { name: 'Confirm and apply' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Save Business Agent' }))
+    await waitFor(() => expect(fixture.profiles.saveProfile).toHaveBeenCalledTimes(2))
+    expect(presetApi.copy).toHaveBeenCalledTimes(1)
+    expect(fixture.profiles.saveProfile).toHaveBeenLastCalledWith(expect.objectContaining({
+      presetId: copiedPresetId,
+      expectedVersion: 'v1-business',
+      authoringSessionId: 'session-authoring',
+    }))
+
     fireEvent.click(screen.getByRole('button', { name: 'Back to Center' }))
     expect(fixture.runtime.beginAgentCenterBrowse).toHaveBeenCalledOnce()
     expect(screen.queryByRole('alert')).toBeNull()
@@ -946,7 +1179,7 @@ describe('Agent Center business UI', () => {
     surface.dispose()
   })
 
-  it('gates Test Chat and passes the same edited Preset to the runtime adapter without copying', async () => {
+  it('auto-saves an edited Agent before Test Chat and passes the same Preset without copying', async () => {
     const fixture = services()
     const presetApi = api()
     const onNativeConversationChange = vi.fn()
@@ -964,19 +1197,19 @@ describe('Agent Center business UI', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Test chat' }))
     expect(screen.queryByText('Save the Agent configuration first')).toBeNull()
-    await waitFor(() => expect(fixture.runtime.beginTest).toHaveBeenCalledWith('mine', profile))
-    await waitFor(() => expect(onNativeConversationChange).toHaveBeenCalledWith({ sessionId: 'session-test', interactive: true }))
+    await waitFor(() => expect(fixture.runtime.beginTest).toHaveBeenCalledWith('mine', profile, 'Test · Research Agent'))
+    await waitFor(() => expect(onNativeConversationChange).toHaveBeenCalledWith({
+      sessionId: 'session-test', interactive: true, lockedAgentName: 'Research Agent',
+    }))
     expect(screen.getByText('Harness native test conversation connected')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Test “Research Agent”' })).toBeInTheDocument()
+    expect(screen.getByText('Use the composer on the right. Replies come from the saved Agent Preset, not the configuration assistant.')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Role')).toBeNull()
 
     fireEvent.click(screen.getByRole('tab', { name: 'Configuration chat' }))
+    expect(screen.getByLabelText('Role')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Senior research reviewer' } })
     fireEvent.click(screen.getByRole('tab', { name: 'Test chat' }))
-    expect(screen.getByText('Save the Agent configuration first')).toBeInTheDocument()
-    expect(screen.getByText('Test Chat runs the exact saved Agent Preset.')).toBeInTheDocument()
-    expect(onNativeConversationChange).toHaveBeenLastCalledWith({ sessionId: null, interactive: false })
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Configuration chat' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Save Personal Agent' }))
     await waitFor(() => expect(fixture.profiles.saveProfile).toHaveBeenCalledWith(expect.objectContaining({
       agentId: 'mine',
       presetId: 'mine',
@@ -984,13 +1217,35 @@ describe('Agent Center business UI', () => {
       expectedVersion: 'v1-a',
     })))
     expect(presetApi.copy).not.toHaveBeenCalled()
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Test chat' }))
     await waitFor(() => expect(fixture.runtime.beginTest).toHaveBeenLastCalledWith(
-      'mine', expect.objectContaining({ presetId: 'mine', configVersion: 'v2-saved' }),
+      'mine', expect.objectContaining({ presetId: 'mine', configVersion: 'v2-saved' }), 'Test · Research Agent',
     ))
-    await waitFor(() => expect(onNativeConversationChange).toHaveBeenCalledWith({ sessionId: 'session-test', interactive: true }))
+    await waitFor(() => expect(onNativeConversationChange).toHaveBeenCalledWith({
+      sessionId: 'session-test', interactive: true, lockedAgentName: 'Research Agent',
+    }))
     expect(fixture.runtime.test).not.toHaveBeenCalled()
+    expect(fixture.runtime.suppressAutomaticMigration).toHaveBeenCalledTimes(2)
+  })
+
+  it('retries a failed native Test Chat without returning to the configuration form', async () => {
+    const fixture = services()
+    vi.mocked(fixture.runtime.beginTest)
+      .mockRejectedValueOnce(new Error('native bind failed'))
+      .mockResolvedValueOnce('session-test-retry')
+    render(<AgentCenterSection close={() => {}} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
+    await screen.findByRole('tab', { name: 'My Agents' })
+    fireEvent.click(screen.getByRole('tab', { name: 'My Agents' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Test chat' }))
+
+    expect(await screen.findByText('Test conversation failed')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('native bind failed')
+    expect(screen.queryByLabelText('Role')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Test Chat' }))
+
+    await waitFor(() => expect(fixture.runtime.beginTest).toHaveBeenCalledTimes(2))
+    await screen.findByText('Test Chat is ready')
+    expect(screen.queryByLabelText('Role')).toBeNull()
   })
 
   it('declares one combined Center surface with Remote, Workspace, and conversation dependencies', () => {
@@ -1027,6 +1282,103 @@ describe('Agent Center business UI', () => {
     expect(screen.queryByRole('main', { name: 'Agent Center' })).toBeNull()
     expect(nativeConversation).not.toHaveAttribute('inert')
     expect(nativeConversation).not.toHaveAttribute('aria-hidden')
+    controller.dispose()
+  })
+
+  it('keeps the Agent-bound Session current after Start conversation closes the Center', async () => {
+    const fixture = services()
+    vi.mocked(fixture.runtime.start).mockImplementation(async () => {
+      fixture.runtime.openSession('session-agent-bound')
+      return 'session-agent-bound'
+    })
+    const controller = new PaimindProductSurfaceController('agent-center', window, document)
+    const center = document.createElement('main')
+    const nativeConversation = document.createElement('div')
+    nativeConversation.dataset.slot = 'conversation'
+    nativeConversation.append(document.createElement('section'))
+    center.append(nativeConversation)
+    document.body.append(center)
+    render(<>
+      <AgentCenterTrigger wide controller={controller} locale={locale()} />
+      <AgentCenterSurface controller={controller} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />
+    </>)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Agent Center' }))
+    await screen.findByRole('main', { name: 'Agent Center' })
+    fireEvent.click(screen.getByRole('button', { name: 'Start conversation' }))
+
+    await waitFor(() => expect(screen.queryByRole('main', { name: 'Agent Center' })).toBeNull())
+    expect(fixture.runtime.start).toHaveBeenCalledWith('mine', profile)
+    expect(fixture.runtime.currentSessionId()).toBe('session-agent-bound')
+    expect(fixture.runtime.openSession).not.toHaveBeenCalledWith('session-origin')
+    controller.dispose()
+  })
+
+  it('does not restore the previous Session while a native Test Chat is being bound', async () => {
+    const fixture = services()
+    let finishTest: ((sessionId: string) => void) | null = null
+    vi.mocked(fixture.runtime.beginTest).mockImplementation(() => {
+      fixture.runtime.openSession('session-blank-for-test')
+      return new Promise(resolve => { finishTest = resolve })
+    })
+    const controller = new PaimindProductSurfaceController('agent-center', window, document)
+    const center = document.createElement('main')
+    const nativeConversation = document.createElement('div')
+    nativeConversation.dataset.slot = 'conversation'
+    const nativeContent = document.createElement('section')
+    const presetSeat = document.createElement('button')
+    presetSeat.type = 'button'
+    presetSeat.setAttribute('aria-haspopup', 'dialog')
+    presetSeat.setAttribute('data-paimind-agent-picker-trigger', 'true')
+    presetSeat.textContent = 'Research Agent'
+    const presetSeatClick = vi.fn()
+    presetSeat.addEventListener('click', presetSeatClick)
+    const quickAgents = document.createElement('section')
+    quickAgents.setAttribute('data-paimind-quick-agents', '')
+    const quickAgent = document.createElement('button')
+    quickAgent.type = 'button'
+    quickAgent.textContent = 'Another Agent'
+    const quickAgentClick = vi.fn()
+    quickAgent.addEventListener('click', quickAgentClick)
+    quickAgents.append(quickAgent)
+    nativeContent.append(presetSeat, quickAgents)
+    nativeConversation.append(nativeContent)
+    center.append(nativeConversation)
+    document.body.append(center)
+    render(<>
+      <AgentCenterTrigger wide controller={controller} locale={locale()} />
+      <AgentCenterSurface controller={controller} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />
+    </>)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Agent Center' }))
+    await screen.findByRole('main', { name: 'Agent Center' })
+    fireEvent.click(screen.getByRole('tab', { name: 'My Agents' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    vi.mocked(fixture.runtime.openSession).mockClear()
+    fireEvent.click(screen.getByRole('tab', { name: 'Test chat' }))
+
+    await waitFor(() => expect(fixture.runtime.beginTest).toHaveBeenCalledOnce())
+    expect(fixture.runtime.currentSessionId()).toBe('session-blank-for-test')
+    await act(async () => { await Promise.resolve() })
+    expect(fixture.runtime.openSession).not.toHaveBeenCalledWith('session-origin')
+
+    await act(async () => { finishTest?.('session-blank-for-test') })
+    await screen.findByText('Test Chat is ready')
+    expect(nativeConversation).not.toHaveAttribute('inert')
+    await waitFor(() => expect(nativeConversation).toHaveAttribute('data-paimind-agent-test-locked', 'true'))
+    expect(presetSeat).toHaveAttribute('data-paimind-agent-test-seat')
+    expect(presetSeat).toHaveAttribute('aria-disabled', 'true')
+    expect(presetSeat).toHaveAttribute('title', 'Test Chat is locked to “Research Agent”')
+    fireEvent.click(presetSeat)
+    fireEvent.click(quickAgent)
+    expect(presetSeatClick).not.toHaveBeenCalled()
+    expect(quickAgentClick).not.toHaveBeenCalled()
+    expect(AGENT_CENTER_STYLE).toContain("[data-paimind-agent-test-locked='true'] [data-paimind-quick-agents]")
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Configuration chat' }))
+    await waitFor(() => expect(nativeConversation).not.toHaveAttribute('data-paimind-agent-test-locked'))
+    expect(presetSeat).not.toHaveAttribute('data-paimind-agent-test-seat')
+    expect(presetSeat).not.toHaveAttribute('aria-disabled')
     controller.dispose()
   })
 
@@ -1105,7 +1457,7 @@ describe('Agent Center business UI', () => {
     fireEvent.change(screen.getByLabelText('What Agent do you want to create?'), { target: { value: 'Create a customer follow-up Agent' } })
     fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
 
-    await screen.findByText('Creation assistant is working in the native conversation')
+    await screen.findByText('Creation assistant is working')
     await waitFor(() => expect(nativeConversation).not.toHaveAttribute('inert'))
     fireEvent.click(screen.getByRole('radio', { name: 'B2B sales follow-up' }))
     expect(choose).toHaveBeenCalledOnce()
@@ -1196,7 +1548,7 @@ describe('Agent Center business UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
     const builder = screen.getByRole('region', { name: 'Create Agent' })
     expect(builder.closest('[data-paimind-agent-center]')).toHaveAttribute('data-builder-open', 'true')
-    await screen.findByText('Harness native configuration conversation connected')
+    await screen.findByText('Creation assistant is ready')
     await waitFor(() => expect(fixture.runtime.openSession).toHaveBeenCalledWith('session-authoring'))
     expect(center).toHaveAttribute('data-paimind-product-center-native-conversation')
     expect(nativeContent).toHaveAttribute('data-paimind-product-center-native-conversation-content')
@@ -1299,7 +1651,7 @@ describe('Agent Center business UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
     const builder = screen.getByRole('region', { name: 'Create Agent' })
     expect(builder).not.toHaveAttribute('aria-modal')
-    await screen.findByText('Harness native configuration conversation connected')
+    await screen.findByText('Creation assistant is ready')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Back to Agent Center' })).toHaveFocus())
     expect(builder.querySelector('[data-paimind-agent-conversation-composer]')).toBeNull()
     fireEvent.keyDown(builder, { key: 'Escape' })
@@ -1316,6 +1668,11 @@ describe('Agent Center business UI', () => {
     expect(AGENT_CENTER_STYLE).toContain('grid-template-rows: auto auto auto minmax(0, 1fr) auto;')
     expect(AGENT_CENTER_STYLE).toMatch(/\[data-paimind-product-surface='agent-center'\] \[data-paimind-agent-skills-panel\] \{[\s\S]*height: max-content;[\s\S]*min-height: 76px;[\s\S]*display: grid;[\s\S]*overflow: clip;/)
     expect(AGENT_CENTER_STYLE).toContain('@media(max-width:680px)')
+    expect(AGENT_CENTER_STYLE).toContain('--paimind-agent-native-conversation-height: clamp(260px, 44dvh, 420px);')
+    expect(AGENT_CENTER_STYLE).toContain('inset: 0 0 var(--paimind-agent-native-conversation-height);')
+    expect(AGENT_CENTER_STYLE).toContain('inset: auto 0 0 !important;')
+    expect(AGENT_CENTER_STYLE).toContain('height: var(--paimind-agent-native-conversation-height) !important;')
+    expect(AGENT_CENTER_STYLE).toContain('grid-template-columns: repeat(3, minmax(0, 1fr));')
     expect(AGENT_CENTER_STYLE).toContain('@media(prefers-reduced-motion:reduce)')
     expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-splitter]')
     expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-draft-question-recovered] > :not([data-paimind-agent-draft-projection])')

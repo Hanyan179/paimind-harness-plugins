@@ -42,4 +42,4 @@ The manifest allowlist contains built JavaScript, declarations, source maps, opt
 - `pnpm run check:packages`
 - `pnpm run check:packs`
 - `pnpm run check:api`
-- Harness `0.1.0-rc.8` + Better Sidebar `0.12.2` browser matrix and reversible install/uninstall rehearsal
+- Selected Harness + Better Sidebar browser matrix and reversible install/uninstall rehearsal

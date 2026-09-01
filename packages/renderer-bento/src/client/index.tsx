@@ -21,7 +21,7 @@ export interface BentoClientContext extends PaimindClientContext {
   readonly paimindSidebar: PaimindSidebarService
 }
 
-const RUNTIME_EVENT_TYPES = new Set(['paimind:bento-ready', 'paimind:bento-slide', 'paimind:bento-select', 'paimind:bento-exit'])
+const RUNTIME_EVENT_TYPES = new Set(['paimind:bento-ready', 'paimind:bento-manifest', 'paimind:bento-slide', 'paimind:bento-select', 'paimind:bento-exit'])
 
 export function normalizeBentoRuntimeMessage(value: unknown): PaimindBentoRuntimeEvent | null {
   if (value === null || typeof value !== 'object') return null
@@ -32,6 +32,21 @@ export function normalizeBentoRuntimeMessage(value: unknown): PaimindBentoRuntim
   if (mode !== 'preview' && mode !== 'edit' && mode !== 'trace') return null
   if (!Number.isInteger(candidate.slide) || (candidate.slide ?? 0) < 1 || (candidate.slide ?? 0) > 10_000) return null
   const optionalId = (value: unknown): string | undefined => typeof value === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/.test(value) ? value : undefined
+  let slides: readonly PaimindBentoSlideNavigationItem[] | undefined
+  if (candidate.type === 'paimind:bento-manifest') {
+    const rawSlides = (value as { readonly slides?: unknown }).slides
+    if (!Array.isArray(rawSlides) || rawSlides.length < 1 || rawSlides.length > 10_000) return null
+    const normalizedSlides: PaimindBentoSlideNavigationItem[] = []
+    for (const rawSlide of rawSlides) {
+      if (rawSlide === null || typeof rawSlide !== 'object') return null
+      const entry = rawSlide as { readonly slideId?: unknown; readonly title?: unknown }
+      const slideId = optionalId(entry.slideId)
+      const title = typeof entry.title === 'string' ? entry.title.trim() : ''
+      if (slideId === undefined || title === '' || title.length > 500) return null
+      normalizedSlides.push(Object.freeze({ slideId, title }))
+    }
+    slides = Object.freeze(normalizedSlides)
+  }
   let selector = candidate.selector
   if (selector !== undefined) {
     if (selector.kind === 'object') selector = Object.freeze({ kind: 'object' })
@@ -40,11 +55,11 @@ export function normalizeBentoRuntimeMessage(value: unknown): PaimindBentoRuntim
     else return null
   }
   if (candidate.type === 'paimind:bento-select' && (optionalId(candidate.slideId) === undefined || optionalId(candidate.objectId) === undefined || optionalId(candidate.factId) === undefined || selector === undefined)) return null
-  return Object.freeze({ type: candidate.type as PaimindBentoRuntimeEvent['type'], mode, slide: candidate.slide as number, ...(optionalId(candidate.slideId) === undefined ? {} : { slideId: candidate.slideId }), ...(optionalId(candidate.objectId) === undefined ? {} : { objectId: candidate.objectId }), ...(optionalId(candidate.factId) === undefined ? {} : { factId: candidate.factId }), ...(selector === undefined ? {} : { selector }) })
+  return Object.freeze({ type: candidate.type as PaimindBentoRuntimeEvent['type'], mode, slide: candidate.slide as number, ...(optionalId(candidate.slideId) === undefined ? {} : { slideId: candidate.slideId }), ...(optionalId(candidate.objectId) === undefined ? {} : { objectId: candidate.objectId }), ...(optionalId(candidate.factId) === undefined ? {} : { factId: candidate.factId }), ...(selector === undefined ? {} : { selector }), ...(slides === undefined ? {} : { slides }) })
 }
 
 export class BentoPreviewStore implements PaimindBentoPreviewService {
-  private snapshot: PaimindBentoPreviewSnapshot = Object.freeze({ revision: 0, requestRevision: 0, request: null, runtimeEvent: null, mode: 'preview', focusRevision: 0, focus: null, slideTargetRevision: 0, slideTarget: null, inspectorRevision: 0 })
+  private snapshot: PaimindBentoPreviewSnapshot = Object.freeze({ revision: 0, requestRevision: 0, request: null, runtimeEvent: null, slides: Object.freeze([]), mode: 'preview', focusRevision: 0, focus: null, slideTargetRevision: 0, slideTarget: null, inspectorRevision: 0 })
   private readonly listeners = new Set<() => void>()
   private readonly inspectors: PaimindBentoInspectorContribution[] = []
 
@@ -62,6 +77,7 @@ export class BentoPreviewStore implements PaimindBentoPreviewService {
       requestRevision: this.snapshot.requestRevision + 1,
       request: Object.freeze({ ...request }),
       runtimeEvent: null,
+      slides: Object.freeze([]),
       mode: 'preview',
       focus: null,
       slideTarget: null,
@@ -70,8 +86,11 @@ export class BentoPreviewStore implements PaimindBentoPreviewService {
     return this.sidebar.openTab('paimind:bento-preview', { title: request.title })
   }
   publishRuntimeEvent(event: PaimindBentoRuntimeEvent): void {
-    if (this.snapshot.request === null) return
-    this.snapshot = Object.freeze({ ...this.snapshot, revision: this.snapshot.revision + 1, runtimeEvent: Object.freeze({ ...event }) })
+    if (this.snapshot.request === null || event.mode !== this.snapshot.mode) return
+    const slides = event.type === 'paimind:bento-manifest' && event.slides !== undefined
+      ? Object.freeze(event.slides.map(slide => Object.freeze({ ...slide })))
+      : this.snapshot.slides
+    this.snapshot = Object.freeze({ ...this.snapshot, revision: this.snapshot.revision + 1, runtimeEvent: Object.freeze({ ...event, ...(event.slides === undefined ? {} : { slides }) }), slides })
     for (const listener of [...this.listeners]) listener()
   }
   setMode(mode: PaimindBentoMode): boolean {
@@ -127,6 +146,9 @@ const STYLE = `
 [data-paimind-bento-stage] { min-width: 0; min-height: 0; position: relative; overflow:hidden; }
 [data-paimind-bento-workbench] { min-width:0; min-height:0; display:grid; grid-template-columns:minmax(0,1fr); overflow:hidden; }
 [data-paimind-bento-workbench][data-mode='trace'] { grid-template-columns:minmax(0,1.65fr) minmax(300px,1fr); }
+[data-paimind-bento-workbench][data-mode='preview'] [data-paimind-bento-canvas] { background:var(--dsw-alias-bg-base,#e8ebf0); }
+[data-paimind-bento-workbench][data-mode='preview'] [data-paimind-bento-stage] { display:grid; place-items:center; padding:clamp(14px,2.4vw,32px); }
+[data-paimind-bento-workbench][data-mode='preview'] [data-paimind-bento-stage] > iframe { border-radius:8px; box-shadow:0 18px 55px #07172530; }
 [data-paimind-bento-inspector] { min-width:0; min-height:0; overflow:hidden; border-left:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16)); }
 [data-paimind-bento-slide-rail] { min-width:0; min-height:0; padding:10px 8px 14px; overflow-y:auto; border-right:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16)); background:var(--dsw-alias-bg-layer-2,#f5f7fa); scrollbar-width:thin; }
 [data-paimind-bento-slide-rail] > header { padding:0 2px 10px; color:var(--dsw-alias-label-tertiary,#7a808a); font-size:9px; font-weight:650; line-height:14px; letter-spacing:.02em; white-space:nowrap; }
@@ -150,11 +172,17 @@ const STYLE = `
 [data-paimind-bento-mode-option]:hover [data-paimind-bento-mode-tooltip] { opacity:1; transform:translate(-50%,0); }
 [data-paimind-bento-edit-guidance] { position:absolute; z-index:5; top:10px; left:50%; max-width:calc(100% - 24px); padding:6px 10px; border:1px solid color-mix(in srgb,var(--dsw-alias-state-business-primary,#4f7ff8) 35%,transparent); border-radius:999px; color:var(--dsw-alias-label-primary,#202124); background:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#fff) 92%,transparent); box-shadow:0 8px 24px #0002; font-size:10px; line-height:15px; text-align:center; transform:translateX(-50%); backdrop-filter:blur(12px); }
 [data-paimind-bento-stage] > iframe { width:100%; height:100%; min-height:0; display:block; border:0; background:#071725; }
+[data-paimind-bento-player-controls] { position:absolute; z-index:6; left:50%; bottom:16px; display:flex; align-items:center; gap:8px; padding:5px 7px; border:1px solid color-mix(in srgb,var(--dsw-alias-border-l1,rgba(128,128,128,.2)) 82%,transparent); border-radius:999px; color:var(--dsw-alias-label-primary,#202124); background:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#fff) 92%,transparent); box-shadow:0 10px 30px #07172533; transform:translateX(-50%); backdrop-filter:blur(14px); }
+[data-paimind-bento-player-controls] button { width:30px; height:30px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; color:inherit; background:transparent; cursor:pointer; font-size:22px; line-height:1; }
+[data-paimind-bento-player-controls] button:hover:not(:disabled),[data-paimind-bento-player-controls] button:focus-visible { color:#fff; background:var(--dsw-alias-state-business-primary,#4f7ff8); }
+[data-paimind-bento-player-controls] button:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:2px; }
+[data-paimind-bento-player-controls] button:disabled { opacity:.3; cursor:not-allowed; }
+[data-paimind-bento-player-position] { min-width:52px; color:var(--dsw-alias-label-secondary,#59606b); font-size:11px; font-weight:650; line-height:16px; text-align:center; font-variant-numeric:tabular-nums; }
 [data-paimind-bento-state] { min-height: 240px; display: grid; place-items: center; padding: 24px; color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 12px; line-height: 19px; text-align: center; }
 [data-paimind-bento-state][data-error='true'] { color: var(--dsw-alias-state-error-primary, #d04444); }
 @container paimind-bento (max-width:1040px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr)}[data-paimind-bento-canvas][data-has-slide-rail='true']{grid-template-columns:104px minmax(0,1fr)}}
 @container paimind-bento (max-width:900px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(280px,58%) minmax(0,42%);overflow:hidden}[data-paimind-bento-inspector]{border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16));border-left:0}[data-paimind-bento-canvas][data-has-slide-rail='true']{grid-template-columns:76px minmax(0,1fr)}[data-paimind-bento-slide-rail]{padding-inline:5px}[data-paimind-bento-slide-item]{grid-template-columns:1fr}[data-paimind-bento-slide-number]{position:absolute;z-index:2;top:5px;left:5px;min-width:14px;padding:1px 3px;border-radius:4px;color:var(--dsw-alias-label-primary-inverted,#fff);background:color-mix(in srgb,var(--dsw-alias-bg-base,#071725) 86%,transparent)}}
-@container paimind-bento (max-width:620px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(240px,54%) minmax(0,46%)}[data-paimind-bento-canvas][data-has-slide-rail='true']{grid-template-columns:64px minmax(0,1fr)}[data-paimind-bento-slide-rail]{padding-inline:3px}}
+@container paimind-bento (max-width:620px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(240px,54%) minmax(0,46%)}[data-paimind-bento-canvas][data-has-slide-rail='true']{grid-template-columns:64px minmax(0,1fr)}[data-paimind-bento-slide-rail]{padding-inline:3px}[data-paimind-bento-workbench][data-mode='preview'] [data-paimind-bento-stage]{padding:8px}[data-paimind-bento-player-controls]{bottom:10px}}
 @media(prefers-reduced-motion:reduce){[data-paimind-bento] *,[data-paimind-bento] *::before,[data-paimind-bento] *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 `
 
@@ -206,6 +234,7 @@ function BentoSlideThumbnail(props: {
   readonly source: { readonly origin: string; readonly url: string }
 }): React.JSX.Element {
   const frameRef = useRef<HTMLSpanElement>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
   const [scale, setScale] = useState(0.06)
   useEffect(() => {
     const frame = frameRef.current
@@ -216,17 +245,26 @@ function BentoSlideThumbnail(props: {
     observer.observe(frame)
     return () => { observer.disconnect() }
   }, [])
+  useEffect(() => {
+    let initialized = false
+    const receive = (event: MessageEvent): void => {
+      if (initialized || event.source !== iframeRef.current?.contentWindow || event.origin !== props.source.origin) return
+      if (normalizeBentoRuntimeMessage(event.data) === null) return
+      initialized = true
+      iframeRef.current?.contentWindow?.postMessage({ type: 'paimind:bento-mode', mode: 'preview' }, props.source.origin)
+      iframeRef.current?.contentWindow?.postMessage({ type: 'paimind:bento-navigate', slideId: props.item.slideId, slide: props.index + 1 }, props.source.origin)
+    }
+    window.addEventListener('message', receive)
+    return () => { window.removeEventListener('message', receive) }
+  }, [props.index, props.item.slideId, props.source.origin])
   return <span ref={frameRef} data-paimind-bento-thumbnail-frame aria-hidden="true" style={{ '--paimind-thumbnail-scale': String(scale) } as CSSProperties}><iframe
+    ref={iframeRef}
     title=""
     src={props.source.url}
     sandbox="allow-scripts allow-same-origin"
     referrerPolicy="no-referrer"
     loading="lazy"
     tabIndex={-1}
-    onLoad={event => {
-      event.currentTarget.contentWindow?.postMessage({ type: 'paimind:bento-mode', mode: 'preview' }, props.source.origin)
-      event.currentTarget.contentWindow?.postMessage({ type: 'paimind:bento-navigate', slideId: props.item.slideId, slide: props.index + 1 }, props.source.origin)
-    }}
   /></span>
 }
 
@@ -264,6 +302,23 @@ function BentoSlideRail(props: {
   </aside>
 }
 
+function BentoPreviewControls(props: {
+  readonly slides: readonly PaimindBentoSlideNavigationItem[]
+  readonly activeSlide: number
+  readonly store: BentoPreviewStore
+  readonly zh: boolean
+}): React.JSX.Element {
+  const navigate = (index: number): void => {
+    const item = props.slides[index]
+    if (item !== undefined) props.store.navigate({ slideId: item.slideId, slide: index + 1 })
+  }
+  return <div role="group" aria-label={props.zh ? '幻灯片播放控制' : 'Slideshow controls'} data-paimind-bento-player-controls>
+    <button type="button" aria-label={props.zh ? '上一张幻灯片' : 'Previous slide'} disabled={props.activeSlide <= 1} onClick={() => { navigate(props.activeSlide - 2) }}><span aria-hidden="true">‹</span></button>
+    <span aria-live="polite" data-paimind-bento-player-position>{props.activeSlide} / {props.slides.length}</span>
+    <button type="button" aria-label={props.zh ? '下一张幻灯片' : 'Next slide'} disabled={props.activeSlide >= props.slides.length} onClick={() => { navigate(props.activeSlide) }}><span aria-hidden="true">›</span></button>
+  </div>
+}
+
 export function BentoPreviewPanel(props: { readonly store: BentoPreviewStore; readonly scope: PaimindSidebarTabScope }): React.JSX.Element {
   const snapshot = useSyncExternalStore(
     props.store.subscribe.bind(props.store),
@@ -277,11 +332,13 @@ export function BentoPreviewPanel(props: { readonly store: BentoPreviewStore; re
   )
   const zh = activeLocale.startsWith('zh')
   const [source, setSource] = useState<{ readonly requestRevision: number; readonly origin: string; readonly url: string } | null>(null)
+  const [readySourceUrl, setReadySourceUrl] = useState<string | null>(null)
   const [error, setError] = useState(false)
   const frameRef = useRef<HTMLIFrameElement>(null)
   useEffect(() => {
     const request = snapshot.request
     setSource(null)
+    setReadySourceUrl(null)
     setError(false)
     if (request === null) return
     const controller = new AbortController()
@@ -304,30 +361,35 @@ export function BentoPreviewPanel(props: { readonly store: BentoPreviewStore; re
     const receive = (event: MessageEvent): void => {
       if (event.source !== frameRef.current?.contentWindow || event.origin !== source.origin) return
       const normalized = normalizeBentoRuntimeMessage(event.data)
-      if (normalized !== null) props.store.publishRuntimeEvent(normalized)
+      if (normalized !== null) {
+        setReadySourceUrl(source.url)
+        props.store.publishRuntimeEvent(normalized)
+      }
     }
     window.addEventListener('message', receive)
     return () => { window.removeEventListener('message', receive) }
   }, [props.store, source])
 
   useEffect(() => {
-    if (source === null) return
+    if (source === null || readySourceUrl !== source.url) return
     frameRef.current?.contentWindow?.postMessage({ type: 'paimind:bento-mode', mode: snapshot.mode }, source.origin)
-  }, [snapshot.mode, source])
+  }, [readySourceUrl, snapshot.mode, source])
 
   useEffect(() => {
-    if (source === null || snapshot.focus === null) return
+    if (source === null || readySourceUrl !== source.url || snapshot.focus === null) return
     frameRef.current?.contentWindow?.postMessage({ type: 'paimind:bento-focus', ...snapshot.focus }, source.origin)
-  }, [snapshot.focusRevision, source])
+  }, [readySourceUrl, snapshot.focusRevision, source])
 
   useEffect(() => {
-    if (source === null || snapshot.slideTarget === null) return
+    if (source === null || readySourceUrl !== source.url || snapshot.slideTarget === null) return
     frameRef.current?.contentWindow?.postMessage({ type: 'paimind:bento-navigate', ...snapshot.slideTarget }, source.origin)
-  }, [snapshot.slideTargetRevision, source])
+  }, [readySourceUrl, snapshot.slideTargetRevision, source])
 
   const request = snapshot.request
-  const slides = props.store.getInspector()?.getSlideNavigation?.()?.slides ?? []
+  const inspectorSlides = props.store.getInspector()?.getSlideNavigation?.()?.slides ?? []
+  const slides = snapshot.slides.length > 0 ? snapshot.slides : snapshot.mode === 'preview' ? [] : inspectorSlides
   const activeSlide = Math.min(slides.length, Math.max(1, snapshot.runtimeEvent?.slide ?? snapshot.slideTarget?.slide ?? 1))
+  const showSlideRail = snapshot.mode !== 'preview' && source !== null && slides.length > 0
   return (
     <section data-paimind-bento aria-label={zh ? 'Bento 隔离预览' : 'Isolated Bento preview'}>
       <header data-paimind-bento-header>
@@ -338,8 +400,8 @@ export function BentoPreviewPanel(props: { readonly store: BentoPreviewStore; re
         <div data-paimind-bento-modes aria-label={zh ? '工作台模式' : 'Workbench mode'}>{(['preview', 'edit', 'trace'] as const).map(mode => <BentoModeButton key={mode} mode={mode} active={snapshot.mode === mode} disabled={mode === 'trace' && props.store.getInspector() === null} zh={zh} onClick={() => { props.store.setMode(mode) }} />)}</div>
       </div>
       <div data-paimind-bento-workbench data-mode={snapshot.mode}>
-      <div data-paimind-bento-canvas data-has-slide-rail={source !== null && slides.length > 0}>
-      {source !== null && slides.length > 0 && <BentoSlideRail slides={slides} activeSlide={activeSlide} source={source} store={props.store} zh={zh} />}
+      <div data-paimind-bento-canvas data-has-slide-rail={showSlideRail}>
+      {showSlideRail && <BentoSlideRail slides={slides} activeSlide={activeSlide} source={source} store={props.store} zh={zh} />}
       <div data-paimind-bento-stage>
         {snapshot.mode === 'edit' && <div role="status" data-paimind-bento-edit-guidance>{zh ? '可编辑标题、说明与展示文案 · 事实值和派生指标已锁定' : 'Edit titles, explanations, and presentation copy · facts and derived metrics are locked'}</div>}
         {request === null ? <div data-paimind-bento-state>{zh ? '请打开一个 Bento 产物。' : 'Open a Bento artifact.'}</div>
@@ -353,11 +415,8 @@ export function BentoPreviewPanel(props: { readonly store: BentoPreviewStore; re
                   sandbox="allow-scripts allow-same-origin allow-popups allow-downloads allow-modals"
                   referrerPolicy="no-referrer"
                   allow=""
-                  onLoad={() => {
-                    frameRef.current?.contentWindow?.postMessage({ type: 'paimind:bento-mode', mode: snapshot.mode }, source.origin)
-                    if (snapshot.slideTarget !== null) frameRef.current?.contentWindow?.postMessage({ type: 'paimind:bento-navigate', ...snapshot.slideTarget }, source.origin)
-                  }}
                 />}
+        {snapshot.mode === 'preview' && source !== null && slides.length > 0 && <BentoPreviewControls slides={slides} activeSlide={activeSlide} store={props.store} zh={zh} />}
       </div>
       </div>
       {snapshot.mode === 'trace' && <aside data-paimind-bento-inspector>{props.store.getInspector()?.render(props.scope)}</aside>}

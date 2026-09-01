@@ -101,7 +101,7 @@ async function bootAndProbe(expectedPackages, absentPackages, label) {
   console.log(`start: ${label}`)
   const port = await freePort()
   const child = spawn(process.execPath, [
-    dshBin, '--profile', 'web', '--host', '127.0.0.1', '--port', String(port),
+    dshBin, '--profile', 'web', '--host', '127.0.0.1', '--port', String(port), '--no-open',
   ], { cwd: runtimeRoot, env, stdio: ['ignore', 'pipe', 'pipe'] })
   let output = ''
   child.stdout.setEncoding('utf8')

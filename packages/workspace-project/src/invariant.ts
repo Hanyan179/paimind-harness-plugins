@@ -8,6 +8,6 @@ export const name = 'paimind-workspace-project-invariant'
 export const inject = ['invariants']
 
 /** Register FP04 package ownership with the shared invariant service. */
-export function apply(ctx: PaimindInvariantContext): Promise<() => void> {
-  return Promise.resolve(ctx.invariants.register(PACKAGE_NAME, () => {}))
-}
+export const apply = (ctx: PaimindInvariantContext): (() => void) => (
+  ctx.invariants.register(PACKAGE_NAME, () => {})
+)

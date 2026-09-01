@@ -1,13 +1,42 @@
 import { execFile } from 'node:child_process'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { resolve } from 'node:path'
+import { relative, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { describe, expect, it } from 'vitest'
 
 const run = promisify(execFile)
 
 describe('frozen PAIMind Python parity baseline', () => {
+  it('runs the synthetic Walmart data-to-analysis-to-outline demo chain', async () => {
+    const root = process.cwd()
+    const temp = await mkdtemp(resolve(root, '.tmp-walmart-demo-chain-'))
+    const workspacePath = relative(root, temp)
+    const runtime = resolve(root, 'packages/walmart-proposal-adapter/runtime')
+    const runner = resolve(runtime, 'runner.py')
+    const invoke = async (args: string[]) => await run('uv', ['run', '--project', runtime, '--locked', '--python', '3.12', 'python', runner, ...args], { cwd: root, timeout: 120_000 })
+    try {
+      await invoke(['prepare', '--output-dir', `${workspacePath}/frozen`])
+      await invoke(['fineline', '--manifest', `${workspacePath}/frozen/source-manifest.json`, '--output', `${workspacePath}/analysis/walmart.fineline.data-result.json`, '--category', 'KIDS CRAFTS'])
+      await invoke(['white-space', '--manifest', `${workspacePath}/frozen/source-manifest.json`, '--output', `${workspacePath}/analysis/walmart.white-space.data-result.json`, '--category', 'KIDS CRAFTS'])
+      await invoke(['outline', '--fineline', `${workspacePath}/analysis/walmart.fineline.data-result.json`, '--white-space', `${workspacePath}/analysis/walmart.white-space.data-result.json`, '--fineline-artifact-id', 'artifact:demo-fineline', '--white-space-artifact-id', 'artifact:demo-white-space', '--output', `${workspacePath}/deck/walmart-demo.outline.json`])
+
+      const manifest = JSON.parse(await readFile(resolve(temp, 'frozen/source-manifest.json'), 'utf8'))
+      const fineline = JSON.parse(await readFile(resolve(temp, 'analysis/walmart.fineline.data-result.json'), 'utf8'))
+      const whiteSpace = JSON.parse(await readFile(resolve(temp, 'analysis/walmart.white-space.data-result.json'), 'utf8'))
+      const outline = JSON.parse(await readFile(resolve(temp, 'deck/walmart-demo.outline.json'), 'utf8'))
+      expect(manifest).toMatchObject({ schema: 'paimind.analysis-source-manifest/v1', synthetic: true })
+      expect(manifest.sources).toHaveLength(5)
+      expect(fineline).toMatchObject({ schema: 'paimind.data-result/v1', analysisKind: 'fineline-investment-analysis' })
+      expect(whiteSpace).toMatchObject({ schema: 'paimind.data-result/v1', analysisKind: 'white-space-analysis' })
+      expect(outline).toMatchObject({ schema: 'paimind.presentation-outline/v1' })
+      expect(outline.slides).toHaveLength(25)
+      expect(outline.facts.length).toBeGreaterThan(0)
+    } finally {
+      await rm(temp, { recursive: true, force: true })
+    }
+  }, 120_000)
+
   it('preserves upstream metrics, classifications, ordering and evidence fields', async () => {
     const temp = await mkdtemp(resolve(tmpdir(), 'paimind-python-parity-'))
     try {

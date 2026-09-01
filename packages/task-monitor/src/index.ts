@@ -391,10 +391,6 @@ function parseTodoItems(value: unknown): readonly TaskMonitorTodoView[] | undefi
   return Object.freeze(output)
 }
 
-function parseTodos(value: unknown): readonly TaskMonitorTodoView[] {
-  return parseTodoItems(value) ?? Object.freeze([])
-}
-
 function sameTodoList(left: readonly TaskMonitorTodoView[], right: readonly TaskMonitorTodoView[]): boolean {
   if (left.length === 0 || right.length === 0) return false
   const leftItems = new Set(left.map(item => item.content))

@@ -3,12 +3,12 @@
   "version": "0.1.0-alpha.0",
   "description": "Installable DeepSeek Harness composition patch for the PAIMind Plugin Suite",
   "license": "UNLICENSED",
-  "engines": { "node": "^22.19.0 || >=24.0.0" },
+  "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
   "type": "module",
   "files": ["cordis.patch.yml", "README.md"],
   "dsh": { "bundle": { "patch": "./cordis.patch.yml" } },
   "dependencies": {
-    "@huanlin/dsh-plugin-better-sidebar-plugin-office": "0.1.0",
+    "@huanlin/dsh-plugin-better-sidebar-plugin-office": "0.1.2",
     "@paimind/extension-center": "workspace:^",
     "@paimind/branding": "workspace:^",
     "@paimind/visual-experience": "workspace:^",
@@ -25,6 +25,7 @@
     "@paimind/renderer-bento": "workspace:^",
     "@paimind/renderer-pdf": "workspace:^",
     "@paimind/artifacts": "workspace:^",
+    "@paimind/conversation-artifact-renderer": "workspace:^",
     "@paimind/presentation-trace": "workspace:^",
     "@paimind/proposal-experience": "workspace:^",
     "@paimind/walmart-proposal-adapter": "workspace:^",
@@ -39,6 +40,6 @@
     "@paimind/scheduler-adapter-feishu-bot": "workspace:^",
     "@paimind/user-settings": "workspace:^",
     "@paimind/developer-resources": "workspace:^",
-    "dsh-better-sidebar": "0.14.0"
+    "dsh-better-sidebar": "0.16.1"
   }
 }

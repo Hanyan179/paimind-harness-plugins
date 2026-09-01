@@ -41,27 +41,27 @@ export interface PaimindSignatureInput {
   readonly body: string
 }
 
-const identifier = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/)
-const safeUrl = z.url().startsWith('https://').refine(value => {
+export const paimindPlatformIdentifierSchema = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/)
+export const paimindPlatformSafeUrlSchema = z.url().startsWith('https://').refine(value => {
   const url = new URL(value)
   return url.username === '' && url.password === ''
 }, 'URL must not contain credentials')
-const notificationSchema = z.object({
-  recipientIds: z.array(identifier).min(1).max(500).readonly(),
+export const paimindPlatformNotificationSchema = z.object({
+  recipientIds: z.array(paimindPlatformIdentifierSchema).min(1).max(500).readonly(),
   title: z.string().trim().min(1).max(240),
   body: z.string().trim().min(1).max(4_096).optional(),
   level: z.enum(['info', 'success', 'warning', 'error']).optional(),
-  link: z.object({ label: z.string().trim().min(1).max(80), url: safeUrl }).readonly().optional(),
+  link: z.object({ label: z.string().trim().min(1).max(80), url: paimindPlatformSafeUrlSchema }).readonly().optional(),
   idempotencyKey: z.string().trim().min(1).max(512),
 }).readonly()
-const actionRegistrationSchema = z.object({
-  actionId: identifier,
+export const paimindScheduleActionRegistrationSchema = z.object({
+  actionId: paimindPlatformIdentifierSchema,
   nameZh: z.string().trim().min(1).max(120), nameEn: z.string().trim().min(1).max(120),
   descriptionZh: z.string().trim().min(1).max(500).optional(),
   descriptionEn: z.string().trim().min(1).max(500).optional(),
   category: z.enum(['ai', 'workflow', 'message', 'integration', 'health-check']),
-  invokeUrl: safeUrl,
-  allowedResultOrigins: z.array(safeUrl).max(20).readonly(),
+  invokeUrl: paimindPlatformSafeUrlSchema,
+  allowedResultOrigins: z.array(paimindPlatformSafeUrlSchema).max(20).readonly(),
 }).readonly()
 
 function canonicalSignatureInput(input: PaimindSignatureInput): string {
@@ -93,7 +93,7 @@ export class PaimindReplayGuard {
 
   accept(timestamp: string, requestId: string, now = Date.now()): boolean {
     const sentAt = Number(timestamp)
-    if (!Number.isSafeInteger(sentAt) || Math.abs(now - sentAt) > this.maxSkewMs || !identifier.safeParse(requestId).success) {
+    if (!Number.isSafeInteger(sentAt) || Math.abs(now - sentAt) > this.maxSkewMs || !paimindPlatformIdentifierSchema.safeParse(requestId).success) {
       return false
     }
     for (const [id, expiresAt] of this.seen) if (expiresAt < now) this.seen.delete(id)
@@ -128,7 +128,7 @@ export function createPaimindPlatformClient(options: PaimindPlatformClientOption
   if (base.protocol !== 'https:' || base.username !== '' || base.password !== '') {
     throw new Error('PAIMind Platform baseUrl must be credential-free HTTPS')
   }
-  if (!identifier.safeParse(options.serviceId).success) throw new Error('invalid PAIMind serviceId')
+  if (!paimindPlatformIdentifierSchema.safeParse(options.serviceId).success) throw new Error('invalid PAIMind serviceId')
   if (options.secret.length < 32) throw new Error('PAIMind signing secret must contain at least 32 characters')
   const fetcher = options.fetch ?? globalThis.fetch
   if (fetcher === undefined) throw new Error('fetch is unavailable')
@@ -171,16 +171,16 @@ export function createPaimindPlatformClient(options: PaimindPlatformClientOption
   return Object.freeze({
     notifications: Object.freeze({
       send: async (input: PaimindNotificationSendInput) => await call(
-        'POST', '/paimind/platform/v1/notifications', notificationSchema.parse(input),
+        'POST', '/paimind/platform/v1/notifications', paimindPlatformNotificationSchema.parse(input),
       ),
     }),
     schedules: Object.freeze({
       registerAction: async (input: PaimindScheduleActionRegistration) => await call(
         'PUT', `/paimind/platform/v1/schedules/actions/${encodeURIComponent(input.actionId)}`,
-        actionRegistrationSchema.parse(input),
+        paimindScheduleActionRegistrationSchema.parse(input),
       ),
       deactivateAction: async (actionId: string) => {
-        identifier.parse(actionId)
+        paimindPlatformIdentifierSchema.parse(actionId)
         return await call('DELETE', `/paimind/platform/v1/schedules/actions/${encodeURIComponent(actionId)}`)
       },
       reportRun: async (input: PaimindScheduleRunReport) => await call(

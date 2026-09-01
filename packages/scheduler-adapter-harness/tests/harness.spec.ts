@@ -24,6 +24,7 @@ describe('Harness Scheduler Adapter', () => {
       nameZh: 'Agent · 新建会话并生成工作区简报',
       prompt: expect.stringContaining('Review the current workspace'),
     }))
+    expect(registerAction.mock.calls[0]?.[0]).not.toHaveProperty('cwd')
     expect(registerAction).toHaveBeenCalledWith(expect.objectContaining({
       actionId: PAIMIND_AGENT_PROMPT_ACTION_ID,
       category: 'ai',
@@ -42,6 +43,7 @@ describe('Harness Scheduler Adapter', () => {
     }
     const created: string[] = []
     const routes: object[] = []
+    const metas: object[] = []
     const jobs: object[] = []
     const mounted: string[] = []
     const agentPresets = {
@@ -49,14 +51,16 @@ describe('Harness Scheduler Adapter', () => {
       mount: vi.fn(async (_agentCtx: object, id?: string) => { mounted.push(id ?? '') }),
     }
     const agents = {
-      create: vi.fn(async ({ sessionId, setup, agentOptions }: {
+      create: vi.fn(async ({ sessionId, setup, agentOptions, meta }: {
         readonly sessionId: string
         readonly setup?: (agentCtx: object) => void | Promise<void>
         readonly agentOptions?: { readonly provider?: string; readonly model?: string }
+        readonly meta?: { readonly cwd?: string; readonly agentPreset?: string }
       }) => {
         await setup?.({})
         created.push(sessionId)
         routes.push(agentOptions ?? {})
+        metas.push(meta ?? {})
         const events: object[] = []
         const agent = {
           id: sessionId,
@@ -94,6 +98,7 @@ describe('Harness Scheduler Adapter', () => {
       actionId: 'action:brief', trigger: 'schedule' as const,
       scheduledFor: '2026-08-15T01:00:00.000Z', idempotencyKey: `key:${runId}`,
       callbackUrl: 'https://platform.example.test/callback',
+      actionInput: { kind: 'workspace-context', version: 1, cwd: '/workspace', agentPreset: 'paramont' },
     })
     const one = await executor!(request('run:one'), new AbortController().signal)
     const two = await executor!(request('run:two'), new AbortController().signal)
@@ -102,6 +107,10 @@ describe('Harness Scheduler Adapter', () => {
     expect(routes).toEqual([
       { provider: 'provider:default', model: 'model:default' },
       { provider: 'provider:default', model: 'model:default' },
+    ])
+    expect(metas).toEqual([
+      { cwd: '/workspace', agentPreset: 'paramont' },
+      { cwd: '/workspace', agentPreset: 'paramont' },
     ])
     expect(agentDefaultModel.currentSelection).toHaveBeenCalledTimes(2)
     expect(nativeJobs.start).toHaveBeenCalledTimes(2)
@@ -141,5 +150,32 @@ describe('Harness Scheduler Adapter', () => {
       actionId: 'action:invalid', source: { id: 'test', nameZh: '测试', nameEn: 'Test' },
       nameZh: '测试', nameEn: 'Test', prompt: 'Test.', provider: 'provider:test',
     })).rejects.toThrow('provider and model together')
+  })
+
+  it('fails closed before Session creation when a workspace action has no captured Workspace', async () => {
+    let executor: PaimindScheduleExecutor | undefined
+    const create = vi.fn()
+    const service = Object.create(PaimindHarnessScheduleAdapterService.prototype) as PaimindHarnessScheduleAdapterService
+    Object.assign(service, {
+      adapterCtx: {
+        paimindScheduler: {
+          registerAction: vi.fn(async (_descriptor, next: PaimindScheduleExecutor) => { executor = next; return () => {} }),
+        },
+        agentDefaultModel: { currentSelection: () => ({ provider: 'provider:default', model: 'model:default' }) },
+        agents: { create }, agentPresets: {}, jobs: {}, sessionTitle: {},
+      },
+      handles: new Map(),
+    })
+    await service.registerAction({
+      actionId: 'action:workspace', source: { id: 'test', nameZh: '测试', nameEn: 'Test' },
+      nameZh: '工作区任务', nameEn: 'Workspace task', prompt: 'Inspect the current Workspace.',
+    })
+    await expect(executor!({
+      contractVersion: '1.0', runId: 'run:missing-workspace', scheduleId: 'schedule:one',
+      scheduleName: 'Workspace task', actionId: 'action:workspace', trigger: 'manual',
+      scheduledFor: '2026-08-27T01:00:00.000Z', idempotencyKey: 'key:missing-workspace',
+      callbackUrl: 'https://platform.example.test/callback',
+    }, new AbortController().signal)).rejects.toThrow('not bound to a Harness Workspace')
+    expect(create).not.toHaveBeenCalled()
   })
 })

@@ -7,8 +7,7 @@ export const name = 'paimind-runtime-orbs-invariant'
 /** Harness service required by the invariant companion. */
 export const inject = ['invariants']
 
-/** Register package ownership; runtime disposal is proven by the client registration test. */
-export function apply(ctx: PaimindInvariantContext): Promise<() => void> {
-  return Promise.resolve(ctx.invariants.register(PACKAGE_NAME, () => {}))
-}
-
+/** Register package ownership and return the Harness disposer without thenable assimilation. */
+export const apply = (ctx: PaimindInvariantContext): (() => void) => (
+  ctx.invariants.register(PACKAGE_NAME, () => {})
+)

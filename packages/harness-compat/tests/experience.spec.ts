@@ -161,6 +161,41 @@ describe('native Harness Agent choice bridge', () => {
     expect(bridge.getSnapshot().current).toBe('personal-agent')
   })
 
+  it('reloads the native roster when an external selection uses a newly created Preset', async () => {
+    let current = 'standard'
+    let includeCreated = false
+    const listeners = new Set<() => void>()
+    const nativeSeat: HarnessAgentPresetSeatControl = {
+      getSnapshot: () => ({ current, busy: false, error: null }),
+      subscribe: listener => { listeners.add(listener); return () => { listeners.delete(listener) } },
+      load: vi.fn(async () => {}),
+      select: vi.fn(async id => { current = id }),
+    }
+    const api = {
+      list: vi.fn(async () => ({ result: { ok: true as const, value: {
+        authorable: true,
+        hasDocument: true,
+        presets: [
+          { id: 'standard', trust: 'system' as const, isDefault: true, name: '标准模式' },
+          ...(includeCreated ? [{ id: 'new-personal-agent', trust: 'user' as const, isDefault: false, name: '新个人智能体' }] : []),
+        ],
+      } } })),
+    } as unknown as HarnessAgentPresetApi
+    const bridge = new NativeHarnessAgentChoiceBridge(api, nativeSeat)
+
+    await expect(bridge.load()).resolves.toBe(true)
+    includeCreated = true
+    current = 'new-personal-agent'
+    listeners.forEach(listener => { listener() })
+
+    await vi.waitFor(() => {
+      expect(bridge.getSnapshot()).toMatchObject({ status: 'ready', current: 'new-personal-agent' })
+      expect(bridge.getSnapshot().choices).toContainEqual(expect.objectContaining({ id: 'new-personal-agent' }))
+    })
+    expect(api.list).toHaveBeenCalledTimes(2)
+    bridge.dispose()
+  })
+
   it('fails open when the roster is unavailable or cannot preserve the native current choice', async () => {
     const nativeSeat: HarnessAgentPresetSeatControl = {
       getSnapshot: () => ({ current: 'standard', busy: false, error: null }),

@@ -5,17 +5,17 @@ import { PaimindPlatformApiService } from '../src/index.ts'
 
 const SECRET = 'platform-api-test-secret-with-more-than-32-characters'
 
-function request(path: string, value: unknown, requestId = 'request:one') {
+function request(path: string, value: unknown, requestId = 'request:one', method = 'POST') {
   const body = JSON.stringify(value)
   const timestamp = '1000'
   const stream = Readable.from([body])
   Object.assign(stream, {
-    method: 'POST', url: path,
+    method, url: path,
     headers: {
       authorization: 'Bearer service:billing',
       'x-paimind-timestamp': timestamp,
       'x-paimind-request-id': requestId,
-      'x-paimind-signature': signPaimindRequest({ method: 'POST', path, timestamp, requestId, body }, SECRET),
+      'x-paimind-signature': signPaimindRequest({ method, path, timestamp, requestId, body }, SECRET),
     },
   })
   return stream
@@ -63,5 +63,76 @@ describe('PAIMind Platform API', () => {
     await service.handle(request(path, value) as never, repeated.target as never)
     expect(repeated.state.status).toBe(409)
     expect(repeated.state.value).toMatchObject({ error: { code: 'replay_rejected' } })
+  })
+
+  it('returns a stable conflict instead of an internal error for a duplicate action', async () => {
+    const actionId = 'action:billing'
+    const registration = {
+      actionId,
+      nameZh: '生成账单',
+      nameEn: 'Generate invoice',
+      category: 'integration',
+      invokeUrl: 'https://billing.example.test/scheduled-actions',
+      allowedResultOrigins: ['https://billing.example.test/'],
+    }
+    const registerAction = vi.fn()
+    const service = Object.create(PaimindPlatformApiService.prototype) as PaimindPlatformApiService
+    Object.assign(service, {
+      credentials: { resolve: async () => ({
+        serviceId: 'service:billing', secret: SECRET, credentialRef: 'credential:billing',
+        source: { id: 'service:billing', nameZh: '账单系统', nameEn: 'Billing' },
+      }) },
+      now: () => 1_000,
+      replay: new PaimindReplayGuard(500),
+      producers: new Map(),
+      apiCtx: {
+        paimindNotifications: {},
+        paimindScheduler: { list: async () => ({ actions: [{ actionId, enabled: true }], definitions: [], runs: [] }) },
+        paimindHttpScheduleAdapter: { registerAction },
+      },
+    })
+    const path = `/paimind/platform/v1/schedules/actions/${encodeURIComponent(actionId)}`
+    const result = response()
+    await service.handle(request(path, registration, 'request:duplicate', 'PUT') as never, result.target as never)
+    expect(result.state.status).toBe(409)
+    expect(result.state.value).toMatchObject({ error: { code: 'action_already_exists' } })
+    expect(registerAction).not.toHaveBeenCalled()
+  })
+
+  it('returns a stable client error when a run action violates the provider allowlist', async () => {
+    const runId = 'run:one'
+    const path = `/paimind/platform/v1/schedules/runs/${encodeURIComponent(runId)}`
+    const value = {
+      contractVersion: '1.0' as const,
+      runId,
+      status: 'succeeded' as const,
+      message: 'Invoice ready',
+      action: { kind: 'external' as const, label: 'Open result', url: 'https://blocked.example.test/result' },
+    }
+    const service = Object.create(PaimindPlatformApiService.prototype) as PaimindPlatformApiService
+    Object.assign(service, {
+      credentials: { resolve: async () => ({
+        serviceId: 'service:billing', secret: SECRET, credentialRef: 'credential:billing',
+        source: { id: 'service:billing', nameZh: '账单系统', nameEn: 'Billing' },
+      }) },
+      now: () => 1_000,
+      replay: new PaimindReplayGuard(500),
+      producers: new Map(),
+      apiCtx: {
+        paimindNotifications: {},
+        paimindScheduler: { list: async () => ({
+          actions: [], definitions: [], runs: [{ runId, actionId: 'action:billing' }],
+        }) },
+        paimindHttpScheduleAdapter: {
+          validateRunAction: () => { throw new Error('run action URL origin is not allowlisted') },
+        },
+      },
+    })
+    const result = response()
+    await service.handle(request(path, value, 'request:invalid-run-action') as never, result.target as never)
+    expect(result.state.status).toBe(400)
+    expect(result.state.value).toMatchObject({
+      error: { code: 'invalid_run_action', message: 'run action URL origin is not allowlisted' },
+    })
   })
 })

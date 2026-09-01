@@ -138,7 +138,7 @@ export class PaimindNotificationsService
   private readonly ready: Promise<PaimindStorageDomainHandle>
   private mutationTail: Promise<void> = Promise.resolve()
 
-  constructor(private readonly notificationCtx: PaimindNotificationsHostContext) {
+  constructor(notificationCtx: PaimindNotificationsHostContext) {
     super(notificationCtx, 'paimindNotifications')
     markPaimindHostRemoteMethods(this, ['list', 'markRead', 'markAllRead'])
     this.ready = notificationCtx.storageDomain.open(notificationDomainSpec)

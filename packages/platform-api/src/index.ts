@@ -8,7 +8,13 @@ import {
 import { PaimindHostService, type PaimindStorageDomainFacility } from '@paimind/harness-compat/host'
 import type { PaimindHostWebServer } from '@paimind/harness-compat'
 import type { PaimindNotificationProducer, PaimindNotificationService } from '@paimind/notifications'
-import { PaimindReplayGuard, verifyPaimindRequestSignature } from '@paimind/platform-sdk'
+import {
+  PaimindReplayGuard,
+  paimindPlatformIdentifierSchema,
+  paimindPlatformNotificationSchema,
+  paimindScheduleActionRegistrationSchema,
+  verifyPaimindRequestSignature,
+} from '@paimind/platform-sdk'
 import type { PaimindSchedulerServiceApi } from '@paimind/platform-scheduler'
 import type { PaimindHttpScheduleAdapter } from '@paimind/scheduler-adapter-http'
 
@@ -27,37 +33,15 @@ export interface PaimindServiceCredentialProvider {
   resolve(serviceId: string): Promise<Readonly<PaimindServiceCredential> | undefined>
 }
 
-const identifier = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/)
-const safeUrl = z.url().startsWith('https://').refine(value => {
-  const url = new URL(value)
-  return url.username === '' && url.password === ''
-}, 'URL must not contain credentials')
-const notificationSchema = z.object({
-  recipientIds: z.array(identifier).min(1).max(500).readonly(),
-  title: z.string().trim().min(1).max(240),
-  body: z.string().trim().min(1).max(4_096).optional(),
-  level: z.enum(['info', 'success', 'warning', 'error']).optional(),
-  link: z.object({ label: z.string().trim().min(1).max(80), url: safeUrl }).readonly().optional(),
-  idempotencyKey: z.string().trim().min(1).max(512),
-}).readonly()
-const registrationSchema = z.object({
-  actionId: identifier,
-  nameZh: z.string().trim().min(1).max(120), nameEn: z.string().trim().min(1).max(120),
-  descriptionZh: z.string().trim().min(1).max(500).optional(), descriptionEn: z.string().trim().min(1).max(500).optional(),
-  category: z.enum(['ai', 'workflow', 'message', 'integration', 'health-check']),
-  invokeUrl: safeUrl,
-  allowedResultOrigins: z.array(safeUrl).max(20).readonly(),
-}).readonly()
-
 export class PaimindEnvironmentCredentialProvider implements PaimindServiceCredentialProvider {
   async resolve(serviceId: string): Promise<Readonly<PaimindServiceCredential> | undefined> {
     const raw = process.env.PAIMIND_PLATFORM_SERVICE_CREDENTIALS_JSON
     if (raw === undefined || raw.trim() === '') return undefined
     let parsed: unknown
     try { parsed = JSON.parse(raw) } catch { throw new Error('PAIMIND platform credential configuration is invalid') }
-    const row = z.record(identifier, z.object({
-      secret: z.string().min(32), credentialRef: identifier,
-      source: z.object({ id: identifier, nameZh: z.string().min(1).max(80), nameEn: z.string().min(1).max(80) }).readonly(),
+    const row = z.record(paimindPlatformIdentifierSchema, z.object({
+      secret: z.string().min(32), credentialRef: paimindPlatformIdentifierSchema,
+      source: z.object({ id: paimindPlatformIdentifierSchema, nameZh: z.string().min(1).max(80), nameEn: z.string().min(1).max(80) }).readonly(),
     }).readonly()).parse(parsed)[serviceId]
     return row === undefined ? undefined : Object.freeze({ serviceId, ...row })
   }
@@ -138,7 +122,7 @@ export class PaimindPlatformApiService extends PaimindHostService {
       const credential = await this.authenticate(request, method, `${url.pathname}${url.search}`, raw, requestId)
       const relative = url.pathname.slice(PAIMIND_PLATFORM_API_PREFIX.length)
       if (method === 'POST' && relative === '/notifications') {
-        const input = notificationSchema.parse(JSON.parse(raw))
+        const input = paimindPlatformNotificationSchema.parse(JSON.parse(raw))
         let producer = this.producers.get(credential.serviceId)
         if (producer === undefined) {
           producer = this.apiCtx.paimindNotifications.registerProducer(credential.source)
@@ -160,11 +144,22 @@ export class PaimindPlatformApiService extends PaimindHostService {
       const actionMatch = relative.match(/^\/schedules\/actions\/([^/]+)$/)
       if (actionMatch !== null && method === 'PUT') {
         const actionId = decodeURIComponent(actionMatch[1]!)
-        const registration = registrationSchema.parse(JSON.parse(raw)) as PaimindScheduleActionRegistration
+        const registration = paimindScheduleActionRegistrationSchema.parse(JSON.parse(raw)) as PaimindScheduleActionRegistration
         if (registration.actionId !== actionId) throw new ApiFailure(400, 'action_id_mismatch', 'Path and body actionId do not match')
-        await this.apiCtx.paimindHttpScheduleAdapter.registerAction({
-          registration, source: credential.source, credentialRef: credential.credentialRef,
-        })
+        const snapshot = await this.apiCtx.paimindScheduler.list()
+        if (snapshot.actions.some(action => action.actionId === actionId && action.enabled)) {
+          throw new ApiFailure(409, 'action_already_exists', 'Action is already registered')
+        }
+        try {
+          await this.apiCtx.paimindHttpScheduleAdapter.registerAction({
+            registration, source: credential.source, credentialRef: credential.credentialRef,
+          })
+        } catch (error) {
+          if (error instanceof Error && error.message === 'HTTP action is already registered') {
+            throw new ApiFailure(409, 'action_already_exists', 'Action is already registered')
+          }
+          throw error
+        }
         json(response, 201, { actionId, requestId })
         return
       }
@@ -182,7 +177,15 @@ export class PaimindPlatformApiService extends PaimindHostService {
         const snapshot = await this.apiCtx.paimindScheduler.list()
         const run = snapshot.runs.find(candidate => candidate.runId === runId)
         if (run === undefined) throw new ApiFailure(404, 'run_not_found', 'Run not found')
-        this.apiCtx.paimindHttpScheduleAdapter.validateRunAction(run.actionId, report.action)
+        try {
+          this.apiCtx.paimindHttpScheduleAdapter.validateRunAction(run.actionId, report.action)
+        } catch (error) {
+          throw new ApiFailure(
+            400,
+            'invalid_run_action',
+            error instanceof Error ? error.message : 'Run action is invalid',
+          )
+        }
         const next = await this.apiCtx.paimindScheduler.reportRun(report)
         json(response, 200, { run: next, requestId })
         return
@@ -208,7 +211,7 @@ export class PaimindPlatformApiService extends PaimindHostService {
     const authorization = header(request, 'authorization')
     if (!authorization.startsWith('Bearer ')) throw new ApiFailure(401, 'invalid_authentication', 'Invalid authorization scheme')
     const serviceId = authorization.slice('Bearer '.length)
-    if (!identifier.safeParse(serviceId).success) throw new ApiFailure(401, 'invalid_authentication', 'Invalid service identity')
+    if (!paimindPlatformIdentifierSchema.safeParse(serviceId).success) throw new ApiFailure(401, 'invalid_authentication', 'Invalid service identity')
     const credential = await this.credentials.resolve(serviceId)
     if (credential === undefined) throw new ApiFailure(401, 'invalid_authentication', 'Unknown service identity')
     const timestamp = header(request, 'x-paimind-timestamp')

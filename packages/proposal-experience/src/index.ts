@@ -10,4 +10,5 @@ export const PROPOSAL_QUESTION_IDS = Object.freeze({
   department: 'paimind.proposal.departments/v1',
   deckType: 'paimind.proposal.deck-type/v1',
   deckStyle: 'paimind.proposal.deck-style/v1',
+  contentData: 'paimind.proposal.content-data/v1',
 })

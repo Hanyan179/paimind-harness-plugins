@@ -532,6 +532,7 @@ export class NativeHarnessAgentChoiceBridge implements HarnessAgentChoiceBridge 
   private readonly stopNativeSeat: () => void
   private disposed = false
   private generation = 0
+  private unknownChoiceRefresh: Promise<boolean> | null = null
 
   constructor(
     private readonly api: HarnessAgentPresetApi,
@@ -611,6 +612,12 @@ export class NativeHarnessAgentChoiceBridge implements HarnessAgentChoiceBridge 
     if (this.disposed) return
     const seat = this.nativeSeat.getSnapshot()
     this.publish({ ...this.snapshot, current: seat.current, busy: seat.busy, error: seat.error })
+    if (this.snapshot.status !== 'ready' || this.snapshot.choices.some(choice => choice.id === seat.current)
+      || this.unknownChoiceRefresh !== null) return
+    // A freshly created native Preset can be selected after this bridge loaded
+    // its initial roster. Refresh through the Harness API so the visible hero
+    // selector mounts the new identity instead of disappearing on selection.
+    this.unknownChoiceRefresh = this.load().finally(() => { this.unknownChoiceRefresh = null })
   }
 
   dispose(): void {

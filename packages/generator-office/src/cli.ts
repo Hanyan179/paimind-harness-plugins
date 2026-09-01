@@ -1,12 +1,24 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
+import { createWriteStream } from 'node:fs'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import { dirname, extname, isAbsolute, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ExcelJS from 'exceljs'
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import PptxGenJS from 'pptxgenjs'
+import {
+  canonicalJson,
+  definePresentationOutline,
+  traceFromPresentationOutline,
+  validatePresentationTraceability,
+} from '@paimind/presentation-contracts'
+import { renderPresentationOutlinePptx } from './outline-pptx.js'
 
 type JsonRecord = Record<string, unknown>
+
+const require = createRequire(import.meta.url)
+const PDFDocument: typeof import('pdfkit') = require('pdfkit')
+const NOTO_SANS_HANS_ROOT = resolve(dirname(require.resolve('@embedpdf/fonts-sc')), '..')
 
 function record(value: unknown, label: string): JsonRecord {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error(`${label} must be an object`)
@@ -33,24 +45,29 @@ function safeTarget(root: string, filePath: string, extension: string): string {
   return target
 }
 
+function safeSource(root: string, filePath: string, extension: string): string {
+  return safeTarget(root, filePath, extension)
+}
+
+function sidecarPath(pptxPath: string, suffix: '.trace.json' | '.validation.json'): string {
+  return `${pptxPath.slice(0, -'.pptx'.length)}${suffix}`
+}
+
+export interface OfficeArtifactResult {
+  readonly output: string
+  readonly title?: string
+  readonly tracePath?: string
+  readonly traceSchema?: string
+  readonly traceSha256?: string
+  readonly traceBytes?: number
+}
+
 async function publish(target: string, writer: (temporary: string) => Promise<void>): Promise<void> {
   await mkdir(dirname(target), { recursive: true })
   const extension = extname(target)
   const temporary = `${target.slice(0, -extension.length)}.${randomUUID()}.tmp${extension}`
   await writer(temporary)
   await rename(temporary, target)
-}
-
-function wrapLines(input: string, width: number): string[] {
-  const words = input.replace(/\s+/g, ' ').trim().split(' ')
-  const lines: string[] = []
-  let line = ''
-  for (const word of words) {
-    if (line !== '' && `${line} ${word}`.length > width) { lines.push(line); line = word }
-    else line = line === '' ? word : `${line} ${word}`
-  }
-  if (line !== '') lines.push(line)
-  return lines
 }
 
 async function generatePptx(spec: JsonRecord, root: string): Promise<string> {
@@ -90,6 +107,42 @@ async function generatePptx(spec: JsonRecord, root: string): Promise<string> {
   return target
 }
 
+async function generateOutlinePptx(spec: JsonRecord, root: string): Promise<OfficeArtifactResult> {
+  const outputPath = text(spec.file_path, 'file_path')
+  const outlinePath = text(spec.outline_path, 'outline_path')
+  const target = safeTarget(root, outputPath, '.pptx')
+  const outlineTarget = safeSource(root, outlinePath, '.json')
+  if (!outlinePath.toLowerCase().endsWith('.outline.json')) throw new Error('outline_path must be a Workspace-relative .outline.json path')
+  const outline = definePresentationOutline(JSON.parse(await readFile(outlineTarget, 'utf8')))
+  for (const source of outline.sources) {
+    const sourceTarget = safeSource(root, source.path, extname(source.path).toLowerCase())
+    const actual = createHash('sha256').update(await readFile(sourceTarget)).digest('hex')
+    if (actual !== source.sha256) throw new Error(`source hash mismatch for ${source.sourceId}`)
+  }
+  const trace = traceFromPresentationOutline(outline)
+  const validation = validatePresentationTraceability(outline, true)
+  if (!validation.valid || validation.resolutionRate !== 1 || validation.factValuesChanged) throw new Error('presentation trace validation failed')
+  const traceJson = canonicalJson(trace)
+  const validationJson = canonicalJson({
+    ...validation,
+    ...(spec.outline_artifact_id === undefined ? {} : { outlineArtifactId: text(spec.outline_artifact_id, 'outline_artifact_id') }),
+    ...(outline.factSetArtifactId === undefined ? {} : { factSetArtifactId: outline.factSetArtifactId, factSetFactsSha256: outline.factSetFactsSha256 }),
+  })
+  const tracePath = sidecarPath(outputPath, '.trace.json')
+  const validationPath = sidecarPath(outputPath, '.validation.json')
+  await publish(target, async temporary => { await renderPresentationOutlinePptx(outline, temporary) })
+  await publish(safeTarget(root, tracePath, '.json'), async temporary => { await writeFile(temporary, traceJson) })
+  await publish(safeTarget(root, validationPath, '.json'), async temporary => { await writeFile(temporary, validationJson) })
+  return {
+    output: target,
+    title: outline.title,
+    tracePath,
+    traceSchema: trace.schemaVersion,
+    traceSha256: createHash('sha256').update(traceJson).digest('hex'),
+    traceBytes: Buffer.byteLength(traceJson),
+  }
+}
+
 async function generatePdf(spec: JsonRecord, root: string): Promise<string> {
   const target = safeTarget(root, text(spec.file_path, 'file_path'), '.pdf')
   const title = text(spec.title, 'title')
@@ -99,29 +152,42 @@ async function generatePdf(spec: JsonRecord, root: string): Promise<string> {
     return { heading: text(section.heading, `sections[${index}].heading`), body: text(section.body, `sections[${index}].body`) }
   })
   await publish(target, async temporary => {
-    const doc = await PDFDocument.create()
-    doc.setTitle(title); doc.setAuthor('PAIMind'); doc.setProducer('PAIMind Generator')
-    const regular = await doc.embedFont(StandardFonts.Helvetica)
-    const bold = await doc.embedFont(StandardFonts.HelveticaBold)
-    const pageSize: [number, number] = [595.28, 841.89]
-    let page = doc.addPage(pageSize)
-    let y = 782
-    const newPage = (): void => { page = doc.addPage(pageSize); y = 782 }
-    page.drawRectangle({ x: 0, y: 805, width: pageSize[0], height: 36, color: rgb(0.08, 0.24, 0.52) })
-    page.drawText(title, { x: 44, y: 771, size: 22, font: bold, color: rgb(0.06, 0.13, 0.27) })
-    y = 730
+    const doc = new PDFDocument({
+      size: 'A4', margins: { top: 112, right: 44, bottom: 44, left: 44 }, bufferPages: true,
+      info: { Title: title, Author: 'PAIMind', Creator: 'PAIMind Generator', Producer: 'PAIMind Generator' },
+    })
+    const output = createWriteStream(temporary)
+    doc.pipe(output)
+    doc.registerFont('PAIMindCJK', resolve(NOTO_SANS_HANS_ROOT, 'fonts', 'NotoSansHans-Regular.otf'))
+    doc.font('PAIMindCJK')
     for (const section of sections) {
-      if (y < 130) newPage()
-      page.drawText(section.heading, { x: 44, y, size: 15, font: bold, color: rgb(0.10, 0.30, 0.66) })
-      y -= 25
-      for (const line of wrapLines(section.body, 88)) {
-        if (y < 60) newPage()
-        page.drawText(line, { x: 48, y, size: 10.5, font: regular, color: rgb(0.15, 0.19, 0.27) })
-        y -= 16
-      }
-      y -= 16
+      if (doc.y > doc.page.height - 140) doc.addPage()
+      doc.fillColor('#1A4DA8').fontSize(15).text(section.heading, { width: doc.page.width - 88, lineGap: 2 })
+      doc.moveDown(0.45)
+      doc.fillColor('#263045').fontSize(10.5).text(section.body.replace(/\s+/g, ' ').trim(), {
+        width: doc.page.width - 96, lineGap: 3, paragraphGap: 6,
+      })
+      doc.moveDown(0.9)
     }
-    await writeFile(temporary, await doc.save())
+    const pages = doc.bufferedPageRange()
+    for (let index = 0; index < pages.count; index += 1) {
+      doc.switchToPage(pages.start + index)
+      doc.save()
+      doc.rect(0, 0, doc.page.width, 36).fill('#143D85')
+      doc.fillColor('#102245').fontSize(22).text(title, 44, 58, { width: doc.page.width - 88, lineBreak: false })
+      doc.fillColor('#667085').fontSize(9).text(`${index + 1} / ${pages.count}`, 44, doc.page.height - 70, {
+        width: doc.page.width - 88, align: 'right', lineBreak: false,
+      })
+      doc.restore()
+    }
+    const finalizedPages = doc.bufferedPageRange()
+    if (finalizedPages.count !== pages.count) throw new Error(`PDF finalization unexpectedly added pages (${pages.count} -> ${finalizedPages.count})`)
+    doc.end()
+    await new Promise<void>((resolvePromise, reject) => {
+      output.once('finish', resolvePromise)
+      output.once('error', reject)
+      doc.once('error', reject)
+    })
   })
   return target
 }
@@ -145,16 +211,27 @@ async function generateXlsx(spec: JsonRecord, root: string): Promise<string> {
     const formula = record(value, `formulas[${index}]`)
     if (!Number.isSafeInteger(formula.row) || (formula.row as number) < 2 || (formula.row as number) > rows.length + 1) throw new Error(`formulas[${index}].row is invalid`)
     if (!Number.isSafeInteger(formula.column) || (formula.column as number) < 1 || (formula.column as number) > columns.length) throw new Error(`formulas[${index}].column is invalid`)
-    return { row: formula.row as number, column: formula.column as number, formula: text(formula.formula, `formulas[${index}].formula`).replace(/^=/, '') }
+    if (typeof formula.result !== 'string' && typeof formula.result !== 'number' && typeof formula.result !== 'boolean') {
+      throw new Error(`formulas[${index}].result must be a string, number, or boolean`)
+    }
+    return {
+      row: formula.row as number,
+      column: formula.column as number,
+      formula: text(formula.formula, `formulas[${index}].formula`).replace(/^=/, ''),
+      result: formula.result,
+    }
   })
   if (normalizedFormulas.length < 1) throw new Error('at least one real formula is required')
   await publish(target, async temporary => {
     const workbook = new ExcelJS.Workbook()
     workbook.creator = 'PAIMind'; workbook.title = title; workbook.created = new Date()
+    workbook.calcProperties.fullCalcOnLoad = true
     const sheet = workbook.addWorksheet(sheetName, { views: [{ state: 'frozen', ySplit: 1 }] })
     sheet.columns = columns.map((header, index) => ({ header, key: `column-${index + 1}`, width: Math.max(12, Math.min(32, header.length + 6)) }))
     for (const row of rows) sheet.addRow(row)
-    for (const formula of normalizedFormulas) sheet.getCell(formula.row, formula.column).value = { formula: formula.formula }
+    for (const formula of normalizedFormulas) {
+      sheet.getCell(formula.row, formula.column).value = { formula: formula.formula, result: formula.result }
+    }
     const header = sheet.getRow(1)
     header.font = { bold: true, color: { argb: 'FFFFFFFF' } }
     header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2459C4' } }
@@ -167,11 +244,16 @@ async function generateXlsx(spec: JsonRecord, root: string): Promise<string> {
 }
 
 export async function generateOfficeArtifact(specValue: unknown, workspaceRoot = process.cwd()): Promise<string> {
+  return (await generateOfficeArtifactResult(specValue, workspaceRoot)).output
+}
+
+export async function generateOfficeArtifactResult(specValue: unknown, workspaceRoot = process.cwd()): Promise<OfficeArtifactResult> {
   const spec = record(specValue, 'spec')
   const kind = text(spec.kind, 'kind')
-  if (kind === 'pptx') return await generatePptx(spec, workspaceRoot)
-  if (kind === 'pdf') return await generatePdf(spec, workspaceRoot)
-  if (kind === 'xlsx') return await generateXlsx(spec, workspaceRoot)
+  if (kind === 'outline-pptx') return await generateOutlinePptx(spec, workspaceRoot)
+  if (kind === 'pptx') return { output: await generatePptx(spec, workspaceRoot) }
+  if (kind === 'pdf') return { output: await generatePdf(spec, workspaceRoot) }
+  if (kind === 'xlsx') return { output: await generateXlsx(spec, workspaceRoot) }
   throw new Error(`unsupported office artifact kind ${JSON.stringify(kind)}`)
 }
 
@@ -179,8 +261,8 @@ async function main(): Promise<void> {
   const specPath = process.argv[2]
   if (specPath === undefined) throw new Error('usage: node cli.js <workspace-relative-spec.json>')
   const spec = JSON.parse(await readFile(resolve(process.cwd(), specPath), 'utf8')) as unknown
-  const output = await generateOfficeArtifact(spec)
-  process.stdout.write(`${JSON.stringify({ output })}\n`)
+  const output = await generateOfficeArtifactResult(spec)
+  process.stdout.write(`${JSON.stringify(output)}\n`)
 }
 
 if (process.argv[1] !== undefined && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {

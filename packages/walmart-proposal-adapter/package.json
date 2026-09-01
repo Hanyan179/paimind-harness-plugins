@@ -1,9 +1,9 @@
 {
   "name": "@paimind/walmart-proposal-adapter",
   "version": "0.1.0-alpha.0",
-  "description": "Native Harness Tool adapter for deterministic Walmart proposal analysis and outline CLIs",
+  "description": "Native Harness Tools for synthetic-demo preparation, deterministic Walmart analysis and proposal outlines",
   "license": "UNLICENSED",
-  "engines": { "node": "^22.19.0 || >=24.0.0" },
+  "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",

@@ -135,6 +135,43 @@ describe('FP06-FP07 artifact client surface', () => {
       artifactId: 'bento-deep-link', traceId: 'trace-direct', path: '/workspace/decks/direct.bento.html',
     }))
     expect(window.location.search).toBe('')
+    expect(window.history.state).toMatchObject({
+      paimindBentoArtifact: {
+        schema: 'paimind.bento-artifact-history/v1',
+        artifactId: 'bento-deep-link',
+        sourceId: 'test',
+      },
+    })
+    expect(sessions.open).not.toHaveBeenCalled()
+    dispose()
+  })
+
+  it('restores the last authoritative Bento Artifact from history state after reload', async () => {
+    const registry = service([row({
+      id: 'bento-history', kind: 'html', previewKind: 'bento-deck', path: 'decks/history.bento.html',
+      title: 'History deck', traceId: 'trace-history',
+    })])
+    const preview = bento()
+    const project = {
+      workspaceId: 'workspace-1', title: 'Workspace', path: '/workspace', sessionIds: ['session-1'],
+      visibleSessionCount: 1, archivedSessionCount: 0, totalSessionCount: 1,
+      createdAt: '2026-08-17T00:00:00Z', updatedAt: '2026-08-17T00:00:00Z',
+    }
+    const sessions = { list: { getSnapshot: () => ({ current: 'session-1', byId: {} }), subscribe: () => () => {} }, open: vi.fn() }
+    const projects = { getSnapshot: () => ({ state: 'ready', projects: [project], currentSessionId: 'session-1', currentProject: project, error: null }), subscribe: () => () => {}, startSession: vi.fn(), openWorkspace: vi.fn() }
+    window.history.replaceState({
+      paimindBentoArtifact: {
+        schema: 'paimind.bento-artifact-history/v1', artifactId: 'bento-history', sourceId: 'test',
+      },
+    }, '', '/')
+
+    const dispose = installBentoArtifactDeepLink({ sessions, paimindWorkspaceProject: projects, paimindBentoPreview: preview } as never, registry)
+    await Promise.resolve()
+
+    expect(preview.open).toHaveBeenCalledWith(expect.objectContaining({
+      artifactId: 'bento-history', traceId: 'trace-history', path: '/workspace/decks/history.bento.html',
+    }))
+    expect(window.location.search).toBe('')
     expect(sessions.open).not.toHaveBeenCalled()
     dispose()
   })

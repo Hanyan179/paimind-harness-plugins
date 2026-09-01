@@ -22,7 +22,11 @@ Independent Plugin does not mean Independent Domain Model. Harness Workspace, Se
 
 1. A Harness `web` profile composes `@deepseek-ai/dsh-base` and `@deepseek-ai/dsh-web-app`.
 2. `@paimind/harness-bundle` is installed as a later profile layer.
-3. The bundle patch inserts each PAIMind host plugin and invariant companion.
+3. The bundle patch inserts an always-on Extension Center control plane, one
+   always-on package-invariant governance group, and six product-facing
+   `cordis:group` Feature Packs. Switchable groups contain Runtime packages only;
+   one-shot invariant registrations stay outside them so repeated stop/restore
+   cycles do not duplicate governance state.
 4. Packages declaring `dsh.client` are discovered by Harness and served through its native client module graph.
 5. Product plugins contribute through additive Cordis services and browser slots. They do not replace `root`, `sidebar`, or `conversation`.
 
@@ -34,13 +38,18 @@ The native `details` slot is already occupied by Harness Tool Details. The exter
 - `@paimind/harness-compat`: the only package allowed to encode version-sensitive Harness snapshot, slot, event, and service interfaces.
 - `@paimind/contracts`: stable PAIMind domain references and migration identifiers.
 - `@paimind/testkit`: plugin registration/disposal fixtures and later real-composition helpers.
-- `@paimind/extension-center`: PAIMind product capability registry and Settings contribution. It groups immutable descriptors into Experience, Content & Rendering, Agents, Skills & Tools, Automation, Governance and Developer, then joins technical state from Harness Plugin Inventory by package id. It owns no plugin loading, version, dependency or enablement state and never acts as a feature launcher.
+- `@paimind/extension-center`: always-on Product Feature Pack control plane and
+  Settings contribution. It owns the six-pack product catalog, persists explicit
+  enablement overrides in canonical Harness Settings, and calls the public Cordis
+  Loader Entry update seam for real group lifecycle changes. It does not install,
+  remove, upgrade, version, or execute features and never becomes a workflow launcher.
 - `@paimind/branding`: independently installable Paramont Harness identity. It contributes an App-shell descriptor, replaces only the native brand artwork through a reversible `shell.overlay` portal, and owns the document product suffix, favicon and installable-app manifest. It does not own Theme, Sidebar layout, navigation or Session state.
 - `@paimind/developer-resources`: read-only native Plugin Inventory diagnostics, current `paimind.extension` Surface Catalog and bundled integration-contract reference. Extension Center remains the sole child-slot owner; Developer Resources declares no Loader control, version/dependency truth or second technical registry.
 - `@paimind/workspace-project`: headless read-only `Project = Workspace` projection; its prior native-header action is reopened for retirement and it owns no Project persistence or navigation tree.
 - `@paimind/better-sidebar-adapter`: the only package allowed to encode or call the Better Sidebar service; it exposes stable Preview/Side Card and file-capability contracts to viewer/trace packages. It has no Task Monitor responsibility.
 - `@paimind/task-monitor`: the higher-priority implementation of the native `job-list` Session-header slot. Its responsive Popover/Bottom Sheet derives Session, Project, Goal, Todo, Plan, Workflow/Subagent, Tool Call, all native Jobs, Artifact, Deliverable, invoked Skill and evidenced MCP facts. It has no lifecycle store, Preview Source or Better Sidebar dependency; removing it restores the native Job button.
 - `@paimind/artifacts`: observable association over native Harness Turn deliverables and product artifact sources; it owns no fixed overview tab or file bytes and routes exact Workspace-contained PDF/PPTX/HTML/XLSX paths through explicit viewer/service allowlists.
+- `@paimind/conversation-artifact-renderer`: removable turn-tail projection over native producer-declared Deliverables. It replaces the official compact file pills with format-aware cards for Markdown, JSON, HTML, Bento, PPTX, PDF, spreadsheet, Word, image and generic files. Exact Bento Artifacts open through the owner-provided Artifact service; all other files retain the native `openFile` route. Bento and provenance labels require an exact current-Session Artifact and are never inferred from a filename or model prose; removal restores the official row.
 - `@paimind/renderer-pdf`: removable local PDF.js renderer registered only through the stable file-viewer adapter. It corrects the selected Chromium surface where the provider's browser-native Blob iframe was blank, and falls back to the provider viewer when absent.
 - `@paimind/renderer-bento`: the narrow product-specific renderer exception. It owns a random loopback-only origin, token-bound Session path confinement, restrictive CSP and one hidden on-demand workbench tab with dynamic Artifact title; it neither patches the provider HTML viewer nor exposes Harness APIs to the Bento runtime.
 - `@paimind/agent-market`: independent Agent Center catalog and governance surface over Harness `agentPreset.list` and blank-Session `agentPreset.select`. It stores only product metadata keyed by native Preset id and owns neither Preset documents nor Agent execution.
@@ -50,20 +59,46 @@ The native `details` slot is already occupied by Harness Tool Details. The exter
 - `@paimind/scheduler-adapter-http`: active Adapter service for signed HTTPS `202` dispatch and result-Origin allowlist.
 - `@paimind/scheduler-adapter-feishu-bot`: active provider Adapter service; production action registration and credentials remain deployment/business-owned.
 - `@paimind/platform-api` and `@paimind/platform-sdk`: separately deployable packages for authenticated action registration, callbacks, notifications, validation and signing. They do not expose secrets or business logic to the UI and are not browser-facing Bundle rows.
-- Feature packages: user-visible Cordis/client contributions. A feature may use several implementation packages but has one independently verifiable execution unit.
+- Product Feature Packs: the user-facing installation and enablement grain. One
+  pack may contain several independently built implementation packages but owns
+  one product outcome, one top-level switch, declared dependencies, and one
+  end-to-end acceptance boundary.
+- Implementation packages: internal Host, Client, Adapter, Renderer, Contract,
+  SDK, and Invariant modules. They remain separately testable and removable for
+  engineering isolation, but are not presented as dozens of peer products.
+- Package Invariants are composition-time governance and remain in one always-on
+  group. A Product Feature Pack switch controls runtime behavior, not whether the
+  already-validated package identity is registered for diagnostics.
 
 ### Extension Center boundary
 
-- Harness Plugin Registry owns technical loading, version, dependency, enablement, Fiber phase and failure facts.
-- Extension Center owns only PAIMind product metadata and classification. Each feature self-registers and disposes its descriptor.
+- Harness Plugin Registry owns installation, removal, versions, technical Entry
+  identity, Fiber phase, and failure facts. Cordis Loader remains the sole runtime
+  lifecycle owner.
+- Extension Center owns PAIMind product composition, classification, dependency
+  policy, and requested enablement. It stores no second runtime registry.
 - The two surfaces coexist: Harness Settings → Plugins is the technical inventory; Extension Center is PAIMind capability management.
-- A management action may call only a verified public Harness API. Because the current inventory Remote is read-only, Extension Center v1 must not simulate install, remove or enable/disable success.
+- Product enable/disable calls the verified public Cordis Loader `EntryTree.update`
+  seam through `@paimind/harness-compat`; the read-only Plugin Inventory remains
+  the diagnostic source. A failed Loader or Settings write is reported and rolled
+  back instead of being presented as success.
+- Extension Center is outside every managed group, so disabling a Feature Pack
+  cannot remove the control surface required to restore it.
+- A successful switch persists first-class product intent in Harness Settings and
+  reloads the browser application after Host Loader convergence. This is required
+  because the Harness static Client module manifest is selected at page boot;
+  the reload removes or restores browser contributions without restarting the
+  Harness Host process.
 - Extension Center never navigates into feature workflows. Task Monitor remains an independent button; Agent Center remains a Preset catalog; Bento remains a renderer channel.
 
 ### Product classification decision
 
 - Harness Plugin Registry is the technical Loader and Registry only. It is not the PAIMind product catalog and PAIMind does not place every capability into that native product surface.
-- PAIMind Extension Center always presents the seven product categories `Experience`, `Content & Rendering`, `Agents`, `Skills & Tools`, `Automation`, `Governance` and `Developer`, including an honest empty/provider-absent state where applicable.
+- PAIMind Extension Center presents six top-level Product Feature Packs:
+  `Product Experience`, `Agent Center`, `Content & Deliverables`,
+  `Proposal & Presentation`, `Automation`, and `Work Operations`.
+- Immutable per-package descriptors remain available only as technical module
+  detail and diagnostics; they are no longer the primary product navigation grain.
 - The former PAIMind Launcher is retired. Extension Center is a capability-management page, not a navigation launcher or a second plugin runtime.
 - Agent Center is the catalog, market, classification and governance layer over the same Harness Agent Preset ids. Personal Agent Builder creates or modifies those Presets and never creates a second Agent runtime or configuration store.
 - Bento remains a PAIMind-owned independent Renderer Plugin and reaches the host only through stable Preview/Side Card adapter contracts.
@@ -102,7 +137,10 @@ The native `details` slot is already occupied by Harness Tool Details. The exter
 
 ## Compatibility policy
 
-The active runtime is the exact npm artifact `@deepseek-ai/dsh@0.1.0-rc.6`. The local upstream checkout remains at `47f943859bef60e4160492346772ded9b24f765a` and is used only as a source-integrity sentinel because its branch has not supplied the npm artifact's source revision. PAIMind does not claim that `rc.5` checkout as `rc.6` provenance.
+The active npm runtime and external-provider versions are the exact values in
+[`../compatibility/matrix.md`](../compatibility/matrix.md). A local upstream
+checkout is only a source-integrity sentinel; it is not treated as provenance
+for the selected npm artifact unless its revision is independently established.
 
 Feature code imports structural Harness interfaces from `@paimind/harness-compat`. Real composition runs against the selected npm runtime, while every gate also captures the local Harness checkout status before and after to prove PAIMind made no source change.
 
@@ -118,20 +156,22 @@ An upstream upgrade changes `@paimind/harness-compat` first. The remaining packa
 4. An upgrade must pass package metadata compatibility, register/dispose/open-tab contract tests, production build, isolated real-profile install/remove, desktop/narrow/light/dark browser checks, cross-plugin regression, and Harness zero-upstream-delta verification before the bundle pin moves.
 5. Missing, incompatible, or failed Better Sidebar activation hides PAIMind rail tabs and leaves native Harness conversation available. PAIMind does not maintain a second fallback rail.
 
-Better Sidebar `0.12.2` and Harness npm `0.1.0-rc.6` passed the exact-version metadata, native-module build, adapter-v3 public contract, isolated profile install/boot/remove, Extension Center/feature isolation, responsive Side Card, terminal interaction and real Office Viewer gates in R8. They are the selected matrix. The historical FP05 and R7 baselines were `0.11.0` and `0.12.1`; a later release remains only a Candidate until the same gate passes again.
+Historical provider/runtime combinations and their executed evidence remain in
+the acceptance reports and migration ledger. The currently selected combination
+lives only in the compatibility matrix; any later release remains a Candidate
+until it passes the same gate.
 
-Better Sidebar `0.12.x` externalizes PPTX/XLSX viewing. The selected exact
-`@huanlin/dsh-plugin-better-sidebar-plugin-office@0.1.0` owns its own technical
-Harness Bundle row and activates after `dsh-better-sidebar`; PAIMind does not
-copy that provider patch. Its stale declared `dsh-better-sidebar@^0.6.0` peer is
-a recorded metadata risk, while the selected `0.12.2` combination has passed
-real browser PPTX/XLSX gates.
+The selected Better Sidebar line externalizes PPTX/XLSX viewing. The selected
+Office Viewer owns its own technical Harness Bundle row and activates after
+`dsh-better-sidebar`; PAIMind does not copy that provider patch. Its stale
+declared Better Sidebar peer range remains a recorded metadata risk and must be
+retested on either provider upgrade.
 
 ### Preview/Side Card provider ownership
 
 - Better Sidebar owns its responsive right/bottom layout, tab lifecycle, file explorer/editor, terminal, Git/browser surfaces, native background-job UI and built-in viewers.
 - FP06-FP07 reuse verified Better Sidebar PPTX/XLSX/HTML viewers through `@paimind/better-sidebar-adapter`; PAIMind retains Artifact discovery, Session/Workspace association and safe open contracts.
-- The selected Chromium surface rendered the provider's valid PDF as a blank Blob iframe. `@paimind/renderer-pdf` therefore registers a higher-priority local PDF.js channel through adapter contract v3. Removing it restores the provider viewer without changing Artifact identity or upstream source.
+- The selected Chromium surface rendered the provider's valid PDF as a blank Blob iframe. `@paimind/renderer-pdf` therefore registers a higher-priority local PDF.js channel through the stable adapter contract. Removing it restores the provider viewer without changing Artifact identity or upstream source.
 - Bento remains an independent PAIMind Renderer Plugin and registers a new preview channel through the stable adapter. Its core never imports Better Sidebar types, stores, DOM contracts or internal interfaces.
 - Task Monitor is not a Side Card tab. Extension Center may describe and manage the capability package, while the live product entry remains an independent Session-header button.
 
@@ -145,7 +185,15 @@ real browser PPTX/XLSX gates.
 
 ### Feature isolation invariant
 
-- Every migrated capability is an independently installable Cordis package with its own client entry, invariant companion, tests and disposer.
+- Every Product Feature Pack is an independently switchable Cordis group with a
+  stable Loader Entry id. Pack dependencies are explicit: Proposal, Automation,
+  and Work Operations require Content & Deliverables.
+- Every implementation package keeps its own client/host entry, invariant where
+  applicable, focused tests, and disposer. This is an engineering isolation unit,
+  not a promise that every package is a separate user-facing product.
+- A pack may expose a small number of meaningful nested capability switches. The
+  first is `Runtime Orbs` inside Product Experience; internal adapters and
+  contracts are not exposed as configuration noise.
 - Feature packages consume stable PAIMind services or Harness public projections. They never edit upstream source, reducers, profile source or provider stores. A reversible presentation adapter may locate a native DOM seat only through `@paimind/harness-compat`; failure leaves the native surface visible, and disposal removes every marker and portal.
 - Host services flow one way into read-only projections; a PAIMind rendering or source failure collapses only its own tab/surface and cannot block the native conversation.
 - Removing a package removes only its registrations. Shared objects such as Workspace, Session, Turn deliverables and Better Sidebar viewers remain owned by their original provider.
@@ -166,8 +214,12 @@ node scripts/verify-harness-composition.mjs \
   --runtime "/path/to/exact-npm-runtime" \
   --dsh-bin "/path/to/exact-npm-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js" \
   --provider "/path/to/exact-npm-runtime/node_modules/dsh-better-sidebar" \
-  --expected-dsh-version "0.1.0-rc.6" \
   --upstream-checkout "/path/to/deepseek-harness-checkout"
 ```
+
+When this repository's `.dsh-home/profiles` is present, the runtime, provider
+and nearby upstream sentinel are discovered automatically. Expected versions
+always default to the machine-readable compatibility matrix; explicit command
+options are overrides for isolated candidate verification.
 
 The real-composition script validates the exact provider package and public service markers, creates an isolated temporary `DSH_HOME`, initializes the native Web profile, installs Better Sidebar plus the local PAIMind bundle and every currently migrated feature package, verifies one provider row and every served client manifest, removes them, verifies native restoration, and checks that the Harness Git worktree did not change.

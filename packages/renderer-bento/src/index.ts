@@ -4,6 +4,7 @@ import { readFile, realpath, stat } from 'node:fs/promises'
 import { extname, isAbsolute, relative, resolve } from 'node:path'
 import type { PaimindBentoHostContext } from '@paimind/harness-compat'
 import { BENTO_INFO_PATH, type BentoSandboxInfo } from './shared.js'
+import { applyLegacyBentoModeCompatibility } from './legacy-mode-compat.js'
 
 export * from './shared.js'
 
@@ -93,7 +94,7 @@ export async function apply(ctx: PaimindBentoHostContext): Promise<() => Promise
       if (sessionRoot === undefined) { res.writeHead(403); res.end('Session unavailable'); return }
       const safe = await resolveBentoFile(resolve(sessionRoot), path)
       if (safe === null) { res.writeHead(403); res.end('File unavailable'); return }
-      const body = await readFile(safe)
+      const body = applyLegacyBentoModeCompatibility(await readFile(safe, 'utf8'))
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-security-policy': BENTO_CSP,

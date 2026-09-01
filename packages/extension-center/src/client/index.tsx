@@ -15,9 +15,13 @@ import {
 } from '@paimind/contracts'
 import {
   contributePaimindExtension,
+  type HarnessPluginInventoryRemote,
   type HarnessPluginInventorySnapshot,
+  type HarnessRemoteMountService,
+  type HarnessRemoteResult,
   type HarnessSettingsSectionOwnerProps,
   type PaimindExtensionCenterClientContext,
+  projectHarnessPluginTechnicalState,
 } from '@paimind/harness-compat'
 import {
   PaimindCheckIcon,
@@ -31,7 +35,13 @@ import {
   compareExtensionDescriptors,
   projectExtensionTechnicalState,
   type ExtensionTechnicalState,
-} from '../index.js'
+} from '../projection.js'
+import type {
+  PaimindFeaturePackState,
+  PaimindFeaturePackView,
+  PaimindFeatureToggleMutationRequest,
+} from '../feature-packs.js'
+import TYPERT_REMOTE from '../remote.js'
 
 export const inject = ['slots', 'locale', 'remote', 'remote.pluginInventory']
 
@@ -100,6 +110,33 @@ const ATTENTION_STATES = new Set<ExtensionTechnicalState>(['failed', 'disabled',
 const CATEGORY_SET = new Set<string>(PAIMIND_EXTENSION_CATEGORIES)
 const MATURITY_SET = new Set<string>(Object.keys(MATURITY_COPY))
 const SURFACE_SET = new Set<string>(Object.keys(SURFACE_COPY))
+const BOOT_CLIENT_SENTINEL_BY_PACK_ID = Object.freeze<Record<string, `@paimind/${string}`>>({
+  'paimind:pack:experience': '@paimind/branding',
+  'paimind:pack:agents': '@paimind/agent-market',
+  'paimind:pack:content': '@paimind/artifacts',
+  'paimind:pack:proposal': '@paimind/proposal-experience',
+  'paimind:pack:automation': '@paimind/notifications',
+  'paimind:pack:operations': '@paimind/task-monitor',
+})
+const BOOT_CONSISTENCY_ATTRIBUTE = 'data-paimind-boot-consistency'
+const BOOT_RECOVERY_SESSION_KEY = 'paimind:feature-pack-client-recovery-v1'
+
+export function findPaimindFeaturePackClientGaps(
+  view: Readonly<PaimindFeaturePackView>,
+  inventory: Readonly<HarnessPluginInventorySnapshot>,
+  extensions: readonly Readonly<PaimindExtensionDescriptor>[],
+): readonly string[] {
+  if (view.status !== 'ready') return Object.freeze([])
+  const contributedPackages = new Set(extensions.map(extension => extension.packageName))
+  return Object.freeze(view.packs.flatMap(pack => {
+    if (!pack.enabled || pack.failure !== undefined) return []
+    const sentinel = BOOT_CLIENT_SENTINEL_BY_PACK_ID[pack.id]
+    if (sentinel === undefined || contributedPackages.has(sentinel)) return []
+    return projectHarnessPluginTechnicalState(sentinel, inventory).technicalState === 'active'
+      ? [pack.id]
+      : []
+  }))
+}
 
 function surfaceGuidance(
   descriptor: Readonly<PaimindExtensionDescriptor>,
@@ -125,6 +162,32 @@ const STYLE = `
 [data-paimind-extension-header] p{margin:0;max-width:680px;color:var(--extension-muted);font-size:13px;line-height:20px}
 [data-paimind-extension-note]{display:flex;gap:9px;align-items:flex-start;margin:0 0 14px;padding:9px 11px;border:1px solid var(--extension-line);border-radius:10px;background:var(--extension-soft);color:var(--extension-muted);font-size:12px;line-height:18px}
 [data-paimind-extension-note] svg{flex:none;margin-top:1px;color:var(--extension-accent)}
+[data-paimind-feature-pack-section]{display:grid;gap:10px;margin:0 0 18px}
+[data-paimind-feature-pack-heading]{display:flex;align-items:end;justify-content:space-between;gap:12px}
+[data-paimind-feature-pack-heading] h3{margin:0;font-size:15px;line-height:22px}
+[data-paimind-feature-pack-heading] p{margin:2px 0 0;color:var(--extension-muted);font-size:11px;line-height:17px}
+[data-paimind-feature-pack-heading]>span{color:var(--extension-faint);font-size:11px}
+[data-paimind-feature-pack-grid]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+[data-paimind-feature-pack]{display:grid;gap:9px;padding:13px;border:1px solid var(--extension-line);border-radius:12px;background:color-mix(in srgb,var(--extension-surface) 94%,transparent)}
+[data-paimind-feature-pack][data-enabled='false']{background:color-mix(in srgb,var(--extension-soft) 80%,transparent)}
+[data-paimind-feature-pack-main]{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+[data-paimind-feature-pack-copy]{min-width:0}
+[data-paimind-feature-pack-copy] h4{margin:0;font-size:14px;line-height:20px}
+[data-paimind-feature-pack-copy] p{margin:3px 0 0;color:var(--extension-muted);font-size:11px;line-height:17px}
+[data-paimind-feature-pack-meta]{display:flex;flex-wrap:wrap;gap:5px;color:var(--extension-faint);font-size:10px;line-height:15px}
+[data-paimind-feature-pack-error]{margin:0;padding:7px 9px;border:1px solid color-mix(in srgb,#d83a52 34%,var(--extension-line));border-radius:8px;background:color-mix(in srgb,#d83a52 8%,transparent);color:#b4233b;font-size:11px;line-height:17px;overflow-wrap:anywhere}
+[data-paimind-feature-switch]{position:relative;flex:0 0 auto;width:40px;height:22px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--extension-faint) 36%,transparent);cursor:pointer}
+[data-paimind-feature-switch]::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform 160ms ease}
+[data-paimind-feature-switch][aria-checked='true']{background:var(--extension-accent)}
+[data-paimind-feature-switch][aria-checked='true']::after{transform:translateX(18px)}
+[data-paimind-feature-switch]:disabled{opacity:.5;cursor:not-allowed}
+[data-paimind-feature-capabilities]{display:grid;gap:6px;padding-top:8px;border-top:1px solid var(--extension-line)}
+[data-paimind-feature-capability]{display:flex;align-items:center;justify-content:space-between;gap:10px}
+[data-paimind-feature-capability] strong{display:block;font-size:11px;line-height:17px}
+[data-paimind-feature-capability] span{display:block;color:var(--extension-faint);font-size:10px;line-height:15px}
+[data-paimind-feature-pack-feedback]{min-height:17px;color:var(--extension-muted);font-size:11px;line-height:17px}
+[data-paimind-technical-catalog]{border-top:1px solid var(--extension-line);padding-top:12px}
+[data-paimind-technical-catalog]>summary{margin-bottom:12px;color:var(--extension-muted);font-size:12px;line-height:18px;cursor:pointer}
 [data-paimind-extension-summary]{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:hidden;margin-bottom:14px;border:1px solid var(--extension-line);border-radius:12px;background:color-mix(in srgb,var(--extension-surface) 90%,transparent)}
 [data-paimind-extension-summary] div{min-width:0;padding:10px 12px;border-right:1px solid var(--extension-line)}
 [data-paimind-extension-summary] div:last-child{border-right:0}
@@ -186,6 +249,7 @@ const STYLE = `
 [data-paimind-extension-boundary]{margin:24px;padding:18px;border:1px solid var(--paimind-line,var(--dsw-alias-border-l1,rgba(110,128,154,.16)));border-radius:12px;color:var(--paimind-muted,var(--dsw-alias-label-secondary,#65718a));background:var(--paimind-glass,var(--dsw-alias-bg-layer-1,rgba(128,128,128,.05)));font-size:13px;line-height:20px}
 @media(prefers-reduced-motion:no-preference){[data-paimind-extension-card-meta]>svg{transition:transform 160ms ease}[data-paimind-extension-skeleton]{animation:paimind-extension-loading 1.4s ease-in-out infinite}}
 @keyframes paimind-extension-loading{to{background-position:-220% 0}}
+@media(max-width:760px){[data-paimind-feature-pack-grid]{grid-template-columns:1fr}}
 @media(max-width:560px){[data-paimind-extension-center]{position:fixed;z-index:4;inset:72px 24px 24px;min-height:0;padding:16px;overflow:auto;border-radius:16px;background:var(--extension-canvas);box-shadow:var(--dsw-shadow-lv3,0 18px 60px rgba(0,0,0,.18))}[data-paimind-extension-header] h2{font-size:19px;line-height:26px}[data-paimind-extension-summary] div{padding:8px}[data-paimind-extension-summary] strong{font-size:14px}[data-paimind-extension-summary] span{font-size:10px}[data-paimind-extension-card-summary]{grid-template-columns:minmax(0,1fr);gap:8px}[data-paimind-extension-card-meta]{justify-content:flex-start;min-width:0}[data-paimind-extension-location]{grid-column:1}[data-paimind-extension-details] dl{grid-template-columns:minmax(0,1fr);gap:2px 0}[data-paimind-extension-details] dd{margin-bottom:7px}}
 `
 
@@ -235,6 +299,9 @@ interface ExtensionCenterInjected {
   readonly getExtensions: () => readonly Readonly<PaimindExtensionDescriptor>[]
   readonly subscribeExtensions: (listener: () => void) => () => void
   readonly listInventory: () => Promise<HarnessPluginInventorySnapshot>
+  readonly describeFeaturePacks?: () => Promise<PaimindFeaturePackView>
+  readonly mutateFeaturePack?: (request: PaimindFeatureToggleMutationRequest) => Promise<PaimindFeaturePackView>
+  readonly reloadApplication?: () => void
   readonly locale: PaimindExtensionCenterClientContext['locale']
 }
 
@@ -244,6 +311,12 @@ type InventoryState =
   | { readonly status: 'loading' }
   | { readonly status: 'error' }
   | { readonly status: 'ready'; readonly snapshot: HarnessPluginInventorySnapshot }
+
+type FeaturePackState =
+  | { readonly status: 'loading' }
+  | { readonly status: 'error' }
+  | { readonly status: 'unavailable' }
+  | { readonly status: 'ready'; readonly view: Extract<PaimindFeaturePackView, { readonly status: 'ready' }> }
 
 export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.Element {
   const extensions = useSyncExternalStore(
@@ -262,6 +335,9 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [request, setRequest] = useState(0)
   const [inventory, setInventory] = useState<InventoryState>({ status: 'loading' })
+  const [featurePacks, setFeaturePacks] = useState<FeaturePackState>({ status: 'loading' })
+  const [pendingToggle, setPendingToggle] = useState<string | null>(null)
+  const [featurePackFeedback, setFeaturePackFeedback] = useState('')
   const detailsBaseId = useId()
 
   useEffect(() => {
@@ -273,6 +349,23 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
     )
     return () => { current = false }
   }, [props.listInventory, request])
+
+  useEffect(() => {
+    let current = true
+    if (props.describeFeaturePacks === undefined) {
+      setFeaturePacks({ status: 'unavailable' })
+      return () => { current = false }
+    }
+    setFeaturePacks({ status: 'loading' })
+    void props.describeFeaturePacks().then(
+      view => {
+        if (!current) return
+        setFeaturePacks(view.status === 'ready' ? { status: 'ready', view } : { status: 'unavailable' })
+      },
+      () => { if (current) setFeaturePacks({ status: 'error' }) },
+    )
+    return () => { current = false }
+  }, [props.describeFeaturePacks])
 
   const normalizedQuery = query.trim().toLocaleLowerCase(locale)
   const queryMatched = useMemo(() => extensions.filter(extension => {
@@ -294,8 +387,34 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
     projection.descriptor.id,
     projection,
   ])), [projections])
+  const packModuleStateByPackageName = useMemo(() => {
+    if (inventory.status !== 'ready' || featurePacks.status !== 'ready') return new Map<string, ExtensionTechnicalState>()
+    return new Map(featurePacks.view.packs.flatMap(pack => pack.packageNames).map(packageName => [
+      packageName,
+      projectHarnessPluginTechnicalState(packageName, inventory.snapshot).technicalState,
+    ]))
+  }, [featurePacks, inventory])
+  const expectedPackPackageNames = (pack: Readonly<PaimindFeaturePackState>): readonly `@paimind/${string}`[] => {
+    const intentionallyDisabled = new Set<string>(pack.capabilities
+      .filter(capability => !(capability.desiredEnabled ?? capability.enabled))
+      .flatMap(capability => capability.packageNames))
+    return pack.packageNames.filter(packageName => !intentionallyDisabled.has(packageName))
+  }
   const activeCount = projections.filter(projection => projection.technicalState === 'active').length
-  const attentionCount = projections.filter(projection => ATTENTION_STATES.has(projection.technicalState)).length
+  const attentionPackageNames = new Set(projections
+    .filter(projection => ATTENTION_STATES.has(projection.technicalState))
+    .map(projection => projection.descriptor.packageName))
+  if (featurePacks.status === 'ready') {
+    for (const pack of featurePacks.view.packs) {
+      if (!(pack.desiredEnabled ?? pack.enabled)) continue
+      for (const packageName of expectedPackPackageNames(pack)) {
+        if (ATTENTION_STATES.has(packModuleStateByPackageName.get(packageName) ?? 'unavailable')) {
+          attentionPackageNames.add(packageName)
+        }
+      }
+    }
+  }
+  const attentionCount = attentionPackageNames.size
 
   useEffect(() => {
     if (expandedId !== null && !visible.some(extension => extension.id === expandedId)) setExpandedId(null)
@@ -306,12 +425,93 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
     setCategory('all')
   }
 
+  const toggleFeature = async (id: string, enabled: boolean): Promise<void> => {
+    if (featurePacks.status !== 'ready' || props.mutateFeaturePack === undefined) return
+    setPendingToggle(id)
+    setFeaturePackFeedback(zh ? '正在应用并保存…' : 'Applying and saving…')
+    try {
+      const next = await props.mutateFeaturePack({
+        id, enabled, expectedRevision: featurePacks.view.revision,
+      })
+      if (next.status === 'ready') {
+        setFeaturePacks({ status: 'ready', view: next })
+        setFeaturePackFeedback(props.reloadApplication === undefined
+          ? (zh
+              ? '已应用；依赖功能包会按产品规则联动。'
+              : 'Applied. Dependent Feature Packs follow the product dependency rules.')
+          : (zh
+              ? '已保存；正在重新加载应用以同步界面模块。'
+              : 'Saved. Reloading the application to synchronize Client modules.'))
+        if (props.reloadApplication !== undefined) setTimeout(props.reloadApplication, 120)
+      } else {
+        setFeaturePacks({ status: 'unavailable' })
+        setFeaturePackFeedback(zh ? '主机当前不可写。' : 'The Host is currently unavailable for writes.')
+      }
+    } catch {
+      setFeaturePackFeedback(zh ? '未保存；已恢复主机中的实际状态。' : 'Not saved; the actual Host state was restored.')
+      if (props.describeFeaturePacks !== undefined) {
+        try {
+          const actual = await props.describeFeaturePacks()
+          setFeaturePacks(actual.status === 'ready' ? { status: 'ready', view: actual } : { status: 'unavailable' })
+        } catch { setFeaturePacks({ status: 'error' }) }
+      }
+    } finally {
+      setRequest(value => value + 1)
+      setPendingToggle(null)
+    }
+  }
+
   return <section data-paimind-extension-center aria-label={zh ? 'PAIMind 扩展中心' : 'PAIMind Extension Center'}>
     <header data-paimind-extension-header>
       <h2>{zh ? 'PAIMind 扩展中心' : 'PAIMind Extension Center'}</h2>
-      <p>{zh ? '了解每项能力是什么、现在是否可用，以及应该去哪里使用或配置。' : 'Understand what each capability does, whether it is available now, and where to use or configure it.'}</p>
+      <p>{zh ? '按产品功能包启用所需能力；内部技术模块继续独立测试与故障隔离。' : 'Enable the Product Feature Packs you need while internal modules remain independently tested and isolated.'}</p>
     </header>
-    <div data-paimind-extension-note role="note"><PaimindSettingsIcon aria-hidden="true" /><span>{zh ? '产品信息来自各能力包；技术状态实时读取 Harness Plugin Registry。本页不安装、启停或启动插件。' : 'Product facts come from capability packages; technical state is read live from Harness Plugin Registry. This page does not install, enable, disable, or launch plugins.'}</span></div>
+    <div data-paimind-extension-note role="note"><PaimindSettingsIcon aria-hidden="true" /><span>{zh ? '功能包开关直接调用 Harness Loader，并保存到 Harness Settings；安装、卸载和版本升级仍由 Harness Plugin Registry 管理。' : 'Feature Pack switches call the Harness Loader directly and persist in Harness Settings. Installation, removal, and upgrades remain owned by the Harness Plugin Registry.'}</span></div>
+    <section data-paimind-feature-pack-section aria-label={zh ? '产品功能包' : 'Product Feature Packs'}>
+      <header data-paimind-feature-pack-heading><div><h3>{zh ? '产品功能包' : 'Product Feature Packs'}</h3><p>{zh ? '一个功能包对应一项可理解、可关闭的产品能力集合。' : 'Each Feature Pack is one understandable, switchable product capability set.'}</p></div><span>{featurePacks.status === 'ready' ? featurePacks.view.packs.length : '—'}</span></header>
+      {featurePacks.status === 'loading' && <div data-paimind-extension-status aria-busy="true">{zh ? '正在读取功能包状态…' : 'Reading Feature Pack state…'}</div>}
+      {featurePacks.status === 'error' && <div data-paimind-extension-status role="alert">{zh ? '暂时无法读取功能包状态。' : 'Feature Pack state is temporarily unavailable.'}</div>}
+      {featurePacks.status === 'unavailable' && <div data-paimind-extension-status role="note">{zh ? '当前组合尚未提供功能包控制接口；技术模块明细仍可查看。' : 'This composition does not expose Feature Pack controls yet. Technical module details remain available.'}</div>}
+      {featurePacks.status === 'ready' && <div data-paimind-feature-pack-grid>{featurePacks.view.packs.map(pack => {
+        const desiredEnabled = pack.desiredEnabled ?? pack.enabled
+        const expectedPackageNames = expectedPackPackageNames(pack)
+        const activePackageCount = expectedPackageNames.filter(packageName => (
+          packModuleStateByPackageName.get(packageName) === 'active'
+        )).length
+        const complete = !desiredEnabled || (pack.failure === undefined && activePackageCount === expectedPackageNames.length)
+        return <article key={pack.id} data-paimind-feature-pack data-enabled={pack.enabled ? 'true' : 'false'} data-complete={complete ? 'true' : 'false'}>
+        <div data-paimind-feature-pack-main>
+          <div data-paimind-feature-pack-copy><h4>{zh ? pack.nameZh : pack.nameEn}</h4><p>{zh ? pack.descriptionZh : pack.descriptionEn}</p></div>
+          <button
+            type="button" role="switch" data-paimind-feature-switch
+            aria-label={`${zh ? pack.nameZh : pack.nameEn} · ${pack.failure === undefined ? (desiredEnabled ? (zh ? '已启用' : 'Enabled') : (zh ? '已关闭' : 'Disabled')) : (zh ? '启用失败' : 'Failed to enable')}`}
+            aria-checked={desiredEnabled}
+            disabled={!pack.installed || !featurePacks.view.writable || pendingToggle !== null}
+            onClick={() => { void toggleFeature(pack.id, !desiredEnabled) }}
+          />
+        </div>
+        <div data-paimind-feature-pack-meta>
+          <span>{desiredEnabled ? (complete ? expectedPackageNames.length : `${activePackageCount} / ${expectedPackageNames.length}`) : pack.packageNames.length} {zh ? '个内部模块' : 'internal modules'}</span>
+          <span>{pack.installed ? (pack.failure !== undefined ? (zh ? '启动失败' : 'Failed to start') : (desiredEnabled ? (complete ? (zh ? '运行中' : 'Running') : (zh ? '部分运行' : 'Partially running')) : (zh ? '已关闭' : 'Disabled'))) : (zh ? '待应用新组合' : 'Composition update required')}</span>
+          {pack.requiredPackIds.length > 0 && <span>{zh ? `依赖 ${pack.requiredPackIds.length} 个功能包` : `${pack.requiredPackIds.length} required pack(s)`}</span>}
+        </div>
+        {pack.failure !== undefined && <p data-paimind-feature-pack-error role="alert">{pack.failure}</p>}
+        {pack.capabilities.length > 0 && <div data-paimind-feature-capabilities>{pack.capabilities.map(capability => <div key={capability.id} data-paimind-feature-capability>
+          <div><strong>{zh ? capability.nameZh : capability.nameEn}</strong><span>{zh ? capability.descriptionZh : capability.descriptionEn}</span></div>
+          <button
+            type="button" role="switch" data-paimind-feature-switch
+            aria-label={`${zh ? capability.nameZh : capability.nameEn} · ${capability.failure === undefined ? ((capability.desiredEnabled ?? capability.enabled) ? (zh ? '已启用' : 'Enabled') : (zh ? '已关闭' : 'Disabled')) : (zh ? '启用失败' : 'Failed to enable')}`}
+            aria-checked={capability.desiredEnabled ?? capability.enabled}
+            disabled={!pack.enabled || pack.failure !== undefined || !capability.installed || !featurePacks.view.writable || pendingToggle !== null}
+            onClick={() => { void toggleFeature(capability.id, !(capability.desiredEnabled ?? capability.enabled)) }}
+          />
+        </div>)}</div>}
+      </article>
+      })}</div>}
+      {featurePackFeedback !== '' && <div data-paimind-feature-pack-feedback role="status">{featurePackFeedback}</div>}
+    </section>
+    <section data-paimind-technical-catalog aria-label={zh ? '技术模块明细' : 'Technical module details'}>
+      <h3>{zh ? '技术模块明细' : 'Technical module details'}</h3>
     <div data-paimind-extension-summary aria-label={zh ? '扩展概览' : 'Extension overview'}>
       <div><strong>{extensions.length}</strong><span>{zh ? '产品能力' : 'Product capabilities'}</span></div>
       <div><strong>{inventory.status === 'ready' ? activeCount : '—'}</strong><span>{zh ? 'Harness 已加载' : 'Active in Harness'}</span></div>
@@ -364,6 +564,7 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
         })}</div>
       </section>
     })}</div>}
+    </section>
   </section>
 }
 
@@ -374,48 +575,135 @@ class ExtensionCenterBoundary extends Component<{ readonly children: ReactNode; 
   render(): ReactNode { return this.state.failed ? this.props.fallback : this.props.children }
 }
 
-/** Register one Settings section; all extension metadata remains independently contributed. */
-export function apply(ctx: PaimindExtensionCenterClientContext): void {
-  ctx.effect(installStyle, 'paimind-extension-center: style')
-  contributePaimindExtension(ctx.slots, SELF)
+interface FeaturePackRemoteNamespace {
+  describe(): Promise<HarnessRemoteResult<PaimindFeaturePackView>>
+  mutate(request: PaimindFeatureToggleMutationRequest): Promise<HarnessRemoteResult<PaimindFeaturePackView>>
+}
 
-  let cachedVersion = -1
-  let cachedExtensions: readonly Readonly<PaimindExtensionDescriptor>[] = Object.freeze([])
-  const getExtensions = (): readonly Readonly<PaimindExtensionDescriptor>[] => {
-    const version = ctx.slots.getVersion(SLOT)
-    if (version === cachedVersion) return cachedExtensions
-    const seen = new Set<string>()
-    cachedExtensions = Object.freeze(ctx.slots.entries(SLOT)
-      .map(descriptorFromEntry)
-      .filter(isDescriptor)
-      .filter(descriptor => {
-        if (seen.has(descriptor.id)) return false
-        seen.add(descriptor.id)
-        return true
-      })
-      .sort(compareExtensionDescriptors))
-    cachedVersion = version
-    return cachedExtensions
-  }
-  const listInventory = async (): Promise<HarnessPluginInventorySnapshot> => {
-    const result = await ctx.remote.pluginInventory.list()
-    if (!result.ok) throw new Error(`${result.error.code}: ${result.error.message}`)
-    return result.value
-  }
-  const injectSection = (): ExtensionCenterInjected => ({
-    getExtensions,
-    subscribeExtensions: listener => ctx.slots.subscribe(SLOT, listener),
-    listInventory,
-    locale: ctx.locale,
+interface ExtensionCenterRemote extends HarnessRemoteMountService {
+  readonly pluginInventory: HarnessPluginInventoryRemote
+  readonly paimindFeaturePacks?: FeaturePackRemoteNamespace
+}
+
+interface ExtensionCenterClientContext extends Omit<PaimindExtensionCenterClientContext, 'remote'> {
+  readonly remote: ExtensionCenterRemote
+  inject(
+    dependencies: readonly string[],
+    install: (ctx: ExtensionCenterClientContext) => void,
+  ): PromiseLike<unknown> & { dispose(): Promise<void> }
+}
+
+/** Register one product Feature Pack control surface plus read-only technical diagnostics. */
+export async function apply(ctx: ExtensionCenterClientContext): Promise<() => Promise<void>> {
+  const disposeRemote = await ctx.remote.$mount(TYPERT_REMOTE)
+  const mounted = ctx.inject([...inject, 'remote.paimindFeaturePacks'], scopeCtx => {
+    const featurePackRemote = scopeCtx.remote.paimindFeaturePacks
+    if (featurePackRemote === undefined) throw new Error('PAIMind Feature Pack Remote did not mount')
+    scopeCtx.effect(installStyle, 'paimind-extension-center: style')
+    contributePaimindExtension(scopeCtx.slots, SELF)
+
+    let cachedVersion = -1
+    let cachedExtensions: readonly Readonly<PaimindExtensionDescriptor>[] = Object.freeze([])
+    const getExtensions = (): readonly Readonly<PaimindExtensionDescriptor>[] => {
+      const version = scopeCtx.slots.getVersion(SLOT)
+      if (version === cachedVersion) return cachedExtensions
+      const seen = new Set<string>()
+      cachedExtensions = Object.freeze(scopeCtx.slots.entries(SLOT)
+        .map(descriptorFromEntry)
+        .filter(isDescriptor)
+        .filter(descriptor => {
+          if (seen.has(descriptor.id)) return false
+          seen.add(descriptor.id)
+          return true
+        })
+        .sort(compareExtensionDescriptors))
+      cachedVersion = version
+      return cachedExtensions
+    }
+    const listInventory = async (): Promise<HarnessPluginInventorySnapshot> => {
+      const result = await scopeCtx.remote.pluginInventory.list()
+      if (!result.ok) throw new Error(`${result.error.code}: ${result.error.message}`)
+      return result.value
+    }
+    const describeFeaturePacks = async (): Promise<PaimindFeaturePackView> => {
+      const result = await featurePackRemote.describe()
+      if (!result.ok) throw new Error(`${result.error.code}: ${result.error.message}`)
+      return result.value
+    }
+    const mutateFeaturePack = async (request: PaimindFeatureToggleMutationRequest): Promise<PaimindFeaturePackView> => {
+      const result = await featurePackRemote.mutate(request)
+      if (!result.ok) throw new Error(`${result.error.code}: ${result.error.message}`)
+      return result.value
+    }
+    let bootCheckTimer: ReturnType<typeof setTimeout> | undefined
+    let bootCheckDisposed = false
+    let bootCheckAttempt = 0
+    const checkBootConsistency = async (): Promise<void> => {
+      if (bootCheckDisposed) return
+      document.documentElement.setAttribute(BOOT_CONSISTENCY_ATTRIBUTE, 'checking')
+      try {
+        const [view, inventory] = await Promise.all([describeFeaturePacks(), listInventory()])
+        if (bootCheckDisposed) return
+        const unsettled = view.status === 'ready' && view.packs.some(pack => (
+          (pack.desiredEnabled ?? pack.defaultEnabled) && !pack.enabled && pack.failure === undefined
+        ))
+        const gaps = findPaimindFeaturePackClientGaps(view, inventory, getExtensions())
+        if (!unsettled && gaps.length === 0) {
+          window.sessionStorage.removeItem(BOOT_RECOVERY_SESSION_KEY)
+          document.documentElement.setAttribute(BOOT_CONSISTENCY_ATTRIBUTE, 'ready')
+          return
+        }
+        if (!unsettled && gaps.length > 0) {
+          if (window.sessionStorage.getItem(BOOT_RECOVERY_SESSION_KEY) !== 'attempted') {
+            window.sessionStorage.setItem(BOOT_RECOVERY_SESSION_KEY, 'attempted')
+            document.documentElement.setAttribute(BOOT_CONSISTENCY_ATTRIBUTE, 'reloading')
+            window.location.reload()
+            return
+          }
+          document.documentElement.setAttribute(BOOT_CONSISTENCY_ATTRIBUTE, 'failed')
+          console.error('[paimind-extension-center] Client Feature Pack recovery remained incomplete', gaps)
+          return
+        }
+      } catch {
+        // The always-on Settings surface owns the readable remote error state.
+        // Keep the bounded startup check quiet until its final attempt.
+      }
+      bootCheckAttempt += 1
+      if (bootCheckAttempt < 20) {
+        bootCheckTimer = setTimeout(() => { void checkBootConsistency() }, 250)
+      } else {
+        document.documentElement.setAttribute(BOOT_CONSISTENCY_ATTRIBUTE, 'failed')
+        console.error('[paimind-extension-center] Feature Pack boot consistency did not settle within 5 seconds')
+      }
+    }
+    scopeCtx.effect(() => {
+      bootCheckTimer = setTimeout(() => { void checkBootConsistency() }, 250)
+      return () => {
+        bootCheckDisposed = true
+        if (bootCheckTimer !== undefined) clearTimeout(bootCheckTimer)
+        document.documentElement.removeAttribute(BOOT_CONSISTENCY_ATTRIBUTE)
+      }
+    }, 'paimind-extension-center: bounded Client Feature Pack readiness')
+    const injectSection = (): ExtensionCenterInjected => ({
+      getExtensions,
+      subscribeExtensions: listener => scopeCtx.slots.subscribe(SLOT, listener),
+      listInventory,
+      describeFeaturePacks,
+      mutateFeaturePack,
+      reloadApplication: () => { window.location.reload() },
+      locale: scopeCtx.locale,
+    })
+    const label = (): string => scopeCtx.locale.getLocale().active.startsWith('zh') ? '扩展中心' : 'Extension Center'
+
+    scopeCtx.slots.inject('settings.section', () => scopeCtx.slots.register({
+      name: 'settings.section',
+      id: 'paimind-extensions',
+      order: 17,
+      label,
+      inject: injectSection,
+      children: { [SLOT]: { kind: 'list', scope: 'root' } },
+    }, props => <ExtensionCenterBoundary fallback={<div data-paimind-extension-boundary role="alert">{scopeCtx.locale.getLocale().active.startsWith('zh') ? '扩展中心遇到错误，其他 Harness 插件仍可继续工作。' : 'Extension Center encountered an error. Other Harness plugins can continue working.'}</div>}><ExtensionCenterSection {...props as ExtensionCenterProps} /></ExtensionCenterBoundary>))
   })
-  const label = (): string => ctx.locale.getLocale().active.startsWith('zh') ? '扩展中心' : 'Extension Center'
-
-  ctx.slots.inject('settings.section', () => ctx.slots.register({
-    name: 'settings.section',
-    id: 'paimind-extensions',
-    order: 17,
-    label,
-    inject: injectSection,
-    children: { [SLOT]: { kind: 'list', scope: 'root' } },
-  }, props => <ExtensionCenterBoundary fallback={<div data-paimind-extension-boundary role="alert">{ctx.locale.getLocale().active.startsWith('zh') ? '扩展中心遇到错误，其他 Harness 插件仍可继续工作。' : 'Extension Center encountered an error. Other Harness plugins can continue working.'}</div>}><ExtensionCenterSection {...props as ExtensionCenterProps} /></ExtensionCenterBoundary>))
+  try { await mounted } catch (error) { await disposeRemote(); throw error }
+  return async () => { await mounted.dispose(); await disposeRemote() }
 }

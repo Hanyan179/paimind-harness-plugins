@@ -72,7 +72,10 @@ function fixture(options: { readonly includeWorkflow?: boolean } = {}) {
   const sessionsState = {
     current: 'session-existing',
     byId: {
-      'session-existing': { id: 'session-existing', title: 'Existing', blank: false },
+      'session-existing': {
+        id: 'session-existing', title: 'Existing', blank: false,
+        cwd: '/workspace/current', agentPreset: 'paramont',
+      },
     },
   }
   const listeners = new Set<() => void>()
@@ -209,7 +212,10 @@ describe('conversational Scheduled Tasks client', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => { expect(f.create).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Direct daily brief', actionId: 'paimind:agent-prompt',
-      actionInput: { kind: 'agent-prompt', version: 1, prompt: 'Create a concise daily brief.' },
+      actionInput: {
+        kind: 'agent-prompt', version: 1, prompt: 'Create a concise daily brief.',
+        cwd: '/workspace/current', agentPreset: 'paramont',
+      },
     })) })
     expect(f.workspaces.startSession).not.toHaveBeenCalled()
     f.controller.dispose()

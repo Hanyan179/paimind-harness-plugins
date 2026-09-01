@@ -8,6 +8,16 @@ for (const file of await readdir(resolve(root, 'docs'), { recursive: true })) {
 }
 
 const failures = []
+const architecturePath = resolve(root, 'docs/architecture/plugin-framework.md')
+const architecture = await readFile(architecturePath, 'utf8')
+for (const forbidden of [
+  'The active runtime is the exact npm artifact',
+  'They are the selected matrix',
+]) {
+  if (architecture.includes(forbidden)) {
+    failures.push(`docs/architecture/plugin-framework.md: selected versions belong only in docs/compatibility/matrix.md (${forbidden})`)
+  }
+}
 for (const file of files) {
   const source = await readFile(file, 'utf8')
   for (const match of source.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
@@ -27,4 +37,3 @@ if (failures.length > 0) {
 } else {
   console.log(`documentation check passed: ${files.length} Markdown file(s), zero missing local links`)
 }
-

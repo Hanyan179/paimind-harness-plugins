@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { isAbsolute, relative, resolve } from 'node:path'
 import {
   artifactProducedFromToolMeta,
   artifactTraceFromToolMeta,
@@ -78,12 +79,99 @@ export interface PaimindArtifactGeneratorService {
   ): Promise<Readonly<PaimindGeneratedArtifactResult>>
 }
 
+export interface PaimindCurrentSessionArtifactRequirement {
+  readonly description: string
+  readonly kind?: PaimindArtifactEventKind
+  readonly producerIds?: readonly string[]
+  readonly excludedProducerIds?: readonly string[]
+  readonly pathSuffix?: string
+}
+
+function requiredText(value: unknown, label: string): string {
+  if (typeof value !== 'string' || value.trim() === '') throw new Error(`${label} must be a non-empty string`)
+  return value.trim()
+}
+
+/** Resolve a persisted Artifact path to one safe Workspace-relative path for native tools. */
+export function artifactWorkspaceRelativePath(
+  value: unknown,
+  exec: PaimindToolRunContext,
+  options: { readonly label: string; readonly pathSuffix?: string },
+): string {
+  const path = requiredText(value, options.label)
+  const cwd = exec.agent?.session.header.cwd
+  const candidate = isAbsolute(path)
+    ? (() => {
+        if (cwd === undefined) throw new Error(`${options.label} cannot be resolved without a Workspace root`)
+        return relative(resolve(cwd), path)
+      })()
+    : path
+  if (candidate === '' || isAbsolute(candidate) || candidate.split(/[\\/]+/).includes('..')) {
+    throw new Error(`${options.label} escapes the Workspace`)
+  }
+  if (options.pathSuffix !== undefined && !candidate.toLowerCase().endsWith(options.pathSuffix.toLowerCase())) {
+    throw new Error(`${options.label} must be a Workspace-relative ${options.pathSuffix} path`)
+  }
+  return candidate
+}
+
+/** Enforce the common Artifact identity, Session, producer, kind and suffix boundary. */
+export function requireCurrentSessionArtifact(
+  projectionValue: unknown,
+  exec: PaimindToolRunContext,
+  artifactId: string,
+  requirement: PaimindCurrentSessionArtifactRequirement,
+): Readonly<ArtifactProducedEnvelopeV1> {
+  const agent = exec.agent
+  if (agent === undefined) throw new Error(`${requirement.description} requires a live Harness Agent`)
+  const artifact = defineArtifactProjection(projectionValue as PaimindArtifactProjectionV1).artifacts
+    .find(candidate => candidate.artifactId === artifactId)
+  const allowedProducer = requirement.producerIds === undefined || requirement.producerIds.includes(artifact?.producerId ?? '')
+  const excludedProducer = requirement.excludedProducerIds?.includes(artifact?.producerId ?? '') ?? false
+  const validSuffix = requirement.pathSuffix === undefined
+    || (artifact?.path.toLowerCase().endsWith(requirement.pathSuffix.toLowerCase()) ?? false)
+  if (artifact === undefined
+    || artifact.state !== 'available'
+    || artifact.sessionId !== agent.id
+    || (requirement.kind !== undefined && artifact.kind !== requirement.kind)
+    || !allowedProducer
+    || excludedProducer
+    || !validSuffix) {
+    throw new Error(`Artifact ${artifactId} is not ${requirement.description}`)
+  }
+  return artifact
+}
+
 interface ProjectionState {
   readonly artifacts: readonly Readonly<ArtifactProducedEnvelopeV1>[]
   readonly traces: readonly Readonly<ArtifactTraceEnvelope>[]
 }
 
 const EMPTY_STATE: ProjectionState = Object.freeze({ artifacts: Object.freeze([]), traces: Object.freeze([]) })
+
+const artifactProjectionStateSchema = {
+  parse(value: unknown): ProjectionState {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error('invalid PAIMind artifact projection state')
+    }
+    const candidate = value as Partial<ProjectionState>
+    if (!Array.isArray(candidate.artifacts) || !Array.isArray(candidate.traces)) {
+      throw new Error('invalid PAIMind artifact projection state')
+    }
+    const projection = defineArtifactProjection({
+      schema: 'paimind.artifacts/v1',
+      artifacts: candidate.artifacts,
+      traces: candidate.traces,
+    })
+    return Object.freeze({ artifacts: projection.artifacts, traces: projection.traces })
+  },
+}
+
+const artifactProjectionViewSchema = {
+  parse(value: unknown): Readonly<PaimindArtifactProjectionV1> {
+    return defineArtifactProjection(value as PaimindArtifactProjectionV1)
+  },
+}
 
 function eventMeta(event: PaimindSessionEvent): unknown {
   if (event.type !== 'tool/result' || typeof event.data !== 'object' || event.data === null) return undefined
@@ -93,11 +181,7 @@ function eventMeta(event: PaimindSessionEvent): unknown {
 /** Pure durable fold: latest higher revision wins for each explicit artifact id. */
 export const artifactProjectionDefinition = {
   key: ARTIFACT_PROJECTION_KEY,
-  schema: {
-    parse(value: unknown): Readonly<PaimindArtifactProjectionV1> {
-      return defineArtifactProjection(value as PaimindArtifactProjectionV1)
-    },
-  },
+  stateSchema: artifactProjectionStateSchema,
   init(): ProjectionState { return EMPTY_STATE },
   apply(state: ProjectionState, event: PaimindSessionEvent): ProjectionState {
     const meta = eventMeta(event)
@@ -129,8 +213,11 @@ export const artifactProjectionDefinition = {
         : state.traces,
     })
   },
-  view(state: ProjectionState): Readonly<PaimindArtifactProjectionV1> {
-    return defineArtifactProjection({ schema: 'paimind.artifacts/v1', artifacts: state.artifacts, traces: state.traces })
+  wire: {
+    viewSchema: artifactProjectionViewSchema,
+    view(state: ProjectionState): Readonly<PaimindArtifactProjectionV1> {
+      return defineArtifactProjection({ schema: 'paimind.artifacts/v1', artifacts: state.artifacts, traces: state.traces })
+    },
   },
   stateVersion: 1,
 } as const

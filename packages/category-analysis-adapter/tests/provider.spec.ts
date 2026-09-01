@@ -4,11 +4,47 @@ import { resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { describe, expect, it, vi } from 'vitest'
 import { defineAnalysisDataResult } from '../../presentation-contracts/src/index.js'
-import { FROZEN_DATA_PROVIDER_ID, PERFORMANCE_ANALYSIS_TOOL, apply } from '../src/index.js'
+import {
+  FROZEN_DATA_PROVIDER_ID,
+  PERFORMANCE_ANALYSIS_TOOL,
+  apply,
+  frozenDataProvider,
+  opportunityProvider,
+  performanceProvider,
+} from '../src/index.js'
 
 const run = promisify(execFile)
 
 describe('category analysis adapter', () => {
+  it('binds prepare, performance, and opportunity commands to the current Harness Node runtime', async () => {
+    const runWorkspaceCommand = vi.fn(async () => ({ stdout: 'success' }))
+    const context = {
+      signal: new AbortController().signal,
+      writeText: vi.fn(),
+      runWorkspaceCommand,
+    }
+    await frozenDataProvider.generate({ output_dir: 'results/frozen' }, context)
+    await performanceProvider.generate({
+      __manifest_path: 'results/frozen/source-manifest.json',
+      output_path: 'results/demo.performance.data-result.json',
+    }, context)
+    await opportunityProvider.generate({
+      __manifest_path: 'results/frozen/source-manifest.json',
+      output_path: 'results/demo.opportunity.data-result.json',
+    }, context)
+
+    expect(runWorkspaceCommand).toHaveBeenCalledTimes(3)
+    for (const [{ command }] of runWorkspaceCommand.mock.calls) {
+      expect(command).toContain(process.execPath)
+      expect(command).not.toMatch(/^'node'\s/)
+    }
+    expect(runWorkspaceCommand.mock.calls.map(([request]) => request.command)).toEqual([
+      expect.stringMatching(/runner\.mjs'.*'prepare'/),
+      expect.stringMatching(/runner\.mjs'.*'performance'/),
+      expect.stringMatching(/runner\.mjs'.*'opportunity'/),
+    ])
+  })
+
   it('creates hash-locked synthetic data and deterministic source-linked Facts', async () => {
     const temp = await mkdtemp(resolve(process.cwd(), '.tmp-category-analysis-'))
     const relative = temp.slice(process.cwd().length + 1)

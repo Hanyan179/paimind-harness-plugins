@@ -7,6 +7,7 @@ const profile = z.object({
   role: z.string(), goal: z.string(), behavior: z.string(),
   preferredSkillNames: z.array(z.string()).readonly(), instructions: z.string(),
   productKind: z.enum(['personal', 'business']), businessCategory: z.string().optional(), businessCategoryId: id.optional(),
+  authoringSessionId: sessionId.optional(), authoringCursor: z.number().int().nonnegative().optional(),
   revision: z.number().int().positive(), configVersion: z.string(), updatedAt: z.number().nonnegative(),
   health: z.enum(['healthy', 'broken']), healthMessage: z.string().optional(),
 }).readonly()
@@ -15,6 +16,7 @@ const profileInput = z.object({
   role: z.string(), goal: z.string(), behavior: z.string(),
   preferredSkillNames: z.array(z.string()).readonly(), instructions: z.string(),
   productKind: z.enum(['personal', 'business']).optional(), businessCategory: z.string().optional(), businessCategoryId: id.optional(),
+  authoringSessionId: sessionId.optional(), authoringCursor: z.number().int().nonnegative().optional(),
   expectedVersion: z.string().optional(),
 }).readonly()
 const binding = z.object({ sessionId, agentId: id, presetId: id, configVersion: z.string(), boundAt: z.number().nonnegative() }).readonly()

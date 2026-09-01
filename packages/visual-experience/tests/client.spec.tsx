@@ -10,6 +10,7 @@ import type {
 } from '@paimind/harness-compat'
 import {
   apply,
+  PaimindComposerOverlayPresenter,
   type PaimindExperienceModeController,
 } from '../src/client/index.js'
 import {
@@ -139,6 +140,71 @@ afterEach(() => {
 })
 
 describe('PAIMind visual experience client', () => {
+  it('coalesces resize delivery without reconnecting the same composer or rewriting its room', () => {
+    document.body.innerHTML = '<div data-composer-card><div id="anchor"><div data-slot="conversation.input.overlay"></div></div></div>'
+    let resizeCallback: ResizeObserverCallback | undefined
+    let resizeObserver: ResizeObserver | undefined
+    const observe = vi.fn()
+    const disconnect = vi.fn()
+    class FakeResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resizeCallback = callback
+        resizeObserver = this as unknown as ResizeObserver
+      }
+
+      observe = observe
+      disconnect = disconnect
+      unobserve = vi.fn()
+    }
+    vi.stubGlobal('ResizeObserver', FakeResizeObserver)
+    const frames: FrameRequestCallback[] = []
+    const requestAnimationFrame = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      frames.push(callback)
+      return frames.length
+    })
+    const cancelAnimationFrame = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {})
+    const anchor = document.querySelector<HTMLElement>('#anchor')!
+    const setProperty = vi.spyOn(anchor.style, 'setProperty')
+    const presenter = new PaimindComposerOverlayPresenter(document, window)
+
+    try {
+      presenter.setMode('paimind')
+      expect(observe).toHaveBeenCalledOnce()
+      const disconnectCount = disconnect.mock.calls.length
+      const roomWriteCount = setProperty.mock.calls.filter(([name]) => name === '--paimind-composer-overlay-room').length
+
+      resizeCallback?.([], resizeObserver!)
+      resizeCallback?.([], resizeObserver!)
+      expect(requestAnimationFrame).toHaveBeenCalledOnce()
+      expect(frames).toHaveLength(1)
+      frames.shift()?.(performance.now())
+
+      expect(observe).toHaveBeenCalledOnce()
+      expect(disconnect).toHaveBeenCalledTimes(disconnectCount)
+      expect(setProperty.mock.calls.filter(([name]) => name === '--paimind-composer-overlay-room')).toHaveLength(roomWriteCount)
+    } finally {
+      presenter.dispose()
+      expect(cancelAnimationFrame).not.toHaveBeenCalled()
+      vi.unstubAllGlobals()
+      vi.restoreAllMocks()
+    }
+  })
+
+  it('labels a compact native Settings trigger and reverses the label on unload', async () => {
+    document.documentElement.lang = 'zh-CN'
+    const { fixture } = setup()
+    const trigger = document.createElement('button')
+    trigger.innerHTML = '<span data-slot="settings.trigger"></span>'
+    document.body.append(trigger)
+
+    await waitFor(() => expect(trigger).toHaveAttribute('aria-label', '设置'))
+    expect(trigger).toHaveAttribute('data-paimind-settings-trigger-label', '设置')
+
+    fixture.disposeEffects()
+    expect(trigger).not.toHaveAttribute('aria-label')
+    expect(trigger).not.toHaveAttribute('data-paimind-settings-trigger-label')
+  })
+
   it('enables the reversible experience, renders the welcome entry and restores native mode', async () => {
     const { fixture, scope, theme, removeTheme, nativeSelect } = setup()
     await waitFor(() => expect(fixture.slots.filter(entry => entry.injectedName === 'conversation.hero.agentPreset' && !entry.disposed())).toHaveLength(2))
@@ -147,7 +213,12 @@ describe('PAIMind visual experience client', () => {
     expect(document.body).not.toHaveAttribute('data-paimind-composer-overlay')
     expect(document.querySelector('#composer-overlay-anchor')).toHaveAttribute('data-paimind-composer-overlay-anchor')
     expect((document.querySelector('#composer-overlay-anchor') as HTMLElement).style.getPropertyValue('--paimind-composer-overlay-room')).toMatch(/px$/)
-    expect(theme.overrideTokens).toHaveBeenCalledWith('@paimind/visual-experience', expect.objectContaining({ '--dsw-alias-bg-base': expect.any(Object) }))
+    expect(theme.overrideTokens).toHaveBeenCalledWith('@paimind/visual-experience', expect.objectContaining({
+      '--dsw-alias-bg-base': expect.any(Object),
+      '--dsw-alias-bg-layer-1': { light: '#ffffff', dark: '#141d2d' },
+      '--dsw-alias-bg-layer-2': { light: '#eff3f9', dark: '#1d283b' },
+      '--dsw-alias-bg-overlay': { light: '#fcfcfb', dark: '#111927' },
+    }))
     expect(document.querySelector('style[data-paimind-plugin="@paimind/visual-experience"]')).not.toBeNull()
 
     const shell = fixture.slots.find(entry => entry.injectedName === 'shell.overlay' && entry.options.id === 'paimind-visual-experience-hero')!

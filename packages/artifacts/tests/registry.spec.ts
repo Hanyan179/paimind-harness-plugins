@@ -30,6 +30,17 @@ function source(id: string, read: () => readonly PaimindArtifact[]): PaimindArti
 }
 
 describe('FP06-FP07 artifact projection', () => {
+  it('opens only a canonical registered Artifact through the owner-provided handler', () => {
+    const open = vi.fn(() => ({ state: 'opened' as const }))
+    const registry = new ArtifactRegistry(open)
+    registry.registerSource(source('owner', () => [artifact()]))
+
+    expect(registry.open('artifact-1', 'owner')).toEqual({ state: 'opened' })
+    expect(open).toHaveBeenCalledWith(expect.objectContaining({ id: 'artifact-1', sourceId: 'owner' }))
+    expect(registry.open('artifact-1', 'other').state).toBe('failed')
+    expect(registry.open('unknown').state).toBe('failed')
+  })
+
   it('normalizes, freezes, orders and scopes only by explicit identifiers', () => {
     const registry = new ArtifactRegistry()
     registry.registerSource(source('producer', () => [

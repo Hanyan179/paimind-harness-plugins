@@ -11,7 +11,7 @@ export function apply(): void {}
 /** Stable PAIMind-side contract version, independent of the provider package version. */
 export const PAIMIND_SIDEBAR_CONTRACT_VERSION = 4 as const
 /** Exactly verified provider release. Floating ranges are forbidden at the bundle boundary. */
-export const VERIFIED_BETTER_SIDEBAR_VERSION = '0.14.0' as const
+export const VERIFIED_BETTER_SIDEBAR_VERSION = '0.16.1' as const
 
 export type PaimindSidebarProviderState = 'active' | 'missing' | 'incompatible' | 'failed'
 
@@ -112,17 +112,53 @@ export interface ExternalSidebarTabDescriptor {
   readonly component: (props: ExternalSidebarTabProps) => ReactNode
 }
 
+export interface ExternalSidebarFileViewerProps {
+  readonly ctx?: unknown
+  readonly store?: unknown
+  readonly scope: { readonly sessionId: string; readonly cwd?: string }
+  readonly path: string
+  readonly title: string
+  readonly viewerId?: string
+  readonly content?: string
+  readonly truncated?: boolean
+  readonly mediaUrl?: string
+  readonly customData?: unknown
+  readonly toolbar?: 'self' | 'host'
+  readonly onToolbarState?: (state: unknown) => void
+  readonly onToolbarControls?: (controls: unknown) => void
+}
+
 export interface ExternalSidebarFileViewerDescriptor {
   readonly id: string
   readonly title?: string | (() => string)
+  readonly icon?: ReactNode | ((size: number) => ReactNode)
   readonly exts?: readonly string[]
   readonly priority?: number
-  readonly fetchStrategy?: 'mediaUrl'
-  readonly component?: (props: {
-    readonly path: string
-    readonly title: string
-    readonly mediaUrl?: string
-  }) => ReactNode
+  readonly fetchStrategy?: 'none' | 'fsRead' | 'mediaUrl' | 'custom' | 'binary-download'
+  readonly detect?: (path: string, head: Uint8Array) => boolean
+  readonly load?: (path: string, scope: ExternalSidebarFileViewerProps['scope'], signal?: AbortSignal) => Promise<unknown>
+  readonly settings?: unknown
+  readonly component?: (props: ExternalSidebarFileViewerProps) => ReactNode
+}
+
+interface ExternalSidebarTabSnapshot {
+  readonly id: string
+  readonly type: string
+  readonly title: string
+  readonly path?: string
+}
+
+type ExternalSidebarSplitSnapshot =
+  | { readonly kind: 'leaf'; readonly tabs: readonly ExternalSidebarTabSnapshot[] }
+  | { readonly kind: 'split'; readonly children: readonly ExternalSidebarSplitSnapshot[] }
+
+interface ExternalSidebarSnapshot {
+  readonly sessionId?: string
+  readonly state?: {
+    readonly splits: ExternalSidebarSplitSnapshot
+    readonly bottomSplits: ExternalSidebarSplitSnapshot
+    readonly floats: readonly { readonly tab: ExternalSidebarTabSnapshot }[]
+  }
 }
 
 export interface ExternalBetterSidebarService {
@@ -136,8 +172,12 @@ export interface ExternalBetterSidebarService {
   }): void
   closeTab?(tabId: string): void
   getTab?(id: string): ExternalSidebarTabDescriptor | undefined
+  getFileViewers?(): readonly ExternalSidebarFileViewerDescriptor[]
   isTabEnabled?(id: string): boolean
   matchFileViewer?(path: string, head?: Uint8Array): ExternalSidebarFileViewerDescriptor | undefined
+  subscribe?(listener: () => void): () => void
+  getSnapshot?(): ExternalSidebarSnapshot
+  subscribeState?(listener: () => void): () => void
 }
 
 interface Registration {
@@ -148,6 +188,26 @@ interface Registration {
 interface ViewerRegistration {
   readonly definitions: PaimindSidebarFileViewerDefinition[]
   readonly disposeProvider: () => void
+}
+
+const FILE_REFRESH_REOPEN_DELAY_MS = 50
+
+function collectPersistedEditorTabs(snapshot: ExternalSidebarSnapshot): ExternalSidebarTabSnapshot[] {
+  if (snapshot.state === undefined) return []
+  const tabs: ExternalSidebarTabSnapshot[] = []
+  const collect = (node: ExternalSidebarSplitSnapshot): void => {
+    if (node.kind === 'leaf') {
+      tabs.push(...node.tabs.filter(tab => tab.type === 'editor' && tab.path !== undefined))
+      return
+    }
+    for (const child of node.children) collect(child)
+  }
+  collect(snapshot.state.splits)
+  collect(snapshot.state.bottomSplits)
+  tabs.push(...snapshot.state.floats
+    .map(entry => entry.tab)
+    .filter(tab => tab.type === 'editor' && tab.path !== undefined))
+  return [...new Map(tabs.map(tab => [tab.id, tab])).values()]
 }
 
 const freezeStatus = (
@@ -179,6 +239,13 @@ export class BetterSidebarAdapter implements PaimindSidebarService {
   private readonly listeners = new Set<() => void>()
   private readonly registrations = new Map<string, Registration>()
   private readonly viewerRegistrations = new Map<string, ViewerRegistration>()
+  private readonly pendingFileOpens = new Map<string, ReturnType<typeof setTimeout>>()
+  private pendingProviderRehydrate: ReturnType<typeof setTimeout> | null = null
+  private disposeProviderRegistry: (() => void) | null = null
+  private disposeProviderState: (() => void) | null = null
+  private providerViewerFingerprint = ''
+  private providerViewerRevision = 0
+  private readonly rehydratedProviderStates = new Set<string>()
   private disposed = false
 
   constructor(
@@ -197,6 +264,14 @@ export class BetterSidebarAdapter implements PaimindSidebarService {
     } else {
       this.provider = provider
       this.status = freezeStatus('active')
+      this.providerViewerFingerprint = this.fileViewerFingerprint()
+      if (typeof provider.subscribe === 'function') {
+        this.disposeProviderRegistry = provider.subscribe(() => { this.onProviderRegistryChange() })
+      }
+      if (typeof provider.subscribeState === 'function') {
+        this.disposeProviderState = provider.subscribeState(() => { this.queueProviderRehydrate() })
+      }
+      this.queueProviderRehydrate()
     }
   }
 
@@ -372,14 +447,16 @@ export class BetterSidebarAdapter implements PaimindSidebarService {
     const at = Math.max(request.path.lastIndexOf('/'), request.path.lastIndexOf('\\'))
     const title = request.title ?? (at === -1 ? request.path : request.path.slice(at + 1))
     const id = `editor:${request.path}`
+    const seed = { type: 'editor', title, path: request.path, id }
     try {
       if (request.refresh === true) {
         if (typeof this.provider.closeTab !== 'function') {
           return { state: 'editor-unavailable', viewerId: null }
         }
-        this.provider.closeTab(id)
+        this.refreshProviderFile(id, seed)
+        return { state: 'opened', viewerId: capability.viewerId }
       }
-      this.provider.openTab({ type: 'editor', title, path: request.path, id })
+      this.provider.openTab(seed)
       return { state: 'opened', viewerId: capability.viewerId }
     } catch (error) {
       this.fail(error)
@@ -393,6 +470,14 @@ export class BetterSidebarAdapter implements PaimindSidebarService {
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
+    if (this.pendingProviderRehydrate !== null) clearTimeout(this.pendingProviderRehydrate)
+    this.pendingProviderRehydrate = null
+    for (const timer of this.pendingFileOpens.values()) clearTimeout(timer)
+    this.pendingFileOpens.clear()
+    try { this.disposeProviderState?.() } catch { /* disposal remains best-effort */ }
+    try { this.disposeProviderRegistry?.() } catch { /* disposal remains best-effort */ }
+    this.disposeProviderState = null
+    this.disposeProviderRegistry = null
     for (const registration of [...this.registrations.values()].reverse()) {
       try { registration.disposeProvider() } catch { /* disposal remains best-effort */ }
     }
@@ -402,6 +487,72 @@ export class BetterSidebarAdapter implements PaimindSidebarService {
     this.registrations.clear()
     this.viewerRegistrations.clear()
     this.listeners.clear()
+  }
+
+  private refreshProviderFile(
+    id: string,
+    seed: { readonly type: string; readonly title?: string; readonly path?: string; readonly id?: string },
+  ): void {
+    if (this.provider?.closeTab === undefined) return
+    this.provider.closeTab(id)
+    const pending = this.pendingFileOpens.get(id)
+    if (pending !== undefined) clearTimeout(pending)
+    const timer = setTimeout(() => {
+      this.pendingFileOpens.delete(id)
+      if (this.disposed || this.status.state !== 'active' || this.provider === null) return
+      try { this.provider.openTab(seed) } catch (error) { this.fail(error) }
+    }, FILE_REFRESH_REOPEN_DELAY_MS)
+    this.pendingFileOpens.set(id, timer)
+  }
+
+  private fileViewerFingerprint(): string {
+    if (this.provider?.getFileViewers === undefined) return ''
+    return this.provider.getFileViewers().map(viewer => viewer.id).sort().join('\u0000')
+  }
+
+  private onProviderRegistryChange(): void {
+    if (this.disposed) return
+    try {
+      const fingerprint = this.fileViewerFingerprint()
+      if (fingerprint === this.providerViewerFingerprint) return
+      this.providerViewerFingerprint = fingerprint
+      this.providerViewerRevision += 1
+      this.queueProviderRehydrate()
+    } catch (error) {
+      this.fail(error)
+    }
+  }
+
+  private queueProviderRehydrate(): void {
+    if (
+      this.disposed
+      || this.provider?.getSnapshot === undefined
+      || this.provider.matchFileViewer === undefined
+      || this.provider.closeTab === undefined
+    ) return
+    if (this.pendingProviderRehydrate !== null) clearTimeout(this.pendingProviderRehydrate)
+    this.pendingProviderRehydrate = setTimeout(() => {
+      this.pendingProviderRehydrate = null
+      if (this.disposed || this.provider?.getSnapshot === undefined) return
+      try {
+        const snapshot = this.provider.getSnapshot()
+        if (snapshot.sessionId === undefined) return
+        // A late viewer registration invalidates persisted editor mounts once.
+        // Session changes reuse the same registry and must not close/reopen every
+        // editor tab while the provider is reconciling its own React tree.
+        const stateKey = String(this.providerViewerRevision)
+        if (this.rehydratedProviderStates.has(stateKey)) return
+        this.rehydratedProviderStates.add(stateKey)
+        for (const tab of collectPersistedEditorTabs(snapshot)) {
+          if (tab.path === undefined || this.provider.matchFileViewer?.(tab.path) === undefined) continue
+          this.refreshProviderFile(tab.id, {
+            type: 'editor', title: tab.title, path: tab.path, id: tab.id,
+          })
+        }
+      } catch (error) {
+        this.fail(error)
+      }
+    }, FILE_REFRESH_REOPEN_DELAY_MS)
   }
 
   private fail(reason: unknown): void {

@@ -27,6 +27,7 @@ describe('R3 Bento generator provider', () => {
     const html = writeText.mock.calls[0]?.[1] as string
     expect(output).toEqual({ path: 'deck.html', title: 'Deck' })
     expect(html).toContain("paimind:bento-ready")
+    expect(html).toContain("paimind:bento-manifest")
     expect(html).toContain("paimind:bento-navigate")
     expect(html).not.toMatch(/https?:\/\//)
     expect(html).not.toMatch(/<script[^>]+src=/)
@@ -65,6 +66,12 @@ describe('R3 Bento generator provider', () => {
     expect(html).toContain('paimind:bento-navigate')
     expect(html).toContain('Tracing evidence…')
     expect(html).toContain('trace-text-shimmer')
+    expect(html).toContain('data-paimind-mode-contract="exclusive-selection-v1"')
+    expect(html).toContain('body[data-mode="trace"][data-trace-status="active"]')
+    expect(html).toContain("if(mode!=='trace')")
+    expect(html).toContain("if(data.mode==='preview')")
+    expect(html).toContain('← / → · Navigate slides')
+    expect(html).toContain("mode==='preview'")
     expect(html).toContain('prefers-reduced-motion:reduce')
     expect(html).toContain('data-fit-profile=')
     expect(html).toContain('data-fit-scale="1"')
@@ -82,6 +89,21 @@ describe('R3 Bento generator provider', () => {
     expect([...writes.keys()]).toEqual(['result.trace.json', 'result.validation.json', 'result.bento.html'])
     expect(JSON.parse(writes.get('result.validation.json') ?? '{}')).toMatchObject({ valid: true, resolutionRate: 1, factValuesChanged: false, sourceHashesVerified: true, outlineArtifactId: 'artifact:outline' })
     expect(result.traceDocumentRef).toMatchObject({ path: 'result.trace.json', schema: 'paimind.presentation-trace/v3' })
+  })
+
+  it('renders a trusted complete Outline Artifact without copying large JSON through command stdout', async () => {
+    const runWorkspaceCommand = vi.fn(async () => ({ stdout: JSON.stringify({
+      status: 'success', title: 'Walmart Kids Crafts Growth Proposal', tracePath: 'result.trace.json',
+      validationPath: 'result.validation.json', traceSchema: 'paimind.presentation-trace/v3',
+      traceSha256: 'b'.repeat(64), traceBytes: 1234,
+    }) }))
+    const result = await traceableBentoProvider.generate({
+      file_path: 'result.bento.html', outline_artifact_id: 'artifact:outline', __outline_path: 'result.outline.json',
+    }, { signal: new AbortController().signal, writeText: vi.fn(), runWorkspaceCommand })
+    expect(runWorkspaceCommand).toHaveBeenCalledWith(expect.objectContaining({ command: expect.stringContaining('render-exact-outline.mjs') }))
+    expect(runWorkspaceCommand.mock.calls[0]?.[0].command).toContain(process.execPath)
+    expect(runWorkspaceCommand.mock.calls[0]?.[0].command).not.toContain('--fact-set')
+    expect(result.traceDocumentRef).toEqual({ path: 'result.trace.json', schema: 'paimind.presentation-trace/v3', sha256: 'b'.repeat(64), bytes: 1234 })
   })
 
   it('assigns a tighter fit profile to copy-heavy slides before runtime measurement', () => {
@@ -135,6 +157,7 @@ describe('R3 Bento generator provider', () => {
       sessionProjections: { register: vi.fn(), snapshot: () => ({ asOfSeq: 2, values: { 'paimind.artifacts': { schema: 'paimind.artifacts/v1', traces: [], artifacts: [
         { schema: 'paimind.artifact-produced/v1', artifactId: 'artifact:fact-set', sessionId: 'session-1', workspaceId: 'workspace-1', path: '/workspace/results/proposal.fact-set.json', title: 'Fact Set', kind: 'json', previewKind: 'data-document', revision: 1, producerId: 'paimind.fact-layer', taskId: 'task-1', state: 'available', producedAt: 1 },
         { schema: 'paimind.artifact-produced/v1', artifactId: 'artifact:outline', sessionId: 'session-1', workspaceId: 'workspace-1', path: '/workspace/results/proposal.outline.json', title: 'Outline', kind: 'json', previewKind: 'data-document', revision: 1, producerId: 'paimind.generator.presentation-outline', taskId: 'task-2', state: 'available', producedAt: 2 },
+        { schema: 'paimind.artifact-produced/v1', artifactId: 'artifact:walmart-outline', sessionId: 'session-1', workspaceId: 'workspace-1', path: '/workspace/results/walmart.outline.json', title: 'Walmart Outline', kind: 'json', previewKind: 'data-document', revision: 1, producerId: 'paimind.walmart.buyer-proposal-outline', taskId: 'task-3', state: 'available', producedAt: 3 },
       ] } } }) },
       effect(install) { install() },
     } as any)
@@ -146,6 +169,12 @@ describe('R3 Bento generator provider', () => {
     expect(execute).toHaveBeenLastCalledWith('paimind.generator.presentation-outline', expect.objectContaining({ __fact_set_path: 'results/proposal.fact-set.json' }), exec)
     await definitions.find(definition => definition.name === 'generate_traceable_bento_from_outline').execute({ file_path: 'results/proposal.bento.html', outline_artifact_id: 'artifact:outline', fact_set_artifact_id: 'artifact:fact-set' }, exec)
     expect(execute).toHaveBeenLastCalledWith('paimind.generator.traceable-bento-deck', expect.objectContaining({ __outline_path: 'results/proposal.outline.json', __fact_set_path: 'results/proposal.fact-set.json', __fact_set_artifact_id: 'artifact:fact-set' }), exec)
+    await definitions.find(definition => definition.name === 'generate_traceable_bento_from_outline').execute({ file_path: 'results/walmart.bento.html', outline_artifact_id: 'artifact:walmart-outline' }, exec)
+    expect(execute).toHaveBeenLastCalledWith('paimind.generator.traceable-bento-deck', expect.objectContaining({ __outline_path: 'results/walmart.outline.json' }), exec)
+    expect(execute.mock.calls.at(-1)?.[1]).not.toHaveProperty('__fact_set_path')
+    await definitions.find(definition => definition.name === 'generate_traceable_bento_from_outline').execute({ file_path: 'results/walmart.bento.html', outline_artifact_id: 'artifact:walmart-outline', fact_set_artifact_id: '' }, exec)
+    expect(execute).toHaveBeenLastCalledWith('paimind.generator.traceable-bento-deck', expect.objectContaining({ __outline_path: 'results/walmart.outline.json' }), exec)
+    expect(execute.mock.calls.at(-1)?.[1]).not.toHaveProperty('__fact_set_path')
     await definitions.find(definition => definition.name === 'generate_traceable_bento_presentation').execute({ file_path: 'results/proposal.bento.html', outline_artifact_id: 'artifact:outline', outline: boundOutline }, exec)
     expect(execute).toHaveBeenLastCalledWith('paimind.generator.traceable-bento-deck', expect.objectContaining({ __outline_path: 'results/proposal.outline.json', __fact_set_path: 'results/proposal.fact-set.json' }), exec)
   })

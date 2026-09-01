@@ -150,9 +150,11 @@ export class PaimindExperienceModeController {
 
 const THEME_TOKENS = Object.freeze({
   '--dsw-alias-bg-base': { light: '#f7f8fb', dark: '#0c1320' },
-  '--dsw-alias-bg-layer-1': { light: 'rgba(255,255,255,.86)', dark: 'rgba(20,29,45,.88)' },
-  '--dsw-alias-bg-layer-2': { light: 'rgba(239,243,249,.72)', dark: 'rgba(29,40,59,.72)' },
-  '--dsw-alias-bg-overlay': { light: 'rgba(252,252,251,.96)', dark: 'rgba(17,25,39,.96)' },
+  // Harness-owned structural surfaces must stay opaque so dialogs never reveal
+  // unrelated page content. Plugin-owned glass surfaces use --paimind-glass below.
+  '--dsw-alias-bg-layer-1': { light: '#ffffff', dark: '#141d2d' },
+  '--dsw-alias-bg-layer-2': { light: '#eff3f9', dark: '#1d283b' },
+  '--dsw-alias-bg-overlay': { light: '#fcfcfb', dark: '#111927' },
   '--dsw-alias-border-l1': { light: 'rgba(19,45,76,.10)', dark: 'rgba(190,204,225,.13)' },
   '--dsw-alias-border-l2': { light: 'rgba(19,45,76,.18)', dark: 'rgba(190,204,225,.22)' },
   '--dsw-alias-brand-primary': { light: '#123d68', dark: '#8eb5df' },
@@ -355,7 +357,9 @@ export class PaimindComposerOverlayPresenter {
   private mode: PaimindExperienceMode = 'native'
   private disposed = false
   private queued = false
+  private animationFrame: number | null = null
   private anchor: HTMLElement | null = null
+  private observedComposer: HTMLElement | null = null
   private disclosureList: HTMLElement | null = null
   private disclosure: HTMLElement | null = null
   private hoveredOption: HTMLElement | null = null
@@ -386,8 +390,14 @@ export class PaimindComposerOverlayPresenter {
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
+    if (this.animationFrame !== null) {
+      this.win.cancelAnimationFrame(this.animationFrame)
+      this.animationFrame = null
+    }
+    this.queued = false
     this.observer.disconnect()
     this.resizeObserver?.disconnect()
+    this.observedComposer = null
     this.win.removeEventListener('resize', this.schedule)
     this.doc.removeEventListener('keydown', this.onKeyboardNavigation, true)
     this.clearDisclosure()
@@ -398,10 +408,16 @@ export class PaimindComposerOverlayPresenter {
   private readonly schedule = (): void => {
     if (this.queued || this.disposed) return
     this.queued = true
-    queueMicrotask(() => {
+    const apply = (): void => {
+      this.animationFrame = null
       this.queued = false
       this.apply()
-    })
+    }
+    if (typeof this.win.requestAnimationFrame === 'function') {
+      this.animationFrame = this.win.requestAnimationFrame(apply)
+    } else {
+      queueMicrotask(apply)
+    }
   }
 
   private apply(): void {
@@ -420,11 +436,17 @@ export class PaimindComposerOverlayPresenter {
 
     const composer = slot.closest<HTMLElement>('[data-composer-card]')
     nextAnchor.setAttribute(COMPOSER_OVERLAY_ANCHOR_MARKER, '')
-    this.resizeObserver?.disconnect()
-    if (composer !== null) this.resizeObserver?.observe(composer)
+    if (this.observedComposer !== composer) {
+      this.resizeObserver?.disconnect()
+      this.observedComposer = composer
+      if (composer !== null) this.resizeObserver?.observe(composer)
+    }
     const top = composer?.getBoundingClientRect().top ?? this.win.innerHeight
     const room = Math.max(0, Math.floor(top - 16))
-    nextAnchor.style.setProperty(COMPOSER_OVERLAY_ROOM, `${room}px`)
+    const roomValue = `${room}px`
+    if (nextAnchor.style.getPropertyValue(COMPOSER_OVERLAY_ROOM) !== roomValue) {
+      nextAnchor.style.setProperty(COMPOSER_OVERLAY_ROOM, roomValue)
+    }
     const list = slot.querySelector<HTMLElement>('[role="listbox"]')
     if (list !== null) {
       this.doc.body.dataset.paimindComposerOverlay = 'open'
@@ -602,6 +624,7 @@ export class PaimindComposerOverlayPresenter {
   private clearAnchor(): void {
     this.clearDisclosure()
     this.resizeObserver?.disconnect()
+    this.observedComposer = null
     this.anchor?.removeAttribute(COMPOSER_OVERLAY_ANCHOR_MARKER)
     this.anchor?.style.removeProperty(COMPOSER_OVERLAY_ROOM)
     this.anchor = null
@@ -1180,6 +1203,36 @@ function installAgentExperience(
   }
 }
 
+const PAIMIND_SETTINGS_TRIGGER_LABEL_MARKER = 'paimindSettingsTriggerLabel'
+
+/** Keep the compact native Settings rail trigger discoverable by keyboard and assistive tech. */
+export function installHarnessSettingsTriggerAccessibility(doc: Document): () => void {
+  const labelled = new Set<HTMLButtonElement>()
+  const sync = (): void => {
+    const slot = doc.querySelector<HTMLElement>('[data-slot="settings.trigger"]')
+    const button = slot?.closest<HTMLButtonElement>('button') ?? null
+    if (button === null || button.hasAttribute('aria-label')) return
+    const label = doc.documentElement.lang.toLowerCase().startsWith('zh') ? '设置' : 'Settings'
+    button.setAttribute('aria-label', label)
+    button.dataset[PAIMIND_SETTINGS_TRIGGER_LABEL_MARKER] = label
+    labelled.add(button)
+  }
+  const observer = new MutationObserver(sync)
+  observer.observe(doc.documentElement, { childList: true, subtree: true })
+  sync()
+  return () => {
+    observer.disconnect()
+    for (const button of labelled) {
+      const label = button.dataset[PAIMIND_SETTINGS_TRIGGER_LABEL_MARKER]
+      if (label !== undefined && button.getAttribute('aria-label') === label) {
+        button.removeAttribute('aria-label')
+      }
+      delete button.dataset[PAIMIND_SETTINGS_TRIGGER_LABEL_MARKER]
+    }
+    labelled.clear()
+  }
+}
+
 export function apply(ctx: VisualExperienceClientContext): void {
   contributePaimindExtension(ctx.slots, {
     id: 'paimind:visual-experience',
@@ -1200,6 +1253,7 @@ export function apply(ctx: VisualExperienceClientContext): void {
   })
   const mode = new PaimindExperienceModeController(scope)
   ctx.effect(installStyle, 'paimind-visual-experience: style')
+  ctx.effect(() => installHarnessSettingsTriggerAccessibility(document), 'paimind-visual-experience: Settings trigger accessibility')
   ctx.effect(() => () => { mode.dispose() }, 'paimind-visual-experience: mode controller')
   ctx.effect(() => installExperienceRuntime(ctx, mode), 'paimind-visual-experience: reversible runtime')
   ctx.effect(() => installAgentExperience(ctx, mode), 'paimind-visual-experience: native Agent bridge')

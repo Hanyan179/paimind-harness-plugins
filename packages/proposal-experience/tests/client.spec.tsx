@@ -44,11 +44,11 @@ describe('Proposal Assistant Experience', () => {
     expect(container.querySelectorAll('[data-paimind-brand-logo]')).toHaveLength(2)
     expect(container.querySelector('[data-mode="ai-tool-question"][data-trigger="ask-user-question"]')).not.toBeNull()
     expect(container.querySelector('[data-paimind-agent-avatar-seat][data-paimind-agent-id="proposal-assistant"]')).not.toBeNull()
-    expect(screen.getByText('Step 1 of 4')).toBeInTheDocument()
+    expect(screen.getByText('AI-selected question')).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Dollar General' }).querySelector('[data-brand="dollar-general"]')).not.toBeNull()
     expect(screen.getByRole('radio', { name: 'Walmart' }).querySelector('[data-brand="walmart"]')).not.toBeNull()
     expect(screen.getByRole('radio', { name: 'Dollar General' })).toHaveAttribute('data-focused', 'false')
-    expect(screen.queryByRole('button', { name: /Back to/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
     fireEvent.click(screen.getByRole('radio', { name: 'Walmart' }))
     expect(pending.respond).not.toHaveBeenCalled()
@@ -114,20 +114,67 @@ describe('Proposal Assistant Experience', () => {
     }))
   })
 
+  it('presents matched capability content as business choices instead of Skill selection', async () => {
+    const pending = wait({
+      id: PROPOSAL_QUESTION_IDS.contentData,
+      question: 'What content and data should this proposal include?',
+      detail: 'These options come from capabilities matched to your proposal background.',
+      multiSelect: true,
+      options: [
+        { label: 'Sales Performance & Momentum (Recommended)', description: 'Sales, units, average price and weekly trend.' },
+        { label: 'Category Opportunity Priorities', description: 'Opportunity tiers and evidence-backed growth actions.' },
+      ],
+    })
+    const { container } = render(<ProposalQuestionComposer matched={pending} />)
+    expect(screen.getByText('AI-selected question')).toBeInTheDocument()
+    expect(screen.getAllByText('Available from matched capability')).toHaveLength(2)
+    expect(container.querySelector('[data-stage="content-data"]')).not.toBeNull()
+    expect(screen.queryByText('category-performance-analysis')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Use selected content' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Sales Performance & Momentum' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Category Opportunity Priorities' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Use selected content' }))
+    await waitFor(() => expect(pending.respond).toHaveBeenCalledWith({
+      ok: true,
+      value: { sessionId: 'session-one', answer: { answers: [{
+        id: PROPOSAL_QUESTION_IDS.contentData,
+        selected: ['Sales Performance & Momentum (Recommended)', 'Category Opportunity Priorities'],
+      }] } },
+    }))
+  })
+
   it('returns a navigation intent to the AI instead of locally rewinding the workflow', async () => {
     const pending = wait({
       id: PROPOSAL_QUESTION_IDS.deckType, question: 'What type of deck should we prepare?',
       options: [{ label: 'Category Analysis' }, { label: 'Internal Kick Off' }],
     })
     render(<ProposalQuestionComposer matched={pending} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Back to Department' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
     await waitFor(() => expect(pending.respond).toHaveBeenCalledWith({
       ok: true,
       value: { sessionId: 'session-one', answer: { answers: [{
         id: PROPOSAL_QUESTION_IDS.deckType,
         selected: [],
-        custom: `PAIMIND_PROPOSAL_NAVIGATION:BACK:${PROPOSAL_QUESTION_IDS.department}`,
+        custom: 'PAIMIND_PROPOSAL_NAVIGATION:BACK',
       }] } },
+    }))
+  })
+
+  it('renders an AI-authored proposal question without requiring a configured step', async () => {
+    const pending = wait({
+      id: 'paimind.proposal.decision-audience/v1',
+      header: 'Decision audience',
+      question: 'Who needs to make the final decision from this proposal?',
+      options: [{ label: 'Category buyer' }, { label: 'Internal leadership' }],
+    })
+    const { container } = render(<ProposalQuestionComposer matched={pending} />)
+    expect(screen.getByText('Proposal setup · Decision audience')).toBeInTheDocument()
+    expect(container.querySelector('[data-stage="generic"]')).not.toBeNull()
+    fireEvent.click(screen.getByRole('radio', { name: 'Category buyer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    await waitFor(() => expect(pending.respond).toHaveBeenCalledWith({
+      ok: true,
+      value: { sessionId: 'session-one', answer: { answers: [{ id: 'paimind.proposal.decision-audience/v1', selected: ['Category buyer'] }] } },
     }))
   })
 

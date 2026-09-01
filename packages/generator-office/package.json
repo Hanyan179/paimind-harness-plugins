@@ -2,7 +2,9 @@
   "name": "@paimind/generator-office",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
-  "engines": { "node": "^22.19.0 || >=24.0.0" },
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
   "description": "Native Harness Tool providers for PPTX, PDF and formula-bearing XLSX artifacts",
   "type": "module",
   "main": "lib/index.js",
@@ -22,7 +24,12 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts",
+    "lib/**/*.d.ts.map"
+  ],
   "dsh": {
     "client": {
       "inject": [
@@ -32,11 +39,13 @@
     }
   },
   "dependencies": {
+    "@embedpdf/fonts-sc": "1.0.0",
     "@paimind/artifact-runtime": "workspace:^",
     "@paimind/contracts": "workspace:^",
     "@paimind/harness-compat": "workspace:^",
+    "@paimind/presentation-contracts": "workspace:^",
     "exceljs": "4.4.0",
-    "pdf-lib": "1.17.1",
+    "pdfkit": "0.20.1",
     "pptxgenjs": "4.0.1"
   },
   "peerDependencies": {
@@ -45,12 +54,15 @@
   "devDependencies": {
     "@paimind/presentation-trace": "workspace:^",
     "@paimind/testkit": "workspace:^",
+    "@types/pdfkit": "0.17.5",
+    "pdf-lib": "1.17.1",
     "react": "^18.3.1"
   },
   "paimindBuild": {
     "node": [
       "src/index.ts",
       "src/cli.ts",
+      "src/outline-pptx.ts",
       "src/invariant.ts"
     ],
     "client": "src/client/index.tsx"

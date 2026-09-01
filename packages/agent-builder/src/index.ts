@@ -37,6 +37,10 @@ export interface AgentBusinessProfileInput {
   readonly productKind?: AgentProfileKind
   readonly businessCategory?: string
   readonly businessCategoryId?: string
+  /** Native Harness authoring Session that owns this saved configuration flow. */
+  readonly authoringSessionId?: string
+  /** Last authoring event already represented by this saved Profile revision. */
+  readonly authoringCursor?: number
   readonly expectedVersion?: string
 }
 
@@ -208,6 +212,11 @@ function stableProfile(input: AgentBusinessProfileInput, revision: number, updat
   const goal = bounded(input.goal, 2_000, '目标', true)
   const behavior = bounded(input.behavior, 4_000, '行为规范', true)
   const instructions = bounded(input.instructions, 4_000, '补充要求')
+  const authoringSessionId = input.authoringSessionId === undefined
+    ? undefined
+    : bounded(input.authoringSessionId, 200, '创建会话标识', true)
+  const authoringCursor = input.authoringCursor
+  if (authoringCursor !== undefined && (!Number.isInteger(authoringCursor) || authoringCursor < 0)) throw new Error('创建会话进度无效')
   if (input.productKind !== undefined && input.productKind !== 'personal' && input.productKind !== 'business') throw new Error('智能体类型无效')
   const productKind: AgentProfileKind = input.productKind === 'business' ? 'business' : 'personal'
   const businessPlacement = productKind === 'business' ? (() => {
@@ -227,7 +236,14 @@ function stableProfile(input: AgentBusinessProfileInput, revision: number, updat
     productKind, ...businessPlacement, revision,
   }
   const digest = createHash('sha256').update(JSON.stringify(seed)).digest('hex').slice(0, 16)
-  return Object.freeze({ ...seed, configVersion: `v${revision}-${digest}`, updatedAt, health: 'healthy' })
+  return Object.freeze({
+    ...seed,
+    ...(authoringSessionId === undefined ? {} : { authoringSessionId }),
+    ...(authoringCursor === undefined ? {} : { authoringCursor }),
+    configVersion: `v${revision}-${digest}`,
+    updatedAt,
+    health: 'healthy',
+  })
 }
 
 function personaText(profile: AgentBusinessProfile): string {
@@ -646,7 +662,11 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService {
       if (input.expectedVersion !== undefined && previous?.configVersion !== input.expectedVersion) throw new Error('智能体已更新，请刷新后重试')
       if (previous !== undefined && (previous.agentId !== agentId || previous.presetId !== presetId)) throw new Error('智能体标识和预设标识不可修改')
       if (previous !== undefined && previous.basePresetId !== basePresetId) throw new Error('基础能力模板不可修改')
-      const profile = stableProfile(input, (previous?.revision ?? 0) + 1, this.now())
+      const profile = stableProfile({
+        ...input,
+        ...(input.authoringSessionId === undefined && previous?.authoringSessionId !== undefined ? { authoringSessionId: previous.authoringSessionId } : {}),
+        ...(input.authoringCursor === undefined && previous?.authoringCursor !== undefined ? { authoringCursor: previous.authoringCursor } : {}),
+      }, (previous?.revision ?? 0) + 1, this.now())
       const staging = join(this.stateRoot, 'staging', `${presetId}-${randomUUID()}`)
       const backup = join(this.stateRoot, 'backups', `${presetId}-${this.now()}-${randomUUID()}`)
       await mkdir(dirname(staging), { recursive: true, mode: 0o700 })

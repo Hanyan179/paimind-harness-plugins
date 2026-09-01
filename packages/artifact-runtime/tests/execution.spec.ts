@@ -6,8 +6,10 @@ import type {
 } from '@paimind/harness-compat/host'
 import {
   ArtifactGeneratorRegistry,
+  artifactWorkspaceRelativePath,
   normalizeArtifactFailureResult,
   presentArtifactToolResult,
+  requireCurrentSessionArtifact,
   type PaimindGeneratorProvider,
 } from '../src/index.js'
 
@@ -96,6 +98,30 @@ function setup(writeFails = false): {
 }
 
 describe('R2 native artifact execution', () => {
+  it('centralizes current-Session Artifact identity and Workspace path validation', () => {
+    const fixture = setup()
+    const artifact = {
+      schema: 'paimind.artifact-produced/v1' as const,
+      artifactId: 'artifact:outline', sessionId: 'session-1', workspaceId: 'workspace-1',
+      path: '/workspace/proposal.outline.json', title: 'Outline', kind: 'json' as const,
+      previewKind: 'data-document' as const, revision: 1, producerId: 'paimind.generator.presentation-outline',
+      taskId: 'job-outline', state: 'available' as const, producedAt: 1,
+    }
+    const projection = { schema: 'paimind.artifacts/v1' as const, artifacts: [artifact], traces: [] }
+    expect(requireCurrentSessionArtifact(projection, fixture.exec, artifact.artifactId, {
+      description: 'a current Outline', kind: 'json', producerIds: [artifact.producerId], pathSuffix: '.outline.json',
+    })).toStrictEqual(artifact)
+    expect(artifactWorkspaceRelativePath(artifact.path, fixture.exec, {
+      label: 'resolved Outline path', pathSuffix: '.outline.json',
+    })).toBe('proposal.outline.json')
+    expect(() => artifactWorkspaceRelativePath('/outside/proposal.outline.json', fixture.exec, {
+      label: 'resolved Outline path', pathSuffix: '.outline.json',
+    })).toThrow(/escapes the Workspace/)
+    expect(() => requireCurrentSessionArtifact({ ...projection, artifacts: [{ ...artifact, sessionId: 'session-2' }] }, fixture.exec, artifact.artifactId, {
+      description: 'a current Outline', producerIds: [artifact.producerId],
+    })).toThrow(/not a current Outline/)
+  })
+
   it('publishes through the native write Tool under the parent token and completes the native Job', async () => {
     const fixture = setup()
     const { artifact } = await fixture.registry.execute(fixture.provider.id, {}, fixture.exec)

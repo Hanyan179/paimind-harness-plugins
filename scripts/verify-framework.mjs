@@ -98,11 +98,23 @@ for (const marker of ['PAIMIND_SIDEBAR_CONTRACT_VERSION = 4', 'readonly hidden?:
 }
 
 const extensionCenterClient = await readFile(resolve(packagesRoot, 'extension-center/src/client/index.tsx'), 'utf8')
+const featurePackCatalog = await readFile(resolve(packagesRoot, 'extension-center/src/feature-packs.ts'), 'utf8')
 if (/pluginInventory\.(?:add|remove|install|uninstall|enable|disable|toggle)\s*\(/.test(extensionCenterClient)) {
   failures.push('@paimind/extension-center: must not mutate the Harness Plugin Registry')
 }
 if (extensionCenterClient.includes('paimindLauncher')) {
   failures.push('@paimind/extension-center: must remain capability management rather than Launcher navigation')
+}
+for (const packId of ['experience', 'agents', 'content', 'proposal', 'automation', 'operations']) {
+  if (!featurePackCatalog.includes(`id: 'paimind:pack:${packId}'`)) {
+    failures.push(`@paimind/extension-center: product Feature Pack catalog is missing ${packId}`)
+  }
+  if (!featurePackCatalog.includes(`loaderEntryId: 'paimind-pack-${packId}'`)) {
+    failures.push(`@paimind/extension-center: stable Loader group id is missing for ${packId}`)
+  }
+}
+for (const marker of ['paimind:capability:runtime-orbs', 'paimind-capability-runtime-orbs']) {
+  if (!featurePackCatalog.includes(marker)) failures.push(`@paimind/extension-center: nested capability is missing ${marker}`)
 }
 
 const brandingClient = await readFile(resolve(packagesRoot, 'branding/src/client/index.tsx'), 'utf8')
@@ -305,5 +317,5 @@ if (failures.length > 0) {
   console.error(failures.join('\n'))
   process.exitCode = 1
 } else {
-  console.log(`framework verification passed: ${pluginPackages.length} client plugin(s), exact seven-category Extension Center taxonomy, Registry remains technical-only, Task Monitor is a complete native read-only monitor, Bento is hidden on-demand and adapter-only, no synthetic Governance product, every user-visible client contributes one descriptor, only compatibility-neutral home-path imports exist outside harness-compat, zero Better Sidebar imports outside better-sidebar-adapter`)
+  console.log(`framework verification passed: ${pluginPackages.length} client plugin(s), six Product Feature Packs with a nested Runtime Orb capability, seven-category technical descriptor taxonomy, Registry remains installation/version truth, Loader remains lifecycle truth, Task Monitor is a complete native read-only monitor, Bento is hidden on-demand and adapter-only, no synthetic Governance product, every user-visible client contributes one descriptor, only compatibility-neutral home-path imports exist outside harness-compat, zero Better Sidebar imports outside better-sidebar-adapter`)
 }
