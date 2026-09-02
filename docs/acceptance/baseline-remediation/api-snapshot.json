@@ -43,9 +43,9 @@
       "path": "packages/better-sidebar-adapter",
       "contractSha256": "e4b76dab54ad21e5f8fe727812e4160957d573290a795e95ed948e8ba4d9346b",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "416a5eafe1d52a086501d0cb5c54548c23dbab30f640dddfc2f23469a639a8ed",
+      "runtimeExportSha256": "70913d05c003e8cc02aa64eb43c030ab33240a8e29a09f3cfe11a9e00eae09fb",
       "declarationCount": 3,
-      "declarationSha256": "8dd7180f75d37b2be0ba39ea2867fcb1c9902c70648ac52b21c25c14b53fbf9c",
+      "declarationSha256": "a9f08172e4857e6ef6af4f1e4a3532fce224474db7337d3c52d0556a295bf86d",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@paimind/branding": {

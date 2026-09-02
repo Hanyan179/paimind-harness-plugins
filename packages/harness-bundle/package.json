@@ -41,6 +41,6 @@
     "@paimind/scheduler-adapter-feishu-bot": "workspace:^",
     "@paimind/user-settings": "workspace:^",
     "@paimind/developer-resources": "workspace:^",
-    "dsh-better-sidebar": "0.16.1"
+    "dsh-better-sidebar": "0.17.1"
   }
 }

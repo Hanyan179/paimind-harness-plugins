@@ -178,8 +178,8 @@ importers:
         specifier: workspace:^
         version: link:../testkit
       dsh-better-sidebar:
-        specifier: 0.16.1
-        version: 0.16.1(ceea12104c5ac0bfc509e64c00a4a000)
+        specifier: 0.17.1
+        version: 0.17.1(fad6fbbdaca3f1f6e57e6754b9e71d9e)
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -407,7 +407,7 @@ importers:
     dependencies:
       '@huanlin/dsh-plugin-better-sidebar-plugin-office':
         specifier: 0.1.2
-        version: 0.1.2(@deepseek-ai/dsh-client-runtime@0.1.1-rc.2(601e9129357dc48738583e18d75d19b2))(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(cordis@4.0.0-rc.8)(dsh-better-sidebar@0.16.1(ceea12104c5ac0bfc509e64c00a4a000))(pdfjs-dist@6.2.108)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+        version: 0.1.2(@deepseek-ai/dsh-client-runtime@0.1.1-rc.2(601e9129357dc48738583e18d75d19b2))(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(cordis@4.0.0-rc.8)(dsh-better-sidebar@0.17.1(fad6fbbdaca3f1f6e57e6754b9e71d9e))(pdfjs-dist@6.2.108)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
       '@paimind/agent-builder':
         specifier: workspace:^
         version: link:../agent-builder
@@ -505,8 +505,8 @@ importers:
         specifier: workspace:^
         version: link:../workspace-project
       dsh-better-sidebar:
-        specifier: 0.16.1
-        version: 0.16.1(ceea12104c5ac0bfc509e64c00a4a000)
+        specifier: 0.17.1
+        version: 0.17.1(fad6fbbdaca3f1f6e57e6754b9e71d9e)
 
   packages/harness-compat:
     dependencies:
@@ -5996,14 +5996,13 @@ packages:
   dompurify@3.4.14:
     resolution: {integrity: sha512-dVoH9z+MY+C9IilgGCk3YfFqjLi3fChm2OiKJMzh6axrJ5qwxqWaZamgmHrpv22CN/KdbZJuGEGgfQoL00LTdg==}
 
-  dsh-better-sidebar@0.16.1:
-    resolution: {integrity: sha512-fjFNzfrgdIbzlcC4Sd4aS1I2ZRbuA+/m3XQnOxY13jE6IKJzwz0+GjATcKTyFoLnXoDRp2QJz/U0GxhaOD70Dw==}
+  dsh-better-sidebar@0.17.1:
+    resolution: {integrity: sha512-7me2X6w+ecbzAMEHtuWkSPUrfLDLTBvL9qugzgBbg1FyWyy2dzS9QNDvnZjjkst4kr4LjUJTTG4rsXBcz41YzQ==}
     engines: {node: '>=20'}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
       '@deepseek-ai/dsh-agent': ^0.1.0-rc.8
       '@deepseek-ai/dsh-client-locale': ^0.1.0-rc.8
-      '@deepseek-ai/dsh-client-runtime': ^0.1.0-rc.8
       '@deepseek-ai/dsh-client-ui-conversation': ^0.1.0-rc.8
       '@deepseek-ai/dsh-client-ui-primitives': ^0.1.0-rc.8
       '@deepseek-ai/dsh-client-ui-settings': ^0.1.0-rc.8
@@ -10798,7 +10797,7 @@ snapshots:
     dependencies:
       hono: 4.13.5
 
-  '@huanlin/dsh-plugin-better-sidebar-plugin-office@0.1.2(@deepseek-ai/dsh-client-runtime@0.1.1-rc.2(601e9129357dc48738583e18d75d19b2))(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(cordis@4.0.0-rc.8)(dsh-better-sidebar@0.16.1(ceea12104c5ac0bfc509e64c00a4a000))(pdfjs-dist@6.2.108)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
+  '@huanlin/dsh-plugin-better-sidebar-plugin-office@0.1.2(@deepseek-ai/dsh-client-runtime@0.1.1-rc.2(601e9129357dc48738583e18d75d19b2))(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(cordis@4.0.0-rc.8)(dsh-better-sidebar@0.17.1(fad6fbbdaca3f1f6e57e6754b9e71d9e))(pdfjs-dist@6.2.108)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
     dependencies:
       '@aiden0z/pptx-renderer': 1.2.4(pdfjs-dist@6.2.108)
       '@univerjs/preset-sheets-core': 0.25.1(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
@@ -10808,7 +10807,7 @@ snapshots:
       xlsx: 0.18.5
     optionalDependencies:
       '@deepseek-ai/dsh-client-runtime': 0.1.1-rc.2(601e9129357dc48738583e18d75d19b2)
-      dsh-better-sidebar: 0.16.1(ceea12104c5ac0bfc509e64c00a4a000)
+      dsh-better-sidebar: 0.17.1(fad6fbbdaca3f1f6e57e6754b9e71d9e)
       react: 18.3.1
     transitivePeerDependencies:
       - '@types/react'
@@ -14092,7 +14091,7 @@ snapshots:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
-  dsh-better-sidebar@0.16.1(ceea12104c5ac0bfc509e64c00a4a000):
+  dsh-better-sidebar@0.17.1(fad6fbbdaca3f1f6e57e6754b9e71d9e):
     dependencies:
       '@codemirror/commands': 6.10.4
       '@codemirror/lang-cpp': 6.0.3
@@ -14118,7 +14117,6 @@ snapshots:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-agent': 0.1.1-rc.2(c1537a8836b04097f168b024f1e38d85)
       '@deepseek-ai/dsh-client-locale': 0.1.1-rc.2(048e7c438545728704e82d9acbc5c221)
-      '@deepseek-ai/dsh-client-runtime': 0.1.1-rc.2(601e9129357dc48738583e18d75d19b2)
       '@deepseek-ai/dsh-client-ui-conversation': 0.1.1-rc.2(b441692b8d185dbf8cce39ef789ff602)
       '@deepseek-ai/dsh-client-ui-primitives': 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-client-ui-settings': 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-api-remotes@0.1.1-rc.2(0037c360ed8ef45e74e856e82932995e))(@deepseek-ai/dsh-client-connection@0.1.1-rc.2)(@deepseek-ai/dsh-client-runtime@0.1.1-rc.2(601e9129357dc48738583e18d75d19b2))(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-settings@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/schemastery@3.18.1))

@@ -39,7 +39,7 @@
     "@paimind/workspace-project": "workspace:^"
   },
   "peerDependencies": {
-    "dsh-better-sidebar": "0.16.1",
+    "dsh-better-sidebar": "0.17.1",
     "react": ">=18.0.0 <20.0.0",
     "react-dom": ">=18.0.0 <20.0.0"
   },
@@ -48,7 +48,7 @@
   },
   "devDependencies": {
     "@paimind/testkit": "workspace:^",
-    "dsh-better-sidebar": "0.16.1",
+    "dsh-better-sidebar": "0.17.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
