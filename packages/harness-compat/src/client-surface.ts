@@ -11,6 +11,40 @@ export const PAIMIND_PRODUCT_SURFACE_IDS = ['agent-center', 'skill-center'] as c
 
 export type PaimindProductSurfaceId = typeof PAIMIND_PRODUCT_SURFACE_IDS[number]
 
+const agentAvatarOverrides = new Map<string, ReadonlyMap<string, string>>()
+const agentAvatarOverrideListeners = new Set<() => void>()
+
+/** Shared presentation-only avatar overrides; canonical Harness Preset ids remain unchanged. */
+export function replacePaimindAgentAvatarOverrides(
+  owner: string,
+  entries: Readonly<Record<string, string>>,
+): () => void {
+  const normalized = new Map(Object.entries(entries).filter(([id, avatarId]) => id.trim() !== '' && avatarId.trim() !== ''))
+  agentAvatarOverrides.set(owner, normalized)
+  for (const listener of agentAvatarOverrideListeners) listener()
+  let active = true
+  return () => {
+    if (!active) return
+    active = false
+    if (agentAvatarOverrides.get(owner) !== normalized) return
+    agentAvatarOverrides.delete(owner)
+    for (const listener of agentAvatarOverrideListeners) listener()
+  }
+}
+
+export function resolvePaimindAgentAvatarOverride(canonicalId: string): string {
+  for (const entries of [...agentAvatarOverrides.values()].reverse()) {
+    const avatarId = entries.get(canonicalId)
+    if (avatarId !== undefined) return avatarId
+  }
+  return canonicalId
+}
+
+export function subscribePaimindAgentAvatarOverrides(listener: () => void): () => void {
+  agentAvatarOverrideListeners.add(listener)
+  return () => { agentAvatarOverrideListeners.delete(listener) }
+}
+
 export interface PaimindProductSurfaceSnapshot {
   readonly open: boolean
 }
@@ -566,19 +600,17 @@ export class NativeHarnessAgentChoiceBridge implements HarnessAgentChoiceBridge 
         return false
       }
       const choices = response.result.value.presets
-        .filter(preset => preset.broken === undefined)
+        // Native execution modes stay available to Harness internally, but the
+        // PAIMind Agent surfaces expose only actual business or personal Agents.
+        .filter(preset => preset.broken === undefined && !PLATFORM_MODE_IDS.has(preset.id))
         .map((preset): HarnessAgentChoice => Object.freeze({
           id: preset.id,
           name: agentChoiceName(preset.id, preset.name),
           description: agentChoiceDescription(preset.description),
           trust: preset.trust,
-          category: PLATFORM_MODE_IDS.has(preset.id) ? 'platform-mode' : 'recommended',
+          category: 'recommended',
         }))
       const seat = this.nativeSeat.getSnapshot()
-      if (choices.length === 0 || !choices.some(choice => choice.id === seat.current)) {
-        this.publish({ ...this.snapshot, status: 'unavailable', choices: Object.freeze([]), current: seat.current, busy: seat.busy, error: seat.error })
-        return false
-      }
       this.publish({
         status: 'ready', choices: Object.freeze(choices), current: seat.current,
         busy: seat.busy, error: seat.error,

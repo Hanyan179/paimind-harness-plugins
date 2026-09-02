@@ -7,6 +7,18 @@ export const FEATURE_PACKAGE_IDS = [
 /** One independently verifiable execution unit in the PAIMind migration program. */
 export type FeaturePackageId = typeof FEATURE_PACKAGE_IDS[number]
 
+/** Internal Harness foundation used by every PAIMind-created Agent. */
+export const PAIMIND_STANDARD_AGENT_BASE_PRESET_ID = 'standard' as const
+
+/**
+ * DSH-home-relative repository for business Skill packages managed by PAIMind.
+ * Harness default Skill discovery must never scan this repository directly.
+ */
+export const PAIMIND_BUSINESS_SKILL_REPOSITORY_DIRECTORY = '.paimind-skill-market/skills' as const
+
+/** Creator-Agent Tool that transfers a complete proposal into the reviewable UI draft. */
+export const PAIMIND_AGENT_PREPARE_CREATE_TOOL = 'paimind_agent_prepare_create' as const
+
 /** Autonomous verification lifecycle shared by migration documents and diagnostics. */
 export type VerificationState =
   | 'not-started'

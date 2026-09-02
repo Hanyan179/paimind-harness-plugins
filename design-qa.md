@@ -30,6 +30,48 @@ final result: passed
 
 ---
 
+# Composer @ and Slash Disclosure Design QA
+
+## Comparison input
+
+- Source reference: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-2905bcb1-1879-4230-81ab-384cc2105fba.png` (`2006 x 1240`).
+- Browser implementation: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/slash-menu-final.png` (`1291 x 1226`).
+- Model selector implementation: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/model-menu-final.png` (`1291 x 1226`).
+- Combined comparison: `/Users/hansen/.codex/visualizations/2026/09/01/01a05baf-4a20-7701-bab4-2773d9c3c65e/slash-menu-comparison.png` (`2000 x 620`).
+
+The source and implementation were normalized onto equal `1000 x 620` canvases and opened together. The live Browser state used the current product profile and real Agent, Skill, command and model candidates.
+
+## Comparison history
+
+1. P1 observed: the source menu stopped before the Composer edge and left an unused right strip, making `@` and `/` feel like separate components.
+2. P1 fix: the desktop overlay now uses one `820px` Composer-aligned shell with a stable `36% / 64%` selection-and-understanding split.
+3. P1 observed: keyboard navigation changed native selection without refreshing the injected right-hand detail.
+4. P1 fix: Arrow Up, Arrow Down, Home and End now clear hover ownership and resynchronize disclosure from the native active descendant.
+5. P2 observed: commands showed only names or upstream one-line descriptions, and Agent and Skill rows did not explain their usable scope.
+6. P2 fix: commands show purpose and common syntax; the selected current Agent shows its real visible Skill roster; Skills show invocation and current-Agent scope.
+7. P1 observed during Browser verification: the `/model` shell had two-column track definitions but did not establish a grid formatting context, so the detail pane fell below the list.
+8. P1 fix: the marked native popup now explicitly uses `display:grid`, producing the same two-column shell as `@` and `/`.
+
+## Verified behavior
+
+- Live `/` menu rendered all eight current commands and refreshed the right pane through keyboard navigation.
+- Live `@` menu rendered real Agent and Skill groups; navigating to `Paramont 助手` exposed the nine Skills currently visible to that Agent.
+- Navigating from Agent to `bento-ppt` changed the detail to Skill purpose, `/bento-ppt` invocation and current-Agent availability without mouse input.
+- `/model` opened the native provider data in the same wide two-column shell and retained native filtering, selection and Escape behavior.
+- Platform execution modes remain internal to Harness and are no longer presented as Agents.
+- Full repository tests passed (`94` files / `452` tests); Type Check and the repository Build passed.
+
+## Findings
+
+- P0: none.
+- P1: none after the model grid correction and live browser recheck.
+- P2: none after adding truthful progressive disclosure and keyboard synchronization.
+- P3: non-current Agent candidates intentionally disclose that their real Skill roster loads after selection; the plugin does not invent or cache another Agent's unavailable runtime Skills.
+
+final result: passed
+
+---
+
 # Conversation Auto-naming Model Service Design QA
 
 ## Comparison input

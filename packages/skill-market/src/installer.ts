@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { createReadStream, createWriteStream } from 'node:fs'
+import { createReadStream, createWriteStream, readFileSync } from 'node:fs'
 import {
   access,
   copyFile,
@@ -20,9 +20,13 @@ import { Transform } from 'node:stream'
 import yauzl, { type Entry, type ZipFile } from 'yauzl'
 import { parseDocument } from 'yaml'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
+import { PAIMIND_BUSINESS_SKILL_REPOSITORY_DIRECTORY } from '@paimind/contracts'
 import {
+  definePaimindHarnessTool,
   PaimindHostRemoteService,
   markPaimindHostRemoteMethods,
+  type PaimindHostToolRegistry,
+  type PaimindToolRunContext,
 } from '@paimind/harness-compat/host'
 import type { PaimindHostWebServer } from '@paimind/harness-compat'
 import { PAIMIND_SKILL_UPLOAD_PATH } from './catalog.js'
@@ -36,8 +40,22 @@ const SKILL_NAME = /^[a-z0-9][a-z0-9-]*$/
 const UPLOAD_ID = /^[a-f0-9-]{36}$/
 const METADATA_SCAN_BYTES = 256 * 1024
 const MAX_EXPANSION_RATIO = 1_000
+const MAX_REMOTE_ARCHIVE_BYTES = 20 * 1024 * 1024
+const MAX_REMOTE_EXPANDED_BYTES = 200 * 1024 * 1024
 const INSTALL_MANIFEST = '.paimind-install.json'
 const CONTROL = /[\u0000-\u001f\u007f]/
+const PAIMIND_SKILL_INSTALLATION_SKILL = 'paimind-skill-installation'
+const PAIMIND_SKILL_INSTALLATION_DESCRIPTION = 'Inspect and install a public GitHub Skill into the PAIMind Skill Center, then optionally attach it to the current managed Agent. Use when the user asks to import, install, update, or bind a Skill from GitHub.'
+export const PAIMIND_SKILL_INSPECT_GITHUB_TOOL = 'paimind_skill_inspect_github'
+export const PAIMIND_SKILL_INSTALL_TOOL = 'paimind_skill_install'
+
+function packagedSkillBody(url: URL): string {
+  const source = readFileSync(url, 'utf8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n')
+  if (!source.startsWith('---\n')) throw new Error(`Packaged Skill is missing YAML frontmatter: ${url.pathname}`)
+  const end = source.indexOf('\n---', 4)
+  if (end < 0) throw new Error(`Packaged Skill frontmatter is incomplete: ${url.pathname}`)
+  return source.slice(end + 4).replace(/^\n+/, '').trimEnd()
+}
 
 function openZip(path: string, options: yauzl.Options): Promise<ZipFile> {
   return new Promise((resolveZip, reject) => {
@@ -103,6 +121,7 @@ interface UploadRecord {
   readonly compressedBytes: number
   preview?: SkillUploadPreview
   archive?: ArchiveInspection
+  repositorySelection?: Readonly<{ subdirectory?: string }>
 }
 
 interface ArchiveEntryInfo {
@@ -128,12 +147,25 @@ interface InstallManifest extends SkillInstallRecord {
 
 export interface SkillInstallerOptions {
   readonly skillRoot?: string
+  /** Existing Harness-global directory used only for one-time managed-Skill migration. */
+  readonly legacySkillRoot?: string
   readonly stateRoot?: string
   readonly now?: () => number
+  readonly fetch?: typeof fetch
 }
 
 export interface SkillInstallerHostContext {
   readonly webServer: PaimindHostWebServer
+  readonly tools?: Pick<PaimindHostToolRegistry, 'register'>
+  readonly skills?: {
+    register(skill: {
+      readonly name: string
+      readonly description: string
+      readonly content: string
+      readonly source: 'bundled'
+      readonly invocation: { readonly modelInvocable: true; readonly userInvocable: true }
+    }): () => void
+  }
   effect(install: () => void | (() => void | Promise<void>), label?: string): void
 }
 
@@ -174,6 +206,64 @@ function safeArchivePath(raw: string): string {
 
 /** Public validation seam used by installer security tests. */
 export const validateSkillArchivePath = safeArchivePath
+
+interface GitHubSkillSource {
+  readonly owner: string
+  readonly repository: string
+  readonly ref: string
+  readonly subdirectory?: string
+  readonly archiveUrl: string
+}
+
+const GITHUB_OWNER = /^[a-z0-9](?:[a-z0-9-]{0,38})$/i
+const GITHUB_REPOSITORY = /^[a-z0-9_.-]{1,100}$/i
+const GITHUB_REF = /^[a-z0-9][a-z0-9._/-]{0,199}$/i
+
+function normalizeRepositorySubdirectory(value: string | undefined): string | undefined {
+  if (value === undefined || value.trim() === '') return undefined
+  const normalized = value.trim().replace(/^\/+|\/+$/g, '')
+  if (normalized === '' || normalized.includes('\\') || CONTROL.test(normalized)) throw new Error('GitHub Skill 子目录无效')
+  const segments = normalized.split('/')
+  if (segments.some(segment => segment === '' || segment === '.' || segment === '..')) throw new Error('GitHub Skill 子目录无效')
+  return segments.join('/')
+}
+
+/** Parse only public github.com repository URLs; the resulting fetch target can never become an arbitrary host. */
+export function parseGitHubSkillSource(input: {
+  readonly repositoryUrl: string
+  readonly ref?: string
+  readonly subdirectory?: string
+}): Readonly<GitHubSkillSource> {
+  let url: URL
+  try { url = new URL(input.repositoryUrl.trim()) } catch { throw new Error('GitHub 仓库 URL 无效') }
+  if (url.protocol !== 'https:' || url.hostname.toLocaleLowerCase() !== 'github.com' || url.port !== '' || url.username !== '' || url.password !== '') {
+    throw new Error('仅支持公开的 https://github.com 仓库')
+  }
+  const segments = url.pathname.split('/').filter(Boolean).map(segment => decodeURIComponent(segment))
+  const owner = segments[0] ?? ''
+  const repository = (segments[1] ?? '').replace(/\.git$/i, '')
+  if (!GITHUB_OWNER.test(owner) || !GITHUB_REPOSITORY.test(repository)) throw new Error('GitHub 仓库路径无效')
+  let treeRef: string | undefined
+  let treeSubdirectory: string | undefined
+  if (segments.length > 2) {
+    if (segments[2] !== 'tree' || segments.length < 4) throw new Error('请提供 GitHub 仓库首页或 tree 子目录 URL')
+    treeRef = segments[3]
+    treeSubdirectory = segments.slice(4).join('/') || undefined
+  }
+  const ref = (input.ref ?? treeRef ?? 'HEAD').trim()
+  if (!GITHUB_REF.test(ref) || ref.split('/').some(segment => segment === '.' || segment === '..')) throw new Error('GitHub ref 无效')
+  if (input.ref !== undefined && treeRef !== undefined && input.ref !== treeRef) throw new Error('GitHub URL 与 ref 参数不一致')
+  const subdirectory = normalizeRepositorySubdirectory(input.subdirectory ?? treeSubdirectory)
+  if (input.subdirectory !== undefined && treeSubdirectory !== undefined
+    && normalizeRepositorySubdirectory(input.subdirectory) !== normalizeRepositorySubdirectory(treeSubdirectory)) {
+    throw new Error('GitHub URL 与 subdirectory 参数不一致')
+  }
+  return Object.freeze({
+    owner, repository, ref,
+    ...(subdirectory === undefined ? {} : { subdirectory }),
+    archiveUrl: `https://codeload.github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/zip/${encodeURIComponent(ref)}`,
+  })
+}
 
 function contained(root: string, target: string): boolean {
   const candidate = relative(resolve(root), resolve(target))
@@ -252,7 +342,7 @@ async function readZipEntry(zip: ZipFile, entry: Entry): Promise<Buffer> {
   return Buffer.concat(chunks)
 }
 
-async function inspectZip(path: string): Promise<ArchiveInspection> {
+async function inspectZip(path: string, repositorySelection?: Readonly<{ subdirectory?: string }>): Promise<ArchiveInspection> {
   const zip = await openZip(path, { lazyEntries: true, validateEntrySizes: true, autoClose: false })
   const rows: { entry: Entry; path: string; directory: boolean }[] = []
   const skillFiles: { entry: Entry; path: string }[] = []
@@ -294,16 +384,41 @@ async function inspectZip(path: string): Promise<ArchiveInspection> {
       zip.once('end', () => { resolveEntries() })
       zip.readEntry()
     })
-    if (skillFiles.length !== 1) throw new Error('压缩包必须且只能包含一个 SKILL.md')
+    if (expandedBytes > MAX_REMOTE_EXPANDED_BYTES) throw new Error('压缩包解压后超过 200 MB 安全上限')
+    const repositoryRoot = rows[0]?.path.split('/')[0]
+    const requestedPrefix = repositorySelection === undefined || repositoryRoot === undefined
+      ? undefined
+      : repositorySelection.subdirectory === undefined
+        ? `${repositoryRoot}/`
+        : `${repositoryRoot}/${repositorySelection.subdirectory}/`
+    const selectedSkillFiles = requestedPrefix === undefined
+      ? skillFiles
+      : skillFiles.filter(row => row.path.startsWith(requestedPrefix))
+    if (selectedSkillFiles.length !== 1) {
+      throw new Error(repositorySelection === undefined
+        ? '压缩包必须且只能包含一个 SKILL.md'
+        : 'GitHub 选择范围必须且只能包含一个 SKILL.md；请指定更准确的 subdirectory')
+    }
     if (compressedBytes > 0 && expandedBytes / compressedBytes > MAX_EXPANSION_RATIO) {
       throw new Error('压缩包总体压缩比异常')
     }
-    const skillFile = skillFiles[0]!
+    const skillFile = selectedSkillFiles[0]!
     const rootPrefix = dirname(skillFile.path) === '.' ? '' : `${dirname(skillFile.path)}/`
-    const outside = rows.find(row => !row.path.startsWith(rootPrefix))
+    const outside = repositorySelection === undefined ? rows.find(row => !row.path.startsWith(rootPrefix)) : undefined
     if (outside !== undefined) throw new Error(`压缩包包含 Skill 目录之外的文件：${outside.path}`)
     const metadata = parseSkillMetadata((await readZipEntry(zip, skillFile.entry)).toString('utf8'))
-    const entries = rows.map(row => Object.freeze({
+    const selectedRows = rows.filter(row => row.path.startsWith(rootPrefix))
+    const selectedWarnings = new Set<string>()
+    const selectedRuntimeRequirements = new Set<SkillRuntimeRequirement>()
+    for (const row of selectedRows) {
+      if (row.directory) continue
+      if (row.path.split('/').includes('scripts')) selectedWarnings.add('包含脚本文件；安装过程不会执行脚本')
+      if ((zipUnixMode(row.entry) & 0o111) !== 0) selectedWarnings.add('包含可执行文件；请确认来源可信')
+      const manifest = basename(row.path).toLocaleLowerCase()
+      if (manifest === 'requirements.txt' || manifest === 'pyproject.toml' || manifest === 'environment.yml' || manifest === 'environment.yaml') selectedRuntimeRequirements.add('python')
+      if (manifest === 'package.json') selectedRuntimeRequirements.add('node')
+    }
+    const entries = selectedRows.map(row => Object.freeze({
       ...row,
       relativePath: row.path.slice(rootPrefix.length),
     }))
@@ -312,9 +427,9 @@ async function inspectZip(path: string): Promise<ArchiveInspection> {
       rootPrefix,
       entries,
       fileCount: entries.filter(row => !row.directory).length,
-      expandedBytes,
-      warnings: Object.freeze([...warnings]),
-      runtimeRequirements: Object.freeze([...runtimeRequirements]),
+      expandedBytes: entries.reduce((total, row) => total + (row.directory ? 0 : row.entry.uncompressedSize), 0),
+      warnings: Object.freeze(repositorySelection === undefined ? [...warnings] : [...selectedWarnings]),
+      runtimeRequirements: Object.freeze(repositorySelection === undefined ? [...runtimeRequirements] : [...selectedRuntimeRequirements]),
     })
   } finally { zip.close() }
 }
@@ -401,28 +516,175 @@ async function readInstallManifest(path: string): Promise<SkillInstallRecord | u
 
 /** Host-owned installer. Harness remains the only runtime Skill registry. */
 export class PaimindSkillInstallerService extends PaimindHostRemoteService {
-  static inject = ['webServer']
+  static inject = ['webServer', 'tools', 'skills']
   private readonly skillRoot: string
+  private readonly legacySkillRoot: string | null
   private readonly stateRoot: string
   private readonly uploadRoot: string
   private readonly stagingRoot: string
   private readonly backupRoot: string
   private readonly now: () => number
+  private readonly remoteFetch: typeof fetch
   private readonly uploads = new Map<string, UploadRecord>()
+  private legacyMigration: Promise<void> | null = null
 
   constructor(installerCtx: SkillInstallerHostContext, options: SkillInstallerOptions = {}) {
     super(installerCtx, 'paimindSkillInstaller')
-    this.skillRoot = resolve(options.skillRoot ?? dshHomePath('skills'))
+    this.skillRoot = resolve(options.skillRoot ?? dshHomePath(PAIMIND_BUSINESS_SKILL_REPOSITORY_DIRECTORY))
+    this.legacySkillRoot = options.legacySkillRoot === undefined
+      ? options.skillRoot === undefined ? resolve(dshHomePath('skills')) : null
+      : resolve(options.legacySkillRoot)
     this.stateRoot = resolve(options.stateRoot ?? dshHomePath('.paimind-skill-installer'))
     this.uploadRoot = join(this.stateRoot, 'uploads')
     this.stagingRoot = join(this.stateRoot, 'staging')
     this.backupRoot = join(this.stateRoot, 'backups')
     this.now = options.now ?? Date.now
+    this.remoteFetch = options.fetch ?? fetch
     markPaimindHostRemoteMethods(this, ['listCatalog', 'inspectCatalog', 'inspectUpload', 'installUpload', 'listInstalled', 'uninstall'])
+    installerCtx.effect(() => installerCtx.skills?.register({
+      name: PAIMIND_SKILL_INSTALLATION_SKILL,
+      description: PAIMIND_SKILL_INSTALLATION_DESCRIPTION,
+      content: packagedSkillBody(new URL('../SKILL.md', import.meta.url)),
+      source: 'bundled',
+      invocation: { modelInvocable: true, userInvocable: true },
+    }), 'paimind-skill-market: bundled installation Skill')
+    installerCtx.effect(() => {
+      if (installerCtx.tools === undefined) return
+      const disposeInspect = installerCtx.tools.register(this.inspectGitHubTool())
+      const disposeInstall = installerCtx.tools.register(this.installSkillTool())
+      return () => {
+        try { disposeInstall() } finally { disposeInspect() }
+      }
+    }, 'paimind-skill-market: conversation installation Tools')
     installerCtx.effect(() => installerCtx.webServer.register({
       kind: 'prefix', path: PAIMIND_SKILL_UPLOAD_PATH,
       handler: async (request, response) => { await this.handleUpload(request, response) },
     }), 'paimind-skill-market: upload route')
+  }
+
+  private inspectGitHubTool(): unknown {
+    return definePaimindHarnessTool({
+      name: PAIMIND_SKILL_INSPECT_GITHUB_TOOL,
+      description: 'Download and safely inspect one public GitHub Skill without installing or executing it. Use this before paimind_skill_install.',
+      parameters: {
+        repository_url: { type: 'string', required: true },
+        ref: { type: 'string' },
+        subdirectory: { type: 'string' },
+      },
+      output: {
+        schema: {
+          type: 'object', additionalProperties: false,
+          properties: {
+            uploadId: { type: 'string', required: true }, digest: { type: 'string', required: true },
+            name: { type: 'string', required: true }, description: { type: 'string', required: true },
+            operation: { type: 'string', required: true }, repository: { type: 'string', required: true },
+            ref: { type: 'string', required: true }, subdirectory: { type: 'string' },
+            warnings: { type: 'array', required: true, items: { type: 'string' } },
+            runtimeRequirements: { type: 'array', required: true, items: { type: 'string' } },
+          },
+        },
+        render(_args, value) { return [{ type: 'text', text: JSON.stringify(value) }] },
+      },
+      execute: async (args, _exec: PaimindToolRunContext) => {
+        const preview = await this.inspectGitHub({
+          repositoryUrl: String(args.repository_url ?? ''),
+          ...(typeof args.ref === 'string' ? { ref: args.ref } : {}),
+          ...(typeof args.subdirectory === 'string' ? { subdirectory: args.subdirectory } : {}),
+        })
+        return preview
+      },
+      presentCall: () => ({ card: 'generic', title: 'Inspect GitHub Skill', kind: 'read' }),
+    })
+  }
+
+  private installSkillTool(): unknown {
+    return definePaimindHarnessTool({
+      name: PAIMIND_SKILL_INSTALL_TOOL,
+      description: 'Install a previously inspected Skill into the PAIMind Skill Center. Call only after the user confirms the exact inspection result.',
+      parameters: {
+        upload_id: { type: 'string', required: true },
+        digest: { type: 'string', required: true },
+      },
+      output: {
+        schema: {
+          type: 'object', additionalProperties: false,
+          properties: {
+            operation: { type: 'string', required: true }, skillName: { type: 'string', required: true },
+            description: { type: 'string', required: true }, digest: { type: 'string', required: true },
+            message: { type: 'string', required: true },
+          },
+        },
+        render(_args, value) { return [{ type: 'text', text: JSON.stringify(value) }] },
+      },
+      execute: async args => {
+        const result = await this.installUpload({ uploadId: String(args.upload_id ?? ''), digest: String(args.digest ?? '') })
+        return {
+          operation: result.operation, skillName: result.record.name, description: result.record.description,
+          digest: result.record.digest,
+          message: 'Skill 已安装到 PAIMind 技能中心；是否绑定当前 Agent 需要单独确认。',
+        }
+      },
+      presentCall: () => ({ card: 'generic', title: 'Install Skill', kind: 'edit' }),
+    })
+  }
+
+  /** Stage one public GitHub repository archive through the existing inspection pipeline. */
+  async inspectGitHub(input: {
+    readonly repositoryUrl: string
+    readonly ref?: string
+    readonly subdirectory?: string
+  }): Promise<Readonly<SkillUploadPreview & { repository: string; ref: string; subdirectory?: string }>> {
+    const source = parseGitHubSkillSource(input)
+    await mkdir(this.uploadRoot, { recursive: true, mode: 0o700 })
+    const uploadId = randomUUID()
+    const path = join(this.uploadRoot, uploadId)
+    const response = await this.remoteFetch(source.archiveUrl, {
+      method: 'GET', redirect: 'follow', headers: { accept: 'application/zip', 'user-agent': 'PAIMind-Skill-Installer/1' },
+    })
+    if (!response.ok || response.body === null) throw new Error(`GitHub Skill 下载失败：HTTP ${response.status}`)
+    const declaredLength = Number(response.headers.get('content-length') ?? '0')
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_REMOTE_ARCHIVE_BYTES) throw new Error('GitHub Skill 压缩包超过 20 MB 安全上限')
+    const handle = await open(path, 'wx', 0o600)
+    const hash = createHash('sha256')
+    let compressedBytes = 0
+    try {
+      const reader = response.body.getReader()
+      while (true) {
+        const part = await reader.read()
+        if (part.done) break
+        const chunk = Buffer.from(part.value)
+        compressedBytes += chunk.byteLength
+        if (compressedBytes > MAX_REMOTE_ARCHIVE_BYTES) {
+          await reader.cancel('archive too large')
+          throw new Error('GitHub Skill 压缩包超过 20 MB 安全上限')
+        }
+        hash.update(chunk)
+        await handle.write(chunk)
+      }
+      if (compressedBytes === 0) throw new Error('GitHub Skill 压缩包为空')
+    } catch (error) {
+      await handle.close().catch(() => undefined)
+      await rm(path, { force: true })
+      throw error
+    }
+    await handle.close()
+    const digest = `sha256:${hash.digest('hex')}`
+    const safeRef = source.ref.replace(/[^a-z0-9._-]+/gi, '-').slice(0, 80)
+    this.uploads.set(uploadId, {
+      uploadId, path, digest, compressedBytes,
+      fileName: `${source.owner}-${source.repository}-${safeRef || 'HEAD'}.zip`,
+      repositorySelection: Object.freeze({ ...(source.subdirectory === undefined ? {} : { subdirectory: source.subdirectory }) }),
+    })
+    try {
+      const preview = await this.inspectUpload({ uploadId })
+      return Object.freeze({
+        ...preview, repository: `${source.owner}/${source.repository}`, ref: source.ref,
+        ...(source.subdirectory === undefined ? {} : { subdirectory: source.subdirectory }),
+      })
+    } catch (error) {
+      await this.cancelUpload(uploadId)
+      throw error
+    }
   }
 
   async handleUpload(request: IncomingMessage, response: ServerResponse): Promise<void> {
@@ -497,6 +759,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
   }
 
   async inspectUpload(input: { readonly uploadId: string }): Promise<Readonly<SkillUploadPreview>> {
+    await this.migrateLegacyManagedSkills()
     const upload = this.upload(input.uploadId)
     if (upload.preview !== undefined) return upload.preview
     try {
@@ -507,7 +770,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       let warnings: readonly string[]
       let runtimeRequirements: readonly SkillRuntimeRequirement[]
       if (extension === '.zip') {
-        const inspection = await inspectZip(upload.path)
+        const inspection = await inspectZip(upload.path, upload.repositorySelection)
         upload.archive = inspection
         metadata = inspection.metadata
         fileCount = inspection.fileCount
@@ -538,6 +801,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
   }
 
   async installUpload(input: { readonly uploadId: string; readonly digest: string }): Promise<Readonly<SkillInstallResult>> {
+    await this.migrateLegacyManagedSkills()
     const upload = this.upload(input.uploadId)
     if (upload.digest !== input.digest) throw new Error('上传摘要不匹配，请重新上传')
     const preview = await this.inspectUpload({ uploadId: input.uploadId })
@@ -583,6 +847,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
   }
 
   async listInstalled(): Promise<Readonly<SkillInstallerSnapshot>> {
+    await this.migrateLegacyManagedSkills()
     let entries
     try { entries = await readdir(this.skillRoot, { withFileTypes: true }) } catch { return Object.freeze({ items: Object.freeze([]) }) }
     const items: SkillInstallRecord[] = []
@@ -608,6 +873,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
   }
 
   async uninstall(input: { readonly skillId: string; readonly version?: string }): Promise<Readonly<SkillRemovalRecord>> {
+    await this.migrateLegacyManagedSkills()
     if (!SKILL_NAME.test(input.skillId)) throw new Error('Skill 名称无效')
     const source = join(this.skillRoot, input.skillId)
     if (!contained(this.skillRoot, source) || !(await pathExists(source))) throw new Error('Skill 不存在')
@@ -625,5 +891,39 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
     const upload = this.uploads.get(uploadId)
     if (upload === undefined) throw new Error('上传已失效，请重新选择文件')
     return upload
+  }
+
+  /** Move only PAIMind-managed packages out of Harness global discovery. */
+  private async migrateLegacyManagedSkills(): Promise<void> {
+    if (this.legacySkillRoot === null || this.legacySkillRoot === this.skillRoot) return
+    this.legacyMigration ??= this.runLegacyManagedSkillMigration()
+    await this.legacyMigration
+  }
+
+  private async runLegacyManagedSkillMigration(): Promise<void> {
+    let entries
+    try { entries = await readdir(this.legacySkillRoot!, { withFileTypes: true }) } catch { return }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith('.') || !SKILL_NAME.test(entry.name)) continue
+      const source = join(this.legacySkillRoot!, entry.name)
+      const sourceManifest = await readInstallManifest(join(source, INSTALL_MANIFEST))
+      if (sourceManifest === undefined) continue
+      await mkdir(this.skillRoot, { recursive: true, mode: 0o700 })
+      const destination = join(this.skillRoot, entry.name)
+      if (!(await pathExists(destination))) {
+        await rename(source, destination)
+        continue
+      }
+      const destinationManifest = await readInstallManifest(join(destination, INSTALL_MANIFEST))
+      if (destinationManifest === undefined) throw new Error(`业务 Skill 仓库存在未托管的同名目录：${entry.name}`)
+      await mkdir(this.backupRoot, { recursive: true, mode: 0o700 })
+      const backup = join(this.backupRoot, `legacy-global-${entry.name}-${this.now()}-${randomUUID()}`)
+      if (sourceManifest.updatedAt > destinationManifest.updatedAt) {
+        await rename(destination, backup)
+        try { await rename(source, destination) } catch (error) { await rename(backup, destination); throw error }
+      } else {
+        await rename(source, backup)
+      }
+    }
   }
 }

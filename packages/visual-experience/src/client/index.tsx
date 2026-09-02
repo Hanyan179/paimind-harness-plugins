@@ -30,6 +30,8 @@ import {
 import {
   HarnessExperienceMarkers,
   NativeHarnessAgentChoiceBridge,
+  resolvePaimindAgentAvatarOverride,
+  subscribePaimindAgentAvatarOverrides,
   isPaimindProductSurfaceAvailable,
   requestPaimindAgentBuilder,
   requestPaimindProductSurface,
@@ -226,26 +228,39 @@ body[data-paimind-experience='paimind'] [data-composer-card] button[aria-haspopu
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor]{z-index:180}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [data-slot='conversation.input.overlay']{display:contents!important}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox']{
-  box-sizing:border-box!important;top:auto!important;right:auto!important;bottom:calc(100% + 8px)!important;left:0!important;width:min(590px,100%)!important;min-width:0!important;max-width:100%!important;
-  height:min(360px,var(--paimind-composer-overlay-room,360px))!important;max-height:min(360px,var(--paimind-composer-overlay-room,360px))!important;padding:0!important;border:1px solid var(--paimind-line)!important;
+  box-sizing:border-box!important;top:auto!important;right:auto!important;bottom:calc(100% + 8px)!important;left:0!important;width:min(820px,100%)!important;min-width:0!important;max-width:100%!important;
+  height:min(400px,var(--paimind-composer-overlay-room,400px))!important;max-height:min(400px,var(--paimind-composer-overlay-room,400px))!important;padding:0!important;border:1px solid var(--paimind-line)!important;
   border-radius:18px!important;background:var(--paimind-glass-strong)!important;box-shadow:0 24px 72px rgba(17,39,63,.2)!important;
   backdrop-filter:blur(24px) saturate(1.12);-webkit-backdrop-filter:blur(24px) saturate(1.12);animation:paimind-composer-menu-in .18s ease-out;
 }
-body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox']:has(>[data-paimind-composer-disclosure]){display:grid!important;grid-template-columns:minmax(190px,42%) minmax(240px,1fr);grid-template-rows:minmax(0,1fr);overflow:hidden!important}
+body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox']:has(>[data-paimind-composer-disclosure]){display:grid!important;grid-template-columns:minmax(250px,36%) minmax(360px,1fr);grid-template-rows:minmax(0,1fr);overflow:hidden!important}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox']:has(>[data-paimind-composer-disclosure])>:first-child{min-width:0;min-height:0;padding:8px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;border-right:1px solid var(--paimind-line)}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox'] [role='option']{display:flex!important;align-items:center;gap:8px;min-width:0;min-height:36px;padding:7px 8px;border-radius:10px;color:var(--paimind-ink);font-size:12px;line-height:18px}
-body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox'] [role='option'][aria-selected='true']{background:color-mix(in srgb,var(--paimind-accent) 10%,transparent)!important;box-shadow:none}
+body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox'] [role='option'][aria-selected='true']{background:color-mix(in srgb,var(--paimind-accent) 17%,transparent)!important;box-shadow:inset 3px 0 0 var(--paimind-accent);font-weight:650}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox'] [role='option']>[aria-hidden]{display:inline-flex;flex:none;width:22px;height:22px;align-items:center;justify-content:center;border-radius:50%;background:color-mix(in srgb,var(--paimind-accent) 9%,transparent)}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox'] [role='option']>[data-paimind-agent-avatar-host]{width:30px;height:30px;overflow:hidden;background:transparent}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [data-paimind-candidate-name]{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [data-paimind-candidate-description]{display:none!important}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [data-paimind-context-kind-label]{flex:none;min-width:38px;color:var(--paimind-accent);font-size:9px;font-weight:700;line-height:14px;letter-spacing:.04em;text-transform:uppercase}
-body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure]{display:grid;align-content:start;gap:9px;min-width:0;overflow:auto;padding:22px;color:var(--paimind-ink)}
-body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] [data-paimind-composer-disclosure-avatar]{width:32px;height:32px}
-body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] small{color:var(--paimind-accent);font-size:10px;font-weight:700;line-height:15px;letter-spacing:.08em;text-transform:uppercase}
-body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] strong{font-size:16px;line-height:22px;overflow-wrap:anywhere}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure]{display:grid;align-content:start;gap:16px;min-width:0;overflow:auto;padding:24px 26px;color:var(--paimind-ink)}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure-header]{display:flex;align-items:flex-start;gap:12px;min-width:0}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure-heading]{display:grid;gap:3px;min-width:0}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] [data-paimind-composer-disclosure-avatar]{width:40px;height:40px}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] small{color:var(--paimind-accent);font-size:10px;font-weight:750;line-height:15px;letter-spacing:.08em;text-transform:uppercase}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] strong{font-size:18px;font-weight:680;line-height:25px;letter-spacing:-.012em;overflow-wrap:anywhere}
 body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] p{margin:0;color:var(--paimind-muted);font-size:12px;line-height:19px;overflow-wrap:anywhere}
-body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure] span{margin-top:4px;color:var(--paimind-muted);font-size:10px;line-height:15px}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure-sections]{display:grid;gap:13px;padding-top:2px}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure-section]{display:grid;gap:7px}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure-section]>span{color:var(--paimind-muted);font-size:10px;font-weight:700;line-height:15px;letter-spacing:.04em}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure-values]{display:flex;flex-wrap:wrap;gap:6px}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure-values]>span,
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure-values]>code{max-width:100%;padding:5px 8px;border:1px solid color-mix(in srgb,var(--paimind-line) 82%,transparent);border-radius:999px;color:var(--paimind-ink);background:color-mix(in srgb,var(--paimind-accent) 7%,transparent);font:inherit;font-size:10px;line-height:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure-hint]{margin-top:auto;padding-top:2px;color:var(--paimind-muted);font-size:10px;line-height:15px}
+body[data-paimind-experience='paimind'] [data-paimind-popup-select]{box-sizing:border-box!important;display:grid!important;grid-template-columns:minmax(250px,36%) minmax(360px,1fr)!important;grid-template-rows:auto minmax(0,1fr)!important;width:min(820px,100%)!important;min-width:0!important;max-width:100%!important;height:min(400px,var(--paimind-composer-overlay-room,400px))!important;max-height:min(400px,var(--paimind-composer-overlay-room,400px))!important;padding:0!important;border:1px solid var(--paimind-line)!important;border-radius:18px!important;background:var(--paimind-glass-strong)!important;box-shadow:0 24px 72px rgba(17,39,63,.2)!important;overflow:hidden!important}
+body[data-paimind-experience='paimind'] [data-paimind-popup-select]>input[type='text']{grid-column:1;grid-row:1;box-sizing:border-box;width:calc(100% - 16px);min-height:38px;margin:8px;padding:8px 10px;border:1px solid var(--paimind-line);border-radius:10px;background:color-mix(in srgb,var(--paimind-glass-strong) 86%,transparent);color:var(--paimind-ink);outline:none}
+body[data-paimind-experience='paimind'] [data-paimind-popup-select]>input[type='text']:focus{border-color:color-mix(in srgb,var(--paimind-accent) 58%,var(--paimind-line));box-shadow:0 0 0 3px color-mix(in srgb,var(--paimind-accent) 13%,transparent)}
+body[data-paimind-experience='paimind'] [data-paimind-popup-select]>[role='listbox']{position:static!important;grid-column:1;grid-row:2;display:flex!important;flex-direction:column!important;width:auto!important;height:auto!important;max-height:none!important;margin:0!important;border:0!important;border-top:1px solid var(--paimind-line)!important;border-right:1px solid var(--paimind-line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none;animation:none;overflow-y:auto!important;padding:8px!important}
+body[data-paimind-experience='paimind'] [data-paimind-popup-select]>[data-paimind-composer-disclosure]{grid-column:2;grid-row:1/3}
 body[data-paimind-experience='paimind'][data-ds-dark-theme] [data-paimind-composer-overlay-anchor] [role='listbox']{background:var(--paimind-glass-strong)!important}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='presentation']{min-height:23px;padding:4px 8px;color:var(--paimind-muted);font-size:10px;font-weight:700;line-height:15px;letter-spacing:.08em;text-transform:uppercase}
 [data-paimind-agent-avatar]{display:block;flex:none;width:30px;height:30px;border:1px solid color-mix(in srgb,var(--paimind-line) 72%,white 28%);border-radius:50%;object-fit:cover;background:var(--paimind-glass-strong);box-shadow:0 1px 4px rgba(15,40,68,.12)}
@@ -332,6 +347,10 @@ body[data-paimind-experience='paimind'] [data-paimind-skill-center],body[data-pa
   body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox']:has(>[data-paimind-composer-disclosure])>:first-child{max-height:36vh;border-right:0;border-bottom:1px solid var(--paimind-line)}
   body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox'] [role='option']{min-height:48px;padding:8px 10px}
   body[data-paimind-experience='paimind'] [data-paimind-composer-disclosure]{max-height:150px;padding:13px 15px}
+  body[data-paimind-experience='paimind'] [data-paimind-popup-select]{grid-template-columns:1fr!important;grid-template-rows:auto minmax(120px,1fr) auto!important;width:100%!important;height:auto!important;max-height:min(72vh,var(--paimind-composer-overlay-room,72vh))!important}
+  body[data-paimind-experience='paimind'] [data-paimind-popup-select]>input[type='text']{grid-column:1;grid-row:1}
+  body[data-paimind-experience='paimind'] [data-paimind-popup-select]>[role='listbox']{grid-column:1;grid-row:2;max-height:36vh!important;border-right:0!important;border-bottom:1px solid var(--paimind-line)!important}
+  body[data-paimind-experience='paimind'] [data-paimind-popup-select]>[data-paimind-composer-disclosure]{grid-column:1;grid-row:3;max-height:150px}
   [data-paimind-context-launcher] span{display:none}
   [data-paimind-agent-picker-scrim]{display:block;position:absolute;inset:0;background:rgba(4,11,20,.42);pointer-events:auto}
   [data-paimind-agent-picker]{right:0!important;bottom:0!important;left:0!important;top:auto!important;grid-template-columns:1fr;grid-template-rows:auto auto;width:auto!important;height:auto;max-height:min(76vh,620px);border-width:1px 0 0;border-radius:22px 22px 0 0;animation:paimind-sheet-in .2s ease-out}
@@ -357,6 +376,78 @@ function installStyle(): () => void {
 const COMPOSER_OVERLAY_ANCHOR_MARKER = 'data-paimind-composer-overlay-anchor'
 const COMPOSER_OVERLAY_ROOM = '--paimind-composer-overlay-room'
 
+interface CommandDisclosureCopy {
+  readonly titleZh: string
+  readonly titleEn: string
+  readonly summaryZh: string
+  readonly summaryEn: string
+  readonly usages: readonly string[]
+}
+
+const COMMAND_DISCLOSURE_COPY: Readonly<Record<string, CommandDisclosureCopy>> = Object.freeze({
+  compact: {
+    titleZh: '压缩较早对话', titleEn: 'Compact earlier conversation',
+    summaryZh: '将较早内容整理成摘要，为后续对话释放上下文空间。',
+    summaryEn: 'Summarize earlier content to free context space for the rest of the conversation.',
+    usages: ['/compact'],
+  },
+  export: {
+    titleZh: '导出会话记录', titleEn: 'Export session log',
+    summaryZh: '下载当前会话、子会话和附件的 ZIP 记录。',
+    summaryEn: 'Download the current session, descendant sessions, and attachments as a ZIP archive.',
+    usages: ['/export'],
+  },
+  feedback: {
+    titleZh: '提交使用反馈', titleEn: 'Send product feedback',
+    summaryZh: '把本次会话中的体验问题记录为反馈，不会作为消息发送给模型。',
+    summaryEn: 'Record product feedback for this session without sending it to the model.',
+    usages: ['/feedback 反馈内容'],
+  },
+  goal: {
+    titleZh: '管理长期目标', titleEn: 'Manage a long-running goal',
+    summaryZh: '创建、查看、暂停或恢复需要持续推进的会话目标。',
+    summaryEn: 'Create, inspect, pause, or resume a goal that continues across multiple rounds.',
+    usages: ['/goal 目标', '/goal pause', '/goal resume', '/goal clear'],
+  },
+  permission: {
+    titleZh: '切换访问权限', titleEn: 'Change access permission',
+    summaryZh: '选择当前会话可访问的文件范围，以及扩大权限时是否需要确认。',
+    summaryEn: 'Choose the file-access scope and whether wider access requires confirmation.',
+    usages: ['/permission'],
+  },
+  plan: {
+    titleZh: '进入规划模式', titleEn: 'Enter plan mode',
+    summaryZh: '先分析需求并形成可评审计划，不立即执行修改。',
+    summaryEn: 'Analyze the request and produce a reviewable plan before making changes.',
+    usages: ['/plan 任务', '/plan off'],
+  },
+  model: {
+    titleZh: '选择对话模型', titleEn: 'Choose the conversation model',
+    summaryZh: '切换当前会话使用的模型；选择后立即应用。',
+    summaryEn: 'Switch the model used by the current conversation and apply it immediately.',
+    usages: ['/model'],
+  },
+  panel: {
+    titleZh: '打开 GenUI 面板', titleEn: 'Open the GenUI panel',
+    summaryZh: '打开可持续更新的会话面板，也可以用一句指令定制面板内容。',
+    summaryEn: 'Open the persistent session panel or tailor its content with an instruction.',
+    usages: ['/panel', '/panel 指令', '/panel clear'],
+  },
+})
+
+interface ComposerDisclosureSection {
+  readonly label: string
+  readonly values: readonly string[]
+  readonly code?: boolean
+}
+
+interface ComposerDisclosureContent {
+  readonly eyebrow: string
+  readonly title: string
+  readonly summary: string
+  readonly sections: readonly ComposerDisclosureSection[]
+}
+
 /**
  * Restyles the native Harness input overlay without owning its candidate
  * data, selection state, or keyboard behavior. All annotations and inline
@@ -370,6 +461,7 @@ export class PaimindComposerOverlayPresenter {
   private anchor: HTMLElement | null = null
   private observedComposer: HTMLElement | null = null
   private disclosureList: HTMLElement | null = null
+  private disclosureShell: HTMLElement | null = null
   private disclosure: HTMLElement | null = null
   private hoveredOption: HTMLElement | null = null
   private disclosureSignature = ''
@@ -467,7 +559,7 @@ export class PaimindComposerOverlayPresenter {
   }
 
   private readonly onKeyboardNavigation = (event: KeyboardEvent): void => {
-    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) || this.hoveredOption === null) return
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) || this.disclosureList === null) return
     this.hoveredOption = null
     this.schedule()
   }
@@ -489,6 +581,9 @@ export class PaimindComposerOverlayPresenter {
     if (this.disclosureList !== list) {
       this.clearDisclosure()
       this.disclosureList = list
+      const shell = list.parentElement
+      this.disclosureShell = shell?.querySelector(':scope > input[type="text"]') === null ? null : shell
+      this.disclosureShell?.setAttribute('data-paimind-popup-select', '')
       list.addEventListener('pointerover', this.onPointerOver)
       list.addEventListener('pointerleave', this.onPointerLeave)
     }
@@ -507,6 +602,8 @@ export class PaimindComposerOverlayPresenter {
     const name = children.find(child => child.className.includes('itemName'))
       ?? children.find(child => child.getAttribute('aria-hidden') !== 'true')
     const description = children.find(child => child.className.includes('itemDescription'))
+      ?? (this.disclosureShell === null ? undefined : children.find(child => child !== name
+        && child.textContent?.trim() !== '' && child.querySelector('svg') === null))
     if (name !== undefined && !name.hasAttribute('data-paimind-candidate-name')) name.setAttribute('data-paimind-candidate-name', '')
     if (description !== undefined && !description.hasAttribute('data-paimind-candidate-description')) description.setAttribute('data-paimind-candidate-description', '')
     if (name !== undefined && option.id.includes('paimind-context')) this.annotateContextName(option, name)
@@ -517,35 +614,143 @@ export class PaimindComposerOverlayPresenter {
       ?? option.textContent?.trim() ?? ''
     const description = option.querySelector<HTMLElement>('[data-paimind-candidate-description]')?.textContent?.trim() ?? ''
     const section = this.sectionFor(option)
+    const content = this.disclosureContent(option, name, description, section)
     const avatarKey = option.querySelector<HTMLElement>('[data-paimind-agent-avatar]')?.dataset.paimindAgentAvatarKey ?? ''
-    const signature = `${option.id}|${section}|${name}|${description}|${avatarKey}`
+    const signature = `${option.id}|${content.eyebrow}|${content.title}|${content.summary}|${content.sections.map(item => item.values.join(',')).join('|')}|${avatarKey}`
     if (signature === this.disclosureSignature && this.disclosure?.isConnected === true) return
     this.disclosureSignature = signature
     const disclosure = this.disclosure ?? this.doc.createElement('aside')
     disclosure.dataset.paimindComposerDisclosure = ''
     disclosure.setAttribute('aria-live', 'polite')
     disclosure.setAttribute('aria-atomic', 'true')
-    const kind = this.doc.createElement('small'); kind.textContent = section
-    const title = this.doc.createElement('strong'); title.textContent = name
-    const copy = this.doc.createElement('p')
-    copy.textContent = option.dataset.paimindContextKind === undefined
-      ? description || this.emptyDescription(section)
-      : this.contextDescription(option.dataset.paimindContextKind, name)
+    const header = this.doc.createElement('div'); header.dataset.paimindComposerDisclosureHeader = ''
+    const heading = this.doc.createElement('div'); heading.dataset.paimindComposerDisclosureHeading = ''
+    const kind = this.doc.createElement('small'); kind.textContent = content.eyebrow
+    const title = this.doc.createElement('strong'); title.textContent = content.title
+    heading.append(kind, title)
+    const copy = this.doc.createElement('p'); copy.textContent = content.summary
+    const sections = this.doc.createElement('div'); sections.dataset.paimindComposerDisclosureSections = ''
+    for (const item of content.sections) {
+      if (item.values.length === 0) continue
+      const block = this.doc.createElement('div'); block.dataset.paimindComposerDisclosureSection = ''
+      const label = this.doc.createElement('span'); label.textContent = item.label
+      const values = this.doc.createElement('div'); values.dataset.paimindComposerDisclosureValues = ''
+      for (const value of item.values) {
+        const element = this.doc.createElement(item.code === true ? 'code' : 'span')
+        element.textContent = value
+        values.append(element)
+      }
+      block.append(label, values)
+      sections.append(block)
+    }
     const hint = this.doc.createElement('span')
+    hint.dataset.paimindComposerDisclosureHint = ''
     hint.textContent = this.isChinese() ? '方向键浏览 · Enter 选择 · Esc 返回' : 'Arrow keys to browse · Enter to select · Esc to return'
     const avatarSource = option.querySelector<HTMLImageElement>('[data-paimind-agent-avatar]')
     const avatar = avatarSource?.cloneNode(true) as HTMLImageElement | undefined
     if (avatar !== undefined) {
       avatar.dataset.paimindComposerDisclosureAvatar = ''
       avatar.removeAttribute('data-paimind-agent-avatar-owner')
-      disclosure.replaceChildren(avatar, kind, title, copy, hint)
+      header.append(avatar, heading)
     } else {
-      disclosure.replaceChildren(kind, title, copy, hint)
+      header.append(heading)
     }
-    if (this.disclosure !== disclosure) {
-      this.disclosure = disclosure
-      this.disclosureList?.append(disclosure)
+    disclosure.replaceChildren(header, copy, sections, hint)
+    if (this.disclosure !== disclosure) this.disclosure = disclosure
+    if (!disclosure.isConnected) (this.disclosureShell ?? this.disclosureList)?.append(disclosure)
+  }
+
+  private disclosureContent(
+    option: HTMLElement,
+    name: string,
+    description: string,
+    section: string,
+  ): ComposerDisclosureContent {
+    const zh = this.isChinese()
+    const popupCommand = this.popupCommand()
+    if (popupCommand === 'model') {
+      const provider = description === '' ? (zh ? '当前提供方' : 'Current provider') : description
+      return {
+        eyebrow: zh ? '对话模型' : 'Conversation model',
+        title: name,
+        summary: zh ? `由 ${provider} 提供，选择后用于当前会话。` : `Provided by ${provider}; selecting it applies it to this conversation.`,
+        sections: [{ label: zh ? '作用范围' : 'Scope', values: [provider, zh ? '当前会话' : 'Current conversation'] }],
+      }
     }
+    if (popupCommand === 'permission') {
+      return {
+        eyebrow: zh ? '权限预设' : 'Permission preset',
+        title: name,
+        summary: description || (zh ? '选择后立即应用到当前会话。' : 'Selecting it applies it to the current conversation.'),
+        sections: [{ label: zh ? '作用范围' : 'Scope', values: [zh ? '当前会话' : 'Current conversation'] }],
+      }
+    }
+    if (option.id.includes('paimind-agent')) {
+      const currentAgent = this.doc.querySelector<HTMLElement>('[data-paimind-agent-picker-trigger] > span')?.textContent?.trim()
+      const isCurrent = currentAgent === name
+      const skills = isCurrent ? this.currentSkillNames() : []
+      return {
+        eyebrow: zh ? 'Agent（智能体）' : 'Agent',
+        title: name,
+        summary: description || this.emptyDescription(section),
+        sections: [{
+          label: zh ? '已挂载 Skill' : 'Mounted Skills',
+          values: isCurrent
+            ? (skills.length === 0 ? [zh ? '当前没有可用 Skill' : 'No Skills available'] : skills)
+            : [zh ? '选择后载入该 Agent 的真实 Skill' : 'Select to load this Agent’s actual Skills'],
+        }],
+      }
+    }
+    if (option.id.includes('paimind-skill')) {
+      return {
+        eyebrow: zh ? 'Skill（技能）' : 'Skill',
+        title: name,
+        summary: description || this.emptyDescription(section),
+        sections: [
+          { label: zh ? '调用方式' : 'Invocation', values: [`/${name}`], code: true },
+          { label: zh ? '可用范围' : 'Availability', values: [zh ? '当前 Agent' : 'Current Agent'] },
+        ],
+      }
+    }
+    if (option.dataset.paimindContextKind !== undefined) {
+      return {
+        eyebrow: section,
+        title: name,
+        summary: this.contextDescription(option.dataset.paimindContextKind, name),
+        sections: [{ label: zh ? '添加到' : 'Add to', values: [zh ? '当前对话上下文' : 'Current conversation context'] }],
+      }
+    }
+    const command = name.replace(/^\//u, '')
+    const commandCopy = COMMAND_DISCLOSURE_COPY[command]
+    if (commandCopy !== undefined) {
+      return {
+        eyebrow: zh ? '命令' : 'Command',
+        title: `/${command}`,
+        summary: zh ? commandCopy.titleZh : commandCopy.titleEn,
+        sections: [
+          { label: zh ? '可以做什么' : 'What it does', values: [zh ? commandCopy.summaryZh : commandCopy.summaryEn] },
+          { label: zh ? '常用写法' : 'Common usage', values: commandCopy.usages, code: true },
+        ],
+      }
+    }
+    return {
+      eyebrow: section,
+      title: name,
+      summary: description || this.emptyDescription(section),
+      sections: [],
+    }
+  }
+
+  private popupCommand(): string | null {
+    const label = this.disclosureShell?.getAttribute('aria-label') ?? ''
+    return /^\/([^\s]+)/u.exec(label)?.[1] ?? null
+  }
+
+  private currentSkillNames(): string[] {
+    if (this.disclosureList === null) return []
+    return [...this.disclosureList.querySelectorAll<HTMLElement>("[id*='paimind-skill']")]
+      .map(skill => skill.querySelector<HTMLElement>('[data-paimind-candidate-name]')?.textContent?.trim() ?? '')
+      .filter((name, index, names) => name !== '' && names.indexOf(name) === index)
   }
 
   private annotateContextName(option: HTMLElement, name: HTMLElement): void {
@@ -623,9 +828,11 @@ export class PaimindComposerOverlayPresenter {
         option.querySelector('[data-paimind-candidate-description]')?.removeAttribute('data-paimind-candidate-description')
       }
     }
+    this.disclosureShell?.removeAttribute('data-paimind-popup-select')
     this.disclosure?.remove()
     this.disclosure = null
     this.disclosureList = null
+    this.disclosureShell = null
     this.hoveredOption = null
     this.disclosureSignature = ''
   }
@@ -727,7 +934,12 @@ export function PaimindAgentAvatar({ choice, className }: {
   readonly choice: Pick<HarnessAgentChoice, 'id' | 'name'>
   readonly className?: string
 }): React.JSX.Element {
-  const identity = resolvePaimindAgentAvatar(choice)
+  const avatarId = useSyncExternalStore(
+    subscribePaimindAgentAvatarOverrides,
+    () => resolvePaimindAgentAvatarOverride(choice.id),
+    () => choice.id,
+  )
+  const identity = resolvePaimindAgentAvatar({ id: avatarId })
   return <img
     className={className}
     data-paimind-agent-avatar
@@ -752,9 +964,19 @@ export class PaimindAgentAvatarPresenter {
   private static readonly PROJECTION_OWNER = '@paimind/visual-experience'
   private readonly observer: MutationObserver
   private disposed = false
+  private readonly stopAvatarOverrides: () => void
 
   constructor(private readonly doc: Document = document) {
     this.observer = new MutationObserver(() => { this.hydrate() })
+    this.stopAvatarOverrides = subscribePaimindAgentAvatarOverrides(() => {
+      for (const image of this.doc.querySelectorAll<HTMLImageElement>(
+        `img[data-paimind-agent-avatar-owner="${PaimindAgentAvatarPresenter.PROJECTION_OWNER}"]`,
+      )) image.remove()
+      for (const seat of this.doc.querySelectorAll<HTMLElement>('[data-paimind-agent-avatar-seat]')) {
+        seat.removeAttribute('data-paimind-agent-avatar-ready')
+      }
+      this.hydrate()
+    })
     this.observer.observe(doc.body, { childList: true, subtree: true })
     this.hydrate()
   }
@@ -763,6 +985,7 @@ export class PaimindAgentAvatarPresenter {
     if (this.disposed) return
     this.disposed = true
     this.observer.disconnect()
+    this.stopAvatarOverrides()
     for (const host of this.doc.querySelectorAll<HTMLElement>('[data-paimind-agent-avatar-host]')) {
       const token = host.dataset.paimindAgentAvatarToken
       if (token !== undefined) host.replaceChildren(this.doc.createTextNode(token))
@@ -787,7 +1010,7 @@ export class PaimindAgentAvatarPresenter {
       const token = host.textContent?.trim() ?? ''
       const canonicalId = canonicalIdFromPaimindAgentAvatarIcon(token)
       if (canonicalId === null) continue
-      const identity = resolvePaimindAgentAvatar({ id: canonicalId })
+      const identity = resolvePaimindAgentAvatar({ id: resolvePaimindAgentAvatarOverride(canonicalId) })
       const image = this.doc.createElement('img')
       image.dataset.paimindAgentAvatar = ''
       image.dataset.paimindAgentAvatarId = canonicalId
@@ -815,7 +1038,7 @@ export class PaimindAgentAvatarPresenter {
       // Native/avatar metadata, when Harness exposes it, wins over PAIMind's
       // deterministic visual projection without replacing identity semantics.
       if (seat.querySelector(':scope > img') !== null) continue
-      const identity = resolvePaimindAgentAvatar({ id: canonicalId })
+      const identity = resolvePaimindAgentAvatar({ id: resolvePaimindAgentAvatarOverride(canonicalId) })
       const image = this.doc.createElement('img')
       image.dataset.paimindAgentAvatar = ''
       image.dataset.paimindAgentAvatarOwner = PaimindAgentAvatarPresenter.PROJECTION_OWNER
@@ -969,7 +1192,7 @@ export function AgentChoiceSeat({ bridge, mode, locale }: {
       ref={panelRef}
       data-paimind-agent-picker
       role="dialog"
-      aria-label={zh ? '选择 Agent 或平台模式' : 'Choose an Agent or platform mode'}
+      aria-label={zh ? '选择 Agent' : 'Choose an Agent'}
       style={style}
       onKeyDown={event => {
         if (event.key === 'Escape') { event.preventDefault(); setOpen(false); triggerRef.current?.focus() }

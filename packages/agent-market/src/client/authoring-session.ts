@@ -1,3 +1,5 @@
+import { PAIMIND_AGENT_PREPARE_CREATE_TOOL } from '@paimind/contracts'
+
 export interface AgentAuthoringDraftContext {
   readonly productKind: 'personal' | 'business'
   readonly businessCategory: string
@@ -60,36 +62,72 @@ export function assistantTextFromHistoryEvent(event: { readonly type: string; re
     .trim()
 }
 
+function nestedText(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) return value.map(nestedText).filter(Boolean).join('\n')
+  if (typeof value !== 'object' || value === null) return ''
+  const record = value as Readonly<Record<string, unknown>>
+  if (record.type === 'text' && typeof record.text === 'string') return record.text
+  return nestedText(record.content)
+}
+
+/** Read the structured Creator Tool result from one native Harness Turn. */
+export function authoringProposalFromHistoryEvents(
+  events: readonly { readonly type: string; readonly seq?: number; readonly data?: unknown }[],
+  startSeq: number,
+  endSeq: number,
+): AgentAuthoringProposal | null {
+  const calls = new Map<string, string>()
+  for (const event of events) {
+    const seq = historySeq(event)
+    if (seq <= startSeq || seq >= endSeq || typeof event.data !== 'object' || event.data === null) continue
+    if (event.type === 'tool/call') {
+      const data = event.data as { readonly callId?: unknown; readonly name?: unknown }
+      if (typeof data.callId === 'string' && typeof data.name === 'string') calls.set(data.callId, data.name)
+      continue
+    }
+    if (event.type !== 'tool/result') continue
+    const data = event.data as { readonly message?: { readonly source?: { readonly callId?: unknown }; readonly content?: unknown } }
+    const callId = data.message?.source?.callId
+    if (typeof callId !== 'string' || calls.get(callId) !== PAIMIND_AGENT_PREPARE_CREATE_TOOL) continue
+    const text = nestedText(data.message?.content)
+    if (text === '') continue
+    const proposal = parseAuthoringTurn(text).proposal
+    if (proposal !== null) return proposal
+  }
+  return null
+}
+
 export function parseAuthoringTurn(text: string): { readonly text: string; readonly proposal: AgentAuthoringProposal | null } {
   const matches = [...text.matchAll(AUTHORING_DRAFT_BLOCK)]
   if (matches.length === 0) {
-    if (/PAIMIND_AGENT_DRAFT/i.test(text)) throw new Error('Harness cordis 返回的说明书提案不完整')
+    if (/PAIMIND_AGENT_DRAFT/i.test(text)) throw new Error('智能体创建助手返回的说明书提案不完整')
     return Object.freeze({ text: text.trim(), proposal: null })
   }
   const match = matches[0]
   const payload = match?.[1]
-  if (matches.length !== 1 || match === undefined || payload === undefined) throw new Error('Harness cordis 每轮只能返回一份说明书提案')
+  if (matches.length !== 1 || match === undefined || payload === undefined) throw new Error('智能体创建助手每轮只能返回一份说明书提案')
   let parsed: unknown
-  try { parsed = JSON.parse(payload) } catch { throw new Error('Harness cordis 返回的说明书提案不是有效 JSON') }
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('Harness cordis 返回的说明书提案必须是 JSON 对象')
+  try { parsed = JSON.parse(payload) } catch { throw new Error('智能体创建助手返回的说明书提案不是有效 JSON') }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('智能体创建助手返回的说明书提案必须是 JSON 对象')
   const record = parsed as Readonly<Record<string, unknown>>
   const allowed = new Set(['businessCategory', 'name', 'description', 'role', 'goal', 'behavior', 'instructions', 'preferredSkillNames'])
   const unknown = Object.keys(record).filter(key => !allowed.has(key))
-  if (unknown.length > 0) throw new Error(`Harness cordis 返回了不允许修改的字段：${unknown.join('、')}`)
+  if (unknown.length > 0) throw new Error(`智能体创建助手返回了不允许修改的字段：${unknown.join('、')}`)
   const proposal: Record<string, string | readonly string[]> = {}
   for (const key of ['businessCategory', 'name', 'description', 'role', 'goal', 'behavior', 'instructions'] as const) {
     if (record[key] === undefined) continue
-    if (typeof record[key] !== 'string') throw new Error(`Harness cordis 返回的 ${key} 字段类型无效`)
+    if (typeof record[key] !== 'string') throw new Error(`智能体创建助手返回的 ${key} 字段类型无效`)
     proposal[key] = record[key]
   }
   if (record.preferredSkillNames !== undefined) {
     if (!Array.isArray(record.preferredSkillNames) || !record.preferredSkillNames.every(value => typeof value === 'string')) {
-      throw new Error('Harness cordis 返回的 preferredSkillNames 字段类型无效')
+      throw new Error('智能体创建助手返回的 preferredSkillNames 字段类型无效')
     }
     proposal.preferredSkillNames = record.preferredSkillNames
   }
   const visibleText = text.replace(match[0], '').trim()
-  if (/PAIMIND_AGENT_DRAFT/i.test(visibleText)) throw new Error('Harness cordis 返回的说明书提案标记不完整')
+  if (/PAIMIND_AGENT_DRAFT/i.test(visibleText)) throw new Error('智能体创建助手返回的说明书提案标记不完整')
   const safeVisibleText = /[?？]/u.test(visibleText) ? '' : visibleText
   return Object.freeze({ text: safeVisibleText, proposal: Object.freeze(proposal) as AgentAuthoringProposal })
 }
@@ -171,7 +209,7 @@ export function correlateAuthoringTurn(
     if (started !== null) openTurn = started
     if (authoringPromptRpcId(event) === rpcId) {
       const userSeq = historySeq(event)
-      if (openTurn === null || userSeq < 0) throw new Error('Harness cordis 创建消息缺少原生 Turn 边界')
+      if (openTurn === null || userSeq < 0) throw new Error('智能体创建消息缺少原生 Turn 边界')
       return Object.freeze({ turn: openTurn, userSeq })
     }
     const ended = historyTurn(event, 'turn/end')

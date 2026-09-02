@@ -1,13 +1,14 @@
-import { mkdtemp, readFile, readdir, stat } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { strToU8, zipSync } from 'fflate'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   PaimindSkillInstallerService,
   parseSkillMetadata,
+  parseGitHubSkillSource,
   validateSkillArchivePath,
 } from '../src/installer.js'
 
@@ -50,6 +51,74 @@ afterEach(async () => {
 })
 
 describe('streaming Skill installer', () => {
+  it('parses only public GitHub repository and tree URLs', () => {
+    expect(parseGitHubSkillSource({ repositoryUrl: 'https://github.com/acme/skills' })).toMatchObject({
+      owner: 'acme', repository: 'skills', ref: 'HEAD', archiveUrl: 'https://codeload.github.com/acme/skills/zip/HEAD',
+    })
+    expect(parseGitHubSkillSource({ repositoryUrl: 'https://github.com/acme/skills/tree/main/research/demo' })).toMatchObject({
+      ref: 'main', subdirectory: 'research/demo',
+    })
+    expect(() => parseGitHubSkillSource({ repositoryUrl: 'https://example.com/acme/skills' })).toThrow('仅支持公开')
+    expect(() => parseGitHubSkillSource({ repositoryUrl: 'https://github.com/acme/skills', subdirectory: '../secret' })).toThrow('子目录无效')
+  })
+
+  it('downloads a GitHub repository envelope and stages only the selected Skill directory', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-skill-github-'))
+    roots.push(base)
+    const root = join(base, 'skills')
+    const archive = zipSync({
+      'skills-main/README.md': strToU8('# Repository'),
+      'skills-main/catalog/demo/SKILL.md': strToU8('---\nname: github-demo\ndescription: Installed from a public GitHub repository\n---\n\nFollow the demo workflow.\n'),
+      'skills-main/catalog/demo/references/example.md': strToU8('Example reference.\n'),
+    })
+    const context = {
+      reflect: { provide: () => {} }, webServer: { register: () => () => {} },
+      effect(install: () => void) { install() },
+    }
+    const service = new PaimindSkillInstallerService(context as never, {
+      skillRoot: root, stateRoot: join(base, 'state'), now: () => 42,
+      fetch: vi.fn(async () => new Response(archive, { status: 200, headers: { 'content-type': 'application/zip' } })) as typeof fetch,
+    })
+    const preview = await service.inspectGitHub({
+      repositoryUrl: 'https://github.com/acme/skills', ref: 'main', subdirectory: 'catalog/demo',
+    })
+    expect(preview).toMatchObject({ name: 'github-demo', repository: 'acme/skills', ref: 'main', subdirectory: 'catalog/demo', fileCount: 2 })
+    await service.installUpload({ uploadId: preview.uploadId, digest: preview.digest })
+    await expect(readFile(join(root, 'github-demo', 'SKILL.md'), 'utf8')).resolves.toContain('Follow the demo workflow')
+    await expect(stat(join(root, 'github-demo', 'README.md'))).rejects.toThrow()
+  })
+
+  it('moves only PAIMind-managed legacy Skills out of Harness global discovery', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-skill-migration-'))
+    roots.push(base)
+    const legacyRoot = join(base, 'skills')
+    const businessRoot = join(base, '.paimind-skill-market', 'skills')
+    const stateRoot = join(base, 'state')
+    const context = {
+      reflect: { provide: () => {} }, webServer: { register: () => () => {} },
+      effect(install: () => void) { install() },
+    }
+    const managedRoot = join(legacyRoot, 'managed-business')
+    const systemRoot = join(legacyRoot, 'system-capability')
+    await mkdir(managedRoot, { recursive: true })
+    await mkdir(systemRoot, { recursive: true })
+    await writeFile(join(managedRoot, 'SKILL.md'), '---\nname: managed-business\ndescription: Managed business method\n---\n')
+    await writeFile(join(managedRoot, '.paimind-install.json'), `${JSON.stringify({
+      schemaVersion: 1, skillId: 'managed-business', name: 'managed-business', description: 'Managed business method',
+      digest: 'sha256:test', sourceFileName: 'SKILL.md', installedAt: 1, updatedAt: 2, managed: true,
+      runtimeRequirements: [],
+    })}\n`)
+    await writeFile(join(systemRoot, 'SKILL.md'), '---\nname: system-capability\ndescription: Harness system capability\n---\n')
+    const service = new PaimindSkillInstallerService(context as never, {
+      skillRoot: businessRoot, legacySkillRoot: legacyRoot, stateRoot, now: () => 42,
+    })
+
+    await expect(service.listInstalled()).resolves.toMatchObject({ items: [expect.objectContaining({ name: 'managed-business' })] })
+    await expect(stat(join(businessRoot, 'managed-business'))).resolves.toBeDefined()
+    await expect(stat(join(legacyRoot, 'managed-business'))).rejects.toThrow()
+    await expect(stat(systemRoot)).resolves.toBeDefined()
+  })
+
   it('parses folded community YAML frontmatter with nested metadata', () => {
     expect(parseSkillMetadata(`---
 name: ppt-master

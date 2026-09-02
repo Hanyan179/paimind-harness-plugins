@@ -591,6 +591,11 @@ export interface HarnessWorkspaceService {
   readonly list: HarnessObservableSnapshot<HarnessWorkspaceListSnapshot>
   startSession(workspaceId?: string): void
   openPath(path: string): Promise<void>
+  /**
+   * Native non-destructive Session archive action. Optional so older Harness
+   * candidates remain readable; feature plugins must fail soft when absent.
+   */
+  archiveSession?(sessionId: string): Promise<void>
 }
 
 /** Native Session list service used by the PAIMind Project bridge. */

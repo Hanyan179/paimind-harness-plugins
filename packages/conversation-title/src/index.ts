@@ -20,7 +20,7 @@ export const inject = ['settings', 'sessionTitle', 'llm']
 
 interface ConversationTitleContext extends PaimindConversationTitleAutomationContext {
   readonly settings: PaimindHostSettingsFacility
-  effect(install: () => () => void, label?: string): void
+  effect(install: () => () => void | Promise<void>, label?: string): void
 }
 
 /** Register settings and the non-blocking title lifecycle over native Harness services. */

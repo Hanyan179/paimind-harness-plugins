@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   HarnessExperienceMarkers,
   NativeHarnessAgentChoiceBridge,
+  replacePaimindAgentAvatarOverrides,
+  resolvePaimindAgentAvatarOverride,
+  subscribePaimindAgentAvatarOverrides,
 } from '../src/client-surface.js'
 import {
   resolveHarnessSettingsNamespace,
@@ -16,6 +19,21 @@ afterEach(() => {
 })
 
 describe('Harness experience semantic markers', () => {
+  it('shares presentation-only Agent avatar overrides without changing canonical Preset ids', () => {
+    const listener = vi.fn()
+    const unsubscribe = subscribePaimindAgentAvatarOverrides(listener)
+    const dispose = replacePaimindAgentAvatarOverrides('agent-market-test', { 'my-agent': 'creator' })
+
+    expect(resolvePaimindAgentAvatarOverride('my-agent')).toBe('creator')
+    expect(resolvePaimindAgentAvatarOverride('standard')).toBe('standard')
+    expect(listener).toHaveBeenCalledOnce()
+
+    dispose()
+    expect(resolvePaimindAgentAvatarOverride('my-agent')).toBe('my-agent')
+    expect(listener).toHaveBeenCalledTimes(2)
+    unsubscribe()
+  })
+
   it('maps dotted PAIMind ownership to the native Settings namespace grammar', () => {
     expect(resolveHarnessSettingsNamespace('paimind.visual-experience')).toBe('paimind-visual-experience')
     expect(resolveHarnessSettingsNamespace('ui-theme')).toBe('ui-theme')
@@ -110,9 +128,9 @@ describe('native Harness Agent choice bridge', () => {
 
     await expect(bridge.load()).resolves.toBe(true)
     expect(bridge.getSnapshot().choices).toEqual([
-      expect.objectContaining({ id: 'standard', category: 'platform-mode' }),
       expect.objectContaining({ id: 'sales-assistant', category: 'recommended' }),
     ])
+    expect(bridge.getSnapshot().choices.some(choice => choice.id === 'standard')).toBe(false)
     await bridge.select('sales-assistant')
     expect(nativeSeat.select).toHaveBeenCalledWith('sales-assistant')
     expect(bridge.getSnapshot().current).toBe('sales-assistant')
@@ -196,7 +214,7 @@ describe('native Harness Agent choice bridge', () => {
     bridge.dispose()
   })
 
-  it('fails open when the roster is unavailable or cannot preserve the native current choice', async () => {
+  it('keeps the internal standard selection while exposing only Agent choices', async () => {
     const nativeSeat: HarnessAgentPresetSeatControl = {
       getSnapshot: () => ({ current: 'standard', busy: false, error: null }),
       load: vi.fn(async () => {}),
@@ -210,9 +228,9 @@ describe('native Harness Agent choice bridge', () => {
       } } })),
     } as unknown as HarnessAgentPresetApi
     const bridge = new NativeHarnessAgentChoiceBridge(api, nativeSeat)
-    await expect(bridge.load()).resolves.toBe(false)
-    expect(bridge.getSnapshot().status).toBe('unavailable')
-    expect(bridge.getSnapshot().choices).toHaveLength(0)
+    await expect(bridge.load()).resolves.toBe(true)
+    expect(bridge.getSnapshot()).toMatchObject({ status: 'ready', current: 'standard' })
+    expect(bridge.getSnapshot().choices).toEqual([expect.objectContaining({ id: 'other', category: 'recommended' })])
     bridge.dispose()
   })
 

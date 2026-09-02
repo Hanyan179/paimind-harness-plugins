@@ -86,6 +86,43 @@ function userMessage(seq: number, text: string): PaimindConversationTitleSession
 }
 
 describe('conversation title automation', () => {
+  it('uses the native Harness title-provider lifecycle when register is available', async () => {
+    let provider: {
+      generate(request: {
+        session: PaimindConversationTitleSession
+        messages: readonly { seq: number; text: string }[]
+        route?: { provider: string; model: string }
+        signal: AbortSignal
+      }): Promise<{ title: string; messageSeqs: readonly number[]; model?: { provider: string; model: string } }>
+    } | undefined
+    const session: PaimindConversationTitleSession = { id: 'native-title-session', append: vi.fn() }
+    const ctx = {
+      sessionTitle: {
+        get: () => undefined,
+        register(value: typeof provider) { provider = value; return () => {} },
+      },
+      llm: { stream: () => textChunks('创建交期风险助手') },
+      logger: { warn: vi.fn() },
+      on: vi.fn(),
+    } as unknown as PaimindConversationTitleAutomationContext
+    const dispose = installPaimindConversationTitleAutomation(ctx, {
+      providerId: 'paimind-conversation-title', enabled: () => true,
+      route: () => undefined,
+      temporaryTitle: temporaryPaimindConversationTitle,
+      prompt: buildPaimindConversationTitlePrompt,
+      finalizeTitle: finalizePaimindConversationTitle,
+      maxOutputTokens: 64, timeoutMs: 1_000,
+    })
+    const result = await provider?.generate({
+      session, messages: [{ seq: 7, text: '创建一个帮我检查交期风险的智能体' }],
+      route: { provider: 'deepseek-official', model: 'deepseek-v4-flash' }, signal: new AbortController().signal,
+    })
+    expect(result).toEqual({
+      title: '创建交期风险助手', messageSeqs: [7], model: { provider: 'deepseek-official', model: 'deepseek-v4-flash' },
+    })
+    await dispose()
+  })
+
   it('shows a temporary title in the same event turn and replaces it in the background', async () => {
     const b = bench()
     b.emit(userMessage(1, '设计   模型服务设置页面'))

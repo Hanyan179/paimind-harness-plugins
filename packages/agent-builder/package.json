@@ -15,7 +15,7 @@
     "./client-contract": { "types": "./lib/types/client-contract.d.ts", "default": "./lib/client-contract.js" },
     "./package.json": "./package.json"
   },
-  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map","SKILL.md"],
   "dependencies": {
     "@deepseek-ai/dsh-home-paths": "0.1.1-rc.2",
     "@paimind/contracts": "workspace:^",

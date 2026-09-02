@@ -62,7 +62,7 @@ function setup(api: HarnessAgentPresetApi = successfulApi(), mode: 'paimind' | '
     <button data-paimind-product-trigger="agent-center">Agent Center</button>
   `
   const fixture = createClientContextFixture()
-  let current = 'standard'
+  let current = 'paimind'
   const nativeSelect = vi.fn(async (id: string) => { current = id })
   fixture.context.slots.inject('conversation.hero.agentPreset', () => fixture.context.slots.register({
     name: 'conversation.hero.agentPreset',
@@ -190,6 +190,109 @@ describe('PAIMind visual experience client', () => {
     }
   })
 
+  it.each([
+    ['@', 'dsh-slash-option-paimind-agent'],
+    ['/', 'dsh-slash-option-command'],
+  ])('keeps the %s menu disclosure synchronized with native keyboard selection', async (_trigger, idPrefix) => {
+    document.documentElement.lang = 'zh-CN'
+    document.body.innerHTML = `
+      <div data-composer-card>
+        <div id="anchor"><div data-slot="conversation.input.overlay">
+          <div role="listbox" aria-activedescendant="${idPrefix}-0"><div>
+            <div role="presentation">候选项</div>
+            <button id="${idPrefix}-0" role="option" aria-selected="true">
+              <span class="fixture_itemName">第一项</span><span class="fixture_itemDescription">第一项说明</span>
+            </button>
+            <button id="${idPrefix}-1" role="option" aria-selected="false">
+              <span class="fixture_itemName">第二项</span><span class="fixture_itemDescription">第二项说明</span>
+            </button>
+          </div></div>
+        </div></div>
+      </div>`
+    const presenter = new PaimindComposerOverlayPresenter(document, window)
+
+    try {
+      presenter.setMode('paimind')
+      const list = document.querySelector<HTMLElement>('[role="listbox"]')!
+      const first = document.querySelector<HTMLElement>(`#${idPrefix}-0`)!
+      const second = document.querySelector<HTMLElement>(`#${idPrefix}-1`)!
+      const disclosure = () => document.querySelector<HTMLElement>('[data-paimind-composer-disclosure]')
+
+      expect(disclosure()).toHaveTextContent('第一项')
+      fireEvent.keyDown(document, { key: 'ArrowDown' })
+      list.setAttribute('aria-activedescendant', second.id)
+      first.setAttribute('aria-selected', 'false')
+      second.setAttribute('aria-selected', 'true')
+
+      await waitFor(() => expect(disclosure()).toHaveTextContent('第二项'))
+      expect(disclosure()).toHaveTextContent('第二项说明')
+    } finally {
+      presenter.dispose()
+    }
+  })
+
+  it('presents popup model choices in the same wide two-column disclosure shell', async () => {
+    document.documentElement.lang = 'zh-CN'
+    document.body.innerHTML = `
+      <div data-composer-card><div id="anchor"><div data-slot="conversation.input.overlay">
+        <div aria-label="/model 选项">
+          <input type="text" aria-label="筛选选项" />
+          <div role="listbox" aria-label="/model 匹配项" aria-activedescendant="model-0">
+            <div id="model-0" role="option" aria-selected="true"><span>DeepSeek-V4-Flash</span><span>DeepSeek</span></div>
+            <div id="model-1" role="option" aria-selected="false"><span>DeepSeek-V4-Pro</span><span>DeepSeek</span></div>
+          </div>
+        </div>
+      </div></div></div>`
+    const presenter = new PaimindComposerOverlayPresenter(document, window)
+
+    try {
+      presenter.setMode('paimind')
+      const shell = document.querySelector<HTMLElement>('[aria-label="/model 选项"]')!
+      await waitFor(() => expect(shell).toHaveAttribute('data-paimind-popup-select'))
+      expect(shell.querySelector(':scope > [data-paimind-composer-disclosure]')).toHaveTextContent('对话模型')
+      expect(shell.querySelector(':scope > [data-paimind-composer-disclosure]')).toHaveTextContent('由 DeepSeek 提供，选择后用于当前会话。')
+      expect(shell.querySelector('[role="listbox"] > [data-paimind-composer-disclosure]')).toBeNull()
+    } finally {
+      presenter.dispose()
+    }
+    expect(document.querySelector('[data-paimind-popup-select]')).toBeNull()
+  })
+
+  it('uses the disclosure space for truthful Agent Skills and command guidance', async () => {
+    document.documentElement.lang = 'zh-CN'
+    document.body.innerHTML = `
+      <button data-paimind-agent-picker-trigger><span>Paramont 助手</span></button>
+      <div data-composer-card><div id="anchor"><div data-slot="conversation.input.overlay">
+        <div role="listbox" aria-activedescendant="dsh-slash-option-paimind-agent-0"><div>
+          <div role="presentation">推荐 Agent</div>
+          <button id="dsh-slash-option-paimind-agent-0" role="option" aria-selected="true"><span class="fixture_itemName">Paramont 助手</span><span class="fixture_itemDescription">产品与协作智能体。</span></button>
+          <div role="presentation">Skill（技能）</div>
+          <button id="dsh-slash-option-paimind-skill-0" role="option" aria-selected="false"><span class="fixture_itemName">openai-docs</span><span class="fixture_itemDescription">查询官方文档。</span></button>
+        </div></div>
+      </div></div></div>`
+    const presenter = new PaimindComposerOverlayPresenter(document, window)
+
+    try {
+      presenter.setMode('paimind')
+      const list = document.querySelector<HTMLElement>('[role="listbox"]')!
+      const disclosure = () => document.querySelector<HTMLElement>('[data-paimind-composer-disclosure]')
+      expect(disclosure()).toHaveTextContent('已挂载 Skill')
+      expect(disclosure()).toHaveTextContent('openai-docs')
+
+      list.setAttribute('aria-activedescendant', 'dsh-slash-option-paimind-skill-0')
+      fireEvent.keyDown(document, { key: 'ArrowDown' })
+      await waitFor(() => expect(disclosure()).toHaveTextContent('/openai-docs'))
+      expect(disclosure()).toHaveTextContent('当前 Agent')
+
+      list.innerHTML = '<div><div role="presentation">命令</div><button id="dsh-slash-option-command-0" role="option" aria-selected="true"><span class="fixture_itemName">goal</span><span class="fixture_itemDescription">set or view the goal</span></button></div>'
+      list.setAttribute('aria-activedescendant', 'dsh-slash-option-command-0')
+      await waitFor(() => expect(disclosure()).toHaveTextContent('管理长期目标'))
+      expect(disclosure()).toHaveTextContent('/goal pause')
+    } finally {
+      presenter.dispose()
+    }
+  })
+
   it('labels a compact native Settings trigger and reverses the label on unload', async () => {
     document.documentElement.lang = 'zh-CN'
     const { fixture } = setup()
@@ -245,10 +348,10 @@ describe('PAIMind visual experience client', () => {
     const trigger = document.querySelector<HTMLButtonElement>('[data-paimind-agent-picker-trigger]')
     if (trigger === null) throw new Error('visual Agent picker trigger is missing')
     fireEvent.click(trigger)
-    const dialog = await screen.findByRole('dialog', { name: '选择 Agent 或平台模式' })
+    const dialog = await screen.findByRole('dialog', { name: '选择 Agent' })
     expect(dialog).toBeInTheDocument()
     expect(screen.getAllByText('推荐 Agent').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('平台模式').length).toBeGreaterThan(0)
+    expect(screen.queryByText('平台模式')).toBeNull()
     expect(dialog).toHaveTextContent('方向键浏览 · Enter 选择 · Esc 返回')
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
@@ -312,10 +415,10 @@ describe('PAIMind visual experience client', () => {
     const visualSeat = fixture.slots.find(entry => entry.options.id === 'paimind-visual-agent-choice')!
     const Seat = visualSeat.component as ComponentType
     const view = render(<Seat {...visualSeat.inject?.() as never} />)
-    const trigger = await screen.findByRole('button', { name: /标准模式/ })
+    const trigger = await screen.findByRole('button', { name: /Paramont 助手/ })
     fireEvent.click(trigger)
 
-    const dialog = await screen.findByRole('dialog', { name: '选择 Agent 或平台模式' })
+    const dialog = await screen.findByRole('dialog', { name: '选择 Agent' })
     const list = dialog.querySelector<HTMLElement>('[data-paimind-agent-picker-list]')
     const detail = dialog.querySelector<HTMLElement>('[data-paimind-agent-picker-detail]')
     if (list === null || detail === null) throw new Error('Agent picker columns are missing')
@@ -353,9 +456,9 @@ describe('PAIMind visual experience client', () => {
     expect(overlay.querySelector('[data-paimind-composer-disclosure]')).toHaveTextContent('方向键浏览 · Enter 选择 · Esc 返回')
 
     const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@paimind/visual-experience"]')?.textContent ?? ''
-    expect(style).toContain('width:min(590px,100%)!important')
-    expect(style).toContain('height:min(360px,var(--paimind-composer-overlay-room,360px))!important')
-    expect(style).toContain('grid-template-columns:minmax(190px,42%) minmax(240px,1fr)')
+    expect(style).toContain('width:min(820px,100%)!important')
+    expect(style).toContain('height:min(400px,var(--paimind-composer-overlay-room,400px))!important')
+    expect(style).toContain('grid-template-columns:minmax(250px,36%) minmax(360px,1fr)')
     expect(style).toContain('min-height:36px;padding:7px 8px;border-radius:10px')
 
     await act(async () => { scope.push('native') })
@@ -408,10 +511,11 @@ describe('PAIMind visual experience client', () => {
     const visualSeat = fixture.slots.find(entry => entry.options.id === 'paimind-visual-agent-choice')!
     const Seat = visualSeat.component as ComponentType
     const seatView = render(<Seat {...visualSeat.inject?.() as never} />)
-    fireEvent.click(await screen.findByRole('button', { name: /标准模式/ }))
-    const picker = await screen.findByRole('dialog', { name: '选择 Agent 或平台模式' })
-    fireEvent.click(picker.querySelector<HTMLButtonElement>("[data-paimind-agent-choice][aria-label='Paramont 助手']")
-      ?? screen.getByRole('button', { name: 'Paramont 助手' }))
+    fireEvent.click(await screen.findByRole('button', { name: /Paramont 助手/ }))
+    const picker = await screen.findByRole('dialog', { name: '选择 Agent' })
+    const currentChoice = picker.querySelector<HTMLButtonElement>("[data-paimind-agent-choice][aria-selected='true']")
+    if (currentChoice === null) throw new Error('current Paramont Agent choice is missing')
+    fireEvent.click(currentChoice)
     await waitFor(() => expect(nativeSelect).toHaveBeenLastCalledWith('paimind'))
     nativeSelect.mockClear()
 
@@ -426,7 +530,7 @@ describe('PAIMind visual experience client', () => {
       { query: '', position: 'leading', signal: new AbortController().signal },
     )
     expect(allAgents[0]?.section).toBe('推荐 Agent')
-    expect(allAgents.find(candidate => candidate.value === 'standard')?.section).toBe('平台模式')
+    expect(allAgents.find(candidate => candidate.value === 'standard')).toBeUndefined()
     expect(allAgents.find(candidate => candidate.value === 'paimind')?.section).toBe('推荐 Agent')
     const agents = await agent.candidates(
       { sessionId: 'session-1' },
@@ -445,19 +549,8 @@ describe('PAIMind visual experience client', () => {
       { sessionId: 'session-1' },
       { query: '创建助手', position: 'leading', signal: new AbortController().signal },
     )
-    expect(creators).toEqual([expect.objectContaining({
-      name: '个人智能体创建助手',
-      description: '使用 Harness 原生创造模式创建和配置个人智能体。',
-      value: 'cordis',
-    })])
-    expect(agent.onPick({
-      candidate: creators[0]!, session: { sessionId: 'session-1' }, position: 'leading', via: 'menu',
-      span: { start: 0, end: 1, draftRev: 3 },
-    })).toEqual({ text: '' })
-    await waitFor(() => expect(nativeSelect).toHaveBeenCalledWith('cordis'))
-    expect(builderRequest).toHaveBeenCalledWith(expect.objectContaining({
-      detail: { productKind: 'personal' },
-    }))
+    expect(creators).toEqual([])
+    expect(builderRequest).not.toHaveBeenCalled()
 
     const skill = triggerSources.find(source => source.name === 'paimind-skill')!
     const skills = await skill.candidates(
@@ -592,7 +685,7 @@ describe('PAIMind visual experience client', () => {
     expect(style).toContain('[data-paimind-agent-picker-trigger]{min-width:0;max-width:45%}')
     expect(style).toContain('[data-paimind-composer-overlay-anchor]')
     expect(style).toContain("[role='listbox']")
-    expect(style).toContain('max-height:min(360px,var(--paimind-composer-overlay-room,360px))!important')
+    expect(style).toContain('max-height:min(400px,var(--paimind-composer-overlay-room,400px))!important')
     expect(style).toContain("[data-input-backdrop='true']{color:var(--paimind-ink)!important}")
     expect(style).toContain('textarea[data-phase]{background:transparent!important;color:transparent!important')
     expect(style).not.toContain("[data-phase]{background:var(--paimind-canvas)!important}")
@@ -601,7 +694,7 @@ describe('PAIMind visual experience client', () => {
     expect(style).not.toContain("body[data-paimind-experience='paimind'] [data-paimind-agent-center]")
     expect(style).toContain("body[data-paimind-experience='paimind'] [data-paimind-skill-center]")
     expect(style).toContain('[data-paimind-composer-disclosure]')
-    expect(style).toContain('grid-template-columns:minmax(190px,42%) minmax(240px,1fr)')
+    expect(style).toContain('grid-template-columns:minmax(250px,36%) minmax(360px,1fr)')
     expect(style).toContain('[data-paimind-candidate-description]{display:none!important}')
     expect(style).toContain('[data-paimind-agent-avatar]{display:block')
     expect(style).toContain('@media(prefers-reduced-motion:reduce)')

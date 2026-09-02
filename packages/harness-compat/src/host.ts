@@ -264,6 +264,21 @@ export interface PaimindConversationTitleSnapshot {
 export interface PaimindConversationTitleAutomationContext {
   readonly sessionTitle: {
     get(session: PaimindConversationTitleSession): PaimindConversationTitleSnapshot | undefined
+    /** Native provider seam available in current Harness; optional keeps the compatibility adapter usable on older releases. */
+    register?(provider: {
+      readonly id: string
+      readonly automatic: 'first-prompt'
+      generate(request: {
+        readonly session: PaimindConversationTitleSession
+        readonly messages: readonly { readonly seq: number; readonly text: string }[]
+        readonly route?: PaimindConversationTitleModelRoute
+        readonly signal: AbortSignal
+      }): Promise<{
+        readonly title: string
+        readonly messageSeqs: readonly number[]
+        readonly model?: PaimindConversationTitleModelRoute
+      }>
+    }): () => void | Promise<void>
   }
   readonly llm: {
     stream(options: {
@@ -329,7 +344,48 @@ function titleRouteFromHeader(event: Extract<PaimindConversationTitleSessionEven
 export function installPaimindConversationTitleAutomation(
   ctx: PaimindConversationTitleAutomationContext,
   options: PaimindConversationTitleAutomationOptions,
-): () => void {
+): () => void | Promise<void> {
+  if (ctx.sessionTitle.register !== undefined) {
+    return ctx.sessionTitle.register({
+      id: options.providerId,
+      automatic: 'first-prompt',
+      async generate(request) {
+        const first = request.messages[0]
+        if (first === undefined) throw new Error('conversation title provider received no human message')
+        const configuredRoute = options.route()
+        const route = configuredRoute ?? request.route
+        if (!options.enabled() || route === undefined) {
+          const title = options.temporaryTitle(first.text)
+          if (title === '') throw new Error('conversation title provider could not derive a fallback title')
+          return { title, messageSeqs: [first.seq] }
+        }
+        const timeout = AbortSignal.timeout(options.timeoutMs)
+        const signal = AbortSignal.any([request.signal, timeout])
+        const assembler = new BlockAssembler()
+        const message = createUserMessage({
+          content: [{ type: 'text', text: options.prompt(first.text) }],
+          source: { kind: 'plugin', plugin: options.providerId },
+        })
+        for await (const chunk of ctx.llm.stream({
+          provider: route.provider,
+          model: route.model,
+          messages: [message],
+          maxTokens: options.maxOutputTokens,
+          sessionId: request.session.id,
+          purpose: 'session-title',
+          signal,
+        })) assembler.push(chunk as Parameters<BlockAssembler['push']>[0])
+        if (assembler.finish.kind !== 'stop') throw new Error('conversation title model call did not finish normally')
+        const output = assembler.message({ kind: 'plugin', plugin: options.providerId }).content
+          .filter(block => block.type === 'text')
+          .map(block => block.text)
+          .join(' ')
+        const title = options.finalizeTitle(output)
+        if (title === undefined) throw new Error('conversation title model returned no valid title')
+        return { title, messageSeqs: [first.seq], model: route }
+      },
+    })
+  }
   const workBySession = new Map<PaimindConversationTitleSession, PaimindConversationTitleWork>()
   let disposed = false
 

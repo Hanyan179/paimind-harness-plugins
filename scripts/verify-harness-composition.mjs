@@ -59,6 +59,7 @@ const extensionCenterRoot = resolve(repositoryRoot, 'packages/extension-center')
 const runtimeOrbsRoot = resolve(repositoryRoot, 'packages/runtime-orbs')
 const brandingRoot = resolve(repositoryRoot, 'packages/branding')
 const visualExperienceRoot = resolve(repositoryRoot, 'packages/visual-experience')
+const conversationTitleRoot = resolve(repositoryRoot, 'packages/conversation-title')
 const workspaceProjectRoot = resolve(repositoryRoot, 'packages/workspace-project')
 const sidebarAdapterRoot = resolve(repositoryRoot, 'packages/better-sidebar-adapter')
 const taskMonitorRoot = resolve(repositoryRoot, 'packages/task-monitor')
@@ -227,6 +228,7 @@ async function bootAndProbe(expectedPackages, absentPackages = []) {
         'Harness boot manifest did not settle before timeout',
         `missing: ${missingPackages.join(', ') || '(none)'}`,
         `unexpected: ${unexpectedPackages.join(', ') || '(none)'}`,
+        `boot output:\n${output}`,
       ].join('\n'))
     }
     console.log('passed: boot isolated Web profile and probe PAIMind client manifests')
@@ -650,6 +652,7 @@ try {
     runtimeOrbsRoot,
     brandingRoot,
     visualExperienceRoot,
+    conversationTitleRoot,
     workspaceProjectRoot,
     sidebarAdapterRoot,
     taskMonitorRoot,
@@ -690,6 +693,7 @@ try {
     'paimind-runtime-orbs', '@paimind/runtime-orbs',
     'paimind-branding', '@paimind/branding',
     'paimind-visual-experience', '@paimind/visual-experience',
+    'paimind-conversation-title', '@paimind/conversation-title',
     'paimind-workspace-project', '@paimind/workspace-project',
     'paimind-better-sidebar-adapter', '@paimind/better-sidebar-adapter',
     'paimind-task-monitor', '@paimind/task-monitor',
@@ -745,6 +749,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/visual-experience',
+    '@paimind/conversation-title',
     '@paimind/workspace-project',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
@@ -778,6 +783,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/visual-experience',
+    '@paimind/conversation-title',
     '@paimind/workspace-project',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
@@ -811,6 +817,7 @@ try {
     || removed.includes('paimind-runtime-orbs')
     || removed.includes('paimind-branding')
     || removed.includes('paimind-visual-experience')
+    || removed.includes('paimind-conversation-title')
     || removed.includes('paimind-workspace-project')
     || removed.includes('paimind-better-sidebar-adapter')
     || removed.includes('paimind-task-monitor')
@@ -867,6 +874,7 @@ try {
     withoutCenterBundleRoot,
     runtimeOrbsRoot,
     brandingRoot,
+    conversationTitleRoot,
     workspaceProjectRoot,
     sidebarAdapterRoot,
     taskMonitorRoot,
