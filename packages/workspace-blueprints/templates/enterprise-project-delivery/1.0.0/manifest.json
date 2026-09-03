@@ -1,0 +1,16 @@
+{
+  "schema": "paimind.workspace-blueprint/v1",
+  "blueprintId": "enterprise-project-delivery",
+  "version": "1.0.0",
+  "name": "企业项目交付工作区",
+  "description": "从目标、范围、责任、风险到验收证据的企业项目交付基座。",
+  "category": "project-delivery",
+  "tags": ["enterprise", "delivery", "governance"],
+  "source": "builtin",
+  "createdAt": 0,
+  "updatedAt": 0,
+  "composition": {
+    "agent": null,
+    "businessSkills": []
+  }
+}

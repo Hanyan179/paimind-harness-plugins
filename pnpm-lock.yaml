@@ -501,6 +501,9 @@ importers:
       '@paimind/walmart-proposal-adapter':
         specifier: workspace:^
         version: link:../walmart-proposal-adapter
+      '@paimind/workspace-blueprints':
+        specifier: workspace:^
+        version: link:../workspace-blueprints
       '@paimind/workspace-project':
         specifier: workspace:^
         version: link:../workspace-project
@@ -948,6 +951,34 @@ importers:
       '@paimind/testkit':
         specifier: workspace:^
         version: link:../testkit
+
+  packages/workspace-blueprints:
+    dependencies:
+      '@deepseek-ai/dsh-home-paths':
+        specifier: 0.1.1-rc.2
+        version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))
+      '@paimind/contracts':
+        specifier: workspace:^
+        version: link:../contracts
+      '@paimind/harness-compat':
+        specifier: workspace:^
+        version: link:../harness-compat
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@paimind/testkit':
+        specifier: workspace:^
+        version: link:../testkit
+      '@testing-library/react':
+        specifier: ^16.3.2
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
 
   packages/workspace-project:
     dependencies:

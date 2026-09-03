@@ -7,7 +7,7 @@ import type {
 } from './index.js'
 
 /** Shared product-surface ids; Harness still owns shell routing and history. */
-export const PAIMIND_PRODUCT_SURFACE_IDS = ['agent-center', 'skill-center'] as const
+export const PAIMIND_PRODUCT_SURFACE_IDS = ['agent-center', 'skill-center', 'workspace-blueprints'] as const
 
 export type PaimindProductSurfaceId = typeof PAIMIND_PRODUCT_SURFACE_IDS[number]
 
@@ -54,6 +54,7 @@ const AGENT_BUILDER_REQUEST_EVENT = 'paimind:agent-builder:request'
 
 interface PaimindProductSurfaceEventDetail {
   readonly id: PaimindProductSurfaceId
+  readonly phase: 'request' | 'commit'
 }
 
 export interface PaimindAgentBuilderRequest {
@@ -71,14 +72,31 @@ function productSurfaceTrigger(
   return doc.querySelector<HTMLButtonElement>(`button[data-paimind-product-trigger="${id}"]`)
 }
 
+function tryRequestPaimindProductSurface(
+  id: PaimindProductSurfaceId,
+  win: Window,
+): boolean {
+  const request = win.document.createEvent('CustomEvent')
+  request.initCustomEvent(OPEN_EVENT, false, true, {
+    id,
+    phase: 'request',
+  } satisfies PaimindProductSurfaceEventDetail)
+  if (!win.dispatchEvent(request)) return false
+  const commit = win.document.createEvent('CustomEvent')
+  commit.initCustomEvent(OPEN_EVENT, false, false, {
+    id,
+    phase: 'commit',
+  } satisfies PaimindProductSurfaceEventDetail)
+  win.dispatchEvent(commit)
+  return true
+}
+
 /** Announce one PAIMind surface without introducing a second router or store. */
 export function requestPaimindProductSurface(
   id: PaimindProductSurfaceId,
   win: Window = window,
 ): void {
-  const event = win.document.createEvent('CustomEvent')
-  event.initCustomEvent(OPEN_EVENT, false, false, { id } satisfies PaimindProductSurfaceEventDetail)
-  win.dispatchEvent(event)
+  tryRequestPaimindProductSurface(id, win)
 }
 
 /**
@@ -89,7 +107,7 @@ export function requestPaimindAgentBuilder(
   request: PaimindAgentBuilderRequest = { productKind: 'personal' },
   win: Window = window,
 ): void {
-  requestPaimindProductSurface('agent-center', win)
+  if (!tryRequestPaimindProductSurface('agent-center', win)) return
   const event = win.document.createEvent('CustomEvent')
   event.initCustomEvent(AGENT_BUILDER_REQUEST_EVENT, false, false, {
     productKind: request.productKind,
@@ -332,13 +350,15 @@ function releaseProductCenterHost(state: ProductCenterHostState): void {
 
 /**
  * Lightweight client-only viewing controller.  It owns no Agent, Skill,
- * Session, URL, or persisted state; DOM events only coordinate two separately
+ * Session, URL, or persisted state; DOM events only coordinate separately
  * installable full-page contributions.
  */
 export class PaimindProductSurfaceController {
   private snapshot: PaimindProductSurfaceSnapshot = closedSnapshot
   private readonly listeners = new Set<() => void>()
+  private readonly closeBlockers = new Set<symbol>()
   private disposed = false
+  private deferredClose: { readonly restoreFocus: boolean } | null = null
   private restoreTarget: HTMLElement | null = null
 
   constructor(
@@ -358,18 +378,42 @@ export class PaimindProductSurfaceController {
   }
 
   open(trigger?: HTMLElement): void {
+    if (this.disposed) return
+    const previousRestoreTarget = this.restoreTarget
     if (trigger !== undefined) this.restoreTarget = trigger
-    requestPaimindProductSurface(this.id, this.win)
+    const opened = tryRequestPaimindProductSurface(this.id, this.win)
+    if (!opened) this.restoreTarget = previousRestoreTarget
   }
 
-  close(restoreFocus = true): void {
-    if (!this.snapshot.open) return
+  /** Block closing until the returned idempotent release function runs. */
+  blockClose(): () => void {
+    if (this.disposed) return () => {}
+    const blocker = Symbol('paimind-product-surface-close-blocker')
+    this.closeBlockers.add(blocker)
+    return () => {
+      if (!this.closeBlockers.delete(blocker) || this.closeBlockers.size > 0) return
+      const deferred = this.deferredClose
+      this.deferredClose = null
+      if (deferred !== null) this.close(deferred.restoreFocus)
+    }
+  }
+
+  /** Recover a failed surface as soon as all active close blockers release. */
+  closeWhenUnblocked(restoreFocus = true): void {
+    if (this.close(restoreFocus)) return
+    this.deferredClose = { restoreFocus }
+  }
+
+  close(restoreFocus = true): boolean {
+    if (!this.snapshot.open) return true
+    if (this.closeBlockers.size > 0) return false
     this.publish(closedSnapshot)
-    if (!restoreFocus) return
+    if (!restoreFocus) return true
     const target = this.restoreTarget?.isConnected === true
       ? this.restoreTarget
       : productSurfaceTrigger(this.doc, this.id)
     this.win.setTimeout(() => { target?.focus() }, 0)
+    return true
   }
 
   toggle(trigger?: HTMLElement): void {
@@ -383,6 +427,8 @@ export class PaimindProductSurfaceController {
     this.win.removeEventListener(OPEN_EVENT, this.onOpenRequest as EventListener)
     this.snapshot = closedSnapshot
     this.listeners.clear()
+    this.closeBlockers.clear()
+    this.deferredClose = null
     this.restoreTarget = null
   }
 
@@ -390,8 +436,11 @@ export class PaimindProductSurfaceController {
     if (this.disposed) return
     const id = event.detail?.id
     if (id === undefined || !PAIMIND_PRODUCT_SURFACE_IDS.includes(id)) return
-    if (id === this.id) this.publish(openSnapshot)
-    else this.close(false)
+    if (event.detail?.phase === 'request') {
+      if (id !== this.id && !this.close(false)) event.preventDefault()
+      return
+    }
+    if (event.detail?.phase === 'commit' && id === this.id) this.publish(openSnapshot)
   }
 
   private publish(snapshot: PaimindProductSurfaceSnapshot): void {
@@ -699,7 +748,7 @@ export function installPaimindProductSurfaceInteraction(
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== 'Escape') return
     event.preventDefault()
-    controller.close()
+    if (!controller.close()) event.stopImmediatePropagation()
   }
   const onClick = (event: MouseEvent): void => {
     const view = doc.defaultView
@@ -713,12 +762,15 @@ export function installPaimindProductSurfaceInteraction(
 
     // Do not restore focus to the Center trigger: the outside control owns the
     // activation and should retain focus while its native navigation continues.
-    controller.close(false)
+    if (!controller.close(false)) {
+      event.preventDefault()
+      event.stopImmediatePropagation()
+    }
   }
-  doc.addEventListener('keydown', onKeyDown)
+  doc.addEventListener('keydown', onKeyDown, true)
   doc.addEventListener('click', onClick, true)
   return () => {
-    doc.removeEventListener('keydown', onKeyDown)
+    doc.removeEventListener('keydown', onKeyDown, true)
     doc.removeEventListener('click', onClick, true)
   }
 }

@@ -61,16 +61,16 @@
       group: true
       disabled: true
       config:
-        - id: paimind-skill-market-invariant
-          name: '@paimind/skill-market/invariant'
-          inject: [invariants]
-        - id: paimind-skill-market
-          name: '@paimind/skill-market'
         - id: paimind-agent-builder-invariant
           name: '@paimind/agent-builder/invariant'
           inject: [invariants]
         - id: paimind-agent-builder
           name: '@paimind/agent-builder'
+        - id: paimind-skill-market-invariant
+          name: '@paimind/skill-market/invariant'
+          inject: [invariants]
+        - id: paimind-skill-market
+          name: '@paimind/skill-market'
         - id: paimind-agent-market-invariant
           name: '@paimind/agent-market/invariant'
           inject: [invariants]
@@ -87,6 +87,11 @@
           inject: [invariants]
         - id: paimind-workspace-project
           name: '@paimind/workspace-project'
+        - id: paimind-workspace-blueprints-invariant
+          name: '@paimind/workspace-blueprints/invariant'
+          inject: [invariants]
+        - id: paimind-workspace-blueprints
+          name: '@paimind/workspace-blueprints'
         - id: paimind-better-sidebar-adapter-invariant
           name: '@paimind/better-sidebar-adapter/invariant'
           inject: [invariants]

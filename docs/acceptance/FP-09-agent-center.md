@@ -1,5 +1,7 @@
 # FP09 智能体中心验收
 
+> Historical Acceptance（历史验收）：本文件记录多个旧版本的真实验收事实，其中 `cordis` 创建模式、可选 Mode（模式）、`.paimind-skills` 文件扫描和仅两个创建 Tool（工具）均已被当前架构取代，不得作为新实现规范。当前规范只以 [`../product/RQ-106-agent-center-prd.md`](../product/RQ-106-agent-center-prd.md)、[`../plans/skill-center-reference-design.md`](../plans/skill-center-reference-design.md) 与仓库根 `AGENTS.md` 为准。
+
 ## 当前状态
 
 历史主链路为 `Product E2E Verified`，最近验收日期为 2026-08-17。2026-08-21 原生 Shell 与统一 Builder 的外壳、布局、入口和保存后测试对话已完成本地 Pre-Acceptance（预验收）；此前把前端本地规则造成的字段同步当作“创建助手真实 AI”的证据是错误的，该结论已撤回。当前工作树已经改为 Harness 原生 `cordis` Session（会话）驱动的创建链路，但新的真实模型 Browser E2E（浏览器端到端）证据仍待本轮补齐，共享测试环境验收继续单列为待办。当前规范为 [`../product/RQ-106-agent-center-prd.md`](../product/RQ-106-agent-center-prd.md)。
@@ -113,6 +115,8 @@
 - 当前设置内容区实际宽度为 `556px`，`clientWidth = scrollWidth = 556px`，没有模块内横向溢出。
 
 ## 2026-08-17 会话技能隔离验收
+
+> Historical Evidence（历史证据）：本节记录当时的 `.paimind-skills` 文件扫描实现，不再代表当前架构。当前实现由 Agent Profile Reference（智能体配置引用）与 Skill Market Resolver（技能市场解析器）生成唯一原生 Scoped Provider（作用域提供方），并在保存或读取修复时清理旧扫描配置。
 
 - 技能中心真实显示 `8` 个已安装 Skill；“官方技能验证助手”的编辑面板显示 `已封装 3 / 已安装 8`。
 - 选择器展示通用、调研与知识、数据分析、内容与演示、产品与 PDM、工程研发、智能体工具七个业务分类，并提供搜索和“只看已选”。

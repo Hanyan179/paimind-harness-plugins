@@ -13,7 +13,10 @@ import {
   type ReactNode,
 } from 'react'
 import { createPortal } from 'react-dom'
-import { PAIMIND_STANDARD_AGENT_BASE_PRESET_ID } from '@paimind/contracts'
+import {
+  PAIMIND_STANDARD_AGENT_BASE_PRESET_ID,
+  type PaimindUserSkillPolicyV1,
+} from '@paimind/contracts'
 import {
   contributePaimindExtension,
   installHarnessAgentPresetSettingsNavigation,
@@ -148,6 +151,7 @@ interface AgentProfilesRemoteNamespace {
 
 interface InstalledSkillsRemoteNamespace {
   listInstalled(): Promise<HarnessRemoteResult<Readonly<SkillInstallerSnapshot>>>
+  getUserSkillPolicy?(): Promise<HarnessRemoteResult<Readonly<PaimindUserSkillPolicyV1>>>
 }
 
 export interface AgentTestSessionHistoryEntry {
@@ -196,6 +200,166 @@ interface AgentCenterClientContext extends PaimindClientContext {
 function remoteValue<Value>(result: HarnessRemoteResult<Value>): Value {
   if (!result.ok) throw new Error(result.error.message)
   return result.value
+}
+
+const AGENT_AUTHORING_SYSTEM_SKILL_NAME = 'paimind-agent-authoring'
+export const PAIMIND_USER_SKILL_POLICY_CHANGED_EVENT = 'paimind:user-skill-policy-changed'
+
+export interface PaimindAgentAuthoringPolicySnapshot {
+  readonly status: 'loading' | 'ready' | 'unavailable' | 'error'
+  readonly enabled: boolean
+  readonly policyRevision: number | null
+}
+
+export interface PaimindAgentAuthoringPolicySource {
+  getSnapshot(): Readonly<PaimindAgentAuthoringPolicySnapshot>
+  subscribe(listener: () => void): () => void
+}
+
+const LOADING_AGENT_AUTHORING_POLICY: Readonly<PaimindAgentAuthoringPolicySnapshot> = Object.freeze({
+  status: 'loading', enabled: false, policyRevision: null,
+})
+const ENABLED_AGENT_AUTHORING_POLICY: Readonly<PaimindAgentAuthoringPolicySnapshot> = Object.freeze({
+  status: 'ready', enabled: true, policyRevision: 0,
+})
+
+/**
+ * Read the Skill Center-owned policy instead of duplicating it in Agent Center.
+ * Missing or failed policy reads fail closed for new authoring entry points while
+ * leaving existing Agent browsing and editing untouched.
+ */
+export class PaimindAgentAuthoringPolicyController implements PaimindAgentAuthoringPolicySource {
+  private snapshot = LOADING_AGENT_AUTHORING_POLICY
+  private readonly listeners = new Set<() => void>()
+  private request = 0
+  private disposed = false
+
+  constructor(
+    private readonly skills: InstalledSkillsRemoteNamespace,
+    private readonly win: Window = window,
+  ) {
+    this.win.addEventListener(PAIMIND_USER_SKILL_POLICY_CHANGED_EVENT, this.onPolicyChanged)
+    void this.refresh()
+  }
+
+  getSnapshot = (): Readonly<PaimindAgentAuthoringPolicySnapshot> => this.snapshot
+
+  subscribe = (listener: () => void): (() => void) => {
+    if (this.disposed) return () => {}
+    this.listeners.add(listener)
+    return () => { this.listeners.delete(listener) }
+  }
+
+  dispose(): void {
+    if (this.disposed) return
+    this.disposed = true
+    this.request += 1
+    this.win.removeEventListener(PAIMIND_USER_SKILL_POLICY_CHANGED_EVENT, this.onPolicyChanged)
+    this.listeners.clear()
+  }
+
+  private readonly onPolicyChanged = (): void => { void this.refresh() }
+
+  private async refresh(): Promise<void> {
+    const request = this.request + 1
+    this.request = request
+    this.publish(LOADING_AGENT_AUTHORING_POLICY)
+    if (this.skills.getUserSkillPolicy === undefined) {
+      this.publish(Object.freeze({ status: 'unavailable', enabled: false, policyRevision: null }))
+      return
+    }
+    try {
+      const policy = remoteValue(await this.skills.getUserSkillPolicy())
+      if (this.disposed || this.request !== request) return
+      this.publish(Object.freeze({
+        status: 'ready',
+        enabled: policy.enabledOptionalSystemSkillNames.includes(AGENT_AUTHORING_SYSTEM_SKILL_NAME),
+        policyRevision: policy.revision,
+      }))
+    } catch {
+      if (this.disposed || this.request !== request) return
+      this.publish(Object.freeze({ status: 'error', enabled: false, policyRevision: null }))
+    }
+  }
+
+  private publish(snapshot: Readonly<PaimindAgentAuthoringPolicySnapshot>): void {
+    if (this.disposed) return
+    if (this.snapshot.status === snapshot.status
+      && this.snapshot.enabled === snapshot.enabled
+      && this.snapshot.policyRevision === snapshot.policyRevision) return
+    this.snapshot = snapshot
+    for (const listener of [...this.listeners]) listener()
+  }
+}
+
+export interface PaimindAgentBuilderRequestSource {
+  getSnapshot(): Readonly<PaimindAgentBuilderRequestSnapshot>
+  subscribe(listener: () => void): () => void
+}
+
+/** Receive Create Agent requests only while the source System Skill is enabled. */
+export class PaimindPolicyAwareAgentBuilderRequestController implements PaimindAgentBuilderRequestSource {
+  private snapshot: Readonly<PaimindAgentBuilderRequestSnapshot> = Object.freeze({ revision: 0, productKind: 'personal' })
+  private readonly listeners = new Set<() => void>()
+  private inner: PaimindAgentBuilderRequestController | null = null
+  private disposeInnerSubscription: () => void = () => {}
+  private readonly disposePolicySubscription: () => void
+  private disposed = false
+
+  constructor(
+    private readonly surface: PaimindProductSurfaceController,
+    private readonly policy: PaimindAgentAuthoringPolicySource,
+    private readonly win: Window = window,
+  ) {
+    this.disposePolicySubscription = policy.subscribe(this.synchronize)
+    this.synchronize()
+  }
+
+  getSnapshot = (): Readonly<PaimindAgentBuilderRequestSnapshot> => this.snapshot
+
+  subscribe = (listener: () => void): (() => void) => {
+    if (this.disposed) return () => {}
+    this.listeners.add(listener)
+    return () => { this.listeners.delete(listener) }
+  }
+
+  dispose(): void {
+    if (this.disposed) return
+    this.disposed = true
+    this.disposePolicySubscription()
+    this.disconnect()
+    this.listeners.clear()
+  }
+
+  private readonly synchronize = (): void => {
+    if (this.disposed) return
+    if (!this.policy.getSnapshot().enabled) {
+      this.disconnect()
+      if (this.snapshot.revision !== 0) {
+        this.snapshot = Object.freeze({ revision: 0, productKind: 'personal' })
+        this.publish()
+      }
+      return
+    }
+    if (this.inner !== null) return
+    this.inner = new PaimindAgentBuilderRequestController(this.surface, this.win)
+    this.disposeInnerSubscription = this.inner.subscribe(() => {
+      if (this.inner === null) return
+      this.snapshot = this.inner.getSnapshot()
+      this.publish()
+    })
+  }
+
+  private disconnect(): void {
+    this.disposeInnerSubscription()
+    this.disposeInnerSubscription = () => {}
+    this.inner?.dispose()
+    this.inner = null
+  }
+
+  private publish(): void {
+    for (const listener of [...this.listeners]) listener()
+  }
 }
 
 function messageOf(error: unknown): string { return error instanceof Error ? error.message : String(error) }
@@ -260,10 +424,12 @@ async function waitForBlankSession(
 ): Promise<string> {
   const before = sessions.list.getSnapshot()
   const previous = before.current
+  const isReusableBlank = (sessionId: string | undefined): sessionId is string => sessionId !== undefined
+    && !sessionId.startsWith(AGENT_AUTHORING_SESSION_PREFIX)
+    && before.byId[sessionId]?.blank === true
   const mayClaimOnlyBlankOnTimeout = !reuseCurrent
-    && previous !== undefined
-    && before.byId[previous]?.blank === true
-  if (reuseCurrent && previous !== undefined && before.byId[previous]?.blank === true) return previous
+    && isReusableBlank(previous)
+  if (reuseCurrent && isReusableBlank(previous)) return previous
   return await new Promise<string>((resolveSession, reject) => {
     let done = false
     let timer: ReturnType<typeof setTimeout>
@@ -273,7 +439,9 @@ async function waitForBlankSession(
       if (done) return
       const snapshot = sessions.list.getSnapshot()
       const current = snapshot.current
-      if (current === undefined || snapshot.byId[current]?.blank !== true) return
+      if (current === undefined
+        || current.startsWith(AGENT_AUTHORING_SESSION_PREFIX)
+        || snapshot.byId[current]?.blank !== true) return
       if (current === previous && !mayClaimExisting) return
       done = true
       clearTimeout(timer)
@@ -1129,21 +1297,35 @@ export class AgentCenterRuntime {
 export function installAgentAuthoringSessionNavigation(
   runtime: AgentCenterRuntime,
   surface: PaimindProductSurfaceController,
+  policy?: PaimindAgentAuthoringPolicySource,
 ): () => void {
   let lastRoutedSessionId: string | null = null
   let observedSessionId: string | null = null
   let pendingSessionId: string | null = null
+  let disabledSessionId: string | null = null
   const synchronize = (): void => {
     const current = runtime.currentSessionId()
     if (current !== observedSessionId) {
       observedSessionId = current
       lastRoutedSessionId = null
       pendingSessionId = null
+      if (disabledSessionId !== current) disabledSessionId = null
     }
+    const policySnapshot = policy?.getSnapshot() ?? ENABLED_AGENT_AUTHORING_POLICY
+    if (!policySnapshot.enabled) {
+      if (policySnapshot.status !== 'loading') disabledSessionId = current
+      return
+    }
+    if (disabledSessionId === current) return
     if (current === null || current === lastRoutedSessionId || current === pendingSessionId) return
     pendingSessionId = current
     void runtime.detectCompletedAuthoringSession(current).then(recognized => {
       if (pendingSessionId === current) pendingSessionId = null
+      const latestPolicy = policy?.getSnapshot() ?? ENABLED_AGENT_AUTHORING_POLICY
+      if (!latestPolicy.enabled) {
+        if (latestPolicy.status !== 'loading') disabledSessionId = current
+        return
+      }
       if (!recognized || runtime.currentSessionId() !== current || lastRoutedSessionId === current) return
       lastRoutedSessionId = current
       if (runtime.consumeAuthoringSessionRouteSuppression(current)) return
@@ -1152,9 +1334,10 @@ export function installAgentAuthoringSessionNavigation(
       if (pendingSessionId === current) pendingSessionId = null
     })
   }
-  const dispose = runtime.subscribeSessions(synchronize)
+  const disposeSessions = runtime.subscribeSessions(synchronize)
+  const disposePolicy = policy?.subscribe(synchronize) ?? (() => {})
   synchronize()
-  return dispose
+  return () => { disposePolicy(); disposeSessions() }
 }
 
 type RosterState = { readonly status: 'loading'; readonly roster: null; readonly error: null }
@@ -1186,6 +1369,7 @@ interface UndoableDraftUpdate {
 const IDLE_BUILDER_REQUEST: PaimindAgentBuilderRequestSnapshot = Object.freeze({ revision: 0, productKind: 'personal' })
 const subscribeNever = (): (() => void) => () => {}
 const idleBuilderRequest = (): PaimindAgentBuilderRequestSnapshot => IDLE_BUILDER_REQUEST
+const enabledAgentAuthoringPolicy = (): Readonly<PaimindAgentAuthoringPolicySnapshot> => ENABLED_AGENT_AUTHORING_POLICY
 const AGENT_CENTER_CONVERSATION_WIDTH = '--paimind-agent-native-conversation-width'
 const AGENT_CENTER_MIN_CONVERSATION_WIDTH = 320
 const AGENT_CENTER_MAX_CONVERSATION_WIDTH = 760
@@ -1589,7 +1773,8 @@ export interface AgentCenterSectionProps {
   readonly runtime: AgentCenterRuntime
   readonly locale: PaimindLocaleSource
   readonly openAdvanced: () => boolean
-  readonly builderRequests?: PaimindAgentBuilderRequestController
+  readonly authoringPolicy?: PaimindAgentAuthoringPolicySource
+  readonly builderRequests?: PaimindAgentBuilderRequestSource
   readonly onNativeConversationChange?: (state: Readonly<{
     readonly sessionId: string | null
     readonly interactive: boolean
@@ -1601,11 +1786,17 @@ export interface AgentCenterSectionProps {
 export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.Element {
   const activeLocale = useSyncExternalStore(props.locale.subscribe.bind(props.locale), () => props.locale.getLocale().active, () => props.locale.getLocale().active)
   const runtimeState = useSyncExternalStore(props.runtime.subscribe, props.runtime.getSnapshot, props.runtime.getSnapshot)
+  const authoringPolicy = useSyncExternalStore(
+    props.authoringPolicy?.subscribe ?? subscribeNever,
+    props.authoringPolicy?.getSnapshot ?? enabledAgentAuthoringPolicy,
+    props.authoringPolicy?.getSnapshot ?? enabledAgentAuthoringPolicy,
+  )
   const builderRequest = useSyncExternalStore(
     props.builderRequests?.subscribe ?? subscribeNever,
     props.builderRequests?.getSnapshot ?? idleBuilderRequest,
     props.builderRequests?.getSnapshot ?? idleBuilderRequest,
   )
+  const agentAuthoringEnabled = authoringPolicy.enabled
   const currentAuthoringSessionId = useSyncExternalStore(
     props.runtime.subscribeSessions.bind(props.runtime),
     props.runtime.currentAuthoringSessionId.bind(props.runtime),
@@ -1652,6 +1843,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   const lastPreparedSignature = useRef<string | null>(null)
   const dismissedAuthoringSessionId = useRef<string | null>(null)
   const resumingAuthoringSessionId = useRef<string | null>(null)
+  const disabledAuthoringSessionId = useRef<string | null>(null)
   const splitDragCleanup = useRef<() => void>(() => {})
   const [nativeConversationWidth, setNativeConversationWidth] = useState(520)
   const [nativeConversationBounds, setNativeConversationBounds] = useState<Readonly<{ min: number; max: number }>>({
@@ -1665,6 +1857,11 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   useEffect(() => { busyRef.current = busy }, [busy])
   useEffect(() => { draftRef.current = draft }, [draft])
   useEffect(() => () => { splitDragCleanup.current() }, [])
+  useEffect(() => {
+    if (agentAuthoringEnabled) return
+    handledBuilderRequest.current = builderRequest.revision
+    setStarterDraft(null)
+  }, [agentAuthoringEnabled, builderRequest.revision])
   useEffect(() => {
     const previous = previousTestSessionId.current
     previousTestSessionId.current = testSessionId
@@ -1888,6 +2085,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     setDraft(nextDraft)
   }
   const openStarter = (nextDraft: Draft): void => {
+    if (!agentAuthoringEnabled) return
     builderTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setError(null); setStarterDraft(nextDraft)
   }
@@ -1897,7 +2095,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   }
   const runAuthoringTurn = async (sourceDraft: Draft, text: string, sessionId: string | null): Promise<void> => {
     const prompt = text.trim()
-    if (prompt === '' || busyRef.current) return
+    if (prompt === '' || busyRef.current || (sessionId === null && !agentAuthoringEnabled)) return
     const sourceSignature = draftSignature(sourceDraft)
     busyRef.current = true
     setError(null)
@@ -1952,7 +2150,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     } finally { busyRef.current = false; setBusy(false) }
   }
   const continueStarter = (): void => {
-    if (starterDraft === null) return
+    if (starterDraft === null || !agentAuthoringEnabled) return
     if (templates.length === 0) {
       setError(zh ? 'Standard 标准基座当前不可用，无法启动智能体创建。' : 'The Standard base is unavailable, so Agent creation cannot start.')
       return
@@ -2034,6 +2232,12 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     Object.fromEntries(profileRows.flatMap(profile => profile.avatarId === undefined ? [] : [[profile.agentId, profile.avatarId]])),
   ), [profileRows])
   useEffect(() => {
+    if (!agentAuthoringEnabled) {
+      if (authoringPolicy.status !== 'loading') disabledAuthoringSessionId.current = currentAuthoringSessionId
+      return
+    }
+    if (disabledAuthoringSessionId.current === currentAuthoringSessionId && currentAuthoringSessionId !== null) return
+    if (disabledAuthoringSessionId.current !== currentAuthoringSessionId) disabledAuthoringSessionId.current = null
     if (currentAuthoringSessionId === null) {
       dismissedAuthoringSessionId.current = null
       return
@@ -2082,7 +2286,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
       if (active) setBusy(false)
     })
     return () => { active = false }
-  }, [authoringSessionId, currentAuthoringSessionId, installedSkills, profileRows, props, roster.status])
+  }, [agentAuthoringEnabled, authoringPolicy.status, authoringSessionId, currentAuthoringSessionId, installedSkills, profileRows, props, roster.status])
   const currentSignature = draft === null ? null : draftSignature(draft)
   const draftDirty = draft !== null && currentSignature !== savedSignature
   const canTestDraft = draft !== null && !draftDirty && savedProfile !== null
@@ -2215,8 +2419,9 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   }, [props.onNativeConversationChange])
 
   useEffect(() => {
-    if (builderRequest.revision === 0 || builderRequest.revision <= handledBuilderRequest.current || templates.length === 0) return
+    if (builderRequest.revision === 0 || builderRequest.revision <= handledBuilderRequest.current) return
     handledBuilderRequest.current = builderRequest.revision
+    if (!agentAuthoringEnabled || templates.length === 0) return
     const next = {
       ...emptyDraft(PAIMIND_STANDARD_AGENT_BASE_PRESET_ID, builderRequest.productKind),
       ...(builderRequest.brief === undefined ? {} : { description: builderRequest.brief }),
@@ -2224,7 +2429,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     if (builderRequest.productKind === 'business') setTab('platform'); else setTab('mine')
     setSkillQuery(''); setSkillCategory('all'); setSelectedSkillsOnly(false)
     openStarter(next)
-  }, [builderRequest, templates])
+  }, [agentAuthoringEnabled, builderRequest, templates])
 
   const start = async (preset: HarnessAgentPresetEntry, profile?: AgentBusinessProfile): Promise<void> => {
     if (preset.broken !== undefined || busy) return
@@ -2358,17 +2563,19 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   }
 
   const createPersonalAgent = (): void => {
+    if (!agentAuthoringEnabled) return
     setTab('mine')
     setSkillQuery(''); setSkillCategory('all'); setSelectedSkillsOnly(false)
     openStarter(emptyDraft(PAIMIND_STANDARD_AGENT_BASE_PRESET_ID))
   }
   const createBusinessAgent = (): void => {
+    if (!agentAuthoringEnabled) return
     setTab('platform')
     setSkillQuery(''); setSkillCategory('all'); setSelectedSkillsOnly(false)
     openStarter(emptyDraft(PAIMIND_STANDARD_AGENT_BASE_PRESET_ID, 'business'))
   }
   const copyPlatformAgent = (preset: HarnessAgentPresetEntry): void => {
-    if (preset.broken !== undefined || preset.id === 'cordis') return
+    if (!agentAuthoringEnabled || preset.broken !== undefined || preset.id === 'cordis') return
     setSkillQuery(''); setSkillCategory('all'); setSelectedSkillsOnly(false)
     openBuilder(copyDraft(preset, zh))
   }
@@ -2416,13 +2623,15 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
       <div>
         <p data-paimind-agent-eyebrow><PaimindAgentIcon size={15} />{zh ? '真实 Harness 智能体' : 'Live Harness Agents'}</p>
         <h1 id="paimind-agent-center-title" tabIndex={-1} data-paimind-product-initial-focus>{zh ? '智能体中心' : 'Agent Center'}</h1>
-        <p data-paimind-agent-hero-copy>{zh ? '选择一个智能体、创建自己的智能体，或直接开始真实对话。' : 'Choose an Agent, create your own, or start a real conversation.'}</p>
+        <p data-paimind-agent-hero-copy>{agentAuthoringEnabled
+          ? (zh ? '选择一个智能体、创建自己的智能体，或直接开始真实对话。' : 'Choose an Agent, create your own, or start a real conversation.')
+          : (zh ? '选择一个已有智能体，编辑配置或直接开始真实对话。' : 'Choose an existing Agent, edit its configuration, or start a real conversation.')}</p>
       </div>
       <div data-paimind-agent-hero-actions>
         <div data-paimind-agent-search-row><div data-paimind-agent-search-wrap><span data-paimind-agent-search-icon><PaimindSearchIcon size={17} /></span><input data-paimind-agent-search type="search" aria-label={zh ? '搜索智能体' : 'Search Agents'} placeholder={zh ? '搜索名称、说明、角色或目标' : 'Search names, descriptions, roles, or goals'} value={query} onChange={event => { setQuery(event.currentTarget.value) }} /></div><button type="button" data-paimind-agent-button data-icon-only="true" aria-label={zh ? '返回对话' : 'Back to conversation'} onClick={() => { props.close() }}><PaimindCloseIcon size={16} /></button></div>
         <div data-paimind-agent-hero-buttons>
           <button type="button" data-paimind-agent-button onClick={openAdvanced}><PaimindSettingsIcon size={15} />{zh ? '高级配置' : 'Advanced configuration'}</button>
-          <button type="button" data-paimind-agent-button data-primary="true" onClick={primaryCreateBusiness ? createBusinessAgent : createPersonalAgent} disabled={busy || templates.length === 0}><PaimindPlusIcon size={15} />{primaryCreateBusiness ? (zh ? '创建业务智能体' : 'Create Business Agent') : (zh ? '创建个人智能体' : 'Create Personal Agent')}</button>
+          {agentAuthoringEnabled && <button type="button" data-paimind-agent-button data-primary="true" onClick={primaryCreateBusiness ? createBusinessAgent : createPersonalAgent} disabled={busy || templates.length === 0}><PaimindPlusIcon size={15} />{primaryCreateBusiness ? (zh ? '创建业务智能体' : 'Create Business Agent') : (zh ? '创建个人智能体' : 'Create Personal Agent')}</button>}
         </div>
       </div>
     </header>
@@ -2440,16 +2649,16 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     <div data-paimind-agent-section-head><div><h2>{tab === 'platform' ? (zh ? '业务智能体' : 'Business Agents') : (zh ? '我的智能体' : 'My Agents')}</h2><p>{tab === 'mine' ? (zh ? '为自己的高频任务配置稳定角色、目标和会话技能。' : 'Configure stable roles, goals, and session Skills for your recurring work.') : (zh ? '按业务场景选择官方或本地维护的智能体。' : 'Choose an official or locally maintained Agent for a business scenario.')}</p></div><div data-paimind-agent-section-actions><span data-paimind-agent-result-count>{zh ? `${visibleCount} 个结果` : `${visibleCount} results`}</span></div></div>
     {roster.status === 'loading' && <div data-paimind-agent-loading-grid aria-busy="true" aria-label={zh ? '正在读取智能体' : 'Reading Agents'}>{[0, 1, 2, 3].map(index => <div key={index} data-paimind-agent-loading-card><span /><strong /><i /></div>)}</div>}
     {roster.status === 'error' && <div data-paimind-agent-status role="alert"><span data-paimind-agent-status-icon><PaimindSettingsIcon size={22} /></span><strong>{zh ? '智能体连接失败' : 'Agent connection failed'}</strong><p>{roster.error}</p><button type="button" data-paimind-agent-button onClick={() => { setRevision(value => value + 1) }}>{zh ? '重新加载' : 'Retry'}</button></div>}
-    {roster.status === 'ready' && tab === 'platform' && (visibleCount === 0 ? <div data-paimind-agent-status><span data-paimind-agent-status-icon><PaimindSearchIcon size={22} /></span><strong>{query.trim() !== '' ? (zh ? '没有匹配结果' : 'No matching results') : (zh ? '暂无业务智能体' : 'No Business Agents yet')}</strong><p>{query.trim() !== '' ? (zh ? '试试更短的关键词，或清空搜索。' : 'Try a shorter search or clear the query.') : (zh ? '当前还没有业务智能体，可以先创建一个。' : 'There are no Business Agents yet. Create one to get started.')}</p>{query.trim() !== '' && <button type="button" data-paimind-agent-button onClick={() => { setQuery('') }}>{zh ? '清空搜索' : 'Clear search'}</button>}{query.trim() === '' && <button type="button" data-paimind-agent-button data-primary="true" onClick={createBusinessAgent} disabled={templates.length === 0}><PaimindPlusIcon size={14} />{zh ? '创建业务智能体' : 'Create Business Agent'}</button>}</div> : <ul data-paimind-agent-grid>{platform.map(preset => { const metadata = metadataForPreset(preset); const presentation = platformPresetPresentation(preset, zh); return <li key={preset.id} data-paimind-agent-card data-paimind-agent-preset-id={preset.id} data-broken={preset.broken !== undefined}>
+    {roster.status === 'ready' && tab === 'platform' && (visibleCount === 0 ? <div data-paimind-agent-status><span data-paimind-agent-status-icon><PaimindSearchIcon size={22} /></span><strong>{query.trim() !== '' ? (zh ? '没有匹配结果' : 'No matching results') : (zh ? '暂无业务智能体' : 'No Business Agents yet')}</strong><p>{query.trim() !== '' ? (zh ? '试试更短的关键词，或清空搜索。' : 'Try a shorter search or clear the query.') : agentAuthoringEnabled ? (zh ? '当前还没有业务智能体，可以先创建一个。' : 'There are no Business Agents yet. Create one to get started.') : (zh ? '当前没有可浏览的业务智能体。' : 'There are no Business Agents to browse.')}</p>{query.trim() !== '' && <button type="button" data-paimind-agent-button onClick={() => { setQuery('') }}>{zh ? '清空搜索' : 'Clear search'}</button>}{query.trim() === '' && agentAuthoringEnabled && <button type="button" data-paimind-agent-button data-primary="true" onClick={createBusinessAgent} disabled={templates.length === 0}><PaimindPlusIcon size={14} />{zh ? '创建业务智能体' : 'Create Business Agent'}</button>}</div> : <ul data-paimind-agent-grid>{platform.map(preset => { const metadata = metadataForPreset(preset); const presentation = platformPresetPresentation(preset, zh); return <li key={preset.id} data-paimind-agent-card data-paimind-agent-preset-id={preset.id} data-broken={preset.broken !== undefined}>
       <div data-paimind-agent-card-head><span data-paimind-agent-card-icon><PaimindAgentIcon size={23} /></span><div data-paimind-agent-card-title><h3>{presentation.name}</h3><span data-paimind-agent-card-kicker>{zh ? '官方业务智能体' : 'Official Business Agent'}</span></div></div>
       <div data-paimind-agent-badges>{metadata.category !== undefined && <span data-paimind-agent-badge data-category="true">{businessCategoryLabel(metadata.category, zh)}</span>}<span data-paimind-agent-badge>{zh ? '官方维护' : 'Official'}</span>{preset.isDefault && <span data-paimind-agent-badge data-success="true">{zh ? '默认' : 'Default'}</span>}{preset.broken !== undefined && <span data-paimind-agent-badge>{zh ? '需修复' : 'Needs repair'}</span>}</div>
       <p>{presentation.description}</p>
       {preset.broken !== undefined && <p role="alert">{zh ? `当前不可用：${preset.broken}` : `Unavailable: ${preset.broken}`}</p>}
-      <div data-paimind-agent-actions>{preset.id === 'cordis' ? <><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || preset.broken !== undefined || templates.length === 0} onClick={createPersonalAgent}><PaimindPlusIcon size={14} />{zh ? '创建个人智能体' : 'Create Personal Agent'}</button><button type="button" data-paimind-agent-button disabled={busy} onClick={openAdvanced}><PaimindSettingsIcon size={14} />{zh ? '管理预设' : 'Manage Presets'}</button></> : <><button type="button" data-paimind-agent-button disabled={busy || preset.broken !== undefined} onClick={() => { copyPlatformAgent(preset) }}><PaimindEditIcon size={14} />{zh ? '复制并编辑' : 'Copy and edit'}</button><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || preset.broken !== undefined} onClick={() => { void start(preset) }}><PaimindPlayIcon size={14} />{zh ? '开始对话' : 'Start conversation'}</button></>}</div>
+      <div data-paimind-agent-actions>{preset.id === 'cordis' ? <>{agentAuthoringEnabled && <button type="button" data-paimind-agent-button data-primary="true" disabled={busy || preset.broken !== undefined || templates.length === 0} onClick={createPersonalAgent}><PaimindPlusIcon size={14} />{zh ? '创建个人智能体' : 'Create Personal Agent'}</button>}<button type="button" data-paimind-agent-button disabled={busy} onClick={openAdvanced}><PaimindSettingsIcon size={14} />{zh ? '管理预设' : 'Manage Presets'}</button></> : <>{agentAuthoringEnabled && <button type="button" data-paimind-agent-button disabled={busy || preset.broken !== undefined} onClick={() => { copyPlatformAgent(preset) }}><PaimindEditIcon size={14} />{zh ? '复制并编辑' : 'Copy and edit'}</button>}<button type="button" data-paimind-agent-button data-primary="true" disabled={busy || preset.broken !== undefined} onClick={() => { void start(preset) }}><PaimindPlayIcon size={14} />{zh ? '开始对话' : 'Start conversation'}</button></>}</div>
     </li> })}{visibleBusinessProfiles.map(managedProfileCard)}</ul>)}
-    {roster.status === 'ready' && tab === 'mine' && (mine.length === 0 ? <div data-paimind-agent-status><span data-paimind-agent-status-icon><PaimindUserIcon size={22} /></span><strong>{query.trim() === '' ? (zh ? '还没有个人智能体' : 'No personal Agents yet') : (zh ? '没有匹配的个人智能体' : 'No matching personal Agents')}</strong><p>{query.trim() === '' ? (zh ? '创建一个智能体，配置角色、目标与会话技能。' : 'Create an Agent and configure its role, goal, and session Skills.') : (zh ? '试试更短的关键词，或清空搜索。' : 'Try a shorter search or clear the query.')}</p><button type="button" data-paimind-agent-button data-primary="true" onClick={query.trim() === '' ? createPersonalAgent : () => { setQuery('') }} disabled={query.trim() === '' && templates.length === 0}><PaimindPlusIcon size={14} />{query.trim() === '' ? (zh ? '创建个人智能体' : 'Create Personal Agent') : (zh ? '清空搜索' : 'Clear search')}</button></div> : <ul data-paimind-agent-grid>{mine.map(managedProfileCard)}</ul>)}
+    {roster.status === 'ready' && tab === 'mine' && (mine.length === 0 ? <div data-paimind-agent-status><span data-paimind-agent-status-icon><PaimindUserIcon size={22} /></span><strong>{query.trim() === '' ? (zh ? '还没有个人智能体' : 'No personal Agents yet') : (zh ? '没有匹配的个人智能体' : 'No matching personal Agents')}</strong><p>{query.trim() === '' ? agentAuthoringEnabled ? (zh ? '创建一个智能体，配置角色、目标与会话技能。' : 'Create an Agent and configure its role, goal, and session Skills.') : (zh ? '当前没有可浏览的个人智能体。' : 'There are no personal Agents to browse.') : (zh ? '试试更短的关键词，或清空搜索。' : 'Try a shorter search or clear the query.')}</p>{(query.trim() !== '' || agentAuthoringEnabled) && <button type="button" data-paimind-agent-button data-primary="true" onClick={query.trim() === '' ? createPersonalAgent : () => { setQuery('') }} disabled={query.trim() === '' && templates.length === 0}><PaimindPlusIcon size={14} />{query.trim() === '' ? (zh ? '创建个人智能体' : 'Create Personal Agent') : (zh ? '清空搜索' : 'Clear search')}</button>}</div> : <ul data-paimind-agent-grid>{mine.map(managedProfileCard)}</ul>)}
 
-    {starterDraft !== null && <div data-paimind-agent-starter-backdrop>
+    {agentAuthoringEnabled && starterDraft !== null && <div data-paimind-agent-starter-backdrop>
       <section ref={starterRef} data-paimind-agent-starter role="dialog" aria-modal="true" aria-labelledby="paimind-agent-starter-title">
         <header data-paimind-agent-starter-head><div data-paimind-agent-starter-icon aria-hidden="true">{starterDraft.productKind === 'business' ? <PaimindAgentIcon size={25} /> : <PaimindUserIcon size={25} />}</div><div data-paimind-agent-starter-copy><p data-paimind-agent-form-kicker>{starterDraft.productKind === 'business' ? (zh ? '业务智能体' : 'Business Agent') : (zh ? '个人智能体' : 'Personal Agent')}</p><h2 id="paimind-agent-starter-title">{zh ? '用一句话开始' : 'Start with one sentence'}</h2><p>{zh ? '告诉创建助手你想要什么。信息不足时它会自然追问，草稿准备好后再由你确认保存。' : 'Tell the creation assistant what you want. It will ask a natural follow-up only when needed, then let you review the draft before saving.'}</p></div><button type="button" data-paimind-agent-builder-close aria-label={zh ? '关闭创建弹窗' : 'Close creation dialog'} onClick={closeStarter}><PaimindCloseIcon size={17} /></button></header>
         {error !== null && <p role="alert" data-paimind-agent-starter-error>{error}</p>}
@@ -2516,7 +2725,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
               : testStatus === 'starting' || testSessionId === null ? <div data-paimind-agent-test-gate><PaimindAgentIcon size={22} /><strong>{zh ? '正在准备真实测试会话' : 'Preparing the real test conversation'}</strong><p>{zh ? '正在创建新会话并绑定已保存的智能体，请稍候。' : 'Creating a fresh Session and binding the saved Agent.'}</p></div>
                 : null}
         </div>}
-        {builderTab === 'configure' && <div data-paimind-agent-form-actions><p>{zh ? '所有对话建议和手工修改都作用于这一个智能体；保存后更新测试对话和之后的新对话。' : 'All conversation suggestions and manual edits update this one Agent. Saving updates Test Chat and future conversations.'}</p><div><button type="button" data-paimind-agent-button disabled={busy} onClick={closeBuilder}>{zh ? '关闭并返回原对话' : 'Close and return'}</button><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || !draftDirty} onClick={() => { void save() }}>{authoringStatus === 'running' ? (zh ? '创建助手思考中…' : 'Creation assistant thinking…') : busy ? (zh ? '保存中…' : 'Saving…') : draftDirty ? (draft.productKind === 'business' ? (zh ? '保存业务智能体' : 'Save Business Agent') : (zh ? '保存个人智能体' : 'Save Personal Agent')) : (zh ? '已保存' : 'Saved')}</button></div></div>}
+        {builderTab === 'configure' && <div data-paimind-agent-form-actions><p>{zh ? '所有对话建议和手工修改都作用于这一个智能体；保存后，当前测试对话与其他已打开的智能体会话会从下一轮开始使用新配置，历史消息不变。' : 'All conversation suggestions and manual edits update this Agent. After saving, the Test Chat and other open Agent conversations use the new configuration from their next turn; message history is unchanged.'}</p><div><button type="button" data-paimind-agent-button disabled={busy} onClick={closeBuilder}>{zh ? '关闭并返回原对话' : 'Close and return'}</button><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || !draftDirty} onClick={() => { void save() }}>{authoringStatus === 'running' ? (zh ? '创建助手思考中…' : 'Creation assistant thinking…') : busy ? (zh ? '保存中…' : 'Saving…') : draftDirty ? (draft.productKind === 'business' ? (zh ? '保存业务智能体' : 'Save Business Agent') : (zh ? '保存个人智能体' : 'Save Personal Agent')) : (zh ? '已保存' : 'Saved')}</button></div></div>}
       </section>
     </div>}
   </section>
@@ -2840,15 +3049,17 @@ export async function apply(ctx: AgentCenterClientContext): Promise<() => Promis
       connectionApi.sessions,
     )
     const surfaceController = new PaimindProductSurfaceController('agent-center')
-    const builderRequests = new PaimindAgentBuilderRequestController(surfaceController)
+    const authoringPolicy = new PaimindAgentAuthoringPolicyController(skills)
+    const builderRequests = new PaimindPolicyAwareAgentBuilderRequestController(surfaceController, authoringPolicy)
     const presetSettings = installHarnessAgentPresetSettingsNavigation(scope.slots)
     scope.effect(installStyle, 'paimind-agent-market: style')
     scope.effect(() => () => { runtime.dispose() }, 'paimind-agent-market: runtime')
     scope.effect(() => () => { surfaceController.dispose() }, 'paimind-agent-market: surface controller')
+    scope.effect(() => () => { authoringPolicy.dispose() }, 'paimind-agent-market: Agent authoring policy')
     scope.effect(() => () => { builderRequests.dispose() }, 'paimind-agent-market: builder requests')
     scope.effect(() => () => { presetSettings.dispose() }, 'paimind-agent-market: native Preset navigation')
     scope.effect(
-      () => installAgentAuthoringSessionNavigation(runtime, surfaceController),
+      () => installAgentAuthoringSessionNavigation(runtime, surfaceController, authoringPolicy),
       'paimind-agent-market: native authoring Session navigation',
     )
     scope.effect(
@@ -2868,6 +3079,7 @@ export async function apply(ctx: AgentCenterClientContext): Promise<() => Promis
       profiles,
       skills,
       runtime,
+      authoringPolicy,
       builderRequests,
       locale: scope.locale,
       openAdvanced: () => {

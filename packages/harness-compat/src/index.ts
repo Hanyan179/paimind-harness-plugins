@@ -590,6 +590,10 @@ export interface HarnessObservableSnapshot<T> {
 export interface HarnessWorkspaceService {
   readonly list: HarnessObservableSnapshot<HarnessWorkspaceListSnapshot>
   startSession(workspaceId?: string): void
+  /** Register one existing directory through the native Harness Workspace owner. */
+  create?(input: { readonly path: string }): Promise<HarnessWorkspaceView>
+  /** Open the native Harness directory picker; absent on older candidates. */
+  pickDirectory?(): Promise<string | null>
   openPath(path: string): Promise<void>
   /**
    * Native non-destructive Session archive action. Optional so older Harness

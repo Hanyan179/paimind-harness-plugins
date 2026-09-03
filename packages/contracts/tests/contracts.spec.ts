@@ -8,7 +8,13 @@ import {
   defineNotificationRecord,
   defineNotificationTarget,
   defineArtifactTraceEnvelope,
+  definePaimindSkillReference,
+  definePaimindSessionBusinessSkillSelection,
+  definePaimindUserSkillPolicy,
+  definePaimindWorkspaceCompositionSnapshot,
 } from '../src/index.ts'
+
+const TEST_DIGEST = `sha256:${'a'.repeat(64)}` as const
 
 describe('migration contracts', () => {
   it('keeps one ordered identifier for every independently verified package', () => {
@@ -90,5 +96,85 @@ describe('migration contracts', () => {
     expect(defineArtifactTraceEnvelope({ schema: 'paimind.artifact-trace/v1', ...common, document: { schemaVersion: 'paimind.presentation-trace/v2' } }).schema).toBe('paimind.artifact-trace/v1')
     expect(defineArtifactTraceEnvelope({ schema: 'paimind.artifact-trace/v2', ...common, documentRef: { path: 'deck.trace.json', schema: 'paimind.presentation-trace/v3', sha256: 'a'.repeat(64), bytes: 42 } }).schema).toBe('paimind.artifact-trace/v2')
     expect(() => defineArtifactTraceEnvelope({ schema: 'paimind.artifact-trace/v2', ...common, documentRef: { path: 'deck.trace.json', schema: 'paimind.presentation-trace/v3', sha256: 'wrong', bytes: 42 } })).toThrow(/sha256/)
+  })
+
+  it('locks non-atomic System Skills and keeps canonical Skill identities explicit', () => {
+    expect(definePaimindSkillReference({
+      kind: 'system', canonicalId: 'system:genui', name: 'genui', description: 'Generate UI',
+      availability: 'mandatory', userControl: 'locked', sourcePluginId: '@deepseek-ai/dsh-genui',
+    })).toMatchObject({ canonicalId: 'system:genui', userControl: 'locked' })
+    expect(() => definePaimindSkillReference({
+      kind: 'system', canonicalId: 'system:search', name: 'search', description: 'Search',
+      availability: 'optional', userControl: 'locked', sourcePluginId: '@paimind/search',
+    } as never)).toThrow(/lifecycle/)
+    expect(() => definePaimindSkillReference({
+      kind: 'business', canonicalId: 'business:wrong', name: 'delivery-risk', description: 'Review risk',
+      digest: TEST_DIGEST,
+    })).toThrow(/canonical/)
+    expect(() => definePaimindSkillReference({
+      kind: 'business', canonicalId: 'business:delivery-risk', name: 'delivery-risk', description: 'Review risk',
+      digest: 'sha256:wrong',
+    } as never)).toThrow(/digest/)
+  })
+
+  it('validates exact Workspace Business Skill composition references', () => {
+    expect(definePaimindWorkspaceCompositionSnapshot({
+      schema: 'paimind.workspace-composition/v1',
+      workspaceId: 'workspace-1',
+      businessSkills: [
+        { name: 'supplier-risk', digest: `sha256:${'b'.repeat(64)}` },
+        { name: 'delivery-risk', digest: TEST_DIGEST },
+      ],
+    })).toEqual({
+      schema: 'paimind.workspace-composition/v1',
+      workspaceId: 'workspace-1',
+      businessSkills: [
+        { name: 'delivery-risk', digest: TEST_DIGEST },
+        { name: 'supplier-risk', digest: `sha256:${'b'.repeat(64)}` },
+      ],
+    })
+    expect(() => definePaimindWorkspaceCompositionSnapshot({
+      schema: 'paimind.workspace-composition/v1', workspaceId: 'workspace-1',
+      businessSkills: [{ name: 'delivery-risk', digest: 'sha256:wrong' }],
+    } as never)).toThrow(/reference/)
+    expect(() => definePaimindWorkspaceCompositionSnapshot({
+      schema: 'paimind.workspace-composition/v1', workspaceId: 'workspace-1',
+      businessSkills: [
+        { name: 'delivery-risk', digest: TEST_DIGEST },
+        { name: 'delivery-risk', digest: TEST_DIGEST },
+      ],
+    })).toThrow(/duplicate/)
+  })
+
+  it('normalizes User Skill Policy and rejects disabled direct defaults', () => {
+    expect(definePaimindUserSkillPolicy({
+      schema: 'paimind.user-skill-policy/v1', revision: 2,
+      enabledOptionalSystemSkillNames: ['web-search', 'web-search'],
+      enabledBusinessSkillNames: ['supplier-risk', 'delivery-risk'],
+      directBusinessSkillNames: ['delivery-risk'],
+    })).toEqual({
+      schema: 'paimind.user-skill-policy/v1', revision: 2,
+      enabledOptionalSystemSkillNames: ['web-search'],
+      enabledBusinessSkillNames: ['delivery-risk', 'supplier-risk'],
+      directBusinessSkillNames: ['delivery-risk'],
+    })
+    expect(() => definePaimindUserSkillPolicy({
+      schema: 'paimind.user-skill-policy/v1', revision: 0,
+      enabledOptionalSystemSkillNames: [], enabledBusinessSkillNames: [],
+      directBusinessSkillNames: ['delivery-risk'],
+    })).toThrow(/must be enabled/)
+  })
+
+  it('normalizes ephemeral Session Business Skill selections and rejects stale shapes', () => {
+    expect(definePaimindSessionBusinessSkillSelection({
+      schema: 'paimind.session-business-skill-selection/v1', revision: 3,
+      skillNames: ['supplier-risk', 'delivery-risk', 'supplier-risk'],
+    })).toEqual({
+      schema: 'paimind.session-business-skill-selection/v1', revision: 3,
+      skillNames: ['delivery-risk', 'supplier-risk'],
+    })
+    expect(() => definePaimindSessionBusinessSkillSelection({
+      schema: 'paimind.session-business-skill-selection/v1', revision: -1, skillNames: [],
+    })).toThrow(/revision/)
   })
 })

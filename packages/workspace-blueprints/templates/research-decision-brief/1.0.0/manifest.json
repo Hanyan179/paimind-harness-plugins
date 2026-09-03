@@ -1,0 +1,16 @@
+{
+  "schema": "paimind.workspace-blueprint/v1",
+  "blueprintId": "research-decision-brief",
+  "version": "1.0.0",
+  "name": "研究与决策简报工作区",
+  "description": "围绕一个明确决策组织研究问题、来源证据、判断与行动建议。",
+  "category": "research",
+  "tags": ["research", "evidence", "decision"],
+  "source": "builtin",
+  "createdAt": 0,
+  "updatedAt": 0,
+  "composition": {
+    "agent": null,
+    "businessSkills": []
+  }
+}

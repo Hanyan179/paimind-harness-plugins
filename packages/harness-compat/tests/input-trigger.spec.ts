@@ -5,7 +5,7 @@ import {
   type HarnessInputTriggerSource,
 } from '../src/client-input-trigger.js'
 
-function setupBridge() {
+function setupBridge(skills?: ConstructorParameters<typeof NativeHarnessInputTriggerBridge>[2]) {
   const originalCandidates = vi.fn(async (_session, request) => request.query === ''
     ? [
       { name: 'docs/', appearance: 'folder', value: 'docs/', section: 'Files & folders' },
@@ -81,7 +81,7 @@ function setupBridge() {
       ? { session: { getSnapshot: () => ({ blank: true }) } }
       : undefined,
   }
-  const bridge = new NativeHarnessInputTriggerBridge(inputTriggers, sessions)
+  const bridge = new NativeHarnessInputTriggerBridge(inputTriggers, sessions, skills)
   return {
     bridge, controller, executed, getCurrentItems: () => currentItems, inputTriggers,
     originalCandidates, reference, skill, skillCandidates, skillPick, sources,
@@ -158,6 +158,38 @@ describe('RC8 native InputTrigger bridge', () => {
       span: { start: 0, end: 1, draftRev: 4 },
     }
     expect(bridge.pickNativeSkill(pick)).toEqual({ text: '/presentation ' })
+    expect(skillPick).toHaveBeenCalledWith(pick)
+  })
+
+  it('reads each PAIMind Skill menu from the fresh native Session catalog while retaining native picks', async () => {
+    const list = vi.fn()
+      .mockResolvedValueOnce({ result: { ok: true, value: { skills: [
+        { name: 'genui', description: 'System UI Skill', modelInvocable: true },
+      ] } } })
+      .mockResolvedValueOnce({ result: { ok: true, value: { skills: [
+        { name: 'genui', description: 'System UI Skill', modelInvocable: true },
+        { name: 'selected-business-skill', description: 'Selected after Session prewarm', modelInvocable: true },
+      ] } } })
+    const { bridge, skillCandidates, skillPick } = setupBridge({ list })
+    const session = { sessionId: 'session-1' }
+    const request = { query: '', position: 'leading' as const, signal: new AbortController().signal }
+
+    await expect(bridge.nativeSkillCandidates(session, request)).resolves.toEqual([
+      { name: 'genui', description: 'System UI Skill' },
+    ])
+    const refreshed = await bridge.nativeSkillCandidates(session, request)
+    expect(refreshed).toEqual([
+      { name: 'genui', description: 'System UI Skill' },
+      { name: 'selected-business-skill', description: 'Selected after Session prewarm' },
+    ])
+    expect(list).toHaveBeenCalledTimes(2)
+    expect(skillCandidates).not.toHaveBeenCalled()
+
+    const pick = {
+      candidate: refreshed[1]!, session, position: 'leading' as const, via: 'menu' as const,
+      span: { start: 0, end: 1, draftRev: 5 },
+    }
+    expect(bridge.pickNativeSkill(pick)).toEqual({ text: '/selected-business-skill ' })
     expect(skillPick).toHaveBeenCalledWith(pick)
   })
 

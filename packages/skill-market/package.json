@@ -17,7 +17,7 @@
     "./client": { "types": "./lib/types/client/index.d.ts", "default": "./lib/client.js" },
     "./package.json": "./package.json"
   },
-  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map","SKILL.md"],
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map","SKILL.md","SKILL_AUTHORING.md"],
   "dsh": {
     "client": {
       "inject": [

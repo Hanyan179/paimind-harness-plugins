@@ -1,10 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type {
-  HarnessConversationDraftService,
   HarnessSessionListSnapshot,
   HarnessSessionService,
-  HarnessSkillsApi,
   PaimindLocaleSource,
 } from '@paimind/harness-compat'
 import { PaimindProductSurfaceController } from '@paimind/harness-compat/client-surface'
@@ -14,25 +12,40 @@ import {
   SkillMarketSection,
   apply,
   inject,
+  installSkillAuthoringDraftNavigation,
   installSkillMarketStyle,
 } from '../src/client/index.js'
 import { SKILL_CENTER_STYLE } from '../src/client/styles.js'
 
-const skills = [
-  { name: 'openai-docs', description: 'Find official documentation', whenToUse: 'Use for OpenAI questions', modelInvocable: true },
-  { name: 'private-review', description: 'Review sensitive input', modelInvocable: false },
-] as const
-
 const recommendations = [
-  { id: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', version: '1.0.0', source: 'OpenAI Official · Adapted for Harness', license: 'Apache-2.0', digest: `sha256:${'a'.repeat(64)}` },
-  { id: 'skill-creator', name: 'skill-creator', description: 'Create Skills', version: '1.0.0', source: 'PAIMind', license: 'Apache-2.0', digest: `sha256:${'b'.repeat(64)}` },
+  { id: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', version: '1.0.0', source: 'OpenAI Official · Adapted for Harness', license: 'Apache-2.0', digest: `sha256:${'a'.repeat(64)}`, category: 'research', tags: ['official-docs', 'research'] },
+  { id: 'bento-ppt', name: 'bento-ppt', description: 'Create presentations', version: '1.0.0', source: 'PAIMind', license: 'Internal', digest: `sha256:${'b'.repeat(64)}`, category: 'content', tags: ['artifact', 'presentation'] },
 ] as const
 
-function api(): HarnessSkillsApi {
-  return { list: vi.fn().mockResolvedValue({ result: { ok: true, value: { skills } } }) }
-}
+const builtInSkills = [
+  {
+    kind: 'system', canonicalId: 'system:genui', name: 'genui', description: 'Generate structured UI',
+    availability: 'optional', userControl: 'atomic', sourcePluginId: '@deepseek-ai/dsh-tool-genui',
+  },
+  {
+    kind: 'system', canonicalId: 'system:paimind-skill-installation', name: 'paimind-skill-installation', description: 'Install Business Skills from GitHub',
+    availability: 'optional', userControl: 'atomic', sourcePluginId: '@paimind/skill-market',
+  },
+] as const
 
-function installer(items: readonly unknown[] = []) {
+function installer(items: readonly unknown[] = [], systemItems: readonly unknown[] = builtInSkills) {
+  let policy = {
+    schema: 'paimind.user-skill-policy/v1' as const,
+    revision: 0,
+    enabledOptionalSystemSkillNames: [] as readonly string[],
+    enabledBusinessSkillNames: items.map(item => (item as { name: string }).name),
+    directBusinessSkillNames: [] as readonly string[],
+  }
+  let sessionSelection = {
+    schema: 'paimind.session-business-skill-selection/v1' as const,
+    revision: 0,
+    skillNames: [] as readonly string[],
+  }
   return {
     listCatalog: vi.fn().mockResolvedValue({ ok: true, value: { items: recommendations } }),
     listInstalled: vi.fn().mockResolvedValue({ ok: true, value: { items } }),
@@ -42,6 +55,58 @@ function installer(items: readonly unknown[] = []) {
       runtimeRequirements: [],
     } }),
     inspectUpload: vi.fn(), installUpload: vi.fn().mockResolvedValue({ ok: true, value: { operation: 'installed', record: { skillId: 'openai-docs' } } }),
+    getAuthoringDraft: vi.fn().mockResolvedValue({ ok: true, value: null }),
+    dismissAuthoringDraft: vi.fn().mockResolvedValue({ ok: true, value: { dismissed: true } }),
+    listSystemSkills: vi.fn().mockResolvedValue({ ok: true, value: { items: systemItems } }),
+    getSessionBusinessSkillSelection: vi.fn().mockImplementation(async () => ({ ok: true, value: sessionSelection })),
+    replaceSessionBusinessSkillSelection: vi.fn().mockImplementation(async (input: { expectedRevision: number; skillNames: readonly string[] }) => {
+      sessionSelection = {
+        schema: 'paimind.session-business-skill-selection/v1', revision: sessionSelection.revision + 1,
+        skillNames: input.skillNames,
+      }
+      return { ok: true, value: sessionSelection }
+    }),
+    getSkillSource: vi.fn().mockResolvedValue({ ok: true, value: {
+      skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', instructions: 'Use official sources.',
+      digest: `sha256:${'c'.repeat(64)}`, managed: true,
+    } }),
+    saveSkillSource: vi.fn().mockImplementation(async (input: { name: string; description: string }) => ({ ok: true, value: {
+      operation: 'installed', record: { skillId: input.name, name: input.name, description: input.description },
+    } })),
+    getSkillPackage: vi.fn().mockResolvedValue({ ok: true, value: {
+      skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation',
+      digest: `sha256:${'c'.repeat(64)}`, managed: true,
+      root: { path: '', entries: [
+        { path: 'SKILL.md', name: 'SKILL.md', kind: 'text', size: 132, digest: `sha256:${'d'.repeat(64)}` },
+        { path: 'references', name: 'references', kind: 'directory', size: 0 },
+      ] },
+    } }),
+    listSkillPackageDirectory: vi.fn().mockResolvedValue({ ok: true, value: { path: 'references', entries: [
+      { path: 'references/example.md', name: 'example.md', kind: 'text', size: 12, digest: `sha256:${'e'.repeat(64)}` },
+    ] } }),
+    readSkillPackageFile: vi.fn().mockImplementation(async (input: { path: string }) => ({ ok: true, value: input.path === 'SKILL.md'
+      ? { path: 'SKILL.md', kind: 'text', size: 132, digest: `sha256:${'d'.repeat(64)}`, content: '---\nname: openai-docs\ndescription: "Find official documentation"\n---\n\nUse official sources.\n' }
+      : { path: input.path, kind: 'text', size: 12, digest: `sha256:${'e'.repeat(64)}`, content: 'Example text' } })),
+    saveSkillPackage: vi.fn().mockImplementation(async (input: { skillId?: string; changes: readonly { operation: string; path: string; content?: string }[] }) => {
+      const source = input.changes.find(change => change.path === 'SKILL.md')?.content ?? ''
+      const name = input.skillId ?? /\nname:\s*([^\n]+)/.exec(source)?.[1]?.trim() ?? 'new-skill'
+      return { ok: true, value: { operation: input.skillId === undefined ? 'installed' : 'updated', record: { skillId: name, name, description: 'Saved Skill' } } }
+    }),
+    getUserSkillPolicy: vi.fn().mockImplementation(async () => ({ ok: true, value: policy })),
+    replaceUserSkillPolicy: vi.fn().mockImplementation(async (input: {
+      expectedRevision: number
+      enabledOptionalSystemSkillNames: readonly string[]
+      enabledBusinessSkillNames: readonly string[]
+      directBusinessSkillNames: readonly string[]
+    }) => {
+      policy = {
+        schema: 'paimind.user-skill-policy/v1', revision: policy.revision + 1,
+        enabledOptionalSystemSkillNames: input.enabledOptionalSystemSkillNames,
+        enabledBusinessSkillNames: input.enabledBusinessSkillNames,
+        directBusinessSkillNames: input.directBusinessSkillNames,
+      }
+      return { ok: true, value: policy }
+    }),
     uninstall: vi.fn().mockResolvedValue({ ok: true, value: { skillId: 'openai-docs', removedAt: 1, recoverable: true } }),
   }
 }
@@ -50,13 +115,11 @@ function locale(active = 'en-US'): PaimindLocaleSource {
   return { getLocale: () => ({ active }), subscribe: () => () => {} }
 }
 
-function runtime(current: string | undefined | null = 'session-1'): { sessions: HarnessSessionService; conversation: HarnessConversationDraftService; setDraft: ReturnType<typeof vi.fn> } {
+function runtime(current: string | undefined | null = 'session-1'): { sessions: HarnessSessionService } {
   if (current === null) current = undefined
   const snapshot: HarnessSessionListSnapshot = { current, byId: current === undefined ? {} : { [current]: { running: false, blank: false, agentPreset: 'standard' } }, jobsBySession: {} }
-  const context = {}; const setDraft = vi.fn()
   return {
-    sessions: { list: { getSnapshot: () => snapshot, subscribe: () => () => {} }, open: () => {}, binding: () => ({ ctx: context, session: { getSnapshot: () => ({}) as never, subscribe: () => () => {} } }) },
-    conversation: { input: { for: () => ({ setDraft }) } }, setDraft,
+    sessions: { list: { getSnapshot: () => snapshot, subscribe: () => () => {} }, open: () => {} },
   }
 }
 
@@ -90,42 +153,169 @@ describe('Skill Market business UI', () => {
     expect(document.head.contains(style)).toBe(false)
   })
 
-  it('uses one catalog, installed, and favorites scope without depending on the current Session catalog', async () => {
+  it('uses market, built-in, and installed as the three primary views', async () => {
     const native = runtime()
-    render(<SkillMarketSection close={() => {}} api={api()} installer={installer() as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />)
+    render(<SkillMarketSection close={() => {}} installer={installer() as never} sessions={native.sessions} locale={locale()} />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'View: openai-docs' })).toBeInTheDocument())
-    expect(screen.getByRole('tab', { name: 'Catalog' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Market' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Built-in' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Installed' })).toBeInTheDocument()
     expect(screen.queryByText(/runtime id|host path|not exposed|hash/i)).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: 'Installed' }))
     expect(screen.getByText(/No personal Skills installed/)).toBeInTheDocument()
   })
 
-  it('supports roving keyboard navigation across the single scope tablist', async () => {
-    const native = runtime()
-    render(<SkillMarketSection close={() => {}} api={api()} installer={installer() as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />)
-    await screen.findByRole('button', { name: 'View: openai-docs' })
-    const catalog = screen.getByRole('tab', { name: 'Catalog' })
-    catalog.focus()
-    fireEvent.keyDown(catalog, { key: 'ArrowRight' })
-    expect(screen.getByRole('tab', { name: 'Installed' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('tab', { name: 'Installed' })).toHaveFocus()
+  it('places the Center close control in the top-right header and calls close', async () => {
+    const native = runtime(); const close = vi.fn()
+    render(<SkillMarketSection close={close} installer={installer() as never} sessions={native.sessions} locale={locale()} />)
+    const button = await screen.findByRole('button', { name: 'Close Skill Center' })
+    expect(button).toHaveAttribute('data-paimind-skill-center-close')
+    fireEvent.click(button)
+    expect(close).toHaveBeenCalledOnce()
   })
 
-  it('uses the native slash invocation without a second runtime registry', async () => {
-    const native = runtime(); const close = vi.fn()
-    const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
-    render(<SkillMarketSection close={close} api={api()} installer={installer(installed) as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />)
-    await waitFor(() => expect(screen.getByRole('button', { name: 'View: openai-docs' })).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: 'View: openai-docs' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Use in conversation' }))
-    expect(native.setDraft).toHaveBeenCalledWith('/openai-docs ')
-    expect(close).toHaveBeenCalledTimes(1)
+  it('supports roving keyboard navigation across the three primary views', async () => {
+    const native = runtime()
+    render(<SkillMarketSection close={() => {}} installer={installer() as never} sessions={native.sessions} locale={locale()} />)
+    await screen.findByRole('button', { name: 'View: openai-docs' })
+    const market = screen.getByRole('tab', { name: 'Market' })
+    market.focus()
+    fireEvent.keyDown(market, { key: 'ArrowRight' })
+    expect(screen.getByRole('tab', { name: 'Built-in' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Built-in' })).toHaveFocus()
+  })
+
+  it('renders verified built-in descriptors as real lifecycle switches and writes optional policy', async () => {
+    const native = runtime(); const host = installer()
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Built-in' }))
+    expect(await screen.findByText('genui')).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Enable genui' })).not.toBeChecked()
+    const optional = screen.getByRole('switch', { name: 'Enable paimind-skill-installation' })
+    expect(optional).not.toBeChecked()
+    fireEvent.click(optional)
+    await waitFor(() => expect(host.replaceUserSkillPolicy).toHaveBeenCalledWith({
+      expectedRevision: 0,
+      enabledOptionalSystemSkillNames: ['paimind-skill-installation'],
+      enabledBusinessSkillNames: [],
+      directBusinessSkillNames: [],
+    }))
+    await waitFor(() => expect(optional).toBeChecked())
+  })
+
+  it('fails closed in Built-in when the verified System descriptor API is unavailable', async () => {
+    const native = runtime(); const host = installer()
+    delete (host as Partial<typeof host>).listSystemSkills
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    await screen.findByRole('tab', { name: 'Built-in' })
+    fireEvent.click(screen.getByRole('tab', { name: 'Built-in' }))
+    expect(screen.getByRole('heading', { name: 'Built-in Skill descriptors are not connected' })).toBeInTheDocument()
+    expect(screen.getByText(/does not guess by name or expose UI-only switches/)).toBeInTheDocument()
+    expect(screen.queryByRole('switch')).toBeNull()
+  })
+
+  it('creates a Skill through the reviewable editor and saves only after user confirmation', async () => {
+    const native = runtime(); const host = installer()
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    await screen.findByRole('button', { name: 'Add Skill' })
+    fireEvent.click(screen.getByRole('button', { name: 'Add Skill' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /Create manually/ }))
+    const skillSource = '---\nname: delivery-risk-review\ndescription: "Review delivery risk when orders are provided."\n---\n\nInspect orders and return ranked risks.\n'
+    fireEvent.change(screen.getByLabelText('Skill file editor'), { target: { value: skillSource } })
+    fireEvent.change(screen.getByLabelText('New folder name'), { target: { value: 'references' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create folder' }))
+    fireEvent.change(screen.getByLabelText('New folder name'), { target: { value: 'examples' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create folder' }))
+    fireEvent.change(screen.getByLabelText('New file name'), { target: { value: 'output-format.md' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create file' }))
+    fireEvent.change(screen.getByLabelText('Skill file editor'), { target: { value: '# Output\n\nReturn ranked risks.' } })
+    expect(host.saveSkillPackage).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Save Skill folder' }))
+    await waitFor(() => expect(host.saveSkillPackage).toHaveBeenCalledWith({ changes: [
+      { operation: 'write', path: 'SKILL.md', content: skillSource },
+      { operation: 'mkdir', path: 'references' },
+      { operation: 'mkdir', path: 'references/examples' },
+      { operation: 'write', path: 'references/examples/output-format.md', content: '# Output\n\nReturn ranked risks.' },
+    ] }))
+  })
+
+  it('reviews and saves an AI-prepared draft before dismissing its conversation state', async () => {
+    const native = runtime(); const host = installer()
+    host.getAuthoringDraft.mockResolvedValue({ ok: true, value: {
+      draftId: 'db13cad0-4d50-49ef-aa51-17fc1339d9f3', sessionId: 'session-1',
+      name: 'delivery-risk-review', description: 'Review delivery risk', instructions: 'Review orders and return ranked risks.', updatedAt: 1,
+    } })
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+
+    expect(await screen.findByText('Prepared by AI · not saved')).toBeInTheDocument()
+    const source = '---\nname: delivery-risk-review\ndescription: "Review delivery risk"\n---\n\nReview orders and return ranked risks.\n'
+    expect(screen.getByLabelText('Skill file editor')).toHaveValue(source)
+    expect(host.saveSkillPackage).not.toHaveBeenCalled()
+    expect(host.dismissAuthoringDraft).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Skill folder' }))
+    await waitFor(() => expect(host.saveSkillPackage).toHaveBeenCalledWith({ changes: [
+      { operation: 'write', path: 'SKILL.md', content: source },
+    ] }))
+    await waitFor(() => expect(host.dismissAuthoringDraft).toHaveBeenCalledWith({
+      sessionId: 'session-1', draftId: 'db13cad0-4d50-49ef-aa51-17fc1339d9f3',
+    }))
+  })
+
+  it('creates nested content beneath an explicitly selected lazily loaded directory', async () => {
+    const native = runtime(); const host = installer([{
+      skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true,
+      digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [],
+    }])
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    await screen.findByRole('tab', { name: 'Installed' })
+    fireEvent.click(screen.getByRole('tab', { name: 'Installed' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Select directory: references' }))
+    await waitFor(() => expect(host.listSkillPackageDirectory).toHaveBeenCalledWith({ skillId: 'openai-docs', path: 'references' }))
+
+    fireEvent.change(screen.getByLabelText('New folder name'), { target: { value: 'examples' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create folder' }))
+    fireEvent.change(screen.getByLabelText('New folder name'), { target: { value: 'nested' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create folder' }))
+    fireEvent.change(screen.getByLabelText('New file name'), { target: { value: 'guide.md' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create file' }))
+    fireEvent.change(screen.getByLabelText('Skill file editor'), { target: { value: '# Guide\n' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Skill folder' }))
+
+    await waitFor(() => expect(host.saveSkillPackage).toHaveBeenCalledWith({
+      skillId: 'openai-docs', expectedDigest: `sha256:${'c'.repeat(64)}`,
+      changes: [
+        { operation: 'mkdir', path: 'references/examples' },
+        { operation: 'mkdir', path: 'references/examples/nested' },
+        { operation: 'write', path: 'references/examples/nested/guide.md', content: '# Guide\n' },
+      ],
+    }))
+  })
+
+  it('opens an installed managed Skill for editing and saves with optimistic concurrency', async () => {
+    const native = runtime(); const host = installer([{
+      skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true,
+      digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [],
+    }])
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    await screen.findByRole('tab', { name: 'Installed' })
+    fireEvent.click(screen.getByRole('tab', { name: 'Installed' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    const editor = await screen.findByLabelText('Skill file editor')
+    expect((editor as HTMLTextAreaElement).value).toContain('Use official sources.')
+    const revised = '---\nname: openai-docs\ndescription: "Find official documentation"\n---\n\nUse primary official sources only.\n'
+    fireEvent.change(editor, { target: { value: revised } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Skill folder' }))
+    await waitFor(() => expect(host.saveSkillPackage).toHaveBeenCalledWith({
+      skillId: 'openai-docs', expectedDigest: `sha256:${'c'.repeat(64)}`,
+      changes: [{ operation: 'write', path: 'SKILL.md', content: revised, expectedDigest: `sha256:${'d'.repeat(64)}` }],
+    }))
   })
 
   it('reviews a recommended package before installing through the shared installer', async () => {
     const native = runtime(); const host = installer()
-    render(<SkillMarketSection close={() => {}} api={api()} installer={host as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />)
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Review and install' })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: 'Review and install' }))
     const dialog = await screen.findByRole('dialog', { name: 'Install openai-docs' })
@@ -143,18 +333,19 @@ describe('Skill Market business UI', () => {
 
   it('explains the local Skill package contract before opening the file picker', async () => {
     const native = runtime(); const host = installer()
-    render(<SkillMarketSection close={() => {}} api={api()} installer={host as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />)
-    await screen.findByRole('button', { name: 'Import local Skill' })
-    const input = document.querySelector<HTMLInputElement>('input[type="file"]')!
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    await screen.findByRole('button', { name: 'Add Skill' })
+    const input = screen.getByLabelText('Choose Skill folder') as HTMLInputElement
     const openPicker = vi.spyOn(input, 'click').mockImplementation(() => {})
-    fireEvent.click(screen.getByRole('button', { name: 'Import local Skill' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add Skill' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /Import from device/ }))
     const dialog = screen.getByRole('dialog', { name: 'Choose a recognizable Skill package' })
     expect(dialog).toHaveTextContent('YAML frontmatter')
     expect(dialog).toHaveTextContent('SKILL.md')
     expect(dialog).toHaveTextContent('scripts/')
     expect(dialog).toHaveTextContent('personal Skill scope')
     expect(host.inspectUpload).not.toHaveBeenCalled()
-    const choose = screen.getByRole('button', { name: 'Choose Skill package' })
+    const choose = screen.getByRole('button', { name: 'Choose folder' })
     await waitFor(() => expect(choose).toHaveFocus())
     fireEvent.click(choose)
     expect(openPicker).toHaveBeenCalledOnce()
@@ -164,15 +355,14 @@ describe('Skill Market business UI', () => {
   it('does not offer a redundant catalog update when package digests match', async () => {
     const native = runtime()
     const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
-    render(<SkillMarketSection close={() => {}} api={api()} installer={installer(installed) as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />)
+    render(<SkillMarketSection close={() => {}} installer={installer(installed) as never} sessions={native.sessions} locale={locale()} />)
     await screen.findByRole('button', { name: 'View: openai-docs' })
-    const current = screen.getByRole('button', { name: 'Catalog version is current' })
-    expect(current).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /Update|Review update|Catalog version is current/ })).toBeNull()
   })
 
   it('requires an explicit recoverable-uninstall confirmation', async () => {
     const native = runtime(); const host = installer([{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }])
-    render(<SkillMarketSection close={() => {}} api={api()} installer={host as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />)
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
     await screen.findByRole('button', { name: 'View: openai-docs' })
     fireEvent.click(screen.getByRole('tab', { name: 'Installed' }))
     fireEvent.click(screen.getByRole('button', { name: 'Uninstall' }))
@@ -183,31 +373,261 @@ describe('Skill Market business UI', () => {
   })
 
   it('declares the Remote and business surface dependencies', () => {
-    expect(inject).toEqual(['slots', 'locale', 'remote', 'sessions', 'conversation'])
+    expect(inject).toEqual(['slots', 'locale', 'remote', 'sessions'])
   })
 
-  it('filters real catalog fields and persists favorites without inventing usage data', async () => {
+  it('filters the market by explicit metadata, inferred categories, and the stable general fallback', async () => {
     const native = runtime()
-    const storage = { getItem: vi.fn(() => null), setItem: vi.fn() }
-    render(<SkillMarketSection close={() => {}} api={api()} installer={installer() as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} storage={storage} />)
+    const host = installer()
+    host.listCatalog.mockResolvedValue({ ok: true, value: { items: [
+      ...recommendations,
+      { id: 'release-helper', name: 'release-helper', description: 'Search and analyze release data', version: '1.0.0', source: 'Community', license: 'MIT', digest: `sha256:${'c'.repeat(64)}`, category: 'engineering', tags: ['release-pipeline'] },
+      { id: 'specialized-capability', name: 'specialized-capability', description: 'A specialized capability', version: '1.0.0', source: 'Community', license: 'MIT', digest: `sha256:${'d'.repeat(64)}` },
+    ] } })
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
     await screen.findByRole('button', { name: 'View: openai-docs' })
-    fireEvent.change(screen.getByLabelText('Filter by source'), { target: { value: 'PAIMind' } })
+    const category = screen.getByLabelText('Filter by business category')
+    expect(screen.getByRole('option', { name: 'Engineering (1)' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'General (1)' })).toBeInTheDocument()
+    fireEvent.change(category, { target: { value: 'content' } })
     expect(screen.queryByRole('button', { name: 'View: openai-docs' })).toBeNull()
-    expect(screen.getByRole('button', { name: 'View: skill-creator' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Favorite: skill-creator' }))
-    expect(storage.setItem).toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: 'Favorites only' }))
-    expect(screen.getByRole('button', { name: 'View: skill-creator' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'View: bento-ppt' })).toBeInTheDocument()
+    fireEvent.change(category, { target: { value: 'engineering' } })
+    expect(screen.getByRole('button', { name: 'View: release-helper' })).toBeInTheDocument()
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search Skills' }), { target: { value: 'release-pipeline' } })
+    expect(screen.getByRole('button', { name: 'View: release-helper' })).toBeInTheDocument()
+    fireEvent.change(category, { target: { value: 'general' } })
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search Skills' }), { target: { value: '' } })
+    expect(screen.getByRole('button', { name: 'View: specialized-capability' })).toBeInTheDocument()
   })
 
-  it('explains why current-conversation use is disabled when no Session exists', async () => {
+  it('does not expose favorite actions or filters', async () => {
+    const native = runtime()
+    render(<SkillMarketSection close={() => {}} installer={installer() as never} sessions={native.sessions} locale={locale()} />)
+    await screen.findByRole('button', { name: 'View: openai-docs' })
+    expect(screen.queryByRole('button', { name: /favorite/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /unfavorite/i })).toBeNull()
+    expect(screen.queryByText('Favorites only')).toBeNull()
+  })
+
+  it('pages a 1,000-item market catalog and resets the window when filters change', async () => {
+    const native = runtime()
+    const host = installer()
+    const items = Array.from({ length: 1_000 }, (_, index) => ({
+      id: `catalog-skill-${String(index).padStart(4, '0')}`,
+      name: `catalog-skill-${String(index).padStart(4, '0')}`,
+      description: `General catalog capability ${index}`,
+      category: index < 500 ? 'data' : 'engineering', tags: [index < 500 ? 'analytics' : 'development'],
+      version: '1.0.0', source: 'Community', license: 'MIT', digest: `sha256:${index.toString(16).padStart(64, '0')}`,
+    }))
+    host.listCatalog.mockResolvedValue({ ok: true, value: { items } })
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    await screen.findByRole('button', { name: 'View: catalog-skill-0000' })
+    expect(screen.getAllByRole('button', { name: /^View: catalog-skill-/ })).toHaveLength(50)
+    expect(screen.getByText('Showing 50 of 1000 results')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Load more (950 remaining)' }))
+    expect(screen.getAllByRole('button', { name: /^View: catalog-skill-/ })).toHaveLength(100)
+    expect(screen.getByText('Showing 100 of 1000 results')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Load more (900 remaining)' })).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Filter by business category'), { target: { value: 'data' } })
+    expect(screen.getAllByRole('button', { name: /^View: catalog-skill-/ })).toHaveLength(50)
+    expect(screen.getByText('Showing 50 of 500 results')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Load more (450 remaining)' })).toBeInTheDocument()
+  })
+
+  it('writes Business Skill eligibility and direct-chat defaults through the real policy contract', async () => {
+    const native = runtime()
+    const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
+    const host = installer(installed)
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Installed' }))
+    const eligible = await screen.findByRole('switch', { name: 'Enable openai-docs' })
+    const direct = screen.getByRole('switch', { name: 'Use openai-docs by default in direct chats' })
+    expect(eligible).toBeChecked()
+    expect(direct).not.toBeChecked()
+    fireEvent.click(direct)
+    await waitFor(() => expect(host.replaceUserSkillPolicy).toHaveBeenLastCalledWith({
+      expectedRevision: 0,
+      enabledOptionalSystemSkillNames: [],
+      enabledBusinessSkillNames: ['openai-docs'],
+      directBusinessSkillNames: ['openai-docs'],
+    }))
+    await waitFor(() => expect(direct).toBeChecked())
+    fireEvent.click(eligible)
+    await waitFor(() => expect(host.replaceUserSkillPolicy).toHaveBeenLastCalledWith({
+      expectedRevision: 1,
+      enabledOptionalSystemSkillNames: [],
+      enabledBusinessSkillNames: [],
+      directBusinessSkillNames: [],
+    }))
+  })
+
+  it('loads the current Session selection before enabling its runtime switch', async () => {
+    const native = runtime()
+    const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
+    const host = installer(installed)
+    let resolveSelection!: (value: unknown) => void
+    host.getSessionBusinessSkillSelection.mockReturnValueOnce(new Promise(resolve => { resolveSelection = resolve }))
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Installed' }))
+    const current = await screen.findByRole('switch', { name: 'Use openai-docs in current conversation' })
+    expect(current).toBeDisabled()
+    expect(screen.getByText(/Reading the current runtime Session scope/)).toBeInTheDocument()
+    resolveSelection({ ok: true, value: { schema: 'paimind.session-business-skill-selection/v1', revision: 0, skillNames: [] } })
+    await waitFor(() => expect(current).toBeEnabled())
+  })
+
+  it('adds an enabled Business Skill to the current runtime Session with optimistic revision', async () => {
+    const native = runtime()
+    const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
+    const host = installer(installed)
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Installed' }))
+    const current = await screen.findByRole('switch', { name: 'Use openai-docs in current conversation' })
+    await waitFor(() => expect(current).toBeEnabled())
+    expect(screen.getByText(/Runtime-ephemeral.*host restarts/)).toBeInTheDocument()
+    fireEvent.click(current)
+    await waitFor(() => expect(host.replaceSessionBusinessSkillSelection).toHaveBeenCalledWith({
+      sessionId: 'session-1', expectedRevision: 0, skillNames: ['openai-docs'],
+    }))
+    await waitFor(() => expect(current).toBeChecked())
+    expect(screen.getAllByText(/clears when the host restarts/).length).toBeGreaterThan(0)
+  })
+
+  it('does not allow a disabled Business Skill to be added to the current Session', async () => {
+    const native = runtime()
+    const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
+    const host = installer(installed)
+    host.getUserSkillPolicy.mockResolvedValue({ ok: true, value: {
+      schema: 'paimind.user-skill-policy/v1', revision: 2,
+      enabledOptionalSystemSkillNames: [], enabledBusinessSkillNames: [], directBusinessSkillNames: [],
+    } })
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Installed' }))
+    const current = await screen.findByRole('switch', { name: 'Use openai-docs in current conversation' })
+    await waitFor(() => expect(current).toBeDisabled())
+    expect(screen.getByText(/Enable this Business Skill first/)).toBeInTheDocument()
+    expect(host.replaceSessionBusinessSkillSelection).not.toHaveBeenCalled()
+  })
+
+  it('allows a selected Business Skill to be removed after the user disables it', async () => {
+    const native = runtime()
+    const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
+    const host = installer(installed)
+    host.getUserSkillPolicy.mockResolvedValue({ ok: true, value: {
+      schema: 'paimind.user-skill-policy/v1', revision: 2,
+      enabledOptionalSystemSkillNames: [], enabledBusinessSkillNames: [], directBusinessSkillNames: [],
+    } })
+    host.getSessionBusinessSkillSelection.mockResolvedValue({ ok: true, value: {
+      schema: 'paimind.session-business-skill-selection/v1', revision: 3, skillNames: ['openai-docs'],
+    } })
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Installed' }))
+    const current = await screen.findByRole('switch', { name: 'Use openai-docs in current conversation' })
+    await waitFor(() => expect(current).toBeChecked())
+    expect(current).toBeEnabled()
+    expect(screen.getByText(/disabled but can still be removed/)).toBeInTheDocument()
+    fireEvent.click(current)
+    await waitFor(() => expect(host.replaceSessionBusinessSkillSelection).toHaveBeenCalledWith({
+      sessionId: 'session-1', expectedRevision: 3, skillNames: [],
+    }))
+    await waitFor(() => expect(current).not.toBeChecked())
+  })
+
+  it('refreshes the current Session selection after an optimistic concurrency conflict', async () => {
+    const native = runtime()
+    const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
+    const host = installer(installed)
+    host.getSessionBusinessSkillSelection
+      .mockResolvedValueOnce({ ok: true, value: { schema: 'paimind.session-business-skill-selection/v1', revision: 0, skillNames: [] } })
+      .mockResolvedValueOnce({ ok: true, value: { schema: 'paimind.session-business-skill-selection/v1', revision: 1, skillNames: ['openai-docs'] } })
+    host.replaceSessionBusinessSkillSelection.mockRejectedValueOnce(new Error('Session Business Skill Selection was updated'))
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Installed' }))
+    const current = await screen.findByRole('switch', { name: 'Use openai-docs in current conversation' })
+    await waitFor(() => expect(current).toBeEnabled())
+    fireEvent.click(current)
+    await waitFor(() => expect(host.getSessionBusinessSkillSelection).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(current).toBeChecked())
+    expect(screen.getByRole('alert')).toHaveTextContent(/latest runtime Session state has been refreshed/)
+  })
+
+  it('fails closed when the Session selection API is unavailable', async () => {
+    const native = runtime()
+    const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
+    const host = installer(installed)
+    delete (host as Partial<typeof host>).getSessionBusinessSkillSelection
+    delete (host as Partial<typeof host>).replaceSessionBusinessSkillSelection
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Installed' }))
+    expect(await screen.findByRole('switch', { name: 'Use openai-docs in current conversation' })).toBeDisabled()
+    expect(screen.getByText(/does not expose the real Session selection API/)).toBeInTheDocument()
+  })
+
+  it('keeps Agent attachment locked when the Agent Center surface is unavailable', async () => {
+    const native = runtime()
+    const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
+    render(<SkillMarketSection close={() => {}} installer={installer(installed) as never} sessions={native.sessions} locale={locale()} />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Installed' }))
+    const attach = screen.getByRole('button', { name: 'Attach in Agent Center' })
+    expect(attach).toBeDisabled()
+    expect(attach).toHaveAttribute('title', 'Agent Center is not installed or is currently unavailable')
+  })
+
+  it('navigates to the Agent Center surface without writing an Agent Profile from Skill Center', async () => {
+    render(<button type="button" data-paimind-product-trigger="agent-center">Agent Center navigation anchor</button>)
+    const native = runtime(); const close = vi.fn()
+    const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
+    const controller = new PaimindProductSurfaceController('agent-center', window, document)
+    render(<SkillMarketSection close={close} installer={installer(installed) as never} sessions={native.sessions} locale={locale()} />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Installed' }))
+    const attach = screen.getByRole('button', { name: 'Attach in Agent Center' })
+    expect(attach).toBeEnabled()
+    fireEvent.click(attach)
+    expect(controller.getSnapshot().open).toBe(true)
+    expect(close).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('status', { name: /attached/i })).toBeNull()
+    controller.dispose()
+  })
+
+  it('fails closed if the Agent Center surface disappears before navigation', async () => {
+    const anchor = render(<button type="button" data-paimind-product-trigger="agent-center">Agent Center navigation anchor</button>)
+    const native = runtime(); const close = vi.fn()
+    const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
+    const controller = new PaimindProductSurfaceController('agent-center', window, document)
+    render(<SkillMarketSection close={close} installer={installer(installed) as never} sessions={native.sessions} locale={locale()} />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Installed' }))
+    const attach = screen.getByRole('button', { name: 'Attach in Agent Center' })
+    anchor.unmount()
+    fireEvent.click(attach)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Agent Center is unavailable. No Skill was attached.')
+    expect(controller.getSnapshot().open).toBe(false)
+    expect(close).not.toHaveBeenCalled()
+    controller.dispose()
+  })
+
+  it('disables and explains current-conversation attachment when there is no current Session', async () => {
     const native = runtime(null)
     const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
-    render(<SkillMarketSection close={() => {}} api={api()} installer={installer(installed) as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />)
-    await screen.findByRole('button', { name: 'View: openai-docs' })
-    const use = screen.getByRole('button', { name: 'Use in conversation' })
-    expect(use).toBeDisabled()
-    expect(use).toHaveAttribute('title', 'Open a conversation to check')
+    const host = installer(installed)
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Installed' }))
+    expect(await screen.findByRole('switch', { name: 'Use openai-docs in current conversation' })).toBeDisabled()
+    expect(screen.getByText(/Open a conversation first/)).toBeInTheDocument()
+    expect(host.getSessionBusinessSkillSelection).not.toHaveBeenCalled()
+  })
+
+  it('locks policy controls when the user policy API is unavailable', async () => {
+    const native = runtime()
+    const installed = [{ skillId: 'openai-docs', name: 'openai-docs', description: 'Find official documentation', managed: true, digest: `sha256:${'a'.repeat(64)}`, runtimeRequirements: [] }]
+    const host = installer(installed)
+    delete (host as Partial<typeof host>).getUserSkillPolicy
+    delete (host as Partial<typeof host>).replaceUserSkillPolicy
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Installed' }))
+    expect(await screen.findByRole('switch', { name: 'Enable openai-docs' })).toBeDisabled()
+    expect(screen.getByText(/controls stay locked and never fake success/)).toBeInTheDocument()
   })
 
   it('opens from the native sidebar action inside the native center column', async () => {
@@ -216,7 +636,7 @@ describe('Skill Market business UI', () => {
     render(<>
       <SkillCenterTrigger wide={false} controller={controller} locale={locale()} />
       <div data-testid="harness-center"><section data-slot="conversation"><div>Native conversation</div></section></div>
-      <SkillCenterSurface controller={controller} api={api()} installer={installer() as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />
+      <SkillCenterSurface controller={controller} installer={installer() as never} sessions={native.sessions} locale={locale()} />
     </>)
     const trigger = screen.getByRole('button', { name: 'Open Skill Center' })
     expect(trigger.querySelector('svg')).not.toBeNull()
@@ -233,8 +653,6 @@ describe('Skill Market business UI', () => {
     expect(surface.querySelector('[data-paimind-product-return]')).toBeNull()
     expect(screen.queryByRole('dialog', { name: 'Skill Center' })).toBeNull()
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(screen.getByRole('main', { name: 'Skill Center' })).toBeInTheDocument()
-    fireEvent.click(trigger)
     await waitFor(() => expect(screen.queryByRole('main', { name: 'Skill Center' })).toBeNull())
     expect(conversation).not.toHaveAttribute('inert')
     expect(conversation).not.toHaveAttribute('aria-hidden')
@@ -242,12 +660,59 @@ describe('Skill Market business UI', () => {
     controller.dispose()
   })
 
+  it('opens the Skill Center when a conversation Tool prepares a new authoring draft', async () => {
+    let bindingListener = (): void => {}
+    const snapshot: HarnessSessionListSnapshot = { current: 'session-1', byId: { 'session-1': { running: false, blank: false, agentPreset: 'standard' } }, jobsBySession: {} }
+    const sessions: HarnessSessionService = {
+      list: { getSnapshot: () => snapshot, subscribe: () => () => {} }, open: () => {},
+      binding: () => ({ ctx: {}, session: { getSnapshot: () => ({}) as never, subscribe: listener => { bindingListener = listener; return () => {} } } }),
+    }
+    let draft: unknown = null
+    const host = installer()
+    host.getUserSkillPolicy.mockResolvedValue({ ok: true, value: {
+      schema: 'paimind.user-skill-policy/v1', revision: 0,
+      enabledOptionalSystemSkillNames: ['paimind-skill-authoring'],
+      enabledBusinessSkillNames: [], directBusinessSkillNames: [],
+    } })
+    host.getAuthoringDraft.mockImplementation(async () => ({ ok: true, value: draft }))
+    const controller = new PaimindProductSurfaceController('skill-center', window, document)
+    const open = vi.spyOn(controller, 'open')
+    const dispose = installSkillAuthoringDraftNavigation(sessions, host as never, controller)
+    await waitFor(() => expect(host.getAuthoringDraft).toHaveBeenCalled())
+    draft = { draftId: 'db13cad0-4d50-49ef-aa51-17fc1339d9f3', sessionId: 'session-1', name: 'delivery-risk-review', description: 'Review risk', instructions: 'Review orders.', updatedAt: 1 }
+    bindingListener()
+    await waitFor(() => expect(open).toHaveBeenCalledOnce())
+    dispose(); controller.dispose()
+  })
+
+  it('does not auto-open an AI Skill draft while skill authoring is disabled', async () => {
+    let bindingListener = (): void => {}
+    const snapshot: HarnessSessionListSnapshot = { current: 'session-1', byId: { 'session-1': { running: false, blank: false, agentPreset: 'standard' } }, jobsBySession: {} }
+    const sessions: HarnessSessionService = {
+      list: { getSnapshot: () => snapshot, subscribe: () => () => {} }, open: () => {},
+      binding: () => ({ ctx: {}, session: { getSnapshot: () => ({}) as never, subscribe: listener => { bindingListener = listener; return () => {} } } }),
+    }
+    const host = installer()
+    host.getAuthoringDraft.mockResolvedValue({ ok: true, value: {
+      draftId: 'db13cad0-4d50-49ef-aa51-17fc1339d9f3', sessionId: 'session-1',
+      name: 'delivery-risk-review', description: 'Review risk', instructions: 'Review orders.', updatedAt: 1,
+    } })
+    const controller = new PaimindProductSurfaceController('skill-center', window, document)
+    const open = vi.spyOn(controller, 'open')
+    const dispose = installSkillAuthoringDraftNavigation(sessions, host as never, controller)
+    await waitFor(() => expect(host.getUserSkillPolicy).toHaveBeenCalled())
+    bindingListener()
+    await new Promise(resolve => { setTimeout(resolve, 20) })
+    expect(open).not.toHaveBeenCalled()
+    dispose(); controller.dispose()
+  })
+
   it('fails closed without a unique native conversation host', async () => {
     const native = runtime()
     const controller = new PaimindProductSurfaceController('skill-center', window, document)
     render(<>
       <SkillCenterTrigger wide controller={controller} locale={locale()} />
-      <SkillCenterSurface controller={controller} api={api()} installer={installer() as never} sessions={native.sessions} conversation={native.conversation} locale={locale()} />
+      <SkillCenterSurface controller={controller} installer={installer() as never} sessions={native.sessions} locale={locale()} />
     </>)
     const trigger = screen.getByRole('button', { name: 'Open Skill Center' })
     fireEvent.click(trigger)
@@ -269,8 +734,6 @@ describe('Skill Market business UI', () => {
       remote,
       locale: locale(),
       sessions: native.sessions,
-      conversation: native.conversation,
-      get: () => ({ api: { skills: api() } }),
       reflect: { provide: () => () => {} },
       slots: {
         inject(name: string, install: () => unknown) { const disposer = install(); registered.push(name); if (typeof disposer === 'function') disposers.push(disposer as () => void) },

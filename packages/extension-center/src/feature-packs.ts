@@ -64,11 +64,11 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
   pack({
     id: 'paimind:pack:content', loaderEntryId: 'paimind-pack-content', order: 30,
     nameZh: '内容与交付物', nameEn: 'Content & Deliverables', defaultEnabled: true,
-    descriptionZh: '工作区产物、网页与 Office 生成、文件预览和对话交付物展示。',
-    descriptionEn: 'Workspace artifacts, web and Office generation, file preview, and conversation deliverables.',
+    descriptionZh: '工作区模板、工作区产物、网页与 Office 生成、文件预览和对话交付物展示。',
+    descriptionEn: 'Workspace blueprints, workspace artifacts, web and Office generation, file preview, and conversation deliverables.',
     requiredPackIds: [],
     packageNames: [
-      '@paimind/workspace-project', '@paimind/better-sidebar-adapter', '@paimind/artifact-runtime',
+      '@paimind/workspace-project', '@paimind/workspace-blueprints', '@paimind/better-sidebar-adapter', '@paimind/artifact-runtime',
       '@paimind/generator-web', '@paimind/generator-office', '@paimind/renderer-bento',
       '@paimind/renderer-pdf', '@paimind/artifacts', '@paimind/conversation-artifact-renderer',
     ],

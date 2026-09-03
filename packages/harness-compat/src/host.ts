@@ -648,7 +648,15 @@ export async function setPaimindHostLoaderEntryEnabled(
 ): Promise<void> {
   const entry = resolvePaimindHostLoaderEntry(loader, entryId)
   if (entry === undefined) throw new Error(`PAIMind Loader entry "${entryId}" is not installed`)
-  if ((entry.options.disabled !== true) === enabled) return
+  if ((entry.options.disabled !== true) === enabled) {
+    if (!enabled || entry.update === undefined) return
+    // A failed Cordis Group transaction can leave an enabled option flag while
+    // one or more child fibers are absent. Force-patching the runtime entry is
+    // idempotent for healthy fibers and makes the Group recreate only missing
+    // children, so an option flag can never masquerade as successful enablement.
+    await entry.update({ disabled: null }, false, true)
+    return
+  }
   const patch = { disabled: enabled ? null : true }
   // Product switch persistence belongs to Harness Settings. Keep the file-backed
   // Loader tree inert at bootstrap so a physically absent package can still boot
@@ -699,6 +707,195 @@ export interface PaimindHostAgent {
     readonly id: string
     readonly header: { readonly cwd?: string; readonly agentPreset?: string }
   }
+}
+
+/** One complete Skill definition projected into a live Agent scope. */
+export interface PaimindScopedSkillDefinition {
+  readonly name: string
+  readonly description: string
+  readonly whenToUse?: string
+  readonly content: string
+  readonly resourceDirectory?: string
+  readonly modelInvocable?: boolean
+  readonly userInvocable?: boolean
+}
+
+interface PaimindScopedSkillProviderControl {
+  readonly signal: AbortSignal
+  invalidate(): void
+}
+
+interface PaimindScopedSkillCandidate {
+  readonly name: string
+  readonly description: string
+  readonly whenToUse?: string
+  readonly invocation: { readonly modelInvocable: boolean; readonly userInvocable: boolean }
+  readonly provider: string
+  readonly source: 'custom'
+  readonly rank: number
+  readonly locator: string
+  readonly resourceBase?: { readonly kind: 'directory'; readonly path: string }
+}
+
+interface PaimindScopedSkillProvider {
+  readonly name: string
+  list(): Promise<readonly PaimindScopedSkillCandidate[]>
+  get(candidate: PaimindScopedSkillCandidate): Promise<Readonly<PaimindScopedSkillCandidate & { readonly content: string }> | undefined>
+}
+
+interface PaimindScopedSkillRegistry {
+  registerProvider(create: (control: PaimindScopedSkillProviderControl) => PaimindScopedSkillProvider): () => void
+}
+
+interface PaimindScopedAgentPresetRegistry {
+  /** Native answer for the Preset mounted in this live Agent scope. */
+  composedPreset(agentContext: PaimindScopedSkillAgentContext): string | undefined
+}
+
+export interface PaimindScopedSkillAgentContext {
+  get(name: 'skills'): PaimindScopedSkillRegistry | undefined
+  get(name: 'agentPresets'): PaimindScopedAgentPresetRegistry | undefined
+}
+
+/** Exact Agent Context seam used to file a provider into the native Agent layer. */
+export interface PaimindScopedSkillAgent extends PaimindHostAgent {
+  readonly ctx: PaimindScopedSkillAgentContext
+}
+
+/**
+ * Resolve the Preset that is actually mounted in a live Agent scope.
+ *
+ * A native Session header records the Preset used when the Session was created
+ * and can remain stale after the user selects another Preset before the first
+ * turn. Harness' Agent Preset service owns the live composition state, so
+ * runtime projections must consult it before falling back to the header.
+ */
+export function resolvePaimindLiveAgentPreset(agent: PaimindScopedSkillAgent): string | undefined {
+  const presets = agent.ctx.get('agentPresets')
+  return presets === undefined ? agent.session.header.agentPreset : presets.composedPreset(agent.ctx)
+}
+
+/** Mutable handle over one native, Agent-scoped provider registration. */
+export interface PaimindScopedSkillProjection {
+  readonly providerName: string
+  /** Make native reads wait for the latest projection refresh already in flight. */
+  setRefreshBarrier(refresh: Promise<void>): void
+  replace(definitions: readonly PaimindScopedSkillDefinition[]): void
+  snapshot(): readonly Readonly<PaimindScopedSkillDefinition>[]
+  dispose(): void
+}
+
+const PAIMIND_SCOPED_SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+function normalizeScopedSkillDefinitions(
+  definitions: readonly PaimindScopedSkillDefinition[],
+): readonly Readonly<PaimindScopedSkillDefinition>[] {
+  if (!Array.isArray(definitions) || definitions.length > 10_000) {
+    throw new Error('invalid scoped Skill projection')
+  }
+  const names = new Set<string>()
+  return Object.freeze(definitions.map((definition) => {
+    const name = definition.name.trim()
+    const description = definition.description.trim()
+    if (!PAIMIND_SCOPED_SKILL_NAME.test(name) || names.has(name)) {
+      throw new Error(`invalid or duplicate scoped Skill name: ${name}`)
+    }
+    if (description === '' || description.length > 1_000 || /[\u0000-\u001f\u007f]/.test(description)) {
+      throw new Error(`invalid scoped Skill description: ${name}`)
+    }
+    if (typeof definition.content !== 'string' || definition.content.length > 2_000_000) {
+      throw new Error(`invalid scoped Skill content: ${name}`)
+    }
+    names.add(name)
+    return Object.freeze({
+      name,
+      description,
+      ...(definition.whenToUse === undefined ? {} : { whenToUse: definition.whenToUse }),
+      content: definition.content,
+      ...(definition.resourceDirectory === undefined ? {} : { resourceDirectory: definition.resourceDirectory }),
+      modelInvocable: definition.modelInvocable ?? true,
+      userInvocable: definition.userInvocable ?? true,
+    })
+  }))
+}
+
+/**
+ * Register one replaceable Skill provider in the live Agent's native scope.
+ *
+ * Harness traceable services bind `agent.ctx.get('skills')` calls to the
+ * caller Context, so the provider is Agent-local and unwinds with that Agent.
+ * Replacements swap one immutable definition snapshot before invalidating the
+ * native catalog; no second runtime registry or invocation path is created.
+ */
+export function installPaimindScopedSkillProjection(
+  agent: PaimindScopedSkillAgent,
+  definitions: readonly PaimindScopedSkillDefinition[],
+  providerName = 'paimind-session-business-skills',
+): PaimindScopedSkillProjection {
+  if (!PAIMIND_SCOPED_SKILL_NAME.test(providerName)) throw new Error('invalid scoped Skill provider name')
+  const registry = agent.ctx.get('skills')
+  if (registry === undefined) throw new Error('Harness scoped Skill registry is unavailable')
+  let current = normalizeScopedSkillDefinitions(definitions)
+  let refreshBarrier: Promise<void> = Promise.resolve()
+  let invalidate: (() => void) | undefined
+  let active = true
+  const disposeNative = registry.registerProvider((control) => {
+    invalidate = control.invalidate
+    return {
+      name: providerName,
+      async list() {
+        await refreshBarrier
+        if (!active) return Object.freeze([])
+        return current.map((definition) => Object.freeze({
+          name: definition.name,
+          description: definition.description,
+          ...(definition.whenToUse === undefined ? {} : { whenToUse: definition.whenToUse }),
+          invocation: Object.freeze({
+            modelInvocable: definition.modelInvocable ?? true,
+            userInvocable: definition.userInvocable ?? true,
+          }),
+          provider: providerName,
+          source: 'custom' as const,
+          rank: 100,
+          locator: definition.name,
+          ...(definition.resourceDirectory === undefined
+            ? {}
+            : { resourceBase: Object.freeze({ kind: 'directory' as const, path: definition.resourceDirectory }) }),
+        }))
+      },
+      async get(candidate) {
+        await refreshBarrier
+        if (!active) return undefined
+        if (candidate.provider !== providerName || typeof candidate.locator !== 'string') return undefined
+        const definition = current.find(row => row.name === candidate.locator)
+        if (definition === undefined) return undefined
+        return Object.freeze({
+          ...candidate,
+          content: definition.content,
+        })
+      },
+    }
+  })
+  const projection: PaimindScopedSkillProjection = {
+    providerName,
+    setRefreshBarrier(refresh) {
+      if (!active) throw new Error('scoped Skill projection is disposed')
+      refreshBarrier = refresh
+    },
+    replace(next) {
+      if (!active) throw new Error('scoped Skill projection is disposed')
+      const normalized = normalizeScopedSkillDefinitions(next)
+      current = normalized
+      invalidate?.()
+    },
+    snapshot() { return current },
+    dispose() {
+      if (!active) return
+      active = false
+      disposeNative()
+    },
+  }
+  return Object.freeze(projection)
 }
 
 export interface PaimindToolRunContext {

@@ -14,6 +14,7 @@
     "@paimind/visual-experience": "workspace:^",
     "@paimind/runtime-orbs": "workspace:^",
     "@paimind/workspace-project": "workspace:^",
+    "@paimind/workspace-blueprints": "workspace:^",
     "@paimind/better-sidebar-adapter": "workspace:^",
     "@paimind/task-monitor": "workspace:^",
     "@paimind/artifact-runtime": "workspace:^",

@@ -115,7 +115,9 @@ function setup(api: HarnessAgentPresetApi = successfulApi(), mode: 'paimind' | '
     scope: () => ({}),
     binding: () => ({ session: { getSnapshot: () => ({ blank: true }) } }),
   }
-  const skillsList = vi.fn(async () => { throw new Error('PAIMind must delegate to the native Skill source') })
+  const skillsList = vi.fn(async () => ({ result: { ok: true as const, value: { skills: [
+    { name: 'presentation', description: '生成演示文稿。', modelInvocable: true },
+  ] } } }))
   const context = Object.assign({}, fixture.context, {
     slots: fixture.context.slots,
     settingsScope: { bind: () => scope },
@@ -557,11 +559,11 @@ describe('PAIMind visual experience client', () => {
       { sessionId: 'session-1' },
       { query: 'present', position: 'leading', signal: new AbortController().signal },
     )
-    expect(nativeSkillCandidates).toHaveBeenCalledWith(
+    expect(skillsList).toHaveBeenCalledWith(
       { sessionId: 'session-1' },
-      expect.objectContaining({ query: 'present' }),
+      expect.any(AbortSignal),
     )
-    expect(skillsList).not.toHaveBeenCalled()
+    expect(nativeSkillCandidates).not.toHaveBeenCalled()
     expect(skill.onPick({
       candidate: skills[0]!, session: { sessionId: 'session-1' }, position: 'leading', via: 'menu',
       span: { start: 0, end: 1, draftRev: 3 },
@@ -587,6 +589,33 @@ describe('PAIMind visual experience client', () => {
     expect(reference.candidates).toBe(referenceCandidates)
     contextView.unmount(); seatView.unmount()
     fixture.disposeEffects()
+  })
+
+  it('shows a newly selected Session Skill on the next @ query without reload or a prior turn', async () => {
+    const current = setup()
+    await waitFor(() => expect(current.triggerSources.some(source => source.name === 'paimind-skill')).toBe(true))
+    const request = { query: '', position: 'leading' as const, signal: new AbortController().signal }
+    await current.nativeSkillCandidates({ sessionId: 'session-1' }, request)
+    current.skillsList
+      .mockResolvedValueOnce({ result: { ok: true, value: { skills: [
+        { name: 'genui', description: '系统界面能力。', modelInvocable: true },
+      ] } } })
+      .mockResolvedValueOnce({ result: { ok: true, value: { skills: [
+        { name: 'genui', description: '系统界面能力。', modelInvocable: true },
+        { name: 'selected-business-skill', description: '刚刚选择的业务技能。', modelInvocable: true },
+      ] } } })
+    const skill = current.triggerSources.find(source => source.name === 'paimind-skill')!
+
+    await expect(skill.candidates({ sessionId: 'session-1' }, request)).resolves.toEqual([
+      expect.objectContaining({ name: 'genui' }),
+    ])
+    await expect(skill.candidates({ sessionId: 'session-1' }, request)).resolves.toEqual([
+      expect.objectContaining({ name: 'genui' }),
+      expect.objectContaining({ name: 'selected-business-skill', section: 'Skill（技能）' }),
+    ])
+    expect(current.skillsList).toHaveBeenCalledTimes(2)
+
+    current.fixture.disposeEffects()
   })
 
   it('keeps one canonical avatar identity across @, Quick Agents and Preset surfaces, with reversible fallback presentation', async () => {

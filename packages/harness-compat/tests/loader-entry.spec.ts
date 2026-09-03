@@ -99,6 +99,15 @@ describe('PAIMind Host Loader compatibility', () => {
     expect(entry.options.disabled).toBeUndefined()
   })
 
+  it('repairs an already-enabled runtime entry whose child fibers may be stale', async () => {
+    const { loader, runtimeUpdate, persistedUpdate } = nestedRuntimeLoader(false)
+
+    await setPaimindHostLoaderEntryEnabled(loader, 'paimind-pack-experience', true)
+
+    expect(runtimeUpdate).toHaveBeenCalledWith({ disabled: null }, false, true)
+    expect(persistedUpdate).not.toHaveBeenCalled()
+  })
+
   it('rejects duplicate logical product ids instead of toggling an arbitrary entry', () => {
     const first = nestedLoader(false).entry
     const second = { ...first, id: 'another-bundle:paimind-pack-experience' }

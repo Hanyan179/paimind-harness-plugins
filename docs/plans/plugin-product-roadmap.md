@@ -41,6 +41,7 @@ The review fails if two packages claim the same primary surface, write the same 
 - **Notification Center** owns notification presentation, read state, filtering, and target routing. It does not become a second task system or raw execution log.
 - **Visual Experience** owns shared PAIMind presentation behavior and reversible shell decoration. It must not own business data.
 - **Harness Compat** owns all selected-version imports, DOM adapters, and upstream shape translation. Feature plugins consume semantic facades instead of reaching into Harness internals.
+- **Workspace Blueprint Center** owns versioned Folder-first Workspace composition packages, the personal template repository, authoring surface, safe materialization and the materialized Workspace composition receipt. Harness remains the sole owner of Workspace registration, identity, Session lifecycle and navigation. Skill Market consumes exact Business Skill references as Workspace Scope; Agent Builder owns the entry-Session Agent binding. Neither binding is recommendation metadata, copied entity state or a second runtime.
 
 ## Delivery sequence
 

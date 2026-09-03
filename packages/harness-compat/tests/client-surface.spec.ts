@@ -7,6 +7,7 @@ import {
   installPaimindProductSurfaceInteraction,
   resolvePaimindProductCenterHost,
   requestPaimindAgentBuilder,
+  requestPaimindProductSurface,
 } from '../src/client-surface.js'
 
 afterEach(() => {
@@ -30,6 +31,50 @@ describe('PAIMind product surface controller', () => {
 
     agents.dispose()
     skills.dispose()
+    skills.open()
+    expect(skills.getSnapshot().open).toBe(false)
+  })
+
+  it('blocks close behind releasable leases and rejects another programmatic Center open', () => {
+    const agents = new PaimindProductSurfaceController('agent-center', window, document)
+    const skills = new PaimindProductSurfaceController('skill-center', window, document)
+
+    agents.open()
+    const releaseFirst = agents.blockClose()
+    const releaseSecond = agents.blockClose()
+
+    expect(agents.close()).toBe(false)
+    requestPaimindProductSurface('skill-center', window)
+    expect(agents.getSnapshot().open).toBe(true)
+    expect(skills.getSnapshot().open).toBe(false)
+
+    releaseFirst()
+    releaseFirst()
+    expect(agents.close()).toBe(false)
+
+    releaseSecond()
+    requestPaimindProductSurface('skill-center', window)
+    expect(agents.getSnapshot().open).toBe(false)
+    expect(skills.getSnapshot().open).toBe(true)
+
+    agents.dispose()
+    skills.dispose()
+  })
+
+  it('defers catastrophic surface recovery until every close blocker releases', () => {
+    const controller = new PaimindProductSurfaceController('workspace-blueprints', window, document)
+    controller.open()
+    const releaseFirst = controller.blockClose()
+    const releaseSecond = controller.blockClose()
+
+    controller.closeWhenUnblocked(false)
+    expect(controller.getSnapshot().open).toBe(true)
+    releaseFirst()
+    expect(controller.getSnapshot().open).toBe(true)
+    releaseSecond()
+    expect(controller.getSnapshot().open).toBe(false)
+
+    controller.dispose()
   })
 
   it('restores focus to the invoking sidebar action on close', () => {
@@ -258,6 +303,43 @@ describe('PAIMind product surface interaction', () => {
     controller.open(trigger)
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
     expect(controller.getSnapshot().open).toBe(true)
+    controller.dispose()
+  })
+
+  it('prevents Escape and outside navigation while close is blocked', () => {
+    const trigger = document.createElement('button')
+    trigger.dataset.paimindProductTrigger = 'skill-center'
+    document.body.append(trigger)
+    const root = document.createElement('div')
+    root.innerHTML = '<button data-paimind-product-initial-focus>First</button>'
+    document.body.append(root)
+    const outside = document.createElement('a')
+    outside.href = '#workspace'
+    document.body.append(outside)
+    const controller = new PaimindProductSurfaceController('skill-center', window, document)
+    controller.open(trigger)
+    const release = controller.blockClose()
+    const dispose = installPaimindProductSurfaceInteraction(root, controller, document)
+    const underlyingEscape = vi.fn()
+    const underlyingClick = vi.fn()
+    root.addEventListener('keydown', underlyingEscape)
+    outside.addEventListener('click', underlyingClick)
+
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    root.dispatchEvent(escape)
+    expect(escape.defaultPrevented).toBe(true)
+    expect(underlyingEscape).not.toHaveBeenCalled()
+    expect(controller.getSnapshot().open).toBe(true)
+
+    const outsideClick = new MouseEvent('click', { bubbles: true, cancelable: true })
+    outside.dispatchEvent(outsideClick)
+    expect(outsideClick.defaultPrevented).toBe(true)
+    expect(underlyingClick).not.toHaveBeenCalled()
+    expect(controller.getSnapshot().open).toBe(true)
+
+    release()
+    expect(controller.close(false)).toBe(true)
+    dispose()
     controller.dispose()
   })
 })

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { strToU8, zipSync, type Zippable } from 'fflate'
+import type { SkillProductCategory } from './catalog.js'
 import apacheLicense from '../catalog/LICENSE.txt?raw'
 import internalLicense from '../catalog/INTERNAL-LICENSE.txt?raw'
 import bentoPptSkill from '../catalog/bento-ppt/SKILL.md?raw'
@@ -12,10 +13,6 @@ import walmartOutlineSkill from '../catalog/build-walmart-buyer-proposal-outline
 import walmartOutlineNotice from '../catalog/build-walmart-buyer-proposal-outline/NOTICE.txt?raw'
 import openaiDocsSkill from '../catalog/openai-docs/SKILL.md?raw'
 import openaiDocsNotice from '../catalog/openai-docs/NOTICE.txt?raw'
-import skillCreatorSkill from '../catalog/skill-creator/SKILL.md?raw'
-import skillCreatorNotice from '../catalog/skill-creator/NOTICE.txt?raw'
-import skillInstallerSkill from '../catalog/skill-installer/SKILL.md?raw'
-import skillInstallerNotice from '../catalog/skill-installer/NOTICE.txt?raw'
 import categoryPerformanceSkill from '../catalog/category-performance-analysis/SKILL.md?raw'
 import categoryPerformanceNotice from '../catalog/category-performance-analysis/NOTICE.txt?raw'
 import categoryOpportunitySkill from '../catalog/category-opportunity-analysis/SKILL.md?raw'
@@ -31,6 +28,8 @@ export interface SkillCatalogItem {
   readonly source: string
   readonly license: string
   readonly digest: string
+  readonly category: SkillProductCategory
+  readonly tags: readonly string[]
 }
 
 export interface SkillCatalogSnapshot {
@@ -44,6 +43,8 @@ interface RecommendedSkillSource {
   readonly version: string
   readonly source: string
   readonly license: string
+  readonly category: SkillProductCategory
+  readonly tags: readonly string[]
   readonly skill: string
   readonly notice: string
   readonly licenseText: string
@@ -62,42 +63,42 @@ const PAIMIND_SOURCE = 'PAIMind Internal · Adapted for Harness'
 const SOURCES: readonly RecommendedSkillSource[] = Object.freeze([
   {
     id: 'openai-docs', name: 'openai-docs', version: '1.0.0', source: SOURCE, license: 'Apache-2.0',
+    category: 'research', tags: Object.freeze(['official-docs', 'research']),
     description: '查询 OpenAI 官方产品与 API 文档，并提供直接来源。', skill: openaiDocsSkill, notice: openaiDocsNotice, licenseText: apacheLicense,
   },
   {
-    id: 'skill-creator', name: 'skill-creator', version: '1.0.0', source: SOURCE, license: 'Apache-2.0',
-    description: '设计和改进符合 Harness 规范的 Skill 技能包。', skill: skillCreatorSkill, notice: skillCreatorNotice, licenseText: apacheLicense,
-  },
-  {
-    id: 'skill-installer', name: 'skill-installer', version: '1.0.0', source: SOURCE, license: 'Apache-2.0',
-    description: '通过 PAIMind 技能市场安全检查并安装 Skill。', skill: skillInstallerSkill, notice: skillInstallerNotice, licenseText: apacheLicense,
-  },
-  {
     id: 'bento-ppt', name: 'bento-ppt', version: '1.4.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    category: 'content', tags: Object.freeze(['artifact', 'presentation']),
     description: '用真实来源、稳定对象绑定与 Sidecar 溯源生成丰富的 Bento HTML 演示。', skill: bentoPptSkill, notice: bentoPptNotice, licenseText: internalLicense,
   },
   {
     id: 'fineline-investment-analysis', name: 'fineline-investment-analysis', version: '1.0.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    category: 'product', tags: Object.freeze(['data-analysis', 'pdm']),
     description: '从脱敏冻结快照生成 Walmart Fine-line 投资分析 data_result 产物。', skill: finelineSkill, notice: finelineNotice, licenseText: internalLicense,
   },
   {
     id: 'white-space-analysis', name: 'white-space-analysis', version: '1.0.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    category: 'product', tags: Object.freeze(['data-analysis', 'pdm']),
     description: '从脱敏冻结快照生成 Walmart White-space 分析 data_result 产物。', skill: whiteSpaceSkill, notice: whiteSpaceNotice, licenseText: internalLicense,
   },
   {
     id: 'build-walmart-buyer-proposal-outline', name: 'build-walmart-buyer-proposal-outline', version: '1.2.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    category: 'product', tags: Object.freeze(['pdm', 'proposal']),
     description: '从两个已验证分析 Artifact 构建 Walmart Buyer Proposal 提纲。', skill: walmartOutlineSkill, notice: walmartOutlineNotice, licenseText: internalLicense,
   },
   {
     id: 'category-performance-analysis', name: 'category-performance-analysis', version: '1.0.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    category: 'data', tags: Object.freeze(['category-analysis', 'performance']),
     description: '从冻结合成数据生成可溯源的品类经营分析 data_result。', skill: categoryPerformanceSkill, notice: categoryPerformanceNotice, licenseText: internalLicense,
   },
   {
     id: 'category-opportunity-analysis', name: 'category-opportunity-analysis', version: '1.0.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    category: 'data', tags: Object.freeze(['category-analysis', 'opportunity']),
     description: '为 Cosmetics、Party Favors 与手工品生成可溯源的机会分析。', skill: categoryOpportunitySkill, notice: categoryOpportunityNotice, licenseText: internalLicense,
   },
   {
     id: 'proposal-assistant-orchestration', name: 'proposal-assistant-orchestration', version: '1.0.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    category: 'product', tags: Object.freeze(['orchestration', 'proposal']),
     description: 'AI 驱动 Proposal Assistant，从澄清提问编排到 Fact Layer、Bento Deck 与 Trace Mode。', skill: proposalAssistantSkill, notice: proposalAssistantNotice, licenseText: internalLicense,
   },
 ])
@@ -119,7 +120,7 @@ function buildPackage(source: RecommendedSkillSource): RecommendedSkillPackage {
   return Object.freeze({
     item: Object.freeze({
       id: source.id, name: source.name, description: source.description, version: source.version,
-      source: source.source, license: source.license, digest,
+      source: source.source, license: source.license, digest, category: source.category, tags: source.tags,
     }),
     archive,
     fileName: `${source.id}-${source.version}.zip`,

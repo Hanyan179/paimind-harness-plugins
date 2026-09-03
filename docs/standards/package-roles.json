@@ -38,6 +38,7 @@
     { "name": "@paimind/ui-foundation", "path": "packages/ui-foundation", "role": "shared-support" },
     { "name": "@paimind/user-settings", "path": "packages/user-settings", "role": "client-plugin" },
     { "name": "@paimind/visual-experience", "path": "packages/visual-experience", "role": "client-plugin" },
+    { "name": "@paimind/workspace-blueprints", "path": "packages/workspace-blueprints", "role": "client-plugin" },
     { "name": "@paimind/workspace-project", "path": "packages/workspace-project", "role": "client-plugin" },
     { "name": "@paimind/walmart-proposal-adapter", "path": "packages/walmart-proposal-adapter", "role": "headless-plugin" }
   ]

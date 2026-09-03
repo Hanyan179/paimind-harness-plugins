@@ -10,6 +10,7 @@
     { "path": "packages/branding" },
     { "path": "packages/visual-experience" },
     { "path": "packages/runtime-orbs" },
+    { "path": "packages/workspace-blueprints" },
     { "path": "packages/workspace-project" },
     { "path": "packages/better-sidebar-adapter" },
     { "path": "packages/task-monitor" },

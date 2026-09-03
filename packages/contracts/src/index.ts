@@ -18,6 +18,265 @@ export const PAIMIND_BUSINESS_SKILL_REPOSITORY_DIRECTORY = '.paimind-skill-marke
 
 /** Creator-Agent Tool that transfers a complete proposal into the reviewable UI draft. */
 export const PAIMIND_AGENT_PREPARE_CREATE_TOOL = 'paimind_agent_prepare_create' as const
+export const PAIMIND_SKILL_PREPARE_CREATE_TOOL = 'paimind_skill_prepare_create' as const
+export const PAIMIND_SKILL_INSPECT_GITHUB_TOOL = 'paimind_skill_inspect_github' as const
+export const PAIMIND_SKILL_INSTALL_TOOL = 'paimind_skill_install' as const
+export const PAIMIND_SYSTEM_SKILL_NAMES = Object.freeze([
+  'genui',
+  'paimind-agent-authoring',
+  'paimind-skill-installation',
+  'paimind-skill-authoring',
+] as const)
+
+export const PAIMIND_SKILL_NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/
+export const PAIMIND_SHA256_DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/
+
+interface PaimindSkillReferenceBase {
+  readonly name: string
+  readonly description: string
+  readonly whenToUse?: string
+}
+
+/**
+ * A user-toggleable System Skill is valid only when its source Plugin owns one
+ * atomic lifecycle for the catalog row, body, Tools and client contribution.
+ */
+export type PaimindSystemSkillReference = PaimindSkillReferenceBase & (
+  | {
+      readonly kind: 'system'
+      readonly canonicalId: `system:${string}`
+      readonly availability: 'mandatory'
+      readonly userControl: 'locked'
+      readonly sourcePluginId: string
+    }
+  | {
+      readonly kind: 'system'
+      readonly canonicalId: `system:${string}`
+      readonly availability: 'optional'
+      readonly userControl: 'atomic'
+      readonly sourcePluginId: string
+    }
+)
+
+/** Reference to one installed folder in the PAIMind Business Skill repository. */
+export interface PaimindBusinessSkillReference extends PaimindSkillReferenceBase {
+  readonly kind: 'business'
+  readonly canonicalId: `business:${string}`
+  /** Exact managed-package revision; a name alone never authorizes Workspace composition. */
+  readonly digest: `sha256:${string}`
+}
+
+/** Summary-only value accepted by Harness scoped registration. */
+export type PaimindSkillReference = PaimindSystemSkillReference | PaimindBusinessSkillReference
+
+export interface PaimindSystemSkillCatalogSnapshot {
+  readonly items: readonly Readonly<PaimindSystemSkillReference>[]
+}
+
+/** User-owned eligibility and direct-chat defaults; never contains Skill bodies. */
+export interface PaimindUserSkillPolicyV1 {
+  readonly schema: 'paimind.user-skill-policy/v1'
+  readonly revision: number
+  readonly enabledOptionalSystemSkillNames: readonly string[]
+  readonly enabledBusinessSkillNames: readonly string[]
+  readonly directBusinessSkillNames: readonly string[]
+}
+
+export interface PaimindUserSkillPolicyReplaceInput {
+  readonly expectedRevision: number
+  readonly enabledOptionalSystemSkillNames: readonly string[]
+  readonly enabledBusinessSkillNames: readonly string[]
+  readonly directBusinessSkillNames: readonly string[]
+}
+
+/** Session-object-owned ephemeral Business Skill selection; never mutates an Agent profile. */
+export interface PaimindSessionBusinessSkillSelectionV1 {
+  readonly schema: 'paimind.session-business-skill-selection/v1'
+  readonly revision: number
+  readonly skillNames: readonly string[]
+}
+
+export interface PaimindSessionBusinessSkillSelectionReplaceInput {
+  readonly sessionId: string
+  readonly expectedRevision: number
+  readonly skillNames: readonly string[]
+}
+
+/** Exact Business Skill binding persisted by one materialized Workspace composition. */
+export interface PaimindWorkspaceBusinessSkillReference {
+  readonly name: string
+  readonly digest: `sha256:${string}`
+}
+
+/** Canonical lookup input; Session membership is resolved by the source against native Workspace facts. */
+export type PaimindWorkspaceCompositionLookup =
+  | { readonly workspaceId: string }
+  /** `cwd` is a consistency hint only; the source must resolve native Session membership first. */
+  | { readonly sessionId: string; readonly cwd?: string }
+
+/** Read-only Workspace composition projected by the owning plugin. */
+export interface PaimindWorkspaceCompositionSnapshotV1 {
+  readonly schema: 'paimind.workspace-composition/v1'
+  readonly workspaceId: string
+  readonly businessSkills: readonly Readonly<PaimindWorkspaceBusinessSkillReference>[]
+}
+
+/** Public source contract consumed structurally through the Cordis Context. */
+export interface PaimindWorkspaceCompositionSource {
+  getWorkspaceComposition(
+    input: Readonly<PaimindWorkspaceCompositionLookup>,
+  ): Promise<Readonly<PaimindWorkspaceCompositionSnapshotV1> | undefined>
+}
+
+/** Complete, ephemeral input used to resolve one direct or Agent Session catalog. */
+export interface PaimindSkillScopeInputV1 {
+  readonly schema: 'paimind.skill-scope-input/v1'
+  readonly sessionKind: 'direct' | 'agent'
+  readonly mandatorySystemSkills: readonly PaimindSystemSkillReference[]
+  readonly optionalSystemSkills: readonly PaimindSystemSkillReference[]
+  readonly installedBusinessSkills: readonly PaimindBusinessSkillReference[]
+  readonly userPolicy: PaimindUserSkillPolicyV1
+  readonly agentBusinessSkillNames: readonly string[]
+  readonly workspaceComposition: Readonly<PaimindWorkspaceCompositionSnapshotV1> | undefined
+  readonly sessionBusinessSkillNames: readonly string[]
+}
+
+function skillText(value: string, field: string, maximum: number): string {
+  const normalized = value.trim()
+  if (normalized === '' || normalized.length > maximum || /[\u0000-\u001f\u007f]/.test(normalized)) {
+    throw new Error(`invalid Skill ${field}`)
+  }
+  return normalized
+}
+
+function skillNames(values: readonly string[], field: string): readonly string[] {
+  if (!Array.isArray(values) || values.length > 10_000) throw new Error(`invalid Skill policy ${field}`)
+  return Object.freeze([...new Set(values.map(value => {
+    if (typeof value !== 'string' || !PAIMIND_SKILL_NAME_PATTERN.test(value)) {
+      throw new Error(`invalid Skill policy ${field}`)
+    }
+    return value
+  }))].sort())
+}
+
+function boundedIdentity(value: string, field: string): string {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  if (normalized === '' || normalized.length > 200 || /[\u0000-\u001f\u007f]/.test(normalized)) {
+    throw new Error(`invalid ${field}`)
+  }
+  return normalized
+}
+
+/** Validate a Workspace composition snapshot before any Skill scope is resolved. */
+export function definePaimindWorkspaceCompositionSnapshot(
+  candidate: PaimindWorkspaceCompositionSnapshotV1,
+): Readonly<PaimindWorkspaceCompositionSnapshotV1> {
+  if (candidate.schema !== 'paimind.workspace-composition/v1') {
+    throw new Error('unsupported Workspace composition schema')
+  }
+  const workspaceId = boundedIdentity(candidate.workspaceId, 'Workspace id')
+  if (!Array.isArray(candidate.businessSkills) || candidate.businessSkills.length > 10_000) {
+    throw new Error('invalid Workspace Business Skills')
+  }
+  const byName = new Map<string, Readonly<PaimindWorkspaceBusinessSkillReference>>()
+  for (const reference of candidate.businessSkills) {
+    if (typeof reference !== 'object' || reference === null
+      || !PAIMIND_SKILL_NAME_PATTERN.test(reference.name)
+      || !PAIMIND_SHA256_DIGEST_PATTERN.test(reference.digest)) {
+      throw new Error('invalid Workspace Business Skill reference')
+    }
+    if (byName.has(reference.name)) {
+      throw new Error(`duplicate Workspace Business Skill reference: ${reference.name}`)
+    }
+    byName.set(reference.name, Object.freeze({ name: reference.name, digest: reference.digest }))
+  }
+  return Object.freeze({
+    schema: 'paimind.workspace-composition/v1',
+    workspaceId,
+    businessSkills: Object.freeze([...byName.values()].sort((left, right) => left.name.localeCompare(right.name))),
+  })
+}
+
+/** Validate one provider/repository summary before scope resolution. */
+export function definePaimindSkillReference(
+  candidate: PaimindSystemSkillReference,
+): Readonly<PaimindSystemSkillReference>
+export function definePaimindSkillReference(
+  candidate: PaimindBusinessSkillReference,
+): Readonly<PaimindBusinessSkillReference>
+export function definePaimindSkillReference(
+  candidate: PaimindSkillReference,
+): Readonly<PaimindSkillReference>
+export function definePaimindSkillReference(
+  candidate: PaimindSkillReference,
+): Readonly<PaimindSkillReference> {
+  if (!PAIMIND_SKILL_NAME_PATTERN.test(candidate.name)) throw new Error('invalid Skill name')
+  if (candidate.canonicalId !== `${candidate.kind}:${candidate.name}`) {
+    throw new Error('invalid canonical Skill identity')
+  }
+  const description = skillText(candidate.description, 'description', 1_000)
+  const normalized = candidate.whenToUse === undefined
+    ? { ...candidate, description }
+    : { ...candidate, description, whenToUse: skillText(candidate.whenToUse, 'whenToUse', 1_000) }
+  if (candidate.kind === 'business') {
+    if (!PAIMIND_SHA256_DIGEST_PATTERN.test(candidate.digest)) throw new Error('invalid Business Skill digest')
+    return Object.freeze(normalized)
+  }
+  const sourcePluginId = skillText(candidate.sourcePluginId, 'source Plugin id', 200)
+  if (
+    (candidate.availability === 'mandatory' && candidate.userControl !== 'locked')
+    || (candidate.availability === 'optional' && candidate.userControl !== 'atomic')
+  ) throw new Error('invalid System Skill lifecycle')
+  return Object.freeze({ ...normalized, sourcePluginId })
+}
+
+/** Validate, normalize and freeze the only persisted user Skill policy. */
+export function definePaimindUserSkillPolicy(
+  candidate: PaimindUserSkillPolicyV1,
+): Readonly<PaimindUserSkillPolicyV1> {
+  if (candidate.schema !== 'paimind.user-skill-policy/v1') throw new Error('unsupported user Skill policy schema')
+  if (!Number.isSafeInteger(candidate.revision) || candidate.revision < 0) {
+    throw new Error('invalid user Skill policy revision')
+  }
+  const enabledOptionalSystemSkillNames = skillNames(
+    candidate.enabledOptionalSystemSkillNames,
+    'enabled Optional System Skills',
+  )
+  const enabledBusinessSkillNames = skillNames(candidate.enabledBusinessSkillNames, 'enabled Business Skills')
+  const directBusinessSkillNames = skillNames(candidate.directBusinessSkillNames, 'direct Business Skills')
+  const enabledBusiness = new Set(enabledBusinessSkillNames)
+  if (directBusinessSkillNames.some(name => !enabledBusiness.has(name))) {
+    throw new Error('direct Business Skill must be enabled')
+  }
+  const optionalSystem = new Set(enabledOptionalSystemSkillNames)
+  if (enabledBusinessSkillNames.some(name => optionalSystem.has(name))) {
+    throw new Error('System and Business Skill policy names collide')
+  }
+  return Object.freeze({
+    schema: 'paimind.user-skill-policy/v1',
+    revision: candidate.revision,
+    enabledOptionalSystemSkillNames,
+    enabledBusinessSkillNames,
+    directBusinessSkillNames,
+  })
+}
+
+/** Validate one ephemeral Session selection without persisting any Agent-owned state. */
+export function definePaimindSessionBusinessSkillSelection(
+  candidate: PaimindSessionBusinessSkillSelectionV1,
+): Readonly<PaimindSessionBusinessSkillSelectionV1> {
+  if (candidate.schema !== 'paimind.session-business-skill-selection/v1') {
+    throw new Error('unsupported Session Business Skill selection schema')
+  }
+  if (!Number.isSafeInteger(candidate.revision) || candidate.revision < 0) {
+    throw new Error('invalid Session Business Skill selection revision')
+  }
+  return Object.freeze({
+    schema: 'paimind.session-business-skill-selection/v1',
+    revision: candidate.revision,
+    skillNames: skillNames(candidate.skillNames, 'Session Business Skills'),
+  })
+}
 
 /** Autonomous verification lifecycle shared by migration documents and diagnostics. */
 export type VerificationState =

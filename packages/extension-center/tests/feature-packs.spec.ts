@@ -10,14 +10,14 @@ import {
 } from '../src/index.js'
 
 describe('Product Feature Pack composition', () => {
-  it('projects thirty-one runtime packages through six product-facing packs beside the control plane', () => {
+  it('projects thirty-two runtime packages through six product-facing packs beside the control plane', () => {
     const packageNames = PAIMIND_FEATURE_PACKS.flatMap(pack => pack.packageNames)
     expect(PAIMIND_FEATURE_PACKS.map(pack => pack.id)).toEqual([
       'paimind:pack:experience', 'paimind:pack:agents', 'paimind:pack:content',
       'paimind:pack:proposal', 'paimind:pack:automation', 'paimind:pack:operations',
     ])
-    expect(packageNames).toHaveLength(31)
-    expect(new Set(packageNames).size).toBe(31)
+    expect(packageNames).toHaveLength(32)
+    expect(new Set(packageNames).size).toBe(32)
     expect(PAIMIND_FEATURE_PACKS[0]?.capabilities).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: 'paimind:capability:runtime-orbs',
@@ -237,6 +237,143 @@ describe('Product Feature Pack composition', () => {
         failure: 'Cannot find package @paimind/proposal-experience',
       })
       expect(entries.get('paimind-pack-proposal')?.options.disabled).toBe(true)
+      await Promise.all(cleanups.map(async cleanup => { await cleanup() }))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('ignores unrelated Agent entries and repairs an overlapping Root Include replay after boot', async () => {
+    vi.useFakeTimers()
+    try {
+      const settingsValue = { overrides: '{}' }
+      let registeredNamespace: unknown
+      const settings = {
+        writable: true,
+        register(namespace: unknown) {
+          registeredNamespace = namespace
+          return {
+            get: () => settingsValue,
+            watch: () => () => {},
+            update: async () => {},
+            replace: async () => {},
+          }
+        },
+        describe: () => [{ ns: registeredNamespace, value: settingsValue, revision: 0 }],
+        mutate: async () => {},
+      }
+      type Entry = {
+        id: string
+        options: { id: string; name: string; group: boolean; disabled?: boolean }
+        active: boolean
+      }
+      const entries = new Map<string, Entry>(PAIMIND_FEATURE_PACKS.flatMap(pack => [
+        [pack.loaderEntryId, {
+          id: pack.loaderEntryId,
+          options: { id: pack.loaderEntryId, name: 'cordis:group', group: true, disabled: true },
+          active: false,
+        }],
+        ...pack.capabilities.map(capability => [capability.loaderEntryId, {
+          id: capability.loaderEntryId,
+          options: { id: capability.loaderEntryId, name: 'cordis:group', group: true, disabled: true },
+          active: false,
+        }]),
+      ] as const))
+      let observePostBootMutations = false
+      let agentsPackClosedAfterBoot = false
+      const loader = {
+        entries: () => entries.values(),
+        await: vi.fn(async () => {}),
+        resolve(id: string) {
+          const entry = entries.get(id)
+          if (entry === undefined) throw new Error(`missing ${id}`)
+          return entry
+        },
+        update: vi.fn(async (id: string, options: { disabled?: boolean | null }) => {
+          const entry = entries.get(id)
+          if (entry === undefined) throw new Error(`missing ${id}`)
+          if (options.disabled === true) {
+            entry.options.disabled = true
+            entry.active = false
+            if (observePostBootMutations && id === 'paimind-pack-agents') agentsPackClosedAfterBoot = true
+            return
+          }
+          delete entry.options.disabled
+          entry.active = true
+        }),
+      }
+      type LoaderEntryInitListener = (entry: {
+        readonly options: { readonly id?: string; readonly disabled?: boolean | null }
+      }) => void
+      type LoaderPartialDisposeListener = (
+        entry: { readonly options: { readonly id?: string; readonly disabled?: boolean | null } },
+        legacyOptions: { readonly id?: string; readonly disabled?: boolean | null },
+        active: boolean,
+      ) => void
+      let entryInitListener: LoaderEntryInitListener | undefined
+      let partialDisposeListener: LoaderPartialDisposeListener | undefined
+      const cleanups: Array<() => void | Promise<void>> = []
+      const context = {
+        reflect: { provide: () => {} }, get: () => undefined,
+        loader, settings,
+        effect(install: () => void | (() => void | Promise<void>)) {
+          const cleanup = install()
+          if (typeof cleanup === 'function') cleanups.push(cleanup)
+        },
+        on(name: string, listener: unknown) {
+          if (name === 'loader/entry-init') entryInitListener = listener as LoaderEntryInitListener
+          if (name === 'loader/partial-dispose') {
+            partialDisposeListener = listener as LoaderPartialDisposeListener
+          }
+          return () => {}
+        },
+      }
+      const service = new PaimindFeaturePackService(context as never)
+
+      await vi.advanceTimersByTimeAsync(40)
+      entryInitListener?.({ options: { id: 'paimind-pack-agents-child-during-boot' } })
+      await vi.advanceTimersByTimeAsync(40)
+      expect(loader.update).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(11)
+      await (service as unknown as { reconciliation: Promise<void> }).reconciliation
+      expect(loader.update).toHaveBeenCalled()
+      expect(entries.get('paimind-pack-agents')).toMatchObject({ active: true })
+
+      loader.update.mockClear()
+      observePostBootMutations = true
+      entryInitListener?.({ options: { id: 'agent-preset:quotation-reviewer:child' } })
+      await (service as unknown as { reconciliation: Promise<void> }).reconciliation
+
+      expect(loader.update).not.toHaveBeenCalled()
+      expect(agentsPackClosedAfterBoot).toBe(false)
+      expect(entries.get('paimind-pack-agents')).toMatchObject({ active: true })
+
+      partialDisposeListener?.(
+        { options: { id: 'agent-preset:quotation-reviewer:child' } },
+        { id: 'agent-preset:quotation-reviewer:child' },
+        true,
+      )
+      partialDisposeListener?.({ options: { id: 'include' } }, { id: 'include' }, false)
+      await vi.advanceTimersByTimeAsync(30)
+      await (service as unknown as { reconciliation: Promise<void> }).reconciliation
+      expect(loader.update).not.toHaveBeenCalled()
+
+      // The Host HMR Root Include replay can overlap applyOverrides. It must
+      // still enqueue one coalesced repair after the external transaction.
+      const internal = service as unknown as {
+        loaderMutationDepth: number
+        reconciliation: Promise<void>
+      }
+      internal.loaderMutationDepth = 1
+      partialDisposeListener?.({ options: { id: 'include' } }, { id: 'include' }, true)
+      partialDisposeListener?.({ options: { id: 'include' } }, { id: 'include' }, true)
+      internal.loaderMutationDepth = 0
+      await vi.advanceTimersByTimeAsync(25)
+      await internal.reconciliation
+
+      expect(loader.update).toHaveBeenCalled()
+      expect(entries.get('paimind-pack-agents')).toMatchObject({ active: true })
       await Promise.all(cleanups.map(async cleanup => { await cleanup() }))
     } finally {
       vi.useRealTimers()

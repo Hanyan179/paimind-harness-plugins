@@ -5,10 +5,13 @@
  * source, and InputBar's resident plus launcher is hard-wired to `command`.
  * This adapter therefore validates the exact RC8 live registry shape, keeps
  * the native `reference` source in place (so its codec remains authoritative),
- * temporarily replaces only its `candidates` method, delegates PAIMind Skill
- * discovery/picks to rc.8's resident native `skill` source, and registers
- * additive Agent / Skill / Context sources through the public registration API.
+ * temporarily replaces only its `candidates` method, reads PAIMind Skill
+ * discovery from the canonical Session-scoped `skill.list` API, delegates
+ * picks to rc.8's resident native `skill` source, and registers additive
+ * Agent / Skill / Context sources through the public registration API.
  */
+
+import type { HarnessSkillsApi } from './index.js'
 
 export interface HarnessInputTriggerCandidate {
   readonly name: string
@@ -108,6 +111,7 @@ interface InputTriggerServiceLike {
 
 interface SessionsLike {
   scope(sessionId: string): unknown
+  subagentAddress?(sessionId: string): unknown
   binding?(sessionId: string): {
     readonly session?: { getSnapshot(): { readonly blank?: boolean } }
   } | undefined
@@ -162,7 +166,7 @@ export class NativeHarnessInputTriggerBridge {
   private active = false
   private disposed = false
 
-  constructor(inputTriggers: unknown, sessions: unknown) {
+  constructor(inputTriggers: unknown, sessions: unknown, private readonly skills?: HarnessSkillsApi) {
     this.inputTriggers = inputTriggerService(inputTriggers)
     this.sessions = sessionsService(sessions)
   }
@@ -179,14 +183,28 @@ export class NativeHarnessInputTriggerBridge {
   }
 
   /**
-   * Reuse rc.8's native Skill catalog owner instead of opening a second
-   * `skill.list` cache. The native source retains Session prewarm, Preset and
-   * connection invalidation, subagent policy, and failure semantics.
+   * Read the current native Session catalog without opening a second cache.
+   * rc.8's resident source permanently caches its first prewarm and does not
+   * observe Session Skill selection changes, so PAIMind discovery calls the
+   * same canonical `skill.list` API afresh while retaining the native pick
+   * owner. Older compatible hosts without the API fall back to the resident
+   * source.
    */
   nativeSkillCandidates(
     session: HarnessInputTriggerSession,
     request: HarnessInputTriggerCandidateRequest,
   ): Promise<readonly HarnessInputTriggerCandidate[]> {
+    if (this.sessions?.subagentAddress?.(session.sessionId) !== undefined) return Promise.resolve([])
+    if (this.skills !== undefined) {
+      return this.skills.list({ sessionId: session.sessionId }, request.signal).then(({ result }) => {
+        if (!result.ok) throw new Error(`skill.list failed: ${result.error.code}: ${result.error.message}`)
+        if (request.signal.aborted) return Object.freeze([])
+        return Object.freeze(result.value.skills.map(skill => Object.freeze({
+          name: skill.name,
+          description: skill.description,
+        })))
+      })
+    }
     const source = this.nativeSkill ?? this.resolveNativeSkill()
     const candidates = this.nativeSkillCandidatesOwner ?? source?.candidates
     return source === null || candidates === undefined

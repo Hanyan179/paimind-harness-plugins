@@ -134,6 +134,79 @@ for (const sensitiveMarker of ['0 0 182 24', '0 0 23.16 17.04', 'DeepSeek Harnes
   }
 }
 
+const workspaceBlueprintManifest = JSON.parse(await readFile(resolve(packagesRoot, 'workspace-blueprints/package.json'), 'utf8'))
+const workspaceBlueprintHost = await readFile(resolve(packagesRoot, 'workspace-blueprints/src/index.ts'), 'utf8')
+const workspaceBlueprintCatalog = await readFile(resolve(packagesRoot, 'workspace-blueprints/src/catalog.ts'), 'utf8')
+const workspaceBlueprintContract = await readFile(resolve(packagesRoot, 'workspace-blueprints/src/contract.ts'), 'utf8')
+const workspaceBlueprintRemote = await readFile(resolve(packagesRoot, 'workspace-blueprints/src/remote.ts'), 'utf8')
+const workspaceBlueprintClient = await readFile(resolve(packagesRoot, 'workspace-blueprints/src/client/index.tsx'), 'utf8')
+for (const marker of [
+  "export const inject = ['workspaceRegistry']",
+  'new WorkspaceBlueprintCatalog(blueprintCtx.workspaceRegistry',
+  'const initialWorkspace = this.requireWorkspace(input.workspaceId)',
+  'this.workspaceRegistry.list().find(candidate => candidate.id === workspaceId)',
+  "const BASE_INJECT = ['slots', 'locale', 'remote', 'workspaces', 'sessions'] as const",
+  'const workspace = await props.workspaces.create({ path })',
+  'workspaceId: workspace.workspaceId',
+  'props.workspaces.startSession(workspace.workspaceId)',
+]) {
+  if (!workspaceBlueprintHost.includes(marker)
+    && !workspaceBlueprintCatalog.includes(marker)
+    && !workspaceBlueprintClient.includes(marker)) {
+    failures.push(`@paimind/workspace-blueprints: native Workspace ownership or workspaceId materialization boundary is missing ${marker}`)
+  }
+}
+const workspaceBlueprintMaterializeInput = workspaceBlueprintContract.match(
+  /export interface WorkspaceBlueprintMaterializeInput[^}]*}/,
+)?.[0] ?? ''
+const workspaceBlueprintRemoteInput = workspaceBlueprintRemote.match(
+  /const materializeInput = (?:z\.object|identityInputObject\.extend)\(\{[\s\S]*?\}\)\.strict\(\)\.readonly\(\)/,
+)?.[0] ?? ''
+if (!workspaceBlueprintMaterializeInput.includes('readonly workspaceId: string')
+  || workspaceBlueprintMaterializeInput.includes('readonly path: string')
+  || !workspaceBlueprintRemoteInput.includes('workspaceId:')
+  || workspaceBlueprintRemoteInput.includes('path:')) {
+  failures.push('@paimind/workspace-blueprints: materialization must accept a strict workspaceId, never a caller-controlled path')
+}
+if (workspaceBlueprintManifest.dependencies?.['@paimind/agent-market'] !== undefined
+  || workspaceBlueprintManifest.peerDependencies?.['@paimind/agent-market'] !== undefined) {
+  failures.push('@paimind/workspace-blueprints: composition must use the Agent owner contract, not the Agent Center presentation package')
+}
+for (const forbidden of [
+  'saveProfile(', 'installUpload(', 'saveSkillPackage(',
+  'window.localStorage', 'window.sessionStorage',
+]) {
+  if (workspaceBlueprintHost.includes(forbidden)
+    || workspaceBlueprintCatalog.includes(forbidden)
+    || workspaceBlueprintClient.includes(forbidden)) {
+    failures.push(`@paimind/workspace-blueprints: composition ownership boundary forbids ${forbidden}`)
+  }
+}
+for (const marker of [
+  'WorkspaceBlueprintComposition',
+  'readonly agent:',
+  'readonly businessSkills:',
+  'readonly digest:',
+]) {
+  if (!workspaceBlueprintContract.includes(marker)) {
+    failures.push(`@paimind/workspace-blueprints: Folder-first composition contract is missing ${marker}`)
+  }
+}
+if (/recommendations?|推荐能力/u.test(workspaceBlueprintContract)
+  || /\.recommendations\b/.test(workspaceBlueprintClient)) {
+  failures.push('@paimind/workspace-blueprints: deterministic composition must not regress to recommendation metadata')
+}
+for (const marker of [
+  "join(stage, '.paimind', 'workspace-blueprint.json')",
+  'getWorkspaceComposition(',
+  'packageDigest: blueprint.manifest.digest',
+  'composition: blueprint.manifest.composition',
+]) {
+  if (!workspaceBlueprintCatalog.includes(marker)) {
+    failures.push(`@paimind/workspace-blueprints: persistent Workspace composition projection is missing ${marker}`)
+  }
+}
+
 const developerResourcesClient = await readFile(resolve(packagesRoot, 'developer-resources/src/client/index.tsx'), 'utf8')
 const developerResourcesCore = await readFile(resolve(packagesRoot, 'developer-resources/src/index.ts'), 'utf8')
 for (const marker of [
@@ -178,10 +251,21 @@ if (!agentMarketProjection.includes('readonly preset: HarnessAgentPresetEntry'))
 
 const skillMarketClient = await readFile(resolve(packagesRoot, 'skill-market/src/client/index.tsx'), 'utf8')
 const skillMarketProjection = await readFile(resolve(packagesRoot, 'skill-market/src/catalog.ts'), 'utf8')
-for (const marker of ["category: 'skills-tools'", 'api.list({ sessionId }', 'setDraft(`/${name} `)', 'installer.listCatalog()', 'installer.inspectCatalog', 'installer.installUpload']) {
+for (const marker of [
+  "category: 'skills-tools'",
+  'installer.listCatalog()',
+  'installer.inspectCatalog',
+  'installer.installUpload',
+  'installer.saveSkillPackage',
+  'installer.getAuthoringDraft',
+  'installSkillAuthoringDraftNavigation',
+]) {
   if (!skillMarketClient.includes(marker)) failures.push(`@paimind/skill-market: native Skill boundary is missing ${marker}`)
 }
-for (const forbidden of ['SkillRuntime', 'skillConfigStore', 'mockSkill', 'readFile(', 'readdir(', 'glob(']) {
+for (const forbidden of [
+  'SkillRuntime', 'skillConfigStore', 'mockSkill', 'readFile(', 'readdir(', 'glob(',
+  'api.list({ sessionId }', 'setDraft(`/${name} `)',
+]) {
   if (skillMarketClient.includes(forbidden) || skillMarketProjection.includes(forbidden)) {
     failures.push(`@paimind/skill-market: duplicate runtime or Host-path discovery marker is forbidden: ${forbidden}`)
   }
@@ -190,12 +274,72 @@ if (!skillMarketProjection.includes('readonly skill: HarnessSkillEntry')) {
   failures.push('@paimind/skill-market: catalog rows must retain the exact Harness Skill object')
 }
 const skillInstaller = await readFile(resolve(packagesRoot, 'skill-market/src/installer.ts'), 'utf8')
-for (const marker of ['pipeline(request', 'safeArchivePath', 'isSymlink(entry)', 'MAX_EXPANSION_RATIO', 'await rename(staging, destination)']) {
+for (const marker of [
+  'pipeline(request',
+  'safeArchivePath',
+  'isSymlink(entry)',
+  'MAX_EXPANSION_RATIO',
+  'await rename(staging, destination)',
+  'PAIMIND_SKILL_PREPARE_CREATE_TOOL',
+  'PAIMIND_SKILL_AUTHORING_SKILL',
+  'assertBusinessSkillName',
+  'await cp(destination, staging',
+  'installPaimindScopedSkillProjection',
+  'WeakMap<SkillInstallerHostSession',
+  'getSessionBusinessSkillSelection',
+  'replaceSessionBusinessSkillSelection',
+  "installerCtx.on('agent/pre-step'",
+  'Promise.allSettled',
+  "get?.('paimindWorkspaceBlueprints')",
+  'getWorkspaceComposition({',
+  'skillPackageRevision(join(this.skillRoot, record.skillId))',
+]) {
   if (!skillInstaller.includes(marker)) failures.push(`@paimind/skill-market: streaming atomic installer is missing ${marker}`)
+}
+for (const forbidden of [
+  'PAIMIND_SESSION_SKILL_SELECTION_EVENT',
+  'session.append(',
+  'sessionProjections.register',
+]) {
+  if (skillInstaller.includes(forbidden)) {
+    failures.push(`@paimind/skill-market: unsafe Session selection persistence marker is forbidden: ${forbidden}`)
+  }
+}
+const skillScopeResolver = await readFile(resolve(packagesRoot, 'skill-market/src/scope.ts'), 'utf8')
+for (const marker of [
+  'resolvePaimindSkillScope',
+  "input.sessionKind === 'direct'",
+  'policy.directBusinessSkillNames',
+  'input.agentBusinessSkillNames',
+  'input.workspaceComposition',
+  'input.sessionBusinessSkillNames',
+  'Workspace Business Skill digest mismatch',
+  'System and Business Skill name collision',
+]) {
+  if (!skillScopeResolver.includes(marker)) failures.push(`@paimind/skill-market: stateless Skill scope resolver is missing ${marker}`)
+}
+const scopedSkillCompat = await readFile(resolve(packagesRoot, 'harness-compat/src/host.ts'), 'utf8')
+for (const marker of ['installPaimindScopedSkillProjection', "registry.registerProvider", "source: 'custom' as const"]) {
+  if (!scopedSkillCompat.includes(marker)) failures.push(`@paimind/harness-compat: native scoped Skill projection is missing ${marker}`)
+}
+const skillRecommended = await readFile(resolve(packagesRoot, 'skill-market/src/recommended.ts'), 'utf8')
+for (const forbidden of ["id: 'skill-creator'", "id: 'skill-installer'"]) {
+  if (skillRecommended.includes(forbidden)) failures.push(`@paimind/skill-market: system Skill must not be listed as a business Skill: ${forbidden}`)
+}
+const skillAuthoring = await readFile(resolve(packagesRoot, 'skill-market/SKILL_AUTHORING.md'), 'utf8')
+for (const marker of ['name: paimind-skill-authoring', 'paimind_skill_prepare_create', 'unsaved draft']) {
+  if (!skillAuthoring.includes(marker)) failures.push(`@paimind/skill-market: Skill authoring system capability is missing ${marker}`)
 }
 const agentBuilderManifest = JSON.parse(await readFile(resolve(packagesRoot, 'agent-builder/package.json'), 'utf8'))
 if (agentBuilderManifest.dsh?.client !== undefined || agentBuilderManifest.paimindBuild?.client !== undefined) {
   failures.push('@paimind/agent-builder: Builder must remain a headless workflow service with no independent client page')
+}
+const agentBuilderSource = await readFile(resolve(packagesRoot, 'agent-builder/src/index.ts'), 'utf8')
+for (const marker of ['businessSkillNamesForPreset', 'PAIMIND_STANDARD_AGENT_BASE_PRESET_ID', 'AGENT_SKILL_SCOPE_DIRECTORY']) {
+  if (!agentBuilderSource.includes(marker)) failures.push(`@paimind/agent-builder: authoritative Agent Skill selection boundary is missing ${marker}`)
+}
+for (const forbidden of ['AGENT_AUTHORING_SYSTEM_PROTOCOL', 'capabilityPrompt']) {
+  if (agentBuilderSource.includes(forbidden)) failures.push(`@paimind/agent-builder: duplicate authoring or Skill Persona injection marker is forbidden: ${forbidden}`)
 }
 
 const userSettingsClient = await readFile(resolve(packagesRoot, 'user-settings/src/client/index.tsx'), 'utf8')

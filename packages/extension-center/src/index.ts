@@ -32,6 +32,7 @@ interface PaimindFeaturePackSettings {
 }
 
 const DEFAULT_FEATURE_PACK_SETTINGS: PaimindFeaturePackSettings = Object.freeze({ overrides: '{}' })
+const HARNESS_ROOT_INCLUDE_LOADER_ENTRY_ID = 'include'
 
 export interface PaimindFeaturePackHostContext {
   readonly loader: PaimindHostLoaderFacility
@@ -41,6 +42,14 @@ export interface PaimindFeaturePackHostContext {
   on(
     name: 'loader/entry-init',
     listener: (entry: { readonly options: { readonly id?: string; readonly disabled?: boolean | null } }) => void,
+  ): () => void
+  on(
+    name: 'loader/partial-dispose',
+    listener: (
+      entry: { readonly options: { readonly id?: string; readonly disabled?: boolean | null } },
+      legacyOptions: { readonly id?: string; readonly disabled?: boolean | null },
+      active: boolean,
+    ) => void,
   ): () => void
   on(
     name: 'webserver/index-inject',
@@ -517,6 +526,7 @@ export class PaimindFeaturePackService extends PaimindHostRemoteService {
   private reconciliation: Promise<void> = Promise.resolve()
   private bootSettled = false
   private bootTimer: ReturnType<typeof setTimeout> | undefined
+  private externalRepairTimer: ReturnType<typeof setTimeout> | undefined
   private settingsMutationDepth = 0
   private loaderMutationDepth = 0
   private readonly toggleFailures = new Map<string, string>()
@@ -541,15 +551,34 @@ export class PaimindFeaturePackService extends PaimindHostRemoteService {
       // Entry-init fires before the Loader attaches options and before it decides
       // whether to start the entry. Mutating that entry in a later microtask races
       // with import/start. Bootstrap inertness is therefore owned by the static
-      // Bundle config; this listener only extends the quiet-period barrier.
-      if (this.bootSettled) this.queueReconciliation()
-      else this.scheduleBootReconciliation()
+      // Bundle config; this listener only extends the startup quiet-period barrier.
+      // After boot, raw entry-init also fires for unrelated dynamic children such
+      // as Agent presets. Replaying every Product Pack for those child entries
+      // would briefly stop healthy packs, so only an explicit Settings mutation
+      // may reconcile the settled control plane.
+      if (!this.bootSettled) this.scheduleBootReconciliation()
     })
+    const stopWatchingRootIncludeReplays = featureCtx.on(
+      'loader/partial-dispose',
+      (entry, legacyOptions, active) => {
+        if (!active) return
+        const entryId = entry.options.id ?? legacyOptions.id
+        // Extension Center mutates only nested Product Pack groups. A live
+        // partial-dispose of the Host's Root Include therefore identifies the
+        // external HMR full-config replay that can overwrite Settings-owned
+        // runtime switches, even when it overlaps our own reconciliation.
+        if (entryId !== HARNESS_ROOT_INCLUDE_LOADER_ENTRY_ID) return
+        if (this.bootSettled) this.scheduleExternalRepair()
+        else this.scheduleBootReconciliation()
+      },
+    )
     featureCtx.effect(
       () => () => {
         stopWatchingSettings()
         stopWatchingEntries()
+        stopWatchingRootIncludeReplays()
         if (this.bootTimer !== undefined) clearTimeout(this.bootTimer)
+        if (this.externalRepairTimer !== undefined) clearTimeout(this.externalRepairTimer)
       },
       'paimind-extension-center: Feature Pack reconciliation lifecycle',
     )
@@ -573,6 +602,19 @@ export class PaimindFeaturePackService extends PaimindHostRemoteService {
         this.scheduleBootReconciliation()
       })
     }, 50)
+  }
+
+  private scheduleExternalRepair(): void {
+    if (this.externalRepairTimer !== undefined) clearTimeout(this.externalRepairTimer)
+    // Root Include HMR starts after the initial Host boot barrier and can replay
+    // the static disabled composition over a just-enabled product group. A
+    // Root Include partial-dispose is the public signal for that transaction.
+    // Coalesce sibling events, then let the Loader settle before restoring the
+    // Settings-owned desired state.
+    this.externalRepairTimer = setTimeout(() => {
+      this.externalRepairTimer = undefined
+      this.queueReconciliation()
+    }, 25)
   }
 
   private queueReconciliation(): void {

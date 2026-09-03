@@ -11,6 +11,9 @@ import {
   AgentCenterSection,
   AgentCenterSurface,
   AgentCenterTrigger,
+  PAIMIND_USER_SKILL_POLICY_CHANGED_EVENT,
+  PaimindAgentAuthoringPolicyController,
+  PaimindPolicyAwareAgentBuilderRequestController,
   apply,
   inject,
   installAgentAuthoringSessionNavigation,
@@ -40,6 +43,21 @@ const profile = {
   agentId: 'mine', presetId: 'mine', name: 'Research Agent', description: 'Find evidence', basePresetId: 'standard',
   role: 'Researcher', goal: 'Find facts', behavior: 'Cite sources', preferredSkillNames: ['web-research'], instructions: '',
   revision: 1, configVersion: 'v1-a', updatedAt: 1, health: 'healthy' as const,
+}
+
+function mutableAuthoringPolicy(initial: boolean) {
+  let snapshot = Object.freeze({ status: 'ready' as const, enabled: initial, policyRevision: 1 })
+  const listeners = new Set<() => void>()
+  return {
+    source: {
+      getSnapshot: () => snapshot,
+      subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } },
+    },
+    set(enabled: boolean) {
+      snapshot = Object.freeze({ status: 'ready' as const, enabled, policyRevision: snapshot.policyRevision + 1 })
+      for (const listener of [...listeners]) listener()
+    },
+  }
 }
 
 it('reads the reviewed Agent proposal only from the scoped Creator Tool result', () => {
@@ -79,11 +97,18 @@ function services() {
       listProfiles: vi.fn().mockResolvedValue({ ok: true, value: { profiles: [profile] } }),
       saveProfile: vi.fn(), setDefault: vi.fn(), sealAuthoringSession: vi.fn(), prepareAuthoringTurn: vi.fn().mockResolvedValue({ ok: true, value: { sessionId: 'session-authoring', prepared: true } }), bindSession: vi.fn(), listSessionBindings: vi.fn().mockResolvedValue({ ok: true, value: { bindings: [] } }), migrationPlan: vi.fn(), recordMigration: vi.fn(), verifySession: vi.fn(), listAudit: vi.fn(),
     },
-    skills: { listInstalled: vi.fn().mockResolvedValue({ ok: true, value: { items: [
-      { name: 'web-research', description: 'Search official documentation and cite sources' },
-      { name: 'spreadsheet-inspector', description: 'Analyze Excel data and anomalies' },
-      { name: 'ppt-master', description: 'Build presentations from evidence' },
-    ] } }) },
+    skills: {
+      listInstalled: vi.fn().mockResolvedValue({ ok: true, value: { items: [
+        { name: 'web-research', description: 'Search official documentation and cite sources' },
+        { name: 'spreadsheet-inspector', description: 'Analyze Excel data and anomalies' },
+        { name: 'ppt-master', description: 'Build presentations from evidence' },
+      ] } }),
+      getUserSkillPolicy: vi.fn().mockResolvedValue({ ok: true, value: {
+        schema: 'paimind.user-skill-policy/v1', revision: 1,
+        enabledOptionalSystemSkillNames: ['paimind-agent-authoring'],
+        enabledBusinessSkillNames: [], directBusinessSkillNames: [],
+      } }),
+    },
     runtime: {
       subscribe: () => () => {},
       getSnapshot: () => runtimeSnapshot,
@@ -242,6 +267,96 @@ describe('Agent Center business UI', () => {
     controller.dispose()
   })
 
+  it('refreshes Agent authoring eligibility from the Skill Center policy event', async () => {
+    let enabled = false
+    let revision = 1
+    const getUserSkillPolicy = vi.fn(async () => ({ ok: true as const, value: {
+      schema: 'paimind.user-skill-policy/v1' as const,
+      revision,
+      enabledOptionalSystemSkillNames: enabled ? ['paimind-agent-authoring'] : [],
+      enabledBusinessSkillNames: [], directBusinessSkillNames: [],
+    } }))
+    const policy = new PaimindAgentAuthoringPolicyController({ listInstalled: vi.fn(), getUserSkillPolicy } as never, window)
+
+    await waitFor(() => expect(policy.getSnapshot()).toMatchObject({ status: 'ready', enabled: false, policyRevision: 1 }))
+    enabled = true
+    revision = 2
+    window.dispatchEvent(new CustomEvent(PAIMIND_USER_SKILL_POLICY_CHANGED_EVENT))
+
+    await waitFor(() => expect(policy.getSnapshot()).toMatchObject({ status: 'ready', enabled: true, policyRevision: 2 }))
+    expect(getUserSkillPolicy).toHaveBeenCalledTimes(2)
+    policy.dispose()
+  })
+
+  it('does not receive creator requests or auto-route stale drafts while Agent authoring is disabled', async () => {
+    const authoringPolicy = mutableAuthoringPolicy(false)
+    const surface = new PaimindProductSurfaceController('agent-center', window, document)
+    const builderRequests = new PaimindPolicyAwareAgentBuilderRequestController(surface, authoringPolicy.source, window)
+    requestPaimindAgentBuilder({ productKind: 'personal', brief: 'Create a contract reviewer' }, window)
+    // The shared helper may still open the generic Center surface, but the
+    // disabled receiver must not retain or start an authoring request.
+    expect(surface.getSnapshot().open).toBe(true)
+    expect(builderRequests.getSnapshot().revision).toBe(0)
+    surface.close(false)
+
+    let current: string | null = 'paimind-authoring-old-session'
+    const sessionListeners = new Set<() => void>()
+    const runtime = {
+      currentSessionId: () => current,
+      subscribeSessions: (listener: () => void) => { sessionListeners.add(listener); return () => { sessionListeners.delete(listener) } },
+      detectCompletedAuthoringSession: vi.fn().mockResolvedValue(true),
+      consumeAuthoringSessionRouteSuppression: vi.fn(() => false),
+    }
+    const disposeNavigation = installAgentAuthoringSessionNavigation(runtime as never, surface, authoringPolicy.source)
+    expect(surface.getSnapshot().open).toBe(false)
+    expect(runtime.detectCompletedAuthoringSession).not.toHaveBeenCalled()
+
+    act(() => { authoringPolicy.set(true) })
+    expect(surface.getSnapshot().open).toBe(false)
+    current = 'ordinary-session'
+    sessionListeners.forEach(listener => { listener() })
+    current = 'paimind-authoring-old-session'
+    sessionListeners.forEach(listener => { listener() })
+    await waitFor(() => expect(surface.getSnapshot().open).toBe(true))
+
+    surface.close(false)
+    act(() => { authoringPolicy.set(false) })
+    requestPaimindAgentBuilder({ productKind: 'business' }, window)
+    expect(surface.getSnapshot().open).toBe(true)
+    expect(builderRequests.getSnapshot().revision).toBe(0)
+
+    disposeNavigation()
+    builderRequests.dispose()
+    surface.dispose()
+  })
+
+  it('hides new authoring entry points while preserving existing Agent browse and edit', async () => {
+    const fixture = services()
+    const authoringPolicy = mutableAuthoringPolicy(false)
+    const disabledBuilderRequest = Object.freeze({ revision: 1, productKind: 'personal' as const, brief: 'Create a new reviewer' })
+    const builderRequests = { getSnapshot: () => disabledBuilderRequest, subscribe: () => () => {} }
+    render(<AgentCenterSection
+      close={() => {}}
+      api={api()}
+      profiles={fixture.profiles as never}
+      skills={fixture.skills as never}
+      runtime={fixture.runtime as never}
+      locale={locale()}
+      openAdvanced={() => true}
+      authoringPolicy={authoringPolicy.source}
+      builderRequests={builderRequests}
+    />)
+    await screen.findByRole('heading', { name: 'Research Agent' })
+
+    expect(screen.queryByRole('button', { name: 'Create Personal Agent' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Start conversation' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Start with one sentence' })).toBeNull()
+    expect(fixture.runtime.author).not.toHaveBeenCalled()
+
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled()
+
+  })
+
   it('reopens the dual-pane Builder when an existing authoring Session is selected', async () => {
     const fixture = services()
     const close = vi.fn()
@@ -264,7 +379,9 @@ describe('Agent Center business UI', () => {
     expect(readyStatus?.querySelector('small')).toBeNull()
     expect(screen.queryByText(/Harness exclusively owns|native message timeline/)).toBeNull()
 
-    fireEvent.click(within(builder).getByRole('button', { name: 'Close and return to conversation' }))
+    const closeBuilder = within(builder).getByRole('button', { name: 'Close and return to conversation' })
+    await waitFor(() => expect(closeBuilder).toBeEnabled())
+    fireEvent.click(closeBuilder)
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Create Agent' })).toBeNull())
     expect(close).toHaveBeenCalledTimes(1)
     expect(fixture.runtime.resumeAuthoringSession).toHaveBeenCalledTimes(1)
@@ -580,6 +697,57 @@ describe('Agent Center business UI', () => {
     expect(workspaces.startSession).toHaveBeenCalledOnce()
     expect(rows['session-test-previous']).toMatchObject({ agentPreset: 'mine' })
     expect(sessions.open).toHaveBeenLastCalledWith('session-test-previous')
+    runtime.dispose()
+  })
+
+  it('never reuses a dedicated Agent authoring Session as a conversation or Builder Test Chat', async () => {
+    const authoringId = 'paimind-authoring-123e4567-e89b-42d3-a456-426614174000'
+    const rows: Record<string, { id: string; blank: boolean; agentPreset: string }> = {
+      [authoringId]: { id: authoringId, blank: true, agentPreset: 'standard' },
+    }
+    let current = authoringId
+    const listeners = new Set<() => void>()
+    const notify = (): void => { listeners.forEach(listener => { listener() }) }
+    const sessions = {
+      list: {
+        getSnapshot: () => ({ current, byId: rows }),
+        subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } },
+      },
+      open: vi.fn((sessionId: string) => { current = sessionId; notify() }),
+    }
+    const workspaces = {
+      startSession: vi.fn(() => {
+        rows['session-builder-test'] = { id: 'session-builder-test', blank: true, agentPreset: 'standard' }
+        current = 'session-builder-test'
+        notify()
+      }),
+    }
+    let selected = 'standard'
+    const bindSession = vi.fn().mockImplementation(async input => ({ ok: true, value: { ...input, boundAt: 1 } }))
+    const runtime = new AgentCenterRuntime(
+      {
+        getSnapshot: () => ({ current: selected, error: null, busy: false }),
+        select: vi.fn(async (presetId: string) => {
+          selected = presetId
+          rows[current]!.agentPreset = presetId
+          notify()
+        }),
+      } as never,
+      {
+        bindSession,
+        listAudit: vi.fn().mockResolvedValue({ ok: true, value: { migrations: [], verifications: [] } }),
+        migrationPlan: vi.fn().mockResolvedValue({ ok: true, value: null }),
+      } as never,
+      sessions as never,
+      workspaces as never,
+      { input: { for: () => ({ setDraft: vi.fn() }) } } as never,
+    )
+
+    await expect(runtime.beginTest('mine', profile)).resolves.toBe('session-builder-test')
+    expect(bindSession).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: 'session-builder-test', purpose: 'builder-test',
+    }))
+    expect(rows[authoringId]).toMatchObject({ agentPreset: 'standard', blank: true })
     runtime.dispose()
   })
 

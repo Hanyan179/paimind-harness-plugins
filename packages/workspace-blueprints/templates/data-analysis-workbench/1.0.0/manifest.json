@@ -1,0 +1,16 @@
+{
+  "schema": "paimind.workspace-blueprint/v1",
+  "blueprintId": "data-analysis-workbench",
+  "version": "1.0.0",
+  "name": "数据分析工作台",
+  "description": "从数据口径、质量检查、分析过程到可复核结论的数据工作区。",
+  "category": "data",
+  "tags": ["data", "analysis", "quality"],
+  "source": "builtin",
+  "createdAt": 0,
+  "updatedAt": 0,
+  "composition": {
+    "agent": null,
+    "businessSkills": []
+  }
+}

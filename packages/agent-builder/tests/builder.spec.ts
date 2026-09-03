@@ -1,4 +1,6 @@
-import { mkdir, mkdtemp, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises'
+// @vitest-environment node
+
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -8,8 +10,8 @@ import {
   PaimindAgentProfileService,
   effectivePresetForFirstTurn,
   isPaimindAgentAuthoringSession,
+  removePresetSkillFilesystemOverride,
   replacePresetPersona,
-  replacePresetSkillScope,
   summarizeConversationEvents,
   visibleAssistantReplyForFirstTurn,
   type AgentAuthoringDraftContext,
@@ -43,7 +45,7 @@ const authoringDraft: AgentAuthoringDraftContext = {
 }
 
 describe('headless Agent profile workflow', () => {
-  it('seals namespaced Standard authoring Sessions to the native question tool and a complete prompt scope', async () => {
+  it('keeps the Standard prompt intact and loads authoring only through the canonical bundled Skill', async () => {
     const sessionId = 'paimind-authoring-123e4567-e89b-12d3-a456-426614174000'
     const session = {
       id: sessionId, header: { id: sessionId, agentPreset: 'standard' }, events: [],
@@ -56,19 +58,22 @@ describe('headless Agent profile workflow', () => {
       session,
       ctx: { systemPrompt: { section, suppressRuntimeContext }, tools: { register } },
     }
-    let composedPreset = 'standard'
+    let composedPreset: string | undefined = 'standard'
     let guard: ((execution: { readonly name: string; readonly agent?: { readonly session?: typeof session } }) => string | undefined) | undefined
     let assemble: ((
-      assembly: { readonly tools: readonly unknown[] },
+      assembly: { readonly sections?: readonly unknown[]; readonly contexts?: readonly unknown[]; readonly tools: readonly unknown[] },
       context: { readonly agent?: typeof agent },
-      next: () => Promise<{ readonly tools: readonly unknown[] }>,
+      next: () => Promise<{ readonly sections?: readonly unknown[]; readonly contexts?: readonly unknown[]; readonly tools: readonly unknown[] }>,
     ) => Promise<{ readonly sections?: readonly unknown[]; readonly contexts?: readonly unknown[]; readonly tools: readonly unknown[] }>) | undefined
+    const registerSkill = vi.fn(() => () => {})
+    const registerGlobalTool = vi.fn(() => () => {})
     const context = {
       reflect: { provide: () => {} }, get: () => undefined,
       effect(install: () => void | (() => void)) { install() },
       sessions: { get: (id: string) => id === sessionId ? session : undefined },
       agents: { get: (id: string) => id === sessionId ? agent : undefined, list: () => [] },
-      tools: { guard(listener: typeof guard) { guard = listener; return () => {} } },
+      tools: { guard(listener: typeof guard) { guard = listener; return () => {} }, register: registerGlobalTool },
+      skills: { register: registerSkill },
       agentPresets: { composedPreset: () => composedPreset },
       on(event: string, listener: typeof assemble) { if (event === 'system-prompt/assemble') assemble = listener; return () => {} },
     }
@@ -77,40 +82,275 @@ describe('headless Agent profile workflow', () => {
     await expect(service.sealAuthoringSession({ sessionId })).resolves.toEqual({
       sessionId, agentPreset: 'standard', sealed: true,
     })
+    await expect(service.prepareAuthoringTurn({
+      sessionId,
+      draft: { ...authoringDraft, name: 'First {{secret}} <!--FAKE-->' },
+      skills: [{ name: 'web-research', description: 'Research {{hidden}} <script>&' }],
+      locale: 'zh-CN',
+    })).resolves.toEqual({ sessionId, agentPreset: 'standard', prepared: true })
     await expect(service.sealAuthoringSession({ sessionId })).resolves.toEqual({
       sessionId, agentPreset: 'standard', sealed: true,
     })
     expect(session.events).toHaveLength(0)
     expect(isPaimindAgentAuthoringSession(session)).toBe(true)
-    expect(section).toHaveBeenCalledOnce()
-    expect(register).toHaveBeenCalledOnce()
-    expect(section).toHaveBeenCalledWith(expect.objectContaining({ complete: true, name: 'paimind:agent-authoring' }))
-    const defaultPrompt = section.mock.calls[0]?.[0]?.text
-    expect(typeof defaultPrompt === 'function' ? defaultPrompt({}) : defaultPrompt).toContain('LOCALE="auto"')
-    expect(suppressRuntimeContext).toHaveBeenCalledOnce()
+    expect(section).not.toHaveBeenCalled()
+    expect(suppressRuntimeContext).not.toHaveBeenCalled()
+    expect(register).not.toHaveBeenCalled()
+    expect(registerSkill).toHaveBeenCalledOnce()
+    expect(registerGlobalTool.mock.calls.map(call => (call[0] as { readonly name?: string }).name).sort()).toEqual([
+      'paimind_agent_prepare_create', 'paimind_agent_skill_binding',
+    ])
+    expect(registerSkill).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'paimind-agent-authoring', source: 'bundled',
+      invocation: { modelInvocable: true, userInvocable: true },
+    }))
+    const canonicalSkill = registerSkill.mock.calls[0]?.[0]
+    expect(canonicalSkill?.content).toContain('# PAIMind Agent authoring')
+    expect(canonicalSkill?.content).toContain('call `paimind_agent_prepare_create` once')
+    expect(canonicalSkill?.content).not.toContain('CURRENT_DRAFT=')
     expect(guard?.({ name: 'ask_user_question', agent: { session } })).toBeUndefined()
+    expect(guard?.({ name: 'paimind_skill_inspect_github', agent: { session } })).toBeUndefined()
+    expect(guard?.({ name: 'paimind_skill_install', agent: { session } })).toBeUndefined()
     expect(guard?.({ name: 'paimind_agent_prepare_create', agent: { session } })).toBeUndefined()
-    expect(guard?.({ name: 'bash', agent: { session } })).toContain('ask_user_question and paimind_agent_prepare_create')
+    expect(guard?.({ name: 'skill', agent: { session } })).toBeUndefined()
+    expect(guard?.({ name: 'paimind_agent_skill_binding', agent: { session } })).toContain('paimind_skill_install')
+    expect(guard?.({ name: 'bash', agent: { session } })).toContain('paimind_skill_install')
+    expect(guard?.({ name: 'write', agent: { session } })).toContain('paimind_skill_install')
     expect(guard?.({ name: 'write', agent: { session: { ...session, id: 'ordinary' } } })).toBeUndefined()
+    const standardSection = Object.freeze({ name: 'standard', text: 'native Standard foundation' })
+    const skillCatalogSection = Object.freeze({ name: 'skill-catalog', text: 'paimind-agent-authoring' })
+    const nativeContext = Object.freeze({ name: 'cwd', text: '/workspace' })
+    const skillTool = Object.freeze({ name: 'skill', schema: Object.freeze({}) })
     const askTool = Object.freeze({ name: 'ask_user_question', schema: Object.freeze({}) })
+    const inspectTool = Object.freeze({ name: 'paimind_skill_inspect_github', schema: Object.freeze({}) })
+    const installTool = Object.freeze({ name: 'paimind_skill_install', schema: Object.freeze({}) })
     const prepareTool = Object.freeze({ name: 'paimind_agent_prepare_create', schema: Object.freeze({}) })
-    await expect(assemble?.({ tools: ['cordis_define'] }, { agent }, async () => ({ tools: ['bash', askTool, prepareTool] }))).resolves.toMatchObject({ tools: [askTool, prepareTool], contexts: [] })
-    await expect(assemble?.({ tools: [] }, { agent }, async () => ({ tools: ['ask_user_question', 'paimind_agent_prepare_create', 'bash'] }))).resolves.toMatchObject({ tools: ['ask_user_question', 'paimind_agent_prepare_create'], contexts: [] })
+    const bindingTool = Object.freeze({ name: 'paimind_agent_skill_binding', schema: Object.freeze({}) })
+    const writeTool = Object.freeze({ name: 'write', schema: Object.freeze({}) })
+    const objectAssembly = await assemble?.(
+      { tools: ['cordis_define'] },
+      { agent },
+      async () => ({ sections: [standardSection, skillCatalogSection], contexts: [nativeContext], tools: ['bash', skillTool, askTool, inspectTool, installTool, prepareTool, bindingTool, writeTool] }),
+    )
+    expect(objectAssembly?.sections).toEqual([standardSection, skillCatalogSection])
+    expect(objectAssembly?.tools).toEqual([skillTool, askTool, inspectTool, installTool, prepareTool])
+    expect(objectAssembly?.contexts).toHaveLength(2)
+    expect(objectAssembly?.contexts?.[0]).toBe(nativeContext)
+    const dataContexts = objectAssembly?.contexts?.filter(row => (
+      typeof row === 'object' && row !== null && (row as { readonly name?: unknown }).name === 'paimind:agent-authoring-data'
+    )) ?? []
+    expect(dataContexts).toHaveLength(1)
+    const dataText = (dataContexts[0] as { readonly text: string }).text
+    expect(dataText).not.toContain('{{')
+    expect(dataText).not.toContain('<!--')
+    expect(dataText).not.toContain('<script>')
+    expect(dataText).not.toContain('&')
+    expect(dataText).toContain('\\u007b\\u007b')
+    expect(dataText).toContain('\\u003c')
+    expect(JSON.parse(dataText)).toMatchObject({
+      schema: 'paimind.agent-authoring-data/v1',
+      trust: 'untrusted-user-data',
+      CURRENT_DRAFT: { name: 'First {{secret}} <!--FAKE-->' },
+      INSTALLED_BUSINESS_SKILLS: [{ name: 'web-research', description: 'Research {{hidden}} <script>&' }],
+      LOCALE: 'zh-CN',
+    })
 
-    session.header.agentPreset = 'cordis'
-    composedPreset = 'cordis'
+    const stringAssembly = await assemble?.({ tools: [] }, { agent }, async () => ({
+      sections: [standardSection], contexts: [nativeContext],
+      tools: ['skill', 'ask_user_question', 'paimind_skill_inspect_github', 'paimind_skill_install', 'paimind_agent_prepare_create', 'paimind_agent_skill_binding', 'bash', 'write'],
+    }))
+    expect(stringAssembly).toEqual({
+      sections: [standardSection], contexts: objectAssembly?.contexts,
+      tools: ['skill', 'ask_user_question', 'paimind_skill_inspect_github', 'paimind_skill_install', 'paimind_agent_prepare_create'],
+    })
+
+    composedPreset = 'saved-agent'
     expect(isPaimindAgentAuthoringSession(session)).toBe(true)
-    expect(guard?.({ name: 'ask_user_question', agent: { session } })).toBeUndefined()
-    expect(guard?.({ name: 'paimind_agent_prepare_create', agent: { session } })).toBeUndefined()
-    expect(guard?.({ name: 'bash', agent: { session } })).toContain('ask_user_question and paimind_agent_prepare_create')
-    await expect(assemble?.({ tools: ['cordis_define'] }, { agent }, async () => ({ tools: ['ask_user_question', 'paimind_agent_prepare_create', 'bash'] }))).resolves.toMatchObject({ tools: ['ask_user_question', 'paimind_agent_prepare_create'], contexts: [] })
-    await expect(service.sealAuthoringSession({ sessionId })).rejects.toThrow('Harness standard')
-
-    session.header.agentPreset = 'standard'
+    expect(guard?.({ name: 'read', agent: { session } })).toBeUndefined()
+    expect(guard?.({ name: 'glob', agent: { session } })).toBeUndefined()
+    expect(guard?.({ name: 'bash', agent: { session } })).toBeUndefined()
+    await expect(assemble?.({ tools: [] }, { agent }, async () => ({
+      sections: [standardSection], contexts: [nativeContext], tools: ['read', 'glob', 'bash'],
+    }))).resolves.toEqual({
+      sections: [standardSection], contexts: [nativeContext], tools: ['read', 'glob', 'bash'],
+    })
     await expect(service.sealAuthoringSession({ sessionId })).rejects.toThrow('当前运行的原生 Agent Preset 已不是 standard')
+
     await expect(service.prepareAuthoringTurn({
       sessionId, draft: authoringDraft, skills: [{ name: 'web-research', description: 'Research the web' }], locale: 'zh-CN',
     })).rejects.toThrow('当前运行的原生 Agent Preset 已不是 standard')
+
+    composedPreset = undefined
+    expect(guard?.({ name: 'bash', agent: { session } })).toContain('paimind_skill_install')
+    const missingLivePresetAssembly = await assemble?.({ tools: [] }, { agent }, async () => ({
+      sections: [standardSection], contexts: [nativeContext], tools: ['read', 'glob', 'bash'],
+    }))
+    expect(missingLivePresetAssembly?.tools).toEqual([])
+    expect(missingLivePresetAssembly?.contexts).toEqual(objectAssembly?.contexts)
+  })
+
+  it('hot toggles Agent authoring off-on-off-on without duplicate registration while binding and guards stay active', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-agent-authoring-lifecycle-'))
+    roots.push(base)
+    const activeSkills = new Set<string>()
+    const activeTools = new Set<string>()
+    const skillRegistrations = new Map<string, number>()
+    const toolRegistrations = new Map<string, number>()
+    const skillDisposals = new Map<string, number>()
+    const toolDisposals = new Map<string, number>()
+    let guard: ((execution: { readonly name: string; readonly agent?: { readonly session?: unknown } }) => string | undefined) | undefined
+    const increment = (table: Map<string, number>, key: string): void => { table.set(key, (table.get(key) ?? 0) + 1) }
+    const context = {
+      reflect: { provide: () => {} }, get: () => undefined,
+      effect(install: () => void | (() => void | Promise<void>)) { install() },
+      sessions: { get: () => undefined },
+      agents: { get: () => undefined, list: () => [] },
+      tools: {
+        guard(listener: typeof guard) { guard = listener; return () => {} },
+        register(definition: unknown) {
+          const toolName = (definition as { readonly name?: unknown }).name
+          if (typeof toolName !== 'string') throw new Error('test Tool has no name')
+          if (activeTools.has(toolName)) throw new Error(`duplicate Tool: ${toolName}`)
+          activeTools.add(toolName)
+          increment(toolRegistrations, toolName)
+          let disposed = false
+          return () => {
+            if (disposed) return
+            disposed = true
+            activeTools.delete(toolName)
+            increment(toolDisposals, toolName)
+          }
+        },
+      },
+      skills: {
+        register(definition: { readonly name: string }) {
+          if (activeSkills.has(definition.name)) throw new Error(`duplicate Skill: ${definition.name}`)
+          activeSkills.add(definition.name)
+          increment(skillRegistrations, definition.name)
+          let disposed = false
+          return () => {
+            if (disposed) return
+            disposed = true
+            activeSkills.delete(definition.name)
+            increment(skillDisposals, definition.name)
+          }
+        },
+      },
+      agentPresets: { composedPreset: () => 'standard' },
+      on: () => () => {},
+    }
+    const service = new PaimindAgentProfileService(context as never, {
+      presetRoot: join(base, 'presets'), skillRoot: join(base, 'skills'), stateRoot: join(base, 'state'),
+    })
+    await service.prepareRuntime()
+
+    const descriptor = service.describeAgentAuthoringCapability()
+    expect(descriptor).toEqual({
+      name: 'paimind-agent-authoring',
+      description: expect.stringContaining('Create or configure a PAIMind Agent'),
+      sourcePluginId: '@paimind/agent-builder',
+    })
+    expect(Object.isFrozen(descriptor)).toBe(true)
+    expect(activeSkills).toEqual(new Set(['paimind-agent-authoring']))
+    expect(activeTools).toEqual(new Set(['paimind_agent_prepare_create', 'paimind_agent_skill_binding']))
+
+    service.setAgentAuthoringEnabled(false)
+    expect(activeSkills.size).toBe(0)
+    expect(activeTools).toEqual(new Set(['paimind_agent_skill_binding']))
+    const dedicatedSession = { id: 'paimind-authoring-123e4567-e89b-12d3-a456-426614174000' }
+    expect(guard?.({ name: 'bash', agent: { session: dedicatedSession } })).toContain('paimind_skill_install')
+    const reassignedBlankSession = {
+      id: dedicatedSession.id,
+      header: { agentPreset: 'standard' },
+      events: [
+        { type: 'agent-preset/selected', data: { agentPreset: 'saved-agent' } },
+        { type: 'user/message', data: { source: { kind: 'user' } } },
+      ],
+    }
+    expect(guard?.({ name: 'bash', agent: { session: reassignedBlankSession } })).toBeUndefined()
+
+    service.setAgentAuthoringEnabled(true)
+    service.setAgentAuthoringEnabled(true)
+    service.setAgentAuthoringEnabled(false)
+    service.setAgentAuthoringEnabled(false)
+    service.setAgentAuthoringEnabled(true)
+
+    expect(activeSkills).toEqual(new Set(['paimind-agent-authoring']))
+    expect(activeTools).toEqual(new Set(['paimind_agent_prepare_create', 'paimind_agent_skill_binding']))
+    expect(skillRegistrations.get('paimind-agent-authoring')).toBe(3)
+    expect(skillDisposals.get('paimind-agent-authoring')).toBe(2)
+    expect(toolRegistrations.get('paimind_agent_prepare_create')).toBe(3)
+    expect(toolDisposals.get('paimind_agent_prepare_create')).toBe(2)
+    expect(toolRegistrations.get('paimind_agent_skill_binding')).toBe(1)
+    expect(toolDisposals.get('paimind_agent_skill_binding')).toBeUndefined()
+  })
+
+  it('rolls back the private prepare Tool when Agent authoring Skill registration fails and permits a clean retry', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-agent-authoring-rollback-'))
+    roots.push(base)
+    const activeSkills = new Set<string>()
+    const activeTools = new Set<string>()
+    let failNextAuthoringSkill = false
+    let prepareRegistrations = 0
+    let bindingRegistrations = 0
+    const context = {
+      reflect: { provide: () => {} }, get: () => undefined,
+      effect(install: () => void | (() => void | Promise<void>)) { install() },
+      sessions: { get: () => undefined },
+      agents: { get: () => undefined, list: () => [] },
+      tools: {
+        guard: () => () => {},
+        register(definition: unknown) {
+          const toolName = (definition as { readonly name?: unknown }).name
+          if (typeof toolName !== 'string') throw new Error('test Tool has no name')
+          if (activeTools.has(toolName)) throw new Error(`duplicate Tool: ${toolName}`)
+          activeTools.add(toolName)
+          if (toolName === 'paimind_agent_prepare_create') prepareRegistrations += 1
+          if (toolName === 'paimind_agent_skill_binding') bindingRegistrations += 1
+          let disposed = false
+          return () => {
+            if (disposed) return
+            disposed = true
+            activeTools.delete(toolName)
+          }
+        },
+      },
+      skills: {
+        register(definition: { readonly name: string }) {
+          if (failNextAuthoringSkill && definition.name === 'paimind-agent-authoring') {
+            failNextAuthoringSkill = false
+            throw new Error('injected authoring Skill failure')
+          }
+          if (activeSkills.has(definition.name)) throw new Error(`duplicate Skill: ${definition.name}`)
+          activeSkills.add(definition.name)
+          let disposed = false
+          return () => {
+            if (disposed) return
+            disposed = true
+            activeSkills.delete(definition.name)
+          }
+        },
+      },
+      agentPresets: { composedPreset: () => 'standard' },
+      on: () => () => {},
+    }
+    const service = new PaimindAgentProfileService(context as never, {
+      presetRoot: join(base, 'presets'), skillRoot: join(base, 'skills'), stateRoot: join(base, 'state'),
+    })
+    await service.prepareRuntime()
+    service.setAgentAuthoringEnabled(false)
+    failNextAuthoringSkill = true
+
+    expect(() => { service.setAgentAuthoringEnabled(true) }).toThrow('injected authoring Skill failure')
+    expect(activeSkills.size).toBe(0)
+    expect(activeTools).toEqual(new Set(['paimind_agent_skill_binding']))
+    expect(bindingRegistrations).toBe(1)
+
+    service.setAgentAuthoringEnabled(true)
+    expect(activeSkills).toEqual(new Set(['paimind-agent-authoring']))
+    expect(activeTools).toEqual(new Set(['paimind_agent_prepare_create', 'paimind_agent_skill_binding']))
+    expect(prepareRegistrations).toBe(3)
+    expect(bindingRegistrations).toBe(1)
   })
 
   it('does not turn an ordinary Standard Session into an authoring capability', async () => {
@@ -144,7 +384,10 @@ describe('headless Agent profile workflow', () => {
       { sections: [{ name: 'ordinary', text: 'ordinary prompt' }], contexts: [{ name: 'cwd' }], tools: ['bash'] },
       { agent },
       async () => ({ sections: [{ name: 'ordinary', text: 'ordinary prompt' }], contexts: [{ name: 'cwd' }], tools: ['bash', 'ask_user_question', 'paimind_agent_prepare_create'] }),
-    )).resolves.toMatchObject({ sections: [{ name: 'ordinary', text: 'ordinary prompt' }], contexts: [{ name: 'cwd' }] })
+    )).resolves.toEqual({
+      sections: [{ name: 'ordinary', text: 'ordinary prompt' }], contexts: [{ name: 'cwd' }],
+      tools: ['bash', 'ask_user_question', 'paimind_agent_prepare_create'],
+    })
     expect(section).not.toHaveBeenCalled()
     expect(suppressRuntimeContext).not.toHaveBeenCalled()
     await expect(service.prepareAuthoringTurn({
@@ -152,70 +395,93 @@ describe('headless Agent profile workflow', () => {
     })).rejects.toThrow('智能体创建会话')
   })
 
-  it('promotes an ordinary Session only after a real prepare-create Tool result', async () => {
+  it('uses an ordinary Tool result for Builder recovery without sealing the Standard Session', async () => {
     const sessionId = 'ordinary-promoted-session'
     const session = {
       id: sessionId,
-      header: { id: sessionId, agentPreset: 'paimind' },
+      header: { id: sessionId, agentPreset: 'standard' },
       events: [
         { type: 'tool/call', seq: 20, data: { callId: 'call-create', name: 'paimind_agent_prepare_create' } },
         { type: 'tool/result', seq: 21, data: { message: { source: { callId: 'call-create' }, content: [{ type: 'text', text: '<!--PAIMIND_AGENT_DRAFT\n{"name":"Risk Agent"}\n-->' }] } } },
       ],
     }
     const agent = { id: sessionId, session, ctx: { systemPrompt: { section: () => () => {}, suppressRuntimeContext: () => () => {} }, tools: { register: () => () => {} } } }
+    let assemble: ((
+      assembly: { readonly sections?: readonly unknown[]; readonly contexts?: readonly unknown[]; readonly tools: readonly unknown[] },
+      context: { readonly agent?: typeof agent },
+      next: () => Promise<{ readonly sections?: readonly unknown[]; readonly contexts?: readonly unknown[]; readonly tools: readonly unknown[] }>,
+    ) => Promise<{ readonly sections?: readonly unknown[]; readonly contexts?: readonly unknown[]; readonly tools: readonly unknown[] }>) | undefined
+    let guard: ((execution: { readonly name: string; readonly agent?: { readonly session?: typeof session } }) => string | undefined) | undefined
     const context = {
       reflect: { provide: () => {} }, get: () => undefined,
       effect(install: () => void | (() => void)) { install() },
       sessions: { get: (id: string) => id === sessionId ? session : undefined },
       agents: { get: (id: string) => id === sessionId ? agent : undefined, list: () => [] },
-      tools: { guard: () => () => {} },
-      agentPresets: { composedPreset: () => 'paimind' },
-      on: () => () => {},
+      tools: { guard(listener: typeof guard) { guard = listener; return () => {} } },
+      agentPresets: { composedPreset: () => 'standard' },
+      on(event: string, listener: typeof assemble) { if (event === 'system-prompt/assemble') assemble = listener; return () => {} },
     }
     const service = new PaimindAgentProfileService(context as never)
     expect(isPaimindAgentAuthoringSession(session)).toBe(true)
     await expect(service.sealAuthoringSession({ sessionId })).resolves.toEqual({
-      sessionId, agentPreset: 'paimind', sealed: true,
+      sessionId, agentPreset: 'standard', sealed: true,
+    })
+    expect(guard?.({ name: 'bash', agent: { session } })).toBeUndefined()
+    expect(guard?.({ name: 'write', agent: { session } })).toBeUndefined()
+    await expect(assemble?.({ tools: [] }, { agent }, async () => ({
+      sections: [{ name: 'ordinary', text: 'ordinary prompt' }], contexts: [{ name: 'cwd', text: '/workspace' }],
+      tools: ['skill', 'ask_user_question', 'paimind_agent_prepare_create', 'bash'],
+    }))).resolves.toEqual({
+      sections: [{ name: 'ordinary', text: 'ordinary prompt' }], contexts: [{ name: 'cwd', text: '/workspace' }],
+      tools: ['skill', 'ask_user_question', 'paimind_agent_prepare_create', 'bash'],
     })
   })
 
-  it('assembles only the latest prepared turn context and clears it on Agent and service disposal', async () => {
+  it('merges structured draft edits and validates Business Skills against the live repository', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-agent-authoring-skills-'))
+    roots.push(base)
+    const skillRoot = join(base, 'skills')
+    await mkdir(join(skillRoot, 'web-research'), { recursive: true })
+    await writeFile(join(skillRoot, 'web-research', 'SKILL.md'), '---\nname: web-research\ndescription: Research the web\n---\n')
     const sessionId = 'paimind-authoring-323e4567-e89b-12d3-a456-426614174000'
     const session = { id: sessionId, header: { id: sessionId, agentPreset: 'standard' }, events: [] }
-    const disposeSections = vi.fn()
-    const disposeRuntimeContexts = vi.fn()
-    const sections: Array<{
-      readonly name: string
-      readonly complete?: boolean
-      readonly text: string | ((context: Readonly<Record<string, unknown>>) => string)
-    }> = []
-    const section = vi.fn((entry: (typeof sections)[number]) => { sections.push(entry); return disposeSections })
-    const suppressRuntimeContext = vi.fn(() => disposeRuntimeContexts)
+    const ordinarySession = { id: 'ordinary-live-skill-session', header: { id: 'ordinary-live-skill-session', agentPreset: 'standard' }, events: [] }
+    const section = vi.fn(() => () => {})
+    const suppressRuntimeContext = vi.fn(() => () => {})
     const agent = { id: sessionId, session, ctx: { systemPrompt: { section, suppressRuntimeContext }, tools: { register: vi.fn(() => () => {}) } } }
-    let liveAgent: typeof agent | undefined = agent
+    const ordinaryAgent = { id: ordinarySession.id, session: ordinarySession, ctx: agent.ctx }
     const lifecycle = new Map<string, (event: { readonly agent: typeof agent }) => void>()
     const effectCleanups = new Map<string, () => void | Promise<void>>()
+    const registeredTools: Array<{
+      readonly name: string
+      execute(args: Record<string, unknown>, exec: unknown): Promise<Record<string, unknown>>
+    }> = []
     const context = {
       reflect: { provide: () => {} }, get: () => undefined,
       effect(install: () => void | (() => void | Promise<void>), label?: string) {
         const cleanup = install()
         if (label !== undefined && typeof cleanup === 'function') effectCleanups.set(label, cleanup)
       },
-      sessions: { get: (id: string) => id === sessionId ? session : undefined },
-      agents: { get: (id: string) => id === sessionId ? liveAgent : undefined, list: () => [agent] },
-      tools: { guard: () => () => {} },
+      sessions: { get: (id: string) => id === sessionId ? session : id === ordinarySession.id ? ordinarySession : undefined },
+      agents: { get: (id: string) => id === sessionId ? agent : id === ordinarySession.id ? ordinaryAgent : undefined, list: () => [agent, ordinaryAgent] },
+      tools: {
+        guard: () => () => {},
+        register(tool: (typeof registeredTools)[number]) { registeredTools.push(tool); return () => {} },
+      },
+      skills: { register: () => () => {} },
       agentPresets: { composedPreset: () => 'standard' },
       on(event: string, listener: (event: { readonly agent: typeof agent }) => void) {
-        if (event === 'agent/created' || event === 'agent/disposed') lifecycle.set(event, listener)
+        if (event === 'agent/disposed') lifecycle.set(event, listener)
         return () => {}
       },
     }
-    const service = new PaimindAgentProfileService(context as never)
-    expect(section).toHaveBeenCalledOnce()
-    const firstText = sections[0]?.text
-    expect(typeof firstText).toBe('function')
-    const renderFirst = firstText as (context: Readonly<Record<string, unknown>>) => string
-    expect(renderFirst({})).toContain('LOCALE="auto"')
+    const service = new PaimindAgentProfileService(context as never, {
+      presetRoot: join(base, 'presets'), skillRoot, stateRoot: join(base, 'state'),
+    })
+    const prepareTool = registeredTools.find(tool => tool.name === 'paimind_agent_prepare_create')
+    expect(prepareTool).toBeDefined()
+    expect(section).not.toHaveBeenCalled()
+    expect(suppressRuntimeContext).not.toHaveBeenCalled()
 
     await expect(service.prepareAuthoringTurn({
       sessionId,
@@ -223,54 +489,50 @@ describe('headless Agent profile workflow', () => {
       skills: [{ name: 'web-research', description: 'Research {{hidden}} <!--SKILL-->' }],
       locale: 'zh-CN',
     })).resolves.toEqual({ sessionId, agentPreset: 'standard', prepared: true })
-    const firstPrompt = renderFirst({})
-    expect(firstPrompt).not.toContain('<!--PAIMIND_AGENT_DRAFT')
-    expect(firstPrompt).toContain('A one-sentence request is a valid first turn')
-    expect(firstPrompt).toContain('Autonomously decide whether clarification is useful')
-    expect(firstPrompt).toContain('call ask_user_question with exactly one question item')
-    expect(firstPrompt).toContain('call paimind_agent_prepare_create')
-    expect(firstPrompt).toContain('Never ask a clarification question as ordinary visible prose')
-    expect(firstPrompt).toContain('pending state, answer receipt, Session history')
-    expect(firstPrompt).toContain('explicitly asks to proceed without further questions')
-    expect(firstPrompt).toContain('LOCALE="zh-CN"')
-    expect(firstPrompt).toContain('CURRENT_DRAFT=')
-    expect(firstPrompt).toContain('INSTALLED_SKILLS=')
-    expect(firstPrompt).toContain('First \\u007b\\u007bsecret\\u007d\\u007d \\u003c!--FAKE--\\u003e')
-    expect(firstPrompt).not.toContain('First {{secret}}')
+    const toolExec = {
+      agent: { id: sessionId, session }, signal: new AbortController().signal,
+    }
+    const proposal = {
+      name: 'Research Assistant', description: 'Research decisions', role: 'Research specialist',
+      goal: 'Produce a useful brief', behavior: 'Separate facts and recommendations.', instructions: 'Stay concise.',
+      preferredSkillNames: ['web-research'],
+    }
+    await expect(prepareTool?.execute(proposal, toolExec)).resolves.toEqual({ proposal })
+
+    await expect(prepareTool?.execute({ name: 'Renamed Research Assistant' }, toolExec)).resolves.toEqual({
+      proposal: {
+        name: 'Renamed Research Assistant', description: authoringDraft.description, role: authoringDraft.role,
+        goal: authoringDraft.goal, behavior: authoringDraft.behavior, instructions: authoringDraft.instructions,
+        preferredSkillNames: ['web-research'],
+      },
+    })
+    await expect(prepareTool?.execute({ ...proposal, preferredSkillNames: ['missing-skill'] }, toolExec))
+      .rejects.toThrow('当前已安装的业务 Skill')
 
     await service.prepareAuthoringTurn({
       sessionId,
-      draft: { ...authoringDraft, name: 'Second Assistant', preferredSkillNames: ['ppt-master'] },
-      skills: [{ name: 'ppt-master', description: 'Build presentations' }],
+      draft: { ...authoringDraft, name: 'Second Assistant', preferredSkillNames: [] },
+      skills: [],
       locale: 'en-US',
     })
-    const secondPrompt = renderFirst({})
-    expect(secondPrompt).toContain('Second Assistant')
-    expect(secondPrompt).toContain('ppt-master')
-    expect(secondPrompt).toContain('LOCALE="en-US"')
-    expect(secondPrompt).not.toContain('First \\u007b\\u007bsecret')
+    await expect(prepareTool?.execute({ ...proposal, preferredSkillNames: ['ppt-master'] }, toolExec))
+      .rejects.toThrow('当前已安装的业务 Skill')
+    await mkdir(join(skillRoot, 'ppt-master'), { recursive: true })
+    await writeFile(join(skillRoot, 'ppt-master', 'SKILL.md'), '---\nname: ppt-master\ndescription: Build presentations\n---\n')
+    await expect(prepareTool?.execute({ ...proposal, preferredSkillNames: ['ppt-master'] }, toolExec)).resolves.toMatchObject({
+      proposal: { preferredSkillNames: ['ppt-master'] },
+    })
 
-    liveAgent = undefined
     lifecycle.get('agent/disposed')?.({ agent })
-    expect(renderFirst({})).toContain('LOCALE="auto"')
-    await expect(service.prepareAuthoringTurn({
-      sessionId, draft: authoringDraft, skills: [{ name: 'web-research', description: 'Research the web' }], locale: 'zh-CN',
-    })).rejects.toThrow('同一原生 Harness Agent')
-    expect(disposeSections).toHaveBeenCalledOnce()
-    expect(disposeRuntimeContexts).toHaveBeenCalledOnce()
-
-    liveAgent = agent
+    await expect(prepareTool?.execute(proposal, toolExec)).resolves.toEqual({ proposal })
     await service.prepareAuthoringTurn({
       sessionId, draft: authoringDraft, skills: [{ name: 'web-research', description: 'Research the web' }], locale: 'zh-CN',
     })
-    expect(section).toHaveBeenCalledTimes(2)
-    const secondText = sections[1]?.text
-    const renderSecond = secondText as (context: Readonly<Record<string, unknown>>) => string
-    expect(renderSecond({})).toContain('Research Assistant')
-    await effectCleanups.get('paimind-agent-builder: authoring prompt scope lifecycle')?.()
-    expect(renderSecond({})).toContain('LOCALE="auto"')
-    expect(disposeSections).toHaveBeenCalledTimes(2)
-    expect(disposeRuntimeContexts).toHaveBeenCalledTimes(2)
+    await effectCleanups.get('paimind-agent-builder: startup legacy Provider retirement and ephemeral authoring lifecycle')?.()
+    await expect(prepareTool?.execute(proposal, toolExec)).resolves.toEqual({ proposal })
+    await expect(prepareTool?.execute(proposal, {
+      agent: { id: ordinarySession.id, session: ordinarySession }, signal: new AbortController().signal,
+    })).resolves.toEqual({ proposal })
   })
 
   it('publishes a strict Remote contract for preparing one authoring turn', () => {
@@ -369,6 +631,9 @@ describe('headless Agent profile workflow', () => {
       agentId: 'stable-agent', presetId: 'stable-agent', basePresetId: 'standard', revision: 1,
       authoringSessionId: 'paimind-authoring-stable', authoringCursor: 12,
     })
+    const emptySelection = await service.businessSkillNamesForPreset('stable-agent')
+    expect(emptySelection).toEqual([])
+    expect(Object.isFrozen(emptySelection)).toBe(true)
     await expect(service.saveProfile({
       ...input, basePresetId: 'minimal', expectedVersion: created.configVersion,
     })).rejects.toThrow('旧版智能体需要先基于标准模板重新创建')
@@ -391,26 +656,27 @@ describe('headless Agent profile workflow', () => {
     const result = replacePresetPersona(source, profile)
     expect(result).toContain('You are Evidence Agent')
     expect(result).toContain('Start every answer with [EVIDENCE].')
-    expect(result).toContain('Capability terminology:')
-    expect(result).toContain('Agent Business Skills selected in Agent Center: web-research')
-    expect(result).toContain('Never rename or count Tools as Skills.')
-    expect(result).not.toContain('Session-injected Skills:')
+    expect(result).not.toContain('Capability terminology:')
+    expect(result).not.toContain('Agent Business Skills')
+    expect(result).not.toContain('web-research')
+    expect(result).not.toContain('Global Skills')
     expect(result).toContain("- id: tool-bash\n  name: '@deepseek-ai/dsh-tool-bash'")
   })
 
-  it('replaces native filesystem discovery with one idempotent per-Agent Skill projection', () => {
-    const source = "- id: skill-filesystem\n  name: '@deepseek-ai/dsh-skill-filesystem'\n\n- id: tool-skill\n  name: '@deepseek-ai/dsh-tool-skill'\n"
-    const first = replacePresetSkillScope(source, '/tmp/agent-scope', 'v1-test')
-    const second = replacePresetSkillScope(first, '/tmp/agent-scope', 'v1-test')
+  it('removes the retired Agent filesystem override and preserves native Standard discovery idempotently', () => {
+    const source = "# PAIMind skill scope: v1-test\n- id: skill-filesystem\n  name: '@deepseek-ai/dsh-skill-filesystem'\n  config:\n    providerName: 'paimind-agent-scope'\n    includeDefaultRoots: false\n    customSkillDirs:\n      - \"/tmp/agent-scope\"\n\n- id: tool-skill\n  name: '@deepseek-ai/dsh-tool-skill'\n"
+    const first = removePresetSkillFilesystemOverride(source)
+    const second = removePresetSkillFilesystemOverride(first)
     expect(second).toBe(first)
-    expect(first).toContain('includeDefaultRoots: false')
-    expect(first).toContain('customSkillDirs:')
-    expect(first).toContain('"/tmp/agent-scope"')
-    expect(first.match(/# PAIMind skill scope:/g)).toHaveLength(1)
+    expect(first).toContain("- id: skill-filesystem\n  name: '@deepseek-ai/dsh-skill-filesystem'")
+    expect(first).not.toContain('includeDefaultRoots: false')
+    expect(first).not.toContain('customSkillDirs:')
+    expect(first).not.toContain('paimind-agent-scope')
+    expect(first).not.toContain('.paimind-skills')
     expect(first).toContain("- id: tool-skill\n  name: '@deepseek-ai/dsh-tool-skill'")
   })
 
-  it('projects only packaged installed Skills into the copied native Preset and repairs scope drift', async () => {
+  it('persists only Agent Skill references and removes the retired filesystem provider without projecting a second catalog', async () => {
     const base = await mkdtemp(join(tmpdir(), 'paimind-agent-scope-'))
     roots.push(base)
     const presetRoot = join(base, '.agent-presets')
@@ -432,17 +698,172 @@ describe('headless Agent profile workflow', () => {
       preferredSkillNames: ['selected-skill'], instructions: '',
     })
     const scopeRoot = join(source, AGENT_SKILL_SCOPE_DIRECTORY)
-    await expect(realpath(join(scopeRoot, 'selected-skill'))).resolves.toBe(await realpath(join(skillRoot, 'selected-skill')))
-    await expect(stat(join(scopeRoot, 'unselected-skill'))).rejects.toThrow()
+    await expect(stat(scopeRoot)).rejects.toThrow()
     const composition = await readFile(join(source, 'agent.cordis.yml'), 'utf8')
-    expect(composition).toContain('includeDefaultRoots: false')
-    expect(composition).toContain(JSON.stringify(scopeRoot))
+    expect(composition).toContain("- id: skill-filesystem\n  name: '@deepseek-ai/dsh-skill-filesystem'")
+    expect(composition).not.toContain('includeDefaultRoots: false')
+    expect(composition).not.toContain('customSkillDirs:')
+    expect(composition).not.toContain('paimind-agent-scope')
+    expect(composition).not.toContain('selected-skill')
+    const persistedProfile = JSON.parse(await readFile(join(source, AGENT_PROFILE_FILE), 'utf8')) as AgentBusinessProfile
+    expect(persistedProfile.preferredSkillNames).toEqual(['selected-skill'])
+    const selectedNames = await service.businessSkillNamesForPreset('my-agent')
+    expect(selectedNames).toEqual(['selected-skill'])
+    expect(Object.isFrozen(selectedNames)).toBe(true)
+    await expect(service.businessSkillNamesForPreset('missing-agent')).resolves.toBeUndefined()
+    expect(PAIMIND_AGENT_PROFILE_REMOTE_DESCRIPTORS.map(descriptor => String(descriptor.method))).not.toContain('businessSkillNamesForPreset')
 
-    await rm(scopeRoot, { recursive: true, force: true })
+    await mkdir(join(scopeRoot, 'selected-skill'), { recursive: true })
+    await writeFile(join(scopeRoot, 'selected-skill', 'SKILL.md'), 'legacy duplicate provider\n')
+    await writeFile(join(source, 'agent.cordis.yml'), composition.replace(
+      "- id: skill-filesystem\n  name: '@deepseek-ai/dsh-skill-filesystem'\n",
+      `# PAIMind skill scope: legacy\n- id: skill-filesystem\n  name: '@deepseek-ai/dsh-skill-filesystem'\n  config:\n    providerName: 'paimind-agent-scope'\n    includeDefaultRoots: false\n    customSkillDirs:\n      - ${JSON.stringify(scopeRoot)}\n`,
+    ))
     const listed = await service.listProfiles()
     expect(listed.profiles[0]?.health).toBe('healthy')
-    await expect(realpath(join(scopeRoot, 'selected-skill'))).resolves.toBe(await realpath(join(skillRoot, 'selected-skill')))
-    await expect(readFile(join(source, 'agent.cordis.yml'), 'utf8')).resolves.not.toContain('Session-injected Skills:')
+    await expect(stat(scopeRoot)).rejects.toThrow()
+    const repairedComposition = await readFile(join(source, 'agent.cordis.yml'), 'utf8')
+    expect(repairedComposition).not.toContain('paimind-agent-scope')
+    expect(repairedComposition).not.toContain('customSkillDirs:')
+    expect(repairedComposition).not.toContain('.paimind-skills')
+    expect(repairedComposition.match(/^- id:\s*skill-filesystem\s*$/gm)).toHaveLength(1)
+  })
+
+  it('retires legacy Agent providers during Plugin startup and blocks already-mounted historical Agents until rebuilt', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-agent-startup-retirement-'))
+    roots.push(base)
+    const presetRoot = join(base, '.agent-presets')
+    const stateRoot = join(base, '.state')
+    const source = join(presetRoot, 'legacy-agent')
+    const scopeRoot = join(source, AGENT_SKILL_SCOPE_DIRECTORY)
+    await mkdir(join(scopeRoot, 'selected-skill'), { recursive: true })
+    await writeFile(join(scopeRoot, 'selected-skill', 'SKILL.md'), 'legacy duplicate provider\n')
+    await writeFile(join(source, 'agent.cordis.yml'), `# PAIMind skill scope: legacy\n- id: skill-filesystem\n  name: '@deepseek-ai/dsh-skill-filesystem'\n  config:\n    providerName: 'paimind-agent-scope'\n    includeDefaultRoots: false\n    customSkillDirs:\n      - ${JSON.stringify(scopeRoot)}\n\n- id: tool-skill\n  name: '@deepseek-ai/dsh-tool-skill'\n`)
+    await writeFile(join(source, AGENT_PROFILE_FILE), `${JSON.stringify({
+      ...profile, agentId: 'legacy-agent', presetId: 'legacy-agent', preferredSkillNames: [],
+    })}\n`)
+    const session = { id: 'historical-session', header: { id: 'historical-session', agentPreset: 'legacy-agent' }, events: [] }
+    const childContext = {
+      systemPrompt: { section: () => () => {}, suppressRuntimeContext: () => () => {} },
+      tools: { register: () => () => {} },
+    }
+    const historicalAgent = { id: session.id, session, ctx: childContext }
+    let created: ((event: { readonly agent: typeof historicalAgent }) => void) | undefined
+    let preStep: ((event: { readonly agent: typeof historicalAgent }, next: () => Promise<unknown>) => Promise<unknown>) | undefined
+    const context = {
+      reflect: { provide: () => {} }, get: () => undefined,
+      effect(install: () => void | (() => void | Promise<void>)) { install() },
+      sessions: { get: () => session },
+      agents: { get: () => historicalAgent, list: () => [historicalAgent] },
+      tools: { guard: () => () => {}, register: () => () => {} },
+      skills: { register: () => () => {}, list: async () => [] },
+      agentPresets: { composedPreset: () => 'legacy-agent' },
+      on(event: string, listener: unknown) {
+        if (event === 'agent/created') created = listener as typeof created
+        if (event === 'agent/pre-step') preStep = listener as typeof preStep
+        return () => {}
+      },
+    }
+    const service = new PaimindAgentProfileService(context as never, {
+      presetRoot, stateRoot, skillRoot: join(base, 'skills'), now: () => 42,
+    })
+
+    await service.prepareRuntime()
+    await expect(stat(scopeRoot)).rejects.toThrow()
+    const repaired = await readFile(join(source, 'agent.cordis.yml'), 'utf8')
+    expect(repaired).not.toContain('paimind-agent-scope')
+    expect(repaired).not.toContain('customSkillDirs:')
+    expect(repaired.match(/^- id:\s*skill-filesystem\s*$/gm)).toHaveLength(1)
+    const historicalNext = vi.fn(async () => ({ kind: 'enter' }))
+    await expect(preStep?.({ agent: historicalAgent }, historicalNext)).rejects.toThrow(/迁移前创建/)
+    expect(historicalNext).not.toHaveBeenCalled()
+
+    const rebuiltAgent = { ...historicalAgent }
+    created?.({ agent: rebuiltAgent })
+    const rebuiltNext = vi.fn(async () => ({ kind: 'enter' }))
+    await expect(preStep?.({ agent: rebuiltAgent }, rebuiltNext)).resolves.toEqual({ kind: 'enter' })
+    expect(rebuiltNext).toHaveBeenCalledOnce()
+  })
+
+  it('reports that a bound Business Skill takes effect in the current Agent Session on its next turn', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-agent-binding-message-'))
+    roots.push(base)
+    const presetRoot = join(base, '.agent-presets')
+    const skillRoot = join(base, 'skills')
+    const source = join(presetRoot, 'message-agent')
+    await mkdir(source, { recursive: true })
+    await writeFile(join(source, 'agent.cordis.yml'), "- id: persona\n  name: '@deepseek-ai/dsh-persona'\n  config:\n    text: old\n\n- id: skill-filesystem\n  name: '@deepseek-ai/dsh-skill-filesystem'\n")
+    await writeFile(join(source, 'preset.yml'), 'name: Message Agent\n')
+    await mkdir(join(skillRoot, 'review-method'), { recursive: true })
+    await writeFile(join(skillRoot, 'review-method', 'SKILL.md'), '---\nname: review-method\ndescription: Review method\n---\n')
+    const session = { id: 'message-session', header: { id: 'message-session', agentPreset: 'message-agent' }, events: [] }
+    const agent = {
+      id: session.id, session,
+      ctx: {
+        systemPrompt: { section: () => () => {}, suppressRuntimeContext: () => () => {} },
+        tools: { register: () => () => {} },
+      },
+    }
+    const registeredTools: Array<{ readonly name: string; execute(args: unknown, exec: unknown): Promise<Record<string, unknown>> }> = []
+    const context = {
+      reflect: { provide: () => {} }, get: () => undefined,
+      effect(install: () => void | (() => void | Promise<void>)) { install() },
+      sessions: { get: (id: string) => id === session.id ? session : undefined },
+      agents: { get: (id: string) => id === agent.id ? agent : undefined, list: () => [] },
+      tools: {
+        guard: () => () => {},
+        register(tool: (typeof registeredTools)[number]) { registeredTools.push(tool); return () => {} },
+      },
+      skills: { register: () => () => {}, list: async () => [] },
+      agentPresets: { composedPreset: () => 'message-agent' },
+      on: () => () => {},
+    }
+    const service = new PaimindAgentProfileService(context as never, {
+      presetRoot, skillRoot, stateRoot: join(base, '.state'), now: () => 42,
+    })
+    await service.prepareRuntime()
+    await service.saveProfile({
+      agentId: 'message-agent', presetId: 'message-agent', name: 'Message Agent', description: '',
+      basePresetId: 'standard', role: 'Reviewer', goal: 'Review evidence', behavior: 'Be precise',
+      preferredSkillNames: [], instructions: '',
+    })
+    const bindingTool = registeredTools.find(tool => tool.name === 'paimind_agent_skill_binding')
+    await expect(bindingTool?.execute(
+      { operation: 'bind', skill_name: 'review-method' },
+      { agent: { id: session.id, session }, signal: new AbortController().signal },
+    )).resolves.toMatchObject({
+      bound: true,
+      message: 'Skill 已绑定当前 Agent；当前 Agent Session 从下一轮开始使用更新后的配置，历史消息不会改写。',
+    })
+    await expect(service.businessSkillNamesForPreset('message-agent')).resolves.toEqual(['review-method'])
+  })
+
+  it('rejects Agent attachment when an installed Business Skill now collides with a visible System Skill', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-agent-skill-collision-'))
+    roots.push(base)
+    const presetRoot = join(base, '.agent-presets')
+    const skillRoot = join(base, 'skills')
+    const source = join(presetRoot, 'collision-agent')
+    await mkdir(source, { recursive: true })
+    await writeFile(join(source, 'agent.cordis.yml'), "- id: persona\n  name: '@deepseek-ai/dsh-persona'\n  config:\n    text: old\n\n- id: skill-filesystem\n  name: '@deepseek-ai/dsh-skill-filesystem'\n\n- id: tool-skill\n  name: '@deepseek-ai/dsh-tool-skill'\n")
+    await mkdir(join(skillRoot, 'future-system'), { recursive: true })
+    await writeFile(join(skillRoot, 'future-system', 'SKILL.md'), '---\nname: future-system\ndescription: business copy\n---\n')
+    const context = {
+      ...authoringPolicyStubs,
+      reflect: { provide: () => {} },
+      effect(install: () => void) { install() },
+      get: () => undefined,
+      skills: { register: () => () => {}, list: async () => [{ name: 'future-system' }] },
+    }
+    const service = new PaimindAgentProfileService(context as never, {
+      presetRoot, skillRoot, stateRoot: join(base, '.state'),
+    })
+
+    await expect(service.saveProfile({
+      agentId: 'collision-agent', presetId: 'collision-agent', name: 'Collision Agent', description: '',
+      basePresetId: 'standard', role: 'Reviewer', goal: 'Avoid ambiguous capability ownership',
+      behavior: 'Fail closed', preferredSkillNames: ['future-system'], instructions: '',
+    })).rejects.toThrow(/与当前系统能力冲突/)
   })
 
   it('rejects non-standard Agent foundations at the host boundary', async () => {

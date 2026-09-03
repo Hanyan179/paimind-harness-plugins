@@ -16,6 +16,7 @@ import {
   type HarnessAgentChoice,
   type HarnessAgentChoiceBridge,
   type HarnessAgentPresetConnection,
+  type HarnessSkillConnection,
   type HarnessInspectableSlotRegistry,
   type PaimindClientContext,
   type PaimindSettingsScope,
@@ -75,7 +76,7 @@ interface VisualExperienceClientContext extends PaimindClientContext {
   readonly slots: HarnessInspectableSlotRegistry
   readonly settingsScope: PaimindSettingsScopeBinder
   readonly theme: PaimindThemeService
-  get(name: 'connection'): HarnessAgentPresetConnection
+  get(name: 'connection'): HarnessAgentPresetConnection & HarnessSkillConnection
   get(name: 'inputTriggers' | 'sessions'): unknown
 }
 
@@ -1309,7 +1310,11 @@ function installAgentExperience(
   ctx: VisualExperienceClientContext,
   mode: PaimindExperienceModeController,
 ): () => void {
-  const inputBridge = new NativeHarnessInputTriggerBridge(ctx.get('inputTriggers'), ctx.get('sessions'))
+  const inputBridge = new NativeHarnessInputTriggerBridge(
+    ctx.get('inputTriggers'),
+    ctx.get('sessions'),
+    ctx.get('connection').api.skills,
+  )
   let bridge: HarnessAgentChoiceBridge | null = null
   let seatDispose: (() => void) | null = null
   let quickDispose: (() => void) | null = null

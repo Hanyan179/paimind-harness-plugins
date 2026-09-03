@@ -61,6 +61,7 @@ const brandingRoot = resolve(repositoryRoot, 'packages/branding')
 const visualExperienceRoot = resolve(repositoryRoot, 'packages/visual-experience')
 const conversationTitleRoot = resolve(repositoryRoot, 'packages/conversation-title')
 const workspaceProjectRoot = resolve(repositoryRoot, 'packages/workspace-project')
+const workspaceBlueprintsRoot = resolve(repositoryRoot, 'packages/workspace-blueprints')
 const sidebarAdapterRoot = resolve(repositoryRoot, 'packages/better-sidebar-adapter')
 const taskMonitorRoot = resolve(repositoryRoot, 'packages/task-monitor')
 const artifactRuntimeRoot = resolve(repositoryRoot, 'packages/artifact-runtime')
@@ -279,6 +280,8 @@ try {
       name: '@paimind/branding'
     - id: paimind-workspace-project
       name: '@paimind/workspace-project'
+    - id: paimind-workspace-blueprints
+      name: '@paimind/workspace-blueprints'
     - id: paimind-better-sidebar-adapter
       name: '@paimind/better-sidebar-adapter'
     - id: paimind-task-monitor
@@ -330,6 +333,8 @@ try {
       name: '@paimind/branding'
     - id: paimind-workspace-project
       name: '@paimind/workspace-project'
+    - id: paimind-workspace-blueprints
+      name: '@paimind/workspace-blueprints'
     - id: paimind-better-sidebar-adapter
       name: '@paimind/better-sidebar-adapter'
     - id: paimind-artifact-runtime
@@ -377,6 +382,8 @@ try {
       name: '@paimind/branding'
     - id: paimind-workspace-project
       name: '@paimind/workspace-project'
+    - id: paimind-workspace-blueprints
+      name: '@paimind/workspace-blueprints'
     - id: paimind-better-sidebar-adapter
       name: '@paimind/better-sidebar-adapter'
     - id: paimind-task-monitor
@@ -424,6 +431,8 @@ try {
       name: '@paimind/branding'
     - id: paimind-workspace-project
       name: '@paimind/workspace-project'
+    - id: paimind-workspace-blueprints
+      name: '@paimind/workspace-blueprints'
     - id: paimind-better-sidebar-adapter
       name: '@paimind/better-sidebar-adapter'
     - id: paimind-task-monitor
@@ -471,6 +480,8 @@ try {
       name: '@paimind/branding'
     - id: paimind-workspace-project
       name: '@paimind/workspace-project'
+    - id: paimind-workspace-blueprints
+      name: '@paimind/workspace-blueprints'
     - id: paimind-better-sidebar-adapter
       name: '@paimind/better-sidebar-adapter'
     - id: paimind-task-monitor
@@ -518,6 +529,8 @@ try {
       name: '@paimind/branding'
     - id: paimind-workspace-project
       name: '@paimind/workspace-project'
+    - id: paimind-workspace-blueprints
+      name: '@paimind/workspace-blueprints'
     - id: paimind-better-sidebar-adapter
       name: '@paimind/better-sidebar-adapter'
     - id: paimind-task-monitor
@@ -654,6 +667,7 @@ try {
     visualExperienceRoot,
     conversationTitleRoot,
     workspaceProjectRoot,
+    workspaceBlueprintsRoot,
     sidebarAdapterRoot,
     taskMonitorRoot,
     artifactRuntimeRoot,
@@ -695,6 +709,7 @@ try {
     'paimind-visual-experience', '@paimind/visual-experience',
     'paimind-conversation-title', '@paimind/conversation-title',
     'paimind-workspace-project', '@paimind/workspace-project',
+    'paimind-workspace-blueprints', '@paimind/workspace-blueprints',
     'paimind-better-sidebar-adapter', '@paimind/better-sidebar-adapter',
     'paimind-task-monitor', '@paimind/task-monitor',
     'paimind-artifact-runtime', '@paimind/artifact-runtime',
@@ -751,6 +766,7 @@ try {
     '@paimind/visual-experience',
     '@paimind/conversation-title',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/generator-web',
@@ -785,6 +801,7 @@ try {
     '@paimind/visual-experience',
     '@paimind/conversation-title',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/artifact-runtime',
@@ -819,6 +836,7 @@ try {
     || removed.includes('paimind-visual-experience')
     || removed.includes('paimind-conversation-title')
     || removed.includes('paimind-workspace-project')
+    || removed.includes('paimind-workspace-blueprints')
     || removed.includes('paimind-better-sidebar-adapter')
     || removed.includes('paimind-task-monitor')
     || removed.includes('paimind-artifact-runtime')
@@ -876,6 +894,7 @@ try {
     brandingRoot,
     conversationTitleRoot,
     workspaceProjectRoot,
+    workspaceBlueprintsRoot,
     sidebarAdapterRoot,
     taskMonitorRoot,
     artifactRuntimeRoot,
@@ -899,6 +918,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/generator-web',
@@ -919,6 +939,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/artifact-runtime',
@@ -950,6 +971,7 @@ try {
     runtimeOrbsRoot,
     brandingRoot,
     workspaceProjectRoot,
+    workspaceBlueprintsRoot,
     sidebarAdapterRoot,
     artifactRuntimeRoot,
     generatorWebRoot,
@@ -975,6 +997,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/generator-web',
     '@paimind/generator-office',
@@ -994,6 +1017,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/artifact-runtime',
     '@paimind/generator-web',
@@ -1022,6 +1046,7 @@ try {
     runtimeOrbsRoot,
     brandingRoot,
     workspaceProjectRoot,
+    workspaceBlueprintsRoot,
     sidebarAdapterRoot,
     taskMonitorRoot,
     artifactRuntimeRoot,
@@ -1047,6 +1072,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/generator-web',
@@ -1066,6 +1092,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/artifact-runtime',
@@ -1094,6 +1121,7 @@ try {
     runtimeOrbsRoot,
     brandingRoot,
     workspaceProjectRoot,
+    workspaceBlueprintsRoot,
     sidebarAdapterRoot,
     taskMonitorRoot,
     artifactRuntimeRoot,
@@ -1119,6 +1147,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/generator-web',
@@ -1139,6 +1168,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/artifact-runtime',
@@ -1167,6 +1197,7 @@ try {
     runtimeOrbsRoot,
     brandingRoot,
     workspaceProjectRoot,
+    workspaceBlueprintsRoot,
     sidebarAdapterRoot,
     taskMonitorRoot,
     artifactRuntimeRoot,
@@ -1192,6 +1223,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/generator-web',
@@ -1211,6 +1243,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/artifact-runtime',
@@ -1239,6 +1272,7 @@ try {
     runtimeOrbsRoot,
     brandingRoot,
     workspaceProjectRoot,
+    workspaceBlueprintsRoot,
     sidebarAdapterRoot,
     taskMonitorRoot,
     artifactRuntimeRoot,
@@ -1264,6 +1298,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/generator-web',
@@ -1283,6 +1318,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/artifact-runtime',
@@ -1311,6 +1347,7 @@ try {
     runtimeOrbsRoot,
     brandingRoot,
     workspaceProjectRoot,
+    workspaceBlueprintsRoot,
     sidebarAdapterRoot,
     taskMonitorRoot,
     artifactRuntimeRoot,
@@ -1344,6 +1381,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/generator-web',
@@ -1365,6 +1403,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/artifact-runtime',
@@ -1399,6 +1438,7 @@ try {
     runtimeOrbsRoot,
     brandingRoot,
     workspaceProjectRoot,
+    workspaceBlueprintsRoot,
     sidebarAdapterRoot,
     taskMonitorRoot,
     artifactRuntimeRoot,
@@ -1439,6 +1479,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/generator-web',
@@ -1468,6 +1509,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/artifact-runtime',
@@ -1507,6 +1549,7 @@ try {
     runtimeOrbsRoot,
     brandingRoot,
     workspaceProjectRoot,
+    workspaceBlueprintsRoot,
     sidebarAdapterRoot,
     taskMonitorRoot,
     artifactRuntimeRoot,
@@ -1550,6 +1593,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/generator-web',
@@ -1579,6 +1623,7 @@ try {
     '@paimind/runtime-orbs',
     '@paimind/branding',
     '@paimind/workspace-project',
+    '@paimind/workspace-blueprints',
     '@paimind/better-sidebar-adapter',
     '@paimind/task-monitor',
     '@paimind/artifact-runtime',
