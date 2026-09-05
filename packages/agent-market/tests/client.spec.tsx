@@ -95,7 +95,7 @@ function services() {
   return {
     profiles: {
       listProfiles: vi.fn().mockResolvedValue({ ok: true, value: { profiles: [profile] } }),
-      saveProfile: vi.fn(), setDefault: vi.fn(), sealAuthoringSession: vi.fn(), prepareAuthoringTurn: vi.fn().mockResolvedValue({ ok: true, value: { sessionId: 'session-authoring', prepared: true } }), bindSession: vi.fn(), listSessionBindings: vi.fn().mockResolvedValue({ ok: true, value: { bindings: [] } }), migrationPlan: vi.fn(), recordMigration: vi.fn(), verifySession: vi.fn(), listAudit: vi.fn(),
+      saveProfile: vi.fn(), setDefault: vi.fn(), removeProfile: vi.fn().mockResolvedValue({ ok: true, value: { presetId: 'mine', removed: true } }), sealAuthoringSession: vi.fn(), prepareAuthoringTurn: vi.fn().mockResolvedValue({ ok: true, value: { sessionId: 'session-authoring', prepared: true } }), bindSession: vi.fn(), listSessionBindings: vi.fn().mockResolvedValue({ ok: true, value: { bindings: [] } }), migrationPlan: vi.fn(), recordMigration: vi.fn(), verifySession: vi.fn(), listAudit: vi.fn(),
     },
     skills: {
       listInstalled: vi.fn().mockResolvedValue({ ok: true, value: { items: [

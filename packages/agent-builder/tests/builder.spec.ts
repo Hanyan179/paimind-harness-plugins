@@ -969,6 +969,46 @@ describe('headless Agent profile workflow', () => {
     })
   })
 
+  it('refuses to delete a Preset referenced by durable Sessions and delegates unreferenced deletion to Harness', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-agent-delete-integrity-'))
+    roots.push(base)
+    const presetRoot = join(base, '.agent-presets')
+    const remove = vi.fn(async () => {})
+    const context = {
+      ...authoringPolicyStubs,
+      reflect: { provide: () => {} }, effect(install: () => void) { install() }, get: () => undefined,
+      sessions: { get: () => undefined },
+      agentPresets: { composedPreset: () => undefined, remove },
+    }
+    const service = new PaimindAgentProfileService(context as never, {
+      presetRoot, stateRoot: join(base, '.state'), now: () => 100,
+    })
+
+    for (const presetId of ['referenced-agent', 'disposable-agent']) {
+      const source = join(presetRoot, presetId)
+      await mkdir(source, { recursive: true })
+      await writeFile(join(source, 'agent.cordis.yml'), "- id: persona\n  name: '@deepseek-ai/dsh-persona'\n  config:\n    text: base\n")
+      await writeFile(join(source, 'preset.yml'), `name: ${presetId}\n`)
+      await service.saveProfile({
+        agentId: presetId, presetId, name: presetId, description: '', basePresetId: 'standard',
+        role: 'Role', goal: 'Goal', behavior: 'Behavior', preferredSkillNames: [], instructions: '',
+      })
+    }
+    const referenced = (await service.listProfiles()).profiles.find(row => row.presetId === 'referenced-agent')!
+    await service.bindSession({
+      sessionId: 'session-kept', agentId: referenced.agentId, presetId: referenced.presetId,
+      configVersion: referenced.configVersion, purpose: 'conversation',
+    })
+
+    await expect(service.removeProfile({ presetId: 'referenced-agent' }))
+      .rejects.toThrow('仍被 1 个历史会话使用')
+    expect(remove).not.toHaveBeenCalled()
+    await expect(service.removeProfile({ presetId: 'disposable-agent' })).resolves.toEqual({
+      presetId: 'disposable-agent', removed: true,
+    })
+    expect(remove).toHaveBeenCalledWith('disposable-agent')
+  })
+
   it('builds migration summaries from visible human and assistant messages only', () => {
     const summary = summarizeConversationEvents([
       { type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Need a plan' }] } },

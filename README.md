@@ -6,6 +6,9 @@ The durable program scope and autonomous gate policy are defined in [`docs/plans
 
 ## Development
 
+`main` is the single active product line. Enterprise work remains paused and isolated.
+See the [product roadmap](docs/plans/plugin-product-roadmap.md) for integration scope.
+
 ```bash
 pnpm install
 pnpm run check

@@ -52,6 +52,7 @@ const authoringTurnInput = z.object({
   locale: z.string().min(2).max(35).regex(/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i),
 }).strict().readonly()
 const authoringPrepared = z.object({ sessionId, agentPreset: id, prepared: z.literal(true) }).strict().readonly()
+const removedProfile = z.object({ presetId: id, removed: z.literal(true) }).strict().readonly()
 
 const direct = (method: string, parameters: readonly unknown[], result: unknown, line: number) => ({
   id: `@paimind/agent-builder#paimindAgentProfiles/${method}`,
@@ -66,6 +67,7 @@ export const PAIMIND_AGENT_PROFILE_REMOTE_DESCRIPTORS = Object.freeze([
   direct('listProfiles', [], z.object({ profiles: z.array(profile).readonly() }).readonly(), 246),
   direct('saveProfile', input(profileInput, '@paimind/agent-builder#AgentBusinessProfileInput'), profile, 260),
   direct('setDefault', input(z.object({ presetId: id }).readonly(), '@paimind/agent-builder#AgentDefaultInput'), z.object({ presetId: id }).readonly(), 300),
+  direct('removeProfile', input(z.object({ presetId: id }).readonly(), '@paimind/agent-builder#AgentRemoveInput'), removedProfile, 301),
   direct('sealAuthoringSession', input(z.object({ sessionId }).readonly(), '@paimind/agent-builder#AgentAuthoringSealInput'), authoringSeal, 340),
   direct('prepareAuthoringTurn', input(authoringTurnInput, '@paimind/agent-builder#AgentAuthoringTurnInput'), authoringPrepared, 535),
   direct('bindSession', input(bindingInput, '@paimind/agent-builder#AgentSessionBindingInput'), binding, 311),

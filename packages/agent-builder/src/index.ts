@@ -228,6 +228,7 @@ export interface AgentBuilderHostContext {
   }
   readonly agentPresets: {
     composedPreset(agentContext: AgentBuilderHostAgent['ctx']): string | undefined
+    remove?(id: string): Promise<void>
   }
   get(name: 'settings'): PaimindHostSettingsFacility | undefined
   get(name: 'paimindAgentProfiles'): AgentBusinessSkillSelectionSource | undefined
@@ -1128,6 +1129,28 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
     if (descriptor === undefined || !descriptor.writable) throw new Error('当前 Harness 设置不可写')
     await mutatePaimindHostSettings(settings, 'agent-presets', 'default', presetId, descriptor.revision)
     return Object.freeze({ presetId })
+  }
+
+  /**
+   * Delete an unreferenced PAIMind Agent through its native Preset owner.
+   * A durable Session can only be reconstructed while its selected Preset
+   * still exists, so deleting a referenced Preset would corrupt cold resume.
+   */
+  async removeProfile(input: { readonly presetId: string }): Promise<Readonly<{
+    readonly presetId: string
+    readonly removed: true
+  }>> {
+    const presetId = validateId(input.presetId, '预设标识')
+    const profile = (await this.listProfiles()).profiles.find(row => row.presetId === presetId)
+    if (profile === undefined) throw new Error('智能体不存在或已经删除')
+    const state = await this.readState()
+    const referenced = Object.values(state.bindings).filter(binding => binding.presetId === presetId)
+    if (referenced.length > 0) {
+      throw new Error(`该智能体仍被 ${referenced.length} 个历史会话使用；请先迁移或删除这些会话，再删除智能体`)
+    }
+    if (this.agentCtx.agentPresets.remove === undefined) throw new Error('当前 Harness 不支持删除个人智能体')
+    await this.agentCtx.agentPresets.remove(presetId)
+    return Object.freeze({ presetId, removed: true })
   }
 
   /** Validate one native Standard authoring Session. Its workflow comes from the canonical bundled Skill. */

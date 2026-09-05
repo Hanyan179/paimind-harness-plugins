@@ -102,6 +102,13 @@ describe('Workspace Blueprint materializer', () => {
     const receiptPath = join(first, '.paimind', 'workspace-blueprint.json')
     const receipt = await readFile(receiptPath)
     const parsedReceipt = JSON.parse(receipt.toString('utf8'))
+    await writeFile(receiptPath, JSON.stringify({
+      ...parsedReceipt,
+      packageDigest: 'sha256:fe6842f1d54038924ebdea5c60f54ff002742ab2cba08cb835c1f5c738641693',
+    }))
+    await expect(catalog.getWorkspaceComposition({ workspaceId: 'workspace-1' })).resolves.toEqual({
+      schema: 'paimind.workspace-composition/v1', workspaceId: 'workspace-1', businessSkills: [],
+    })
     await writeFile(join(first, '.paimind', 'workspace-blueprint.json'), '{"recommendations":{}}')
     await expect(catalog.getWorkspaceComposition({ workspaceId: 'workspace-1' }))
       .rejects.toThrow('receipt is invalid')

@@ -71,6 +71,13 @@ interface SourceManifest {
   readonly category: WorkspaceBlueprintCategory
   readonly tags: readonly string[]
   readonly source: 'builtin' | 'user'
+  /**
+   * Explicitly declared digests from an already-materialized release whose
+   * bytes changed without a version bump. This is a narrow compatibility
+   * bridge for existing receipts, not permission to mutate a published
+   * package: every future content change must still publish a new version.
+   */
+  readonly compatibleReceiptDigests?: readonly `sha256:${string}`[]
   readonly digest?: string
   readonly fileCount?: number
   readonly totalBytes?: number
@@ -103,6 +110,7 @@ interface LoadedBlueprint {
   readonly manifest: Readonly<WorkspaceBlueprintManifest>
   readonly root: string
   readonly tree: Readonly<ScannedTree>
+  readonly compatibleReceiptDigests: readonly `sha256:${string}`[]
 }
 
 interface CompositionReceipt {
@@ -337,7 +345,7 @@ function parseSourceManifest(value: unknown, expectedSource: 'builtin' | 'user')
   if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error('Workspace Blueprint manifest is invalid')
   assertOnlyKeys(value, new Set([
     'schema', 'blueprintId', 'version', 'name', 'description', 'category', 'tags', 'source',
-    'digest', 'fileCount', 'totalBytes', 'createdAt', 'updatedAt', 'composition',
+    'digest', 'fileCount', 'totalBytes', 'createdAt', 'updatedAt', 'composition', 'compatibleReceiptDigests',
   ]), 'Workspace Blueprint manifest')
   const candidate = value as Partial<SourceManifest>
   if (candidate.schema !== MANIFEST_SCHEMA || typeof candidate.blueprintId !== 'string'
@@ -356,6 +364,15 @@ function parseSourceManifest(value: unknown, expectedSource: 'builtin' | 'user')
   if (candidate.totalBytes !== undefined && (!Number.isSafeInteger(candidate.totalBytes) || candidate.totalBytes < 0)) {
     throw new Error('Workspace Blueprint size is invalid')
   }
+  if (candidate.compatibleReceiptDigests !== undefined
+    && (!Array.isArray(candidate.compatibleReceiptDigests) || candidate.compatibleReceiptDigests.length > 20)) {
+    throw new Error('Workspace Blueprint compatible receipt digests are invalid')
+  }
+  const compatibleReceiptDigests = Object.freeze([...new Set((candidate.compatibleReceiptDigests ?? []).map(value => {
+    if (typeof value !== 'string') throw new Error('Workspace Blueprint compatible receipt digest is invalid')
+    assertDigest(value)
+    return value
+  }))].sort((left, right) => left.localeCompare(right)))
   const createdAt = candidate.createdAt ?? 0
   const updatedAt = candidate.updatedAt ?? createdAt
   if (!Number.isSafeInteger(createdAt) || createdAt < 0 || !Number.isSafeInteger(updatedAt) || updatedAt < createdAt) {
@@ -370,6 +387,7 @@ function parseSourceManifest(value: unknown, expectedSource: 'builtin' | 'user')
     category: candidate.category,
     tags: frozenUnique(candidate.tags, 20),
     source: expectedSource,
+    compatibleReceiptDigests,
     ...(candidate.digest === undefined ? {} : { digest: candidate.digest }),
     ...(candidate.fileCount === undefined ? {} : { fileCount: candidate.fileCount }),
     ...(candidate.totalBytes === undefined ? {} : { totalBytes: candidate.totalBytes }),
@@ -746,8 +764,10 @@ export class WorkspaceBlueprintCatalog {
       blueprintId: receipt.blueprintId,
       version: receipt.version,
     })
+    const digestMatches = blueprint.manifest.digest === receipt.packageDigest
+      || blueprint.compatibleReceiptDigests.includes(receipt.packageDigest)
     if (blueprint.manifest.source !== receipt.source
-      || blueprint.manifest.digest !== receipt.packageDigest
+      || !digestMatches
       || !sameComposition(blueprint.manifest.composition, receipt.composition)) {
       throw new Error('Workspace Blueprint composition receipt does not match its immutable package')
     }
@@ -1007,7 +1027,12 @@ export class WorkspaceBlueprintCatalog {
         identities.add(identity)
         const filesRoot = join(versionRoot, 'files')
         const tree = await scanTree(filesRoot)
-        items.push(Object.freeze({ manifest: manifestFromSource(source, tree), root: filesRoot, tree }))
+        items.push(Object.freeze({
+          manifest: manifestFromSource(source, tree),
+          root: filesRoot,
+          tree,
+          compatibleReceiptDigests: source.compatibleReceiptDigests ?? Object.freeze([]),
+        }))
       }
     }
     return Object.freeze(items)

@@ -9,6 +9,9 @@
   "source": "builtin",
   "createdAt": 0,
   "updatedAt": 0,
+  "compatibleReceiptDigests": [
+    "sha256:9b24e150c3a6c344239d39964e54bb6c09e77768bb15472fb793d040da799106"
+  ],
   "composition": {
     "agent": null,
     "businessSkills": []

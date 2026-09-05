@@ -7,18 +7,18 @@
       "path": "packages/agent-builder",
       "contractSha256": "a4f4e6d18bd298449b0386973329b008f9ea8d8533253b4aab40ce3234ba8b23",
       "runtimeExportCount": 5,
-      "runtimeExportSha256": "2b8b3498c239178e7b415f5ef80dfcb6fb6933ba20e86ec548d2e1ec32c6656d",
+      "runtimeExportSha256": "a2e0c64298c59613dca138266d2a7be45097839abf575799ec282be47e5d080a",
       "declarationCount": 5,
-      "declarationSha256": "57b305b88605b10c941fa83f02ac82bca93a08d0134d343573e58abb1b1c38cb",
+      "declarationSha256": "5e920031cfe61376911d6b450b86749568a0ba71ee3fb391c97449ab9b3c81ed",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@paimind/agent-market": {
       "path": "packages/agent-market",
       "contractSha256": "06a138cf8ebb5b1095f2c33e5f41654abcb77c0c613f3722e989daee911b1bea",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "d4c845444abdd25a91dcdce598217603a6cabd7ac93ec8374460070b09c6cfc7",
+      "runtimeExportSha256": "f12cff8715bc3c55372520661e2fb134577dfa6984a0028c9628a471978d0fd9",
       "declarationCount": 5,
-      "declarationSha256": "1a27bee4c506d7dd3b46f89c93505cf2ee2e12bde4c539ee678ddb284958ea16",
+      "declarationSha256": "9329ca7f7fb56b480f07ca7ab8c3ba379c0eecc7aeb7b83ec16fb06a5a672e56",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@paimind/artifact-runtime": {
@@ -349,7 +349,7 @@
       "path": "packages/workspace-blueprints",
       "contractSha256": "c2326cb8c926d2a929f2a6644aeca2f5286f3c28c5fbf35c38e0dbb159635dd9",
       "runtimeExportCount": 7,
-      "runtimeExportSha256": "cecde28b4af659e0238facc955373ad4726e541f6194a863dd66cfe5b5c23af7",
+      "runtimeExportSha256": "575c9ff0d1b4a654b1fcd454ccbccaeb3daac8381b864f0063d8545a5e1ed7ac",
       "declarationCount": 8,
       "declarationSha256": "550b46cd0d19d38cc0583d6b428ec49cb722c9759c359f5036e37d855a0b5c98",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"

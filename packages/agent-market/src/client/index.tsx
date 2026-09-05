@@ -130,6 +130,7 @@ interface AgentProfilesRemoteNamespace {
   listProfiles(): Promise<HarnessRemoteResult<Readonly<AgentProfileSnapshot>>>
   saveProfile(input: AgentBusinessProfileInput): Promise<HarnessRemoteResult<Readonly<AgentBusinessProfile>>>
   setDefault(input: { readonly presetId: string }): Promise<HarnessRemoteResult<{ readonly presetId: string }>>
+  removeProfile(input: { readonly presetId: string }): Promise<HarnessRemoteResult<Readonly<{ readonly presetId: string; readonly removed: true }>>>
   sealAuthoringSession(input: { readonly sessionId: string }): Promise<HarnessRemoteResult<Readonly<{
     readonly sessionId: string
     readonly agentPreset: 'standard'
@@ -2494,11 +2495,10 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     return saved
   }
   const remove = async (profile: AgentBusinessProfile): Promise<void> => {
-    if (!window.confirm(zh ? `删除“${profile.name}”？已有对话会保留历史记录。` : `Delete “${profile.name}”? Existing conversations keep their history.`)) return
+    if (!window.confirm(zh ? `删除“${profile.name}”？仍被历史会话使用的智能体会被安全拦截。` : `Delete “${profile.name}”? Agents still referenced by conversations will be blocked safely.`)) return
     setBusy(true); setError(null)
     try {
-      const result = await props.api.remove({ agentPreset: profile.presetId })
-      if (!result.result.ok) throw new Error(result.result.error.message)
+      remoteValue(await props.profiles.removeProfile({ presetId: profile.presetId }))
       setRevision(value => value + 1)
     } catch (cause) { setError(messageOf(cause)) } finally { setBusy(false) }
   }

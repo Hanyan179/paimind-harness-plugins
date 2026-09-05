@@ -2,7 +2,9 @@
 
 ## Current baseline
 
-- Product Line is the global delivery baseline in `codex/product-latest-20260901`.
+- `main` is the single active Product Line delivery and integration baseline.
+- Existing non-enterprise feature branches are historical pointers whose committed work is already contained in `main`; they are not parallel product lines. New feature work returns to `main` after the repository acceptance gates.
+- `codex/product-latest-20260901` is a historical checkpoint, not a second active product baseline.
 - Enterprise Line is paused and does not block Product Line design, implementation, or acceptance.
 - Desktop packaging is deferred. The current target remains the real DeepSeek Harness web composition.
 - This repository is the single development home for PAIMind features, feature improvements, adapters, shared contracts, compatibility logic, tests, and acceptance evidence.
