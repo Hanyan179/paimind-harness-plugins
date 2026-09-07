@@ -35,7 +35,8 @@
     "@paimind/contracts": "workspace:^",
     "@paimind/harness-compat": "workspace:^",
     "@paimind/skill-market": "workspace:^",
-    "@paimind/ui-foundation": "workspace:^"
+    "@paimind/ui-foundation": "workspace:^",
+    "@paimind/mcp-center": "workspace:^"
   },
   "peerDependencies": { "react": ">=18.0.0 <20.0.0" },
   "devDependencies": {

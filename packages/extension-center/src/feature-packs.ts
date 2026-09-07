@@ -58,7 +58,7 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
     descriptionZh: '业务智能体目录、创建与技能能力管理。',
     descriptionEn: 'Business Agent catalog, authoring, and Skill capability management.',
     requiredPackIds: [],
-    packageNames: ['@paimind/skill-market', '@paimind/agent-builder', '@paimind/agent-market'],
+    packageNames: ['@paimind/skill-market', '@paimind/agent-builder', '@paimind/agent-market', '@paimind/mcp-center', '@paimind/feishu-cli-mcp'],
     capabilities: [],
   }),
   pack({

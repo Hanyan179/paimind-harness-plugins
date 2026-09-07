@@ -5,6 +5,7 @@ const sessionId = z.string().min(1).max(200)
 const profile = z.object({
   agentId: id, presetId: id, name: z.string(), description: z.string(), basePresetId: id,
   role: z.string(), goal: z.string(), behavior: z.string(),
+  connectionIds: z.array(z.string().regex(/^[a-f0-9]{32}$/)).max(100).readonly().optional(),
   preferredSkillNames: z.array(z.string()).readonly(), instructions: z.string(),
   avatarId: id.optional(),
   productKind: z.enum(['personal', 'business']), businessCategory: z.string().optional(), businessCategoryId: id.optional(),
@@ -15,6 +16,7 @@ const profile = z.object({
 const profileInput = z.object({
   agentId: id, presetId: id, name: z.string(), description: z.string(), basePresetId: id,
   role: z.string(), goal: z.string(), behavior: z.string(),
+  connectionIds: z.array(z.string().regex(/^[a-f0-9]{32}$/)).max(100).readonly().optional(),
   preferredSkillNames: z.array(z.string()).readonly(), instructions: z.string(),
   avatarId: id.optional(),
   productKind: z.enum(['personal', 'business']).optional(), businessCategory: z.string().optional(), businessCategoryId: id.optional(),

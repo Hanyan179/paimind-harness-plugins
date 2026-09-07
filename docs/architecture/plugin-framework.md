@@ -224,3 +224,18 @@ always default to the machine-readable compatibility matrix; explicit command
 options are overrides for isolated candidate verification.
 
 The real-composition script validates the exact provider package and public service markers, creates an isolated temporary `DSH_HOME`, initializes the native Web profile, installs Better Sidebar plus the local PAIMind bundle and every currently migrated feature package, verifies one provider row and every served client manifest, removes them, verifies native restoration, and checks that the Harness Git worktree did not change.
+
+
+## Personal MCP connection ownership
+
+`@paimind/mcp-center` owns personal connection configuration and owner identity. Agent Builder stores only `connectionIds` beside its existing profile fields; it preserves omitted references for existing callers and updates live scopes after explicit save. The center reads the public Agent-profile service, never the profile repository directly.
+
+`@paimind/harness-compat/native-mcp` mounts the selected native MCP client in each actual Agent context. Native MCP reserves server names application-wide, so each connection/Agent pair receives a stable hashed namespace. Native tools, reconnection and transport disposal remain with Harness; the center keeps only transient handles and a synchronous eligibility guard. There is no generic tool-call management RPC.
+
+`McpConnectionRepository`, `McpOwnerResolver` and `McpRuntimeProjection` separate storage, ownership and execution location for future enterprise implementations. The local owner represents the operating-system account, not tenant authentication. Agent references are capability selection, not a multi-user security boundary.
+
+The Center does not depend on any vendor adapter. Its local `registerTemplate` contract accepts validated stdio/HTTP defaults and returns a source-owned disposer; only listable UI presets are held in memory. Registration is not exposed over Remote, does not save connections, and does not register tools. The bundle may separately load `@paimind/feishu-cli-mcp` as an optional template contributor.
+
+The separate `@paimind/feishu-cli-mcp` adapter fixes an explicit local CLI profile, runs document operations as the user, and returns CLI outcomes through the official MCP SDK. Protocol probes do not invoke business tools. Test evidence is process-local and must not be confused with persisted configuration or durable business acceptance.
+
+See [scope and acceptance](../plans/mcp-center-feishu.md).

@@ -1,6 +1,6 @@
 import { readFile, readdir, rm } from 'node:fs/promises'
 import { createRequire } from 'node:module'
-import { dirname, resolve } from 'node:path'
+import { dirname, relative, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { build } from 'esbuild'
 
@@ -25,10 +25,11 @@ const rawImportPlugin = {
         kind: args.kind,
       })
       if (resolved.errors.length > 0) return resolved
-      return { path: resolved.path, namespace: 'paimind-raw-file' }
+      // Keep generated module labels stable across local checkouts and worktrees.
+      return { path: relative(root, resolved.path).replaceAll('\\', '/'), namespace: 'paimind-raw-file' }
     })
     api.onLoad({ filter: /.*/, namespace: 'paimind-raw-file' }, async args => ({
-      contents: await readFile(args.path, 'utf8'),
+      contents: await readFile(resolve(root, args.path), 'utf8'),
       loader: 'text',
     }))
   },

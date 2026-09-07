@@ -57,6 +57,7 @@ import {
   type TaskMonitorViewModel,
   type TaskMonitorWorkflowStatus,
 } from '../index.js'
+import { taskResourceReader, taskCapabilities, type TaskResourceReader, type TaskResourceConfiguration, type CapabilityValue } from './resources.js'
 
 export const inject = ['slots', 'locale', 'sessions', 'workspaces', 'paimindArtifacts', 'paimindWorkspaceProject']
 
@@ -399,7 +400,7 @@ function SubagentRows(props: {
     data-paimind-task-subagent
     aria-label={props.zh ? `打开子代理：${row.label}` : `Open Subagent: ${row.label}`}
     onClick={() => { props.onOpen(row.id, row.mode) }}
-  ><SubagentAvatar label={row.label} slot={row.visualSlot} /><span data-paimind-task-row-main><strong title={row.label}>{row.label}</strong><small>{row.agentPreset ?? row.id}</small></span><span data-paimind-task-row-meta>{row.status}<PaimindChevronRightIcon size={12} /></span></button></li>)}</ul>
+  ><SubagentAvatar label={row.label} slot={row.visualSlot} /><span data-paimind-task-row-main><strong title={row.label}>{row.label}</strong>{row.agentPreset !== undefined && <small>{row.agentPreset}</small>}</span><span data-paimind-task-row-meta>{row.status}<PaimindChevronRightIcon size={12} /></span></button></li>)}</ul>
 }
 
 function FoldedSubagents(props: {
@@ -415,15 +416,14 @@ function FoldedSubagents(props: {
 }
 
 function CapabilityRows(props: {
-  readonly values: readonly { readonly key: string; readonly text: string }[]
+  readonly values: readonly CapabilityValue[]
   readonly zh: boolean
   readonly kind: 'skill' | 'mcp'
   readonly Icon: LucideIcon
 }): React.JSX.Element {
   const rows = (values: typeof props.values): React.JSX.Element => <>{values.map(value => <li key={value.key} data-paimind-task-capability-row data-kind={props.kind}>
     <span data-paimind-task-capability-icon data-kind={props.kind} aria-hidden="true"><props.Icon size={15} /></span>
-    <span data-paimind-task-capability-copy><small>{props.kind === 'skill' ? 'Skill' : 'MCP'}</small><strong>{value.text}</strong></span>
-    <span data-paimind-task-capability-meta>{props.zh ? '已使用' : 'Used'}</span>
+    <span data-paimind-task-capability-copy><small>{props.kind === 'skill' ? (props.zh ? '技能' : 'Skill') : (props.zh ? '工具连接' : 'Tool connection')}</small><strong title={value.text}>{value.text}</strong><small data-paimind-task-capability-state>{value.status}</small></span>
   </li>)}</>
   const primary = props.values.slice(0, RESOURCE_ROW_LIMIT)
   const remaining = props.values.slice(RESOURCE_ROW_LIMIT)
@@ -478,33 +478,37 @@ function Resources(props: {
   readonly view: TaskMonitorViewModel
   readonly zh: boolean
   readonly loading: boolean
+  readonly configuration?: TaskResourceConfiguration | undefined
   readonly subagentAnchorId: string
   readonly onSubagent: (id: string, mode: 'one-shot' | 'continuable') => void
 }): React.JSX.Element {
   const { view, zh } = props
-  const mainAgentLabel = view.session.agentPreset ?? (zh ? '主 Agent' : 'Main Agent')
+  const config = props.configuration
+  const mainAgentLabel = (view.session.agentPreset === undefined ? undefined : config?.names[view.session.agentPreset]) ?? (zh ? '当前智能体' : 'Current Agent')
   const hasMainAgent = view.session.agentPreset !== undefined || view.model !== undefined
   const subagentSlots = new Map(view.subagents.map((subagent, index) => [subagent.id, index]))
   const subagentRows = view.subagents.map((subagent: TaskMonitorSubagentView): SubagentRowData => ({
     id: subagent.id,
     label: subagent.label,
-    ...(subagent.agentPreset === undefined ? {} : { agentPreset: subagent.agentPreset }),
+    ...(subagent.agentPreset === undefined || config?.names[subagent.agentPreset] === undefined ? {} : { agentPreset: config.names[subagent.agentPreset] }),
     mode: subagent.mode,
     running: subagent.activity === 'running',
     status: subagent.activity === 'running' ? (zh ? '进行中' : 'Running') : (zh ? '空闲' : 'Inactive'),
     visualSlot: subagentSlots.get(subagent.id) ?? 0,
   }))
-  const skillValues = view.skills.map(skill => ({ key: `skill:${skill}`, text: skill }))
-  const mcpValues = view.mcps.filter(mcp => mcp.status === 'used').map(mcp => ({ key: `mcp:${mcp.server}`, text: mcp.server }))
+  const { skills: skillValues, mcps: mcpValues } = taskCapabilities(view, config, zh)
   return <div data-paimind-task-resource-list aria-busy={props.loading}>
     {(hasMainAgent || subagentRows.length > 0) && <div data-paimind-task-agent-group>
       {hasMainAgent && <div data-paimind-task-main-agent>
         <span data-paimind-task-main-agent-icon aria-hidden="true"><PaimindAgentIcon size={15} /></span>
-        <span data-paimind-task-main-agent-copy><small>{zh ? '主 Agent' : 'Main Agent'}</small><strong>{mainAgentLabel}</strong></span>
-        <span data-paimind-task-main-agent-role>{zh ? '负责人' : 'Lead'}</span>
+        <span data-paimind-task-main-agent-copy><small>{zh ? '当前智能体' : 'Current Agent'}</small><strong>{mainAgentLabel}</strong></span>
       </div>}
       {subagentRows.length > 0 && <div id={props.subagentAnchorId} data-paimind-task-anchor data-paimind-task-agent-children tabIndex={-1}><FoldedSubagents rows={subagentRows} zh={zh} onOpen={props.onSubagent} /></div>}
     </div>}
+    {(config?.skillNames.length ?? 0) + (config?.connectionIds.length ?? 0) > 0 && <p data-paimind-task-empty>{zh ? '挂载来自智能体当前配置；加载与使用情况来自本会话。' : 'Configured resources reflect the current Agent configuration; loading and usage reflect this session.'}</p>}
+    {props.loading && <span data-paimind-task-empty role="status">{zh ? '正在读取会话能力…' : 'Loading session capabilities…'}</span>}
+    {(config?.profiles === 'error' || config?.profiles === 'unavailable') && <span data-paimind-task-empty>{zh ? '智能体配置暂不可用，以下仅展示已知会话记录。' : 'Agent configuration is unavailable; only known session evidence is shown.'}</span>}
+    {(config?.mcps === 'error' || config?.mcps === 'unavailable') && mcpValues.length > 0 && <span data-paimind-task-empty>{zh ? '连接详情暂不可用。' : 'Connection details are unavailable.'}</span>}
     {skillValues.length > 0 && <CapabilityRows values={skillValues} zh={zh} kind="skill" Icon={PaimindSkillIcon} />}
     {mcpValues.length > 0 && <CapabilityRows values={mcpValues} zh={zh} kind="mcp" Icon={PaimindMcpIcon} />}
   </div>
@@ -518,6 +522,7 @@ export interface TaskMonitorActionProps extends PaimindSessionHeaderActionProps 
   readonly projects: PaimindWorkspaceProjectService
   readonly sessionLog?: TaskMonitorSessionLogService
   readonly sessionHistory?: HarnessSessionHistoryApi
+  readonly readResources?: TaskResourceReader
 }
 
 function sessionHistoryApiOf(ctx: TaskMonitorClientContext): HarnessSessionHistoryApi | undefined {
@@ -630,6 +635,28 @@ export function TaskMonitorAction(props: TaskMonitorActionProps): React.JSX.Elem
     ...(project === undefined ? {} : { projectTitle: project.title, projectPath: project.path }),
   }), [props.sessionId, sessionsSnapshot, conversation, goal, todos, plan, artifactSnapshot, project, resourceHistory])
   const [open, setOpen] = useState(false)
+  const [configuration, setConfiguration] = useState<TaskResourceConfiguration>()
+  const [configurationLoading, setConfigurationLoading] = useState(false)
+  const currentConfiguration = configuration?.sessionId === props.sessionId && configuration.presetId === view.session.agentPreset ? configuration : undefined
+  useEffect(() => {
+    if (!open || props.readResources === undefined) return
+    let active = true, pending = false
+    setConfiguration(undefined)
+    setConfigurationLoading(true)
+    const refresh = async (): Promise<void> => {
+      if (pending) return
+      pending = true
+      try {
+        const result = await props.readResources!(props.sessionId, view.session.agentPreset)
+        if (active) setConfiguration(result)
+      } catch {
+        if (active) setConfiguration({ sessionId: props.sessionId, ...(view.session.agentPreset === undefined ? {} : { presetId: view.session.agentPreset }), names: {}, skillNames: [], connectionIds: [], connections: [], profiles: 'error', mcps: 'error' })
+      } finally { pending = false; if (active) setConfigurationLoading(false) }
+    }
+    void refresh()
+    const timer = setInterval(() => { void refresh() }, 5000)
+    return () => { active = false; clearInterval(timer) }
+  }, [open, props.readResources, props.sessionId, view.session.agentPreset])
   const [navigationError, setNavigationError] = useState<string | undefined>()
   const [now, setNow] = useState(() => Date.now())
   const [position, setPosition] = useState<CSSProperties>({})
@@ -753,7 +780,7 @@ export function TaskMonitorAction(props: TaskMonitorActionProps): React.JSX.Elem
   ]
   const sections: readonly { readonly key: string; readonly visible: boolean; readonly id?: string; readonly title: string; readonly content: ReactNode }[] = [
     { key: 'progress', visible: hasProgress, title: zh ? '任务进度' : 'Task Progress', content: <ProgressSection view={view} zh={zh} now={now} todoAnchorId={todoAnchorId} /> },
-    { key: 'resources', visible: hasResources, title: zh ? 'Agent、Skill 与 MCP' : 'Agent, Skill & MCP', content: <Resources view={view} zh={zh} loading={resourceHistoryLoading} subagentAnchorId={subagentAnchorId} onSubagent={openSubagent} /> },
+    { key: 'resources', visible: hasResources, title: zh ? '智能体、技能与连接' : 'Agent, skills & connections', content: <Resources view={view} zh={zh} configuration={currentConfiguration} loading={resourceHistoryLoading || configurationLoading} subagentAnchorId={subagentAnchorId} onSubagent={openSubagent} /> },
     { key: 'inputs', visible: view.inputs.length > 0, title: zh ? '输入文件' : 'Input Files', content: <Files files={view.inputs} zh={zh} onOpen={openFile} /> },
     { key: 'outputs', visible: view.outputs.length > 0, id: outputAnchorId, title: zh ? '输出与产物' : 'Outputs & Artifacts', content: <Files files={view.outputs} zh={zh} onOpen={openFile} /> },
   ]
@@ -792,6 +819,7 @@ function HiddenHeaderSeat(): null { return null }
 export function apply(ctx: TaskMonitorClientContext): void {
   const sessionLog = sessionLogServiceOf(ctx)
   const sessionHistory = sessionHistoryApiOf(ctx)
+  const readResources = taskResourceReader(ctx as { get?(name: string): unknown })
   contributePaimindExtension(ctx.slots, {
     id: 'paimind:task-monitor', packageName: '@paimind/task-monitor', category: 'automation',
     nameZh: '任务监控', nameEn: 'Task Monitor',
@@ -814,6 +842,6 @@ export function apply(ctx: TaskMonitorClientContext): void {
   ctx.slots.inject('conversation.session.header.utilities', () => [
     ctx.slots.register({
       name: 'conversation.session.header.utilities', id: 'session-log-download', order: 0, priority: HEADER_SHADOW_PRIORITY,
-    }, (slotProps: PaimindSessionHeaderActionProps) => <TaskMonitorBoundary {...slotProps} locale={ctx.locale} sessions={ctx.sessions} workspaces={ctx.workspaces} artifacts={ctx.paimindArtifacts} projects={ctx.paimindWorkspaceProject} {...(sessionLog === undefined ? {} : { sessionLog })} {...(sessionHistory === undefined ? {} : { sessionHistory })} />),
+    }, (slotProps: PaimindSessionHeaderActionProps) => <TaskMonitorBoundary {...slotProps} locale={ctx.locale} sessions={ctx.sessions} workspaces={ctx.workspaces} artifacts={ctx.paimindArtifacts} projects={ctx.paimindWorkspaceProject} readResources={readResources} {...(sessionLog === undefined ? {} : { sessionLog })} {...(sessionHistory === undefined ? {} : { sessionHistory })} />),
   ])
 }

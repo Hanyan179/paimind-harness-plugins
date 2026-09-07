@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
+import { ResourceNavigationSlot } from './resource-navigation.js'
 import {
   contributePaimindExtension,
   installHarnessSettingsNavigationIcons,
@@ -1501,6 +1502,11 @@ export function apply(ctx: VisualExperienceClientContext): void {
   ctx.effect(() => () => { mode.dispose() }, 'paimind-visual-experience: mode controller')
   ctx.effect(() => installExperienceRuntime(ctx, mode), 'paimind-visual-experience: reversible runtime')
   ctx.effect(() => installAgentExperience(ctx, mode), 'paimind-visual-experience: native Agent bridge')
+
+  ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({
+    name: 'sidebar.footer.action', id: 'paimind-resource-navigation', order: -30,
+    inject: () => ({ mode, locale: ctx.locale }),
+  }, ResourceNavigationSlot))
 
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay',

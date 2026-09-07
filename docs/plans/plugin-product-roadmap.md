@@ -80,3 +80,8 @@ A capability is not complete until all applicable checks pass:
 - real Harness composition on the selected compatibility matrix;
 - browser acceptance of the primary user journey, empty/loading/error states, and responsive behavior;
 - recorded evidence that the capability does not duplicate another plugin’s surface, state, runtime service, or compatibility adapter.
+
+
+## 2026-09-07 approved connection-center slice
+
+The approved [MCP Center and local Feishu plan](mcp-center-feishu.md) adds a separate connection-management plugin to the existing Agent/Skill product pack, plus a separate CLI protocol adapter. The ownership/conflict review is recorded in that plan. Human-writing and managed Feishu resources remain user-installed Business Skills in `resources/business-skills`; installing the plugin never injects them globally. This local acceptance slice does not implement enterprise identity, remote employee devices, shared tenancy or multi-user isolation, and does not displace the user's enterprise priority.

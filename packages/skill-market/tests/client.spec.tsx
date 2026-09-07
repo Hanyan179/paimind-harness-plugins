@@ -153,16 +153,128 @@ describe('Skill Market business UI', () => {
     expect(document.head.contains(style)).toBe(false)
   })
 
-  it('uses market, built-in, and installed as the three primary views', async () => {
+  it('uses all Skills, built-in, and installed as the three primary views', async () => {
     const native = runtime()
     render(<SkillMarketSection close={() => {}} installer={installer() as never} sessions={native.sessions} locale={locale()} />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'View: openai-docs' })).toBeInTheDocument())
-    expect(screen.getByRole('tab', { name: 'Market' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'All Skills' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tab', { name: 'Built-in' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Installed' })).toBeInTheDocument()
     expect(screen.queryByText(/runtime id|host path|not exposed|hash/i)).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: 'Installed' }))
     expect(screen.getByText(/No personal Skills installed/)).toBeInTheDocument()
+  })
+
+  it('unifies installed-only Skills and catalog entries without duplicate names or divergent descriptions', async () => {
+    const native = runtime()
+    const items = [
+      { skillId: 'openai-docs', name: 'openai-docs', description: 'My installed documentation workflow', managed: true, sourceFileName: 'docs.zip', digest: recommendations[0].digest, runtimeRequirements: [] },
+      { skillId: 'human-writing', name: 'human-writing', description: 'Private writing workflow', managed: true, sourceFileName: 'human-writing.zip', digest: 'local', runtimeRequirements: [] },
+    ]
+    const host = installer(items)
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    await screen.findByRole('button', { name: 'View: human-writing' })
+    expect(screen.getAllByRole('button', { name: /^View:/ })).toHaveLength(3)
+    expect(screen.getByRole('tab', { name: 'All Skills' })).toHaveTextContent('3')
+    expect(screen.getByRole('tab', { name: 'Installed' })).toHaveTextContent('2')
+    expect(screen.getByRole('button', { name: 'View: openai-docs' })).toHaveTextContent(items[0]!.description)
+    fireEvent.change(screen.getByLabelText('Filter by install status'), { target: { value: 'installed' } })
+    expect(screen.getAllByRole('button', { name: /^View:/ })).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: 'View: human-writing' }))
+    expect(screen.queryByRole('button', { name: 'Review and install' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Update' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Manage Skill' }))
+    expect(screen.getByRole('heading', { name: 'human-writing' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'View installed: openai-docs' })).toHaveTextContent(items[0]!.description)
+    expect(host.installUpload).not.toHaveBeenCalled()
+    expect(host.replaceUserSkillPolicy).not.toHaveBeenCalled()
+  })
+
+  it('filters catalog membership and local source across all and installed views', async () => {
+    const native = runtime()
+    const host = installer([
+      { skillId: 'private-note', name: 'private-note', description: 'Private note', sourceFileName: 'Skill Center package editor', managed: true, digest: 'a', runtimeRequirements: [] },
+      { skillId: 'human-writing', name: 'human-writing', description: 'Private writing', sourceFileName: 'human-writing.zip', managed: true, digest: 'b', runtimeRequirements: [] },
+      { skillId: 'external-note', name: 'external-note', description: 'External note', sourceFileName: 'SKILL.md', managed: false, digest: 'c', runtimeRequirements: [] },
+    ])
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    await screen.findByRole('button', { name: 'View: human-writing' })
+    const source = screen.getByLabelText('Filter by source')
+    fireEvent.change(source, { target: { value: 'catalog' } })
+    expect(screen.getAllByRole('button', { name: /^View:/ })).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: 'View: human-writing' })).toBeNull()
+    fireEvent.change(source, { target: { value: 'created' } })
+    expect(screen.getAllByRole('button', { name: /^View:/ })).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'View: private-note' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Installed' }))
+    expect(screen.getAllByRole('button', { name: /^View installed:/ })).toHaveLength(1)
+    fireEvent.change(source, { target: { value: 'imported' } })
+    expect(screen.getByRole('button', { name: 'View installed: human-writing' })).toBeInTheDocument()
+    fireEvent.change(source, { target: { value: 'external' } })
+    expect(screen.getByRole('button', { name: 'View installed: external-note' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search Skills' }), { target: { value: 'does-not-exist' } })
+    expect(screen.getByText('No installed Skills match these filters.')).toBeInTheDocument()
+    expect(screen.queryByText(/No personal Skills installed/)).toBeNull()
+  })
+
+  it('retains installed-only Skills after catalog failure and recovers a complete union on retry', async () => {
+    const native = runtime()
+    const host = installer([{ skillId: 'human-writing', name: 'human-writing', description: 'Private writing', managed: true, sourceFileName: 'local.zip', digest: 'local', runtimeRequirements: [] }])
+    host.listCatalog.mockResolvedValueOnce({ ok: false, error: { message: 'catalog offline' } })
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    await screen.findByRole('button', { name: 'View: human-writing' })
+    expect(screen.getByRole('alert')).toHaveTextContent('catalog offline')
+    expect(screen.getByRole('tab', { name: 'All Skills' })).toHaveTextContent('1+')
+    fireEvent.click(screen.getByRole('button', { name: 'Manage Skill' }))
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+    fireEvent.click(screen.getByRole('tab', { name: 'All Skills' }))
+    expect(screen.getAllByRole('button', { name: /^View:/ })).toHaveLength(3)
+    expect(screen.getByRole('tab', { name: 'All Skills' })).toHaveTextContent('3')
+    expect(screen.getByRole('tab', { name: 'All Skills' })).not.toHaveTextContent('+')
+  })
+
+  it('does not misreport catalog entries as installable when the installed source fails', async () => {
+    const native = runtime()
+    const host = installer()
+    host.listInstalled.mockRejectedValueOnce(new Error('repository offline'))
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    await screen.findByRole('button', { name: 'View: openai-docs' })
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('repository offline'))
+    expect(screen.getByRole('button', { name: 'View: openai-docs' })).toHaveTextContent('Install status unknown')
+    expect(screen.getByRole('button', { name: 'Review and install' })).toBeDisabled()
+    expect(screen.getByLabelText('Filter by install status')).toBeDisabled()
+    expect(screen.getByRole('tab', { name: 'Installed' })).toHaveTextContent('—')
+    fireEvent.click(screen.getByRole('tab', { name: 'Installed' }))
+    expect(screen.queryByText(/No personal Skills installed/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+    fireEvent.click(screen.getByRole('tab', { name: 'All Skills' }))
+    expect(screen.getByRole('button', { name: 'Review and install' })).toBeEnabled()
+  })
+
+  it.each(['human-writing', 'openai-docs'])('reconciles the union after uninstalling %s without editing the catalog', async name => {
+    const native = runtime()
+    const item = { skillId: name, name, description: 'Local workflow', managed: true, sourceFileName: 'local.zip', digest: 'local', runtimeRequirements: [] }
+    const host = installer([item])
+    host.uninstall.mockImplementationOnce(async () => {
+      host.listInstalled.mockResolvedValue({ ok: true, value: { items: [] } })
+      return { ok: true, value: { skillId: name, removedAt: 1, recoverable: true } }
+    })
+    render(<SkillMarketSection close={() => {}} installer={host as never} sessions={native.sessions} locale={locale()} />)
+    await screen.findByRole('button', { name: `View: ${name}` })
+    fireEvent.click(screen.getByRole('button', { name: `View: ${name}` }))
+    fireEvent.click(screen.getByRole('button', { name: 'Manage Skill' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Uninstall' }))
+    fireEvent.click(screen.getByRole('button', { name: `Uninstall with backup` }))
+    await screen.findByText(/No personal Skills installed/)
+    fireEvent.click(screen.getByRole('tab', { name: 'All Skills' }))
+    expect(screen.getAllByRole('button', { name: /^View:/ })).toHaveLength(2)
+    if (name === 'human-writing') expect(screen.queryByRole('button', { name: 'View: human-writing' })).toBeNull()
+    else expect(screen.getByRole('button', { name: 'View: openai-docs' })).toHaveTextContent('Available')
+    expect(host.inspectCatalog).not.toHaveBeenCalled()
   })
 
   it('places the Center close control in the top-right header and calls close', async () => {
@@ -178,7 +290,7 @@ describe('Skill Market business UI', () => {
     const native = runtime()
     render(<SkillMarketSection close={() => {}} installer={installer() as never} sessions={native.sessions} locale={locale()} />)
     await screen.findByRole('button', { name: 'View: openai-docs' })
-    const market = screen.getByRole('tab', { name: 'Market' })
+    const market = screen.getByRole('tab', { name: 'All Skills' })
     market.focus()
     fireEvent.keyDown(market, { key: 'ArrowRight' })
     expect(screen.getByRole('tab', { name: 'Built-in' })).toHaveAttribute('aria-selected', 'true')

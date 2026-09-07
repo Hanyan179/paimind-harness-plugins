@@ -1,0 +1,58 @@
+{
+  "version": "0.1.0-alpha.0",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts",
+    "lib/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "typecheck": "tsc -b --pretty false"
+  },
+  "name": "@paimind/feishu-cli-mcp",
+  "description": "Controlled local Feishu CLI MCP server using the official protocol SDK",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./server": {
+      "types": "./lib/types/server.d.ts",
+      "default": "./lib/server.js"
+    },
+    "./package.json": "./package.json",
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    }
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "^4.4.3"
+  },
+  "paimindBuild": {
+    "node": [
+      "src/index.ts",
+      "src/server.ts",
+      "src/invariant.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@paimind/mcp-center": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@paimind/mcp-center": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@paimind/mcp-center": "workspace:^"
+  }
+}

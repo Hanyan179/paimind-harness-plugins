@@ -40,6 +40,12 @@
     { "path": "packages/platform-api" },
     { "path": "examples/platform-integration" },
     { "path": "packages/user-settings" },
-    { "path": "packages/developer-resources" }
+    { "path": "packages/developer-resources" },
+    {
+      "path": "packages/feishu-cli-mcp"
+    },
+    {
+      "path": "packages/mcp-center"
+    }
   ]
 }

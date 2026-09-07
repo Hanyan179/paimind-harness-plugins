@@ -3,10 +3,19 @@
   "version": "0.1.0-alpha.0",
   "description": "Installable DeepSeek Harness composition patch for the PAIMind Plugin Suite",
   "license": "UNLICENSED",
-  "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
   "type": "module",
-  "files": ["cordis.patch.yml", "README.md"],
-  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } },
+  "files": [
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
   "dependencies": {
     "@huanlin/dsh-plugin-better-sidebar-plugin-office": "0.1.2",
     "@paimind/extension-center": "workspace:^",
@@ -42,6 +51,8 @@
     "@paimind/scheduler-adapter-feishu-bot": "workspace:^",
     "@paimind/user-settings": "workspace:^",
     "@paimind/developer-resources": "workspace:^",
-    "dsh-better-sidebar": "0.17.1"
+    "dsh-better-sidebar": "0.17.1",
+    "@paimind/mcp-center": "workspace:^",
+    "@paimind/feishu-cli-mcp": "workspace:^"
   }
 }

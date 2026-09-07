@@ -60,6 +60,7 @@ button[data-paimind-product-trigger='skill-center'] [data-paimind-skill-trigger-
 [data-paimind-skill-filterbar]{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--skill-line);background:color-mix(in srgb,var(--skill-soft) 68%,var(--skill-surface))}
 [data-paimind-skill-select-filter]{min-height:36px;padding:7px 30px 7px 10px;border:1px solid var(--skill-line);border-radius:9px;color:var(--skill-muted);background:var(--skill-surface);font:inherit;font-size:11px}
 [data-paimind-skill-filter][aria-pressed='true']{color:var(--skill-accent);background:color-mix(in srgb,currentColor 8%,var(--skill-surface))}
+[data-paimind-skill-list-summary]{margin:0;padding:10px 14px;border-bottom:1px solid var(--skill-line);color:var(--skill-muted);font-size:11px;line-height:18px}
 [data-paimind-skill-result-count]{color:var(--skill-muted);font-size:11px;white-space:nowrap}
 [data-paimind-skill-grid]{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr);min-height:470px}
 [data-paimind-skill-panel]{min-width:0;background:var(--skill-surface)}

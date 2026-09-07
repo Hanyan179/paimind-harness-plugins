@@ -57,6 +57,7 @@ export interface AgentBusinessProfileInput {
   readonly goal: string
   readonly behavior: string
   readonly preferredSkillNames: readonly string[]
+  readonly connectionIds?: readonly string[]
   readonly instructions: string
   /** Presentation-only portrait selected from the shared PAIMind avatar pool. */
   readonly avatarId?: string
@@ -232,6 +233,7 @@ export interface AgentBuilderHostContext {
   }
   get(name: 'settings'): PaimindHostSettingsFacility | undefined
   get(name: 'paimindAgentProfiles'): AgentBusinessSkillSelectionSource | undefined
+  get(name: 'paimindMcpConnections'): { validateSelection(ids: readonly string[]): Promise<void>; bindingsChanged(): Promise<void> } | undefined
   effect(install: () => void | (() => void | Promise<void>), label?: string): void
   on(
     event: 'system-prompt/assemble',
@@ -304,7 +306,13 @@ function stableProfile(input: AgentBusinessProfileInput, revision: number, updat
     if (!SKILL_NAME.test(value)) throw new Error(`Skill 名称无效：${value}`)
     return true
   }))])
+  if ((input.connectionIds?.length ?? 0) > 100) throw new Error('最多选择 100 条连接')
+  const connectionIds = Object.freeze([...new Set((input.connectionIds ?? []).map(value => {
+    if (!/^[a-f0-9]{32}$/.test(value)) throw new Error('连接引用无效')
+    return value
+  }))])
   const seed = {
+    ...(connectionIds.length === 0 ? {} : { connectionIds }),
     agentId, presetId, name, description, basePresetId, role, goal, behavior, preferredSkillNames, instructions,
     productKind, ...businessPlacement, ...(avatarId === undefined ? {} : { avatarId }), revision,
   }
@@ -1070,6 +1078,11 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
   }
 
   /** Read the authoritative profile selection without projecting, repairing, or persisting any Skill state. */
+  async connectionIdsForPreset(presetId: string): Promise<readonly string[]> {
+    const profile = await this.readProfile(join(this.presetRoot, validateId(presetId, '预设标识')))
+    return profile?.connectionIds ?? []
+  }
+
   async businessSkillNamesForPreset(inputPresetId: string): Promise<readonly string[] | undefined> {
     const presetId = validateId(inputPresetId, '预设标识')
     const profile = await this.readProfile(join(this.presetRoot, presetId))
@@ -1078,7 +1091,7 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
   }
 
   async saveProfile(input: AgentBusinessProfileInput): Promise<Readonly<AgentBusinessProfile>> {
-    return await this.withMutationLock(async () => {
+    const saved = await this.withMutationLock(async () => {
       const agentId = validateId(input.agentId, '智能体标识')
       const presetId = validateId(input.presetId, '预设标识')
       const basePresetId = validateId(input.basePresetId, '基础能力模板')
@@ -1092,8 +1105,15 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
       if (previous !== undefined && previous.basePresetId !== basePresetId) {
         throw new Error('旧版智能体需要先基于标准模板重新创建')
       }
+      const connections = this.agentCtx.get('paimindMcpConnections') as { validateSelection(ids: readonly string[]): Promise<void>; bindingsChanged(): Promise<void> } | undefined
+      const connectionIds = input.connectionIds ?? previous?.connectionIds ?? []
+      const additions = connectionIds.filter(id => !previous?.connectionIds?.includes(id))
+      if (additions.length > 0) {
+        if (connections === undefined) throw new Error('连接中心不可用')
+        await connections.validateSelection(additions)
+      }
       const profile = stableProfile({
-        ...input,
+        ...input, connectionIds,
         ...(input.authoringSessionId === undefined && previous?.authoringSessionId !== undefined ? { authoringSessionId: previous.authoringSessionId } : {}),
         ...(input.authoringCursor === undefined && previous?.authoringCursor !== undefined ? { authoringCursor: previous.authoringCursor } : {}),
       }, (previous?.revision ?? 0) + 1, this.now())
@@ -1119,6 +1139,8 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
         throw error
       }
     })
+    await (this.agentCtx.get('paimindMcpConnections') as { bindingsChanged(): Promise<void> } | undefined)?.bindingsChanged()
+    return saved
   }
 
   async setDefault(input: { readonly presetId: string }): Promise<{ readonly presetId: string }> {
@@ -1275,6 +1297,7 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
       return Object.freeze({
         ...value, productKind,
         preferredSkillNames: Object.freeze(value.preferredSkillNames.filter((row): row is string => typeof row === 'string')),
+        ...(value.connectionIds === undefined ? {} : { connectionIds: Array.isArray(value.connectionIds) && value.connectionIds.every(id => typeof id === 'string' && /^[a-f0-9]{32}$/.test(id)) ? Object.freeze([...value.connectionIds]) : (() => { throw new Error('持久连接引用无效') })() }),
         health: 'healthy',
       }) as AgentBusinessProfile
     } catch { return undefined }

@@ -12,6 +12,10 @@ export default defineConfig({
     alias: {
       '@paimind/contracts': packageSource('contracts'),
       '@paimind/presentation-contracts': packageSource('presentation-contracts'),
+      '@paimind/harness-compat/native-mcp': packageModule('harness-compat', 'native-mcp'),
+      '@paimind/mcp-center/client': fileURLToPath(new URL('./packages/mcp-center/src/client/index.tsx', import.meta.url)),
+      '@paimind/mcp-center': packageSource('mcp-center'),
+      '@paimind/feishu-cli-mcp': packageSource('feishu-cli-mcp'),
       '@paimind/harness-compat/host': packageModule('harness-compat', 'host'),
       '@paimind/harness-compat/client-icons': packageModule('harness-compat', 'client-icons'),
       '@paimind/harness-compat/client-surface': packageModule('harness-compat', 'client-surface'),

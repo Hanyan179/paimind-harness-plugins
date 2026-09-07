@@ -1,0 +1,207 @@
+{
+  "date": "2026-09-07",
+  "branch": "codex/mcp-center-feishu",
+  "baseline": "d7078f53b75427f0344105bebccd4605c51e742f",
+  "release": false,
+  "runtime": {
+    "url": "http://127.0.0.1:3080/",
+    "home": "/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins/.dsh-home",
+    "composition": "complete six product feature packs, original data home",
+    "harness": "0.1.1-rc.2"
+  },
+  "skillUpload": {
+    "skill": "human-writing",
+    "version": "1.1.0",
+    "source": "/Users/hansen/.codex/skills/human-writing",
+    "artifact": "/Users/hansen/.codex/visualizations/2026/09/07/01a079c7-204f-7d50-8b82-a65499caeda5/task-summary-skill-upload/human-writing-codex-1.1.0.zip",
+    "archiveSha256": "d6bfadb4ba9ad9a3f77c2ad623e85d68174bfb7baa915a84076ff96208e118f6",
+    "archiveBytes": 44755,
+    "expandedBytes": 92901,
+    "fileCount": 11,
+    "operation": "same-name update of an existing installation through the browser file chooser and confirmation UI",
+    "successText": "human-writing 已原子更新；失败时旧版本会自动回退。",
+    "allInstalledResourcesMatchSource": true,
+    "sourceFileName": "human-writing-codex-1.1.0.zip",
+    "managedDigest": "sha256:d6bfadb4ba9ad9a3f77c2ad623e85d68174bfb7baa915a84076ff96208e118f6",
+    "files": [
+      {
+        "path": "LICENSE",
+        "size": 1089,
+        "sha256": "32ca81a9ae10dda7d18963c9eae733477073906b15ee498d02033c8966dbdcaa"
+      },
+      {
+        "path": "SKILL.md",
+        "size": 15547,
+        "sha256": "70a6e8c92ce74ac157e2ed11d022579aa67027610c47435a187296456008bcf3"
+      },
+      {
+        "path": "VERSION",
+        "size": 6,
+        "sha256": "1575e1af4a95f12f70b4ee6a6adce8160953d93ea17dc2611b90883ccc3ad3b8"
+      },
+      {
+        "path": "agents/openai.yaml",
+        "size": 306,
+        "sha256": "02b92cde5b47d90df37863f1cde3ababdec09a5406b1eb757a1d02a2f8ba8a3a"
+      },
+      {
+        "path": "dist/human-writing-lite.md",
+        "size": 2665,
+        "sha256": "52ba7c2fe1591d742a780e2d6ca2d6aa51dc430d88e2946fc4308470fa0bf884"
+      },
+      {
+        "path": "references/fiction.md",
+        "size": 4797,
+        "sha256": "6efea0c16f28b7ae2d3531a7e2413577e2f6e3c1945912b087c28a0da6d0ad83"
+      },
+      {
+        "path": "references/formats.md",
+        "size": 4574,
+        "sha256": "dd63704550574cd562b55f24307815e9172a63320dcfcc6006b3eab0ccc406bb"
+      },
+      {
+        "path": "references/forum-prose.md",
+        "size": 23623,
+        "sha256": "20c22ad9c5c5c3f43ebae6bb7d258cfc42916413a82c2f95a0de9239541641dd"
+      },
+      {
+        "path": "references/reality.md",
+        "size": 5911,
+        "sha256": "02004e1fd4dba40d8d50260982ecead81ce3788c7269922b8311514fe8edd0e6"
+      },
+      {
+        "path": "references/revision.md",
+        "size": 12785,
+        "sha256": "2e7d8f74ace9d90e4805b6061b8015c91e6088166e5d224be185aba5a94e6592"
+      },
+      {
+        "path": "scripts/check_prose.py",
+        "size": 21598,
+        "sha256": "13110461036c25477963e19ce35c4a34df2a2d24a7132c909394370803822eea"
+      }
+    ],
+    "allowUse": true,
+    "ordinaryConversationDefault": false,
+    "temporarySessionSelection": false
+  },
+  "agentBinding": {
+    "agentId": "0907-21fcf6",
+    "name": "飞书写作助手 0907",
+    "revisions": [
+      7,
+      8,
+      9
+    ],
+    "selectionByRevision": {
+      "7": [
+        "human-writing",
+        "lark-doc",
+        "lark-shared"
+      ],
+      "8": [
+        "lark-doc",
+        "lark-shared"
+      ],
+      "9": [
+        "lark-doc",
+        "lark-shared",
+        "human-writing"
+      ]
+    },
+    "connectionIds": [
+      "cede7168ebd74ecbb51bc2a14b3c1e22"
+    ],
+    "operation": "browser uncheck, save, reopen, search exact skill, check, save, reopen",
+    "changedKeysPerSave": [
+      [
+        "configVersion",
+        "preferredSkillNames",
+        "revision",
+        "updatedAt"
+      ],
+      [
+        "configVersion",
+        "preferredSkillNames",
+        "revision",
+        "updatedAt"
+      ]
+    ],
+    "otherBusinessFieldsPreserved": true,
+    "finalSkillSetEqualsInitial": true,
+    "note": "Final ordering differs from initial ordering; no other Agent was saved."
+  },
+  "nativeAcceptance": {
+    "sessionId": "session-92c0ba68-214e-486a-a415-6b5d2d756c1f",
+    "workspaceId": "b2375adc-d19d-461d-9a3a-14ce735d402e",
+    "marker": "HW_UPLOAD_0907",
+    "turnOneToolCalls": 0,
+    "toolCalls": [
+      {
+        "seq": 310,
+        "turn": 2,
+        "step": 1,
+        "callId": "call_00_6jJVS2G2ByJicccrCP802242",
+        "name": "skill",
+        "arguments": "{\"name\": \"human-writing\"}"
+      }
+    ],
+    "resultSeq": 311,
+    "skillResultIsError": false,
+    "loadedBodyExactlyContainsSourceBody": true,
+    "loadedFromManagedRepository": true,
+    "requestHeaderSeq": 14,
+    "declaredManagedMcpTools": [
+      "mcp__paimind_792cdb52c18e263f1174__feishu_create_document",
+      "mcp__paimind_792cdb52c18e263f1174__feishu_identity",
+      "mcp__paimind_792cdb52c18e263f1174__feishu_read_document",
+      "mcp__paimind_792cdb52c18e263f1174__feishu_update_document"
+    ],
+    "feishuToolCalls": 0,
+    "documentWrites": 0
+  },
+  "browserSummary": {
+    "beforeSkillUse": {
+      "agentName": "飞书写作助手 0907",
+      "skills": {
+        "lark-doc": "已挂载",
+        "lark-shared": "已挂载",
+        "human-writing": "已挂载"
+      },
+      "connection": {
+        "name": "个人飞书 · 写作验收",
+        "status": "已挂载"
+      }
+    },
+    "afterSkillUse": {
+      "human-writing": "已挂载 · 已加载",
+      "connectionStatus": "已挂载"
+    },
+    "internalAgentIdUsedAsDisplayName": false,
+    "configuredResourcesClaimUsage": false,
+    "originalHistoricalSessionVisuallyRetested": false
+  },
+  "checks": {
+    "focused": {
+      "passed": 32,
+      "total": 32,
+      "files": 7
+    },
+    "fullSuite": {
+      "passed": 625,
+      "failed": 1,
+      "total": 626,
+      "failure": "packages/workspace-blueprints/tests/materializer.spec.ts:63; unchanged fixture lacks untracked empty docs and outputs directories"
+    },
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "packageApiPackPublintExternalTypesExamplesFramework": "passed",
+    "realComposition": "passed install/boot/remove/restore and independent optional feature compositions; zero upstream worktree delta"
+  },
+  "artifacts": "/Users/hansen/.codex/visualizations/2026/09/07/01a079c7-204f-7d50-8b82-a65499caeda5/task-summary-skill-upload",
+  "limitations": [
+    "Browser upload covered updating an existing same-name skill, not a brand-new install.",
+    "This acceptance performed no Feishu document write; native managed Feishu tools were present but unused.",
+    "Binding changes prepared an unsent native continuation draft in the original tab; it was not submitted.",
+    "No claim of exhaustive writing-quality evaluation or multi-user security isolation."
+  ]
+}

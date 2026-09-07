@@ -77,6 +77,17 @@
         - id: paimind-agent-market
           name: '@paimind/agent-market'
 
+        - id: paimind-mcp-center-invariant
+          name: '@paimind/mcp-center/invariant'
+          inject: [invariants]
+        - id: paimind-mcp-center
+          name: '@paimind/mcp-center'
+        - id: paimind-feishu-cli-mcp-invariant
+          name: '@paimind/feishu-cli-mcp/invariant'
+          inject: [invariants]
+        - id: paimind-feishu-cli-mcp
+          name: '@paimind/feishu-cli-mcp'
+
     - id: paimind-pack-content
       name: cordis:group
       group: true

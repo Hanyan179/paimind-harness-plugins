@@ -8,6 +8,14 @@ Package rules: [Plugin Authoring Standard](../../docs/standards/plugin-authoring
 
 Role: **Client plugin**. It owns theme overrides, PAIMind design tokens, semantic experience markers, welcome presentation, Quick Agents, compact Agent Preset presentation and focus/workbench density. `@paimind/branding` remains the owner of product identity; Harness remains the canonical owner of Agent Presets, Sessions, Settings and runtime state.
 
+Compact sidebar navigation projects live source-plugin footer contributions into
+an Agent shortcut, one optional pinned shortcut, and a searchable resource
+library. Notifications and Settings retain their native controls in one utility
+row. Source plugins provide short label, description and group metadata on their
+existing trigger; new ids remain discoverable without a second registry.
+The optional shortcut id is a browser-local preference owned by this package
+(`paimind.visual-experience.navigation.pinned.v1`), not an Agent or Skill binding.
+
 ## Public entry points
 
 | Export | Target | Contract |
@@ -30,6 +38,10 @@ The manifest is authoritative for dependency direction and version selection.
 ## Lifecycle and failure
 
 The default mode is `paimind`; `native` disposes theme overrides and the single-slot Preset replacement while retaining only the Settings row and package description. Roster or native-seat discovery failures leave `conversation.hero.agentPreset` untouched. Unload removes styles, theme layers, observers, events, portals, slots and semantic markers; persisted Settings may remain for reinstall recovery.
+
+Native mode, rendering failure, or navigation unmount restores the original
+footer controls. The compatibility adapter owns all footer/settings DOM seams;
+source unload removes the corresponding library entry and active shortcut.
 
 ## Published files
 

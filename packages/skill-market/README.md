@@ -10,7 +10,7 @@ Role: **Client + host product plugin**. It contributes a `sidebar.footer.action`
 
 ## User journey and state projection
 
-- `Market`, `Built-in`, and `Installed` form one keyboard-navigable scope instead of duplicate navigation.
+- `All Skills`, `Built-in`, and `Installed` form one keyboard-navigable scope. All Skills is an ephemeral, name-deduplicated union of the market catalog and installed business packages; Installed is its subset and shares descriptions, search, category and source filters. Built-in System Skills remain separate. Independent source failures retain the other source with an incomplete-list notice; unknown installation state never claims availability or enables installation.
 - Search, product categories, source and install-state filters operate only on real catalog or installed metadata. The browser incrementally renders bounded result batches; a future remote-scale catalog must add server-side cursor pagination. The product intentionally exposes no like or favorite control. Source, license, package contents, and runtime ownership use progressive disclosure.
 - Catalog and local `SKILL.md` / ZIP packages enter the same inspect-first pipeline. Install and update are explicit confirmation actions; an update uses staging, backup, atomic replacement, and rollback on commit failure.
 - `Create Skill` opens the same reviewable Package Editor used by conversational drafts. The Skill folder is the source of truth: `SKILL.md` is the entry file, while `scripts/`, `references/`, `assets/`, nested text files, and visible binary resources stay in the same managed package. The UI lazily pages the directory tree, reads one file on demand, and submits only file-level changes; untouched files remain byte-for-byte unchanged.

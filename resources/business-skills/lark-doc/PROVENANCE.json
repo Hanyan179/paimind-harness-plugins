@@ -1,0 +1,20 @@
+{
+  "source": "/Users/hansen/Documents/飞书cli/skills/lark-doc",
+  "importedAt": "2026-09-07",
+  "sourceFiles": {
+    "SKILL.md": "4dc7487dff4b69402aa488612fba016b5f242784368cbac5c1f37ecb7f073817",
+    "references/lark-doc-create.md": "77101a63e2854c6b5e1c81a4f9de1ada361d969b1c3f0c90aa55dcf96456f970",
+    "references/lark-doc-fetch.md": "5a41b1d28d8475c6ef34a3ee8dd1c2ce9661576e541ce8174a4bd9f463d26748",
+    "references/lark-doc-md.md": "59e357379e326678419db3fcae029ce0d22e17ebdd30208d9e60d5fbb42bfaf4",
+    "references/lark-doc-media-download.md": "d4c7f67d07b907106a037500e5809405ce74ee4b642767af3e417c5edd527277",
+    "references/lark-doc-media-insert.md": "1c1e4f799ba056e51a7cb84188da3d3c4b22d687403b43d4bb8971551b455dfd",
+    "references/lark-doc-media-preview.md": "ebecf432d6ad0dbfa249cbf3dab91e7e20e25ee29e1c4874a039aa2bb8194200",
+    "references/lark-doc-update.md": "2c672e57191a1aaf3e6edae2387844f829f4d02d8d433d34489cc6becbeaf6f6",
+    "references/lark-doc-whiteboard.md": "0c0fdf2d3abf9cd73beac217a72229c6c263ac7e833347e3e2f6ec58619cccf0",
+    "references/lark-doc-xml.md": "8fc7566a276277a0960e02fe05c23fc67380621a369a756df227bd6e52ca8ae3",
+    "references/style/lark-doc-create-workflow.md": "f59e907789b111cbf5911ce83e5b7ecbbb7833ab42c86d06854e1b3498dae99a",
+    "references/style/lark-doc-style.md": "6b91a846a828e33f871a0513b658451078576c39a5c8d74b81497bf9927829b8",
+    "references/style/lark-doc-update-workflow.md": "e147322764fd0daa88d778bfd1ee47dc944be6bc3758d5be946aa3ab55516ac6"
+  },
+  "adaptation": "Managed SKILL.md maps the original resources to the four profile-pinned native MCP tools. Original SKILL.md retained as upstream/ORIGINAL.md."
+}
