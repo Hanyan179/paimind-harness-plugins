@@ -1224,8 +1224,8 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       && agentSource.describeAgentAuthoringCapability !== undefined) {
       names.push(PAIMIND_AGENT_AUTHORING_SKILL)
     }
-    if (this.installerCtx.loader !== undefined
-      && describePaimindHostLoaderEntry(this.installerCtx.loader, PAIMIND_GENUI_LOADER_ENTRY_ID).installed) {
+    const loader = this.installerCtx.loader
+    if (loader !== undefined && describePaimindHostLoaderEntry(loader, PAIMIND_GENUI_LOADER_ENTRY_ID).installed) {
       names.push(PAIMIND_GENUI_SKILL)
     }
     return Object.freeze(names.sort())

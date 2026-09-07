@@ -83,6 +83,7 @@ import {
   metadataForPreset,
 } from '../index.js'
 import { AGENT_CENTER_STYLE } from './styles.js'
+import { TestSessionHistory, type TestHistoryReader } from './test-session-history.js'
 import {
   assistantTextFromHistoryEvent,
   assistantTurn,
@@ -497,7 +498,7 @@ function isLegacyBuilderTestTitle(title: string | undefined): boolean {
   return title !== undefined && /^(?:Test|测试)\s*[·:：-]/i.test(title.trim())
 }
 
-export class AgentCenterRuntime {
+export class AgentCenterRuntime implements TestHistoryReader {
   private disposed = false
   private readonly busySessions = new Set<string>()
   private readonly testSessionIds = new Set<string>()
@@ -616,6 +617,14 @@ export class AgentCenterRuntime {
     } catch (cause) {
       console.warn('[paimind-agent-market] failed to archive Builder Test Chat', sessionId, cause)
     }
+  }
+
+  /** Archived Sessions remain readable through Harness history, without selecting or unarchiving them. */
+  async readTestHistory(agentId: string, sessionId: string, beforeSeq?: number, signal?: AbortSignal) {
+    const rows = await this.listTestSessions(agentId)
+    if (!rows.some(row => row.sessionId === sessionId)) throw new Error('该测试记录不属于当前智能体')
+    if (this.authoringApi === undefined) throw new Error('当前宿主未提供消息读取接口')
+    return (await this.authoringApi.history({ sessionId, maxMessages: 20, ...(beforeSeq === undefined ? {} : { beforeSeq }) }, signal)).result
   }
 
   /** Run the embedded configuration chat as a session-scoped system capability on Standard. */
@@ -1832,6 +1841,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   const [testSessionId, setTestSessionId] = useState<string | null>(null)
   const [testStatus, setTestStatus] = useState<'idle' | 'starting' | 'ready' | 'error'>('idle')
   const [testHistory, setTestHistory] = useState<readonly Readonly<AgentTestSessionHistoryEntry>[]>([])
+  const [viewingTestHistory, setViewingTestHistory] = useState<Readonly<AgentTestSessionHistoryEntry> | null>(null)
   const testHistoryRequest = useRef(0)
   const handledBuilderRequest = useRef(0)
   const [busy, setBusy] = useState(false)
@@ -2081,6 +2091,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     lastPreparedSignature.current = null
     setAuthoringStatus('idle')
     setBuilderTab('configure')
+    setViewingTestHistory(null)
     setSkillPickerOpen(false)
     setUndoableUpdate(null)
     const baselineProfile = savedProfileOverride === undefined ? nextDraft.editing : savedProfileOverride
@@ -2413,12 +2424,16 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
       })
       return
     }
+    if (viewingTestHistory !== null) {
+      props.onNativeConversationChange?.({ sessionId: null, interactive: false })
+      return
+    }
     props.onNativeConversationChange?.({
       sessionId: canTestDraft ? testSessionId : null,
       interactive: canTestDraft && testSessionId !== null && testStatus === 'ready',
       ...(canTestDraft && savedProfile !== null ? { lockedAgentName: savedProfile.name } : {}),
     })
-  }, [authoringContextReady, authoringSessionId, authoringStatus, builderOpen, builderTab, canTestDraft, props.onNativeConversationChange, savedProfile, testSessionId, testStatus])
+  }, [authoringContextReady, authoringSessionId, authoringStatus, builderOpen, builderTab, canTestDraft, props.onNativeConversationChange, savedProfile, testSessionId, testStatus, viewingTestHistory])
 
   useEffect(() => () => {
     props.onNativeConversationChange?.({ sessionId: null, interactive: false })
@@ -2514,10 +2529,12 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   }
 
   const openConfigurationChat = (): void => {
+    setViewingTestHistory(null)
     if (testStatus === 'error') setError(null)
     setBuilderTab('configure')
   }
   const startNativeTestChat = async (profile: AgentBusinessProfile): Promise<void> => {
+    setViewingTestHistory(null)
     setError(null)
     setTestSessionId(null)
     setTestStatus('starting')
@@ -2537,11 +2554,12 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
       setBuilderTab('test')
       return
     }
-    // Completed Test Chats are archived so they stay out of Harness' ordinary
-    // Session sidebar. Archived native Sessions cannot be resumed reliably in
-    // every supported Harness version, so entering Test mode always creates a
-    // fresh live Session while the durable rows below remain history only.
     createNewTestChat()
+  }
+  const openTestHistory = (row: Readonly<AgentTestSessionHistoryEntry>): void => {
+    if (busyRef.current || !canTestDraft || testStatus === 'starting') return
+    setError(null)
+    setViewingTestHistory(row)
   }
   const createNewTestChat = (): void => {
     if (busyRef.current) return
@@ -2676,7 +2694,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
       </section>
     </div>}
 
-    {draft !== null && <div data-paimind-agent-builder-layer data-mode={builderTab} data-paimind-product-escape-scope>
+    {draft !== null && <div data-paimind-agent-builder-layer data-mode={builderTab} data-history-open={builderTab === 'test' && viewingTestHistory !== null} data-paimind-product-escape-scope>
       {builderTab === 'configure' && <div
         role="separator"
         tabIndex={0}
@@ -2725,7 +2743,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
           <div data-paimind-agent-test-profile><span data-paimind-agent-avatar-seat="" data-paimind-agent-id={draft.avatarId}><span data-paimind-agent-avatar-fallback="" aria-hidden="true"><PaimindAgentIcon size={20} /></span></span><div><strong>{draft.name}</strong><p>{draft.description || draft.role}</p></div></div>
           <section data-paimind-agent-test-history aria-labelledby="paimind-agent-test-history-title">
             <header><strong id="paimind-agent-test-history-title">{zh ? '测试记录' : 'Test history'}</strong><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || !canTestDraft || testStatus === 'starting'} onClick={createNewTestChat}><PaimindPlusIcon size={13} />{zh ? '新建测试' : 'New test'}</button></header>
-            {testHistory.length === 0 ? <div data-paimind-agent-test-history-empty>{testStatus === 'starting' ? (zh ? '正在建立第一条测试对话…' : 'Creating the first Test Chat…') : (zh ? '还没有测试记录。新建后会显示在这里，而不是左侧普通会话栏。' : 'No test history yet. New Test Chats appear here instead of the ordinary Session sidebar.')}</div> : <ul>{testHistory.map((row, index) => <li key={row.sessionId}><div aria-current={row.sessionId === testSessionId ? 'page' : undefined}><span data-state={row.error !== null ? 'error' : row.running ? 'running' : row.completed ? 'complete' : 'idle'} aria-hidden="true" /><span><strong>{row.title}</strong><small>{new Date(row.boundAt).toLocaleString(activeLocale)} · {row.sessionId === testSessionId ? (zh ? '当前测试' : 'Current test') : row.error !== null ? (zh ? '失败' : 'Failed') : row.running ? (zh ? '进行中' : 'Running') : index === 0 ? (zh ? '最近测试' : 'Latest test') : (zh ? '历史测试' : 'Previous test')}</small></span></div></li>)}</ul>}
+            {testHistory.length === 0 ? <div data-paimind-agent-test-history-empty>{testStatus === 'starting' ? (zh ? '正在建立第一条测试对话…' : 'Creating the first Test Chat…') : (zh ? '还没有测试记录。新建后会显示在这里，而不是左侧普通会话栏。' : 'No test history yet. New Test Chats appear here instead of the ordinary Session sidebar.')}</div> : <ul>{testHistory.map((row, index) => <li key={row.sessionId}><button type="button" disabled={busy || !canTestDraft || testStatus === 'starting'} aria-current={row.sessionId === (viewingTestHistory?.sessionId ?? testSessionId) ? 'page' : undefined} onClick={() => { openTestHistory(row) }}><span data-state={row.error !== null ? 'error' : row.running ? 'running' : row.completed ? 'complete' : 'idle'} aria-hidden="true" /><span><strong>{row.title}</strong><small>{new Date(row.boundAt).toLocaleString(activeLocale)} · {row.sessionId === testSessionId ? (zh ? '当前测试' : 'Current test') : row.error !== null ? (zh ? '失败' : 'Failed') : row.running ? (zh ? '进行中' : 'Running') : index === 0 ? (zh ? '最近测试' : 'Latest test') : (zh ? '历史测试' : 'Previous test')}</small></span></button></li>)}</ul>}
           </section>
           {!canTestDraft ? <div data-paimind-agent-test-gate><PaimindAgentIcon size={22} /><strong>{zh ? '正在保存并准备测试' : 'Saving and preparing Test Chat'}</strong><p>{zh ? '测试对话将运行刚刚保存的同一个智能体版本。' : 'Test Chat will run the same Agent revision being saved now.'}</p></div>
             : testStatus === 'error' ? <div data-paimind-agent-test-gate data-tone="error"><PaimindWarningIcon size={22} /><strong>{zh ? '测试会话连接失败' : 'Test conversation failed'}</strong><p role="alert">{error ?? (zh ? '原生测试对话未能创建。' : 'The native test conversation could not be created.')}</p><button type="button" data-paimind-agent-button data-primary="true" onClick={retryTestChat}>{zh ? '重新连接测试对话' : 'Retry Test Chat'}</button></div>
@@ -2734,6 +2752,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
         </div>}
         {builderTab === 'configure' && <div data-paimind-agent-form-actions><p>{zh ? '所有建议和手工修改都作用于这个智能体。保存后请新建测试验证效果；已有测试保留原版本，普通对话再次打开时会使用最新版接续，历史记录保留。' : 'All suggestions and manual edits update this Agent. Start a new test after saving. Existing tests retain their original version; reopening a regular conversation continues with the latest version and preserves its history.'}</p><div><button type="button" data-paimind-agent-button disabled={busy} onClick={closeBuilder}>{zh ? '关闭并返回原对话' : 'Close and return'}</button><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || !draftDirty} onClick={() => { void save() }}>{authoringStatus === 'running' ? (zh ? '创建助手思考中…' : 'Creation assistant thinking…') : busy ? (zh ? '保存中…' : 'Saving…') : draftDirty ? (draft.productKind === 'business' ? (zh ? '保存业务智能体' : 'Save Business Agent') : (zh ? '保存个人智能体' : 'Save Personal Agent')) : (zh ? '已保存' : 'Saved')}</button></div></div>}
       </section>
+      {builderTab === 'test' && viewingTestHistory !== null && savedProfile !== null && <TestSessionHistory key={viewingTestHistory.sessionId} runtime={props.runtime} agentId={savedProfile.agentId} sessionId={viewingTestHistory.sessionId} title={viewingTestHistory.title} zh={zh} close={() => { setViewingTestHistory(null) }} />}
     </div>}
   </section>
 }

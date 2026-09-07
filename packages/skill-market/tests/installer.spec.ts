@@ -285,11 +285,11 @@ describe('streaming Skill installer', () => {
     await harness.dispose()
   })
 
-  it.each([false, true])('keeps an absent optional GenUI source inert without blocking other skills (saved preference: %s)', async saved => {
-    const base = await mkdtemp(join(tmpdir(), 'paimind-absent-genui-'))
+  it.each([false, true])('keeps independent capabilities usable without GenUI (persisted preference: %s)', async (persisted) => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-without-genui-'))
     roots.push(base)
     const stateRoot = join(base, 'state')
-    if (saved) {
+    if (persisted) {
       await mkdir(stateRoot, { recursive: true })
       await writeFile(join(stateRoot, 'user-skill-policy.json'), JSON.stringify({
         schema: 'paimind.user-skill-policy-storage/v3', revision: 7,
@@ -298,26 +298,41 @@ describe('streaming Skill installer', () => {
       }))
     }
     const harness = systemLifecycleHarness()
-    Object.assign(harness.context, { loader: {
-      entries: () => [], await: async () => {}, resolve: () => { throw new Error('missing') }, update: vi.fn(),
-    } })
+    const update = vi.fn()
+    Object.assign(harness.context, {
+      loader: { entries: () => [], await: async () => {}, resolve: () => { throw new Error('missing') }, update },
+    })
     const service = new PaimindSkillInstallerService(harness.context, {
       skillRoot: join(base, 'skills'), stateRoot,
       bundledSkillBodies: { installation: 'Install.', authoring: 'Author.' },
     })
     const policy = await service.getUserSkillPolicy()
-    expect(policy.enabledOptionalSystemSkillNames.includes('genui')).toBe(saved)
-    const system = await service.listSystemSkills()
-    expect(system.items.map(row => row.name).sort()).toEqual(['paimind-skill-authoring', 'paimind-skill-installation'])
-    expect(harness.tools.size).toBeGreaterThan(0)
+    expect(policy.enabledOptionalSystemSkillNames.includes('genui')).toBe(persisted)
+    expect((await service.listSystemSkills()).items.map(skill => skill.name)).toEqual([
+      'paimind-skill-authoring', 'paimind-skill-installation',
+    ])
+    expect(harness.tools.has('paimind_skill_install')).toBe(true)
+    expect(harness.tools.has('paimind_skill_prepare_create')).toBe(true)
+    await service.saveSkillSource({ name: 'independent-review', description: 'Review a brief.', instructions: 'Review the supplied brief.' })
+    await expect(service.replaceUserSkillPolicy({
+      expectedRevision: policy.revision,
+      enabledOptionalSystemSkillNames: policy.enabledOptionalSystemSkillNames.filter(name => name !== 'paimind-skill-authoring'),
+      enabledBusinessSkillNames: ['independent-review'], directBusinessSkillNames: ['independent-review'],
+    })).resolves.toMatchObject({ directBusinessSkillNames: ['independent-review'] })
+    expect(harness.tools.has('paimind_skill_prepare_create')).toBe(false)
+    if (!persisted) {
+      await expect(service.replaceUserSkillPolicy({
+        expectedRevision: policy.revision + 1, enabledOptionalSystemSkillNames: ['genui'],
+        enabledBusinessSkillNames: ['independent-review'], directBusinessSkillNames: [],
+      })).rejects.toThrow('不是可原子启停')
+    }
+    const latest = await service.getUserSkillPolicy()
     await service.replaceUserSkillPolicy({
-      ...policy, expectedRevision: policy.revision,
-      enabledOptionalSystemSkillNames: saved ? ['genui'] : [],
+      ...latest, expectedRevision: latest.revision,
+      enabledOptionalSystemSkillNames: persisted ? ['genui'] : [],
     })
-    expect((await service.getUserSkillPolicy()).enabledOptionalSystemSkillNames).toEqual(saved ? ['genui'] : [])
-    if (!saved) await expect(service.replaceUserSkillPolicy({
-      ...policy, expectedRevision: policy.revision + 1, enabledOptionalSystemSkillNames: ['genui'],
-    })).rejects.toThrow('不是可原子启停')
+    expect((await service.getUserSkillPolicy()).enabledOptionalSystemSkillNames).toEqual(persisted ? ['genui'] : [])
+    expect(update).not.toHaveBeenCalled()
     await harness.dispose()
   })
 

@@ -68,6 +68,7 @@ async function projectedContent(agent: TestAgent, name: string): Promise<string 
 async function runtimeFixture(
   profileSkills: Readonly<Record<string, readonly string[] | undefined>> = {},
   agentSourceInitiallyAvailable = true,
+  withoutGenui = false,
 ) {
   const base = await mkdtemp(join(tmpdir(), 'paimind-session-skills-'))
   roots.push(base)
@@ -85,13 +86,17 @@ async function runtimeFixture(
     webServer: { register: () => () => {} },
     skills: {
       async list() {
-        return [{
+        return withoutGenui ? [] : [{
           name: 'genui', description: 'Generate native UI', source: 'bundled', provider: '@deepseek-ai/genui',
         }]
       },
       register: () => () => {},
     },
     sessions: { get: (id: string) => sessions.get(id) },
+    ...(withoutGenui ? { loader: {
+      entries: () => [], await: async () => {},
+      resolve: () => { throw new Error('missing GenUI') }, update: async () => {},
+    } } : {}),
     agents: { get: (id: string) => agents.get(id), list: () => [...agents.values()] },
     get(name: string) {
       if (name === 'paimindAgentProfiles') {
@@ -147,6 +152,25 @@ afterEach(async () => {
 })
 
 describe('live native Session Business Skill projection', () => {
+  it('allows ordinary and Agent turns to execute with their selected Business Skills when GenUI is absent', async () => {
+    const fixture = await runtimeFixture({ 'review-agent': ['agent-review'] }, true, true)
+    await fixture.save('direct-review')
+    await fixture.save('agent-review')
+    await fixture.service.replaceUserSkillPolicy({
+      expectedRevision: 0, enabledOptionalSystemSkillNames: [],
+      enabledBusinessSkillNames: ['direct-review', 'agent-review'], directBusinessSkillNames: ['direct-review'],
+    })
+    const direct = fixture.addAgent({ id: 'direct', header: { agentPreset: 'standard' } })
+    const agent = fixture.addAgent({ id: 'review', header: { agentPreset: 'review-agent' } })
+    for (const target of [direct, agent]) {
+      const next = vi.fn(async () => 'executed')
+      await expect(fixture.preStep(target, next)).resolves.toBe('executed')
+      expect(next).toHaveBeenCalledOnce()
+    }
+    expect((await projectedRows(direct)).map(row => row.name)).toEqual(['direct-review'])
+    expect((await projectedRows(agent)).map(row => row.name)).toEqual(['agent-review'])
+  })
+
   it('keeps Skill Center live before Agent Center mounts and resolves the later source on the next step', async () => {
     const fixture = await runtimeFixture({ 'late-agent': ['late-agent-method'] }, false)
     await fixture.save('late-agent-method')
