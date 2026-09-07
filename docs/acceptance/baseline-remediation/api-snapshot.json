@@ -16,9 +16,9 @@
       "path": "packages/agent-market",
       "contractSha256": "06a138cf8ebb5b1095f2c33e5f41654abcb77c0c613f3722e989daee911b1bea",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "f12cff8715bc3c55372520661e2fb134577dfa6984a0028c9628a471978d0fd9",
-      "declarationCount": 5,
-      "declarationSha256": "9329ca7f7fb56b480f07ca7ab8c3ba379c0eecc7aeb7b83ec16fb06a5a672e56",
+      "runtimeExportSha256": "a2f9c8a94aff34a831ba9401daa288c15a7fe55ae8875baeae803842842cf060",
+      "declarationCount": 6,
+      "declarationSha256": "59a66158d0ebffb3f517104022411e92edd1bc784be0c6b3a9e60a99ff812c11",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@paimind/artifact-runtime": {
@@ -286,7 +286,7 @@
       "path": "packages/skill-market",
       "contractSha256": "da1db1016c1f79da6274ae21e3a03b946d3aa900cbc013756f3736e18250745f",
       "runtimeExportCount": 7,
-      "runtimeExportSha256": "50dd6012e538e93e7ecde1cfd42abf2c7c8e8cb1a17a04aeb0d7f325f918eb40",
+      "runtimeExportSha256": "2073a5d38df99862c7faec87640c01504659ecd3ebdae2a3f2bceb024ae2165d",
       "declarationCount": 10,
       "declarationSha256": "f82c907ea18eb28674a75ca94e92831ac394c43554239ace161938012d084149",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"

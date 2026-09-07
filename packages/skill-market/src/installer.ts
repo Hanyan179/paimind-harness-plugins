@@ -1216,7 +1216,10 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       && agentSource.describeAgentAuthoringCapability !== undefined) {
       names.push(PAIMIND_AGENT_AUTHORING_SKILL)
     }
-    if (this.installerCtx.loader !== undefined) names.push(PAIMIND_GENUI_SKILL)
+    const loader = this.installerCtx.loader
+    if (loader !== undefined && describePaimindHostLoaderEntry(loader, PAIMIND_GENUI_LOADER_ENTRY_ID).installed) {
+      names.push(PAIMIND_GENUI_SKILL)
+    }
     return Object.freeze(names.sort())
   }
 
@@ -1351,9 +1354,6 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
     const loader = this.installerCtx.loader
     if (loader !== undefined) {
       const state = describePaimindHostLoaderEntry(loader, PAIMIND_GENUI_LOADER_ENTRY_ID)
-      if (!state.installed && enabled.has(PAIMIND_GENUI_SKILL)) {
-        throw new Error('GenUI System Skill 来源插件当前未安装')
-      }
       if (state.installed) {
         await setPaimindHostLoaderEntryEnabled(loader, PAIMIND_GENUI_LOADER_ENTRY_ID, enabled.has(PAIMIND_GENUI_SKILL))
       }
@@ -2105,7 +2105,12 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
         throw new Error('用户 Skill Policy 引用了未安装的 Business Skill')
       }
       const systemSkillNames = await this.currentSystemSkillNames()
-      this.assertOptionalSystemSkillPolicy(candidate.enabledOptionalSystemSkillNames)
+      this.assertKnownOptionalSystemSkillPolicy(candidate.enabledOptionalSystemSkillNames)
+      // Retain known preferences for absent sources when editing unrelated
+      // choices. Only a newly enabled capability requires a mounted source.
+      this.assertOptionalSystemSkillPolicy(candidate.enabledOptionalSystemSkillNames.filter(
+        name => !current.enabledOptionalSystemSkillNames.includes(name),
+      ))
       const collision = candidate.enabledBusinessSkillNames.find(name => systemSkillNames.has(name))
       if (collision !== undefined) throw new Error(`Skill 名称与当前系统能力冲突：${collision}`)
       const enabledBusiness = new Set(candidate.enabledBusinessSkillNames)
