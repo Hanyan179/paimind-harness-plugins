@@ -250,7 +250,7 @@ describe('Task Monitor client', () => {
     }
     render(<TaskMonitorAction {...sparse} />)
     fireEvent.click(screen.getByRole('button', { name: 'Task Monitor' }))
-    expect(screen.queryByRole('heading', { name: 'Agent, Skill & MCP' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Assistants and capabilities' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Outputs & Artifacts' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Input Files' })).toBeNull()
     expect(screen.queryByText('No Project')).toBeNull()

@@ -1,3 +1,4 @@
+import { PAIMIND_UI_FOUNDATION_CSS } from '@paimind/ui-foundation'
 import {
   useEffect,
   useMemo,
@@ -5,7 +6,8 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react'
-import { contributePaimindExtension, type PaimindWorkspaceClientContext } from '@paimind/harness-compat'
+import {
+  markHarnessClientStyle, contributePaimindExtension, type PaimindWorkspaceClientContext } from '@paimind/harness-compat'
 import type {
   PaimindSidebarFileOpenResult,
   PaimindSidebarService,
@@ -57,7 +59,7 @@ const STYLE = `
 [data-paimind-artifact-header] p {
   margin: 3px 0 0;
   color: var(--dsw-alias-label-tertiary, #7a808a);
-  font-size: 11px;
+  font-size:12px;
   line-height: 17px;
 }
 [data-paimind-artifact-count] {
@@ -68,7 +70,7 @@ const STYLE = `
   border-radius: 999px;
   color: var(--dsw-alias-state-business-primary, #4f7ff8);
   background: color-mix(in srgb, currentColor 12%, transparent);
-  font-size: 11px;
+  font-size:12px;
   font-weight: 600;
 }
 [data-paimind-artifact-filters] {
@@ -89,7 +91,7 @@ const STYLE = `
   color: var(--dsw-alias-label-secondary, #626872);
   background: transparent;
   font: inherit;
-  font-size: 11px;
+  font-size:12px;
   cursor: pointer;
 }
 [data-paimind-artifact-filter][aria-pressed='true'] {
@@ -128,7 +130,7 @@ const STYLE = `
   border-radius: 6px;
   color: var(--dsw-alias-state-business-primary, #4f7ff8);
   background: color-mix(in srgb, currentColor 10%, transparent);
-  font-size: 9px;
+  font-size:12px;
   line-height: 14px;
   font-weight: 700;
   text-align: center;
@@ -143,12 +145,12 @@ const STYLE = `
   line-height: 18px;
   font-weight: 500;
 }
-[data-paimind-artifact-state] { color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 10px; }
+[data-paimind-artifact-state] { color: var(--dsw-alias-label-tertiary, #7a808a); font-size:12px; }
 [data-paimind-artifact-path] {
   margin: 6px 0 0 46px;
   overflow: hidden;
   color: var(--dsw-alias-label-tertiary, #7a808a);
-  font-size: 10px;
+  font-size:12px;
   line-height: 15px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -156,7 +158,7 @@ const STYLE = `
 [data-paimind-artifact-reason] {
   margin: 7px 0 0 46px;
   color: var(--dsw-alias-label-secondary, #626872);
-  font-size: 11px;
+  font-size:12px;
   line-height: 17px;
   overflow-wrap: anywhere;
 }
@@ -170,7 +172,7 @@ const STYLE = `
   color: var(--dsw-alias-label-primary, #202124);
   background: var(--dsw-alias-bg-layer-3, #fff);
   font: inherit;
-  font-size: 11px;
+  font-size:12px;
   cursor: pointer;
 }
 [data-paimind-artifact-action]:disabled,
@@ -182,7 +184,7 @@ const STYLE = `
   border: 1px dashed var(--dsw-alias-border-l2, rgba(128,128,128,.24));
   border-radius: 12px;
   color: var(--dsw-alias-label-tertiary, #7a808a);
-  font-size: 11px;
+  font-size:12px;
   line-height: 18px;
 }
 [data-paimind-artifact-diagnostic], [data-paimind-artifact-notice] {
@@ -202,8 +204,8 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = '@paimind/artifacts'
-  style.textContent = STYLE
+  style.dataset.paimindPlugin = '@paimind/artifacts'; markHarnessClientStyle(style, '@paimind/artifacts')
+  style.textContent = `${PAIMIND_UI_FOUNDATION_CSS}\n${STYLE}`
   document.head.append(style)
   return () => { style.remove() }
 }
@@ -579,15 +581,15 @@ export function ArtifactPanel({ service, sidebar, bentoPreview, scope }: Artifac
   }
 
   return (
-    <section ref={root} data-paimind-artifacts aria-label={zh ? 'PAIMind 产物' : 'PAIMind Artifacts'}>
+    <section ref={root} data-paimind-ui-scope="artifacts" data-paimind-artifacts aria-label={zh ? '交付文件' : 'PAIMind Artifacts'}>
       <header data-paimind-artifact-header>
         <div>
-          <h2>{zh ? 'PAIMind 产物' : 'PAIMind Artifacts'}</h2>
-          <p>{zh ? '关联 Harness 会话与工作区，预览由侧边栏提供' : 'Session/Workspace associations; previews stay provider-owned'}</p>
+          <h2>{zh ? '交付文件' : 'PAIMind Artifacts'}</h2>
+          <p>{zh ? '查看当前对话和工作区生成的文件' : 'Session/Workspace associations; previews stay provider-owned'}</p>
         </div>
         <span data-paimind-artifact-count>{artifacts.length}</span>
       </header>
-      <div data-paimind-artifact-filters aria-label={zh ? '产物范围' : 'Artifact scope'}>
+      <div data-paimind-artifact-filters aria-label={zh ? '文件范围' : 'Artifact scope'}>
         {(['session', 'workspace'] as const).map(entry => (
           <button
             key={entry}
@@ -607,7 +609,7 @@ export function ArtifactPanel({ service, sidebar, bentoPreview, scope }: Artifac
         </div>
       ))}
       {artifacts.length === 0 ? (
-        <div data-paimind-artifact-empty>{zh ? '这个范围内暂时没有可预览产物。' : 'No previewable artifacts in this scope yet.'}</div>
+        <div data-paimind-artifact-empty>{zh ? '这里还没有可预览的文件。生成文件后会自动显示。' : 'No previewable artifacts in this scope yet.'}</div>
       ) : (
         <ul data-paimind-artifact-list>
           {artifacts.map(artifact => (
@@ -632,9 +634,9 @@ export function apply(ctx: ArtifactsClientContext): void {
     id: 'paimind:artifacts',
     packageName: '@paimind/artifacts',
     category: 'content-rendering',
-    nameZh: '产物与预览',
+    nameZh: '交付文件',
     nameEn: 'Artifacts & Preview',
-    descriptionZh: '投影 Harness Session/Workspace 产物并路由到匹配的安全预览器。',
+    descriptionZh: '汇总当前对话和工作区生成的文件，支持打开、预览和下载。',
     descriptionEn: 'Projects Harness Session/Workspace artifacts and routes them to matching safe viewers.',
     surface: 'preview',
     maturity: 'technical-preview',

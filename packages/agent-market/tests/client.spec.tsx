@@ -131,6 +131,11 @@ function services() {
       }),
       beginTest: vi.fn().mockResolvedValue('session-test'),
       listTestSessions: vi.fn().mockResolvedValue([]),
+      readTestHistory: vi.fn().mockResolvedValue({ ok: true, value: { events: [
+        { event: { type: 'user/message', seq: 1, data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Check the earlier prompt' }] } } },
+        { event: { type: 'assistant/message', seq: 2, data: { message: { content: [{ type: 'text', text: 'The earlier reply' }] } } } },
+        { event: { type: 'agent/error', seq: 3, data: { error: { message: 'Original test failure' } } } },
+      ], hasMore: false } }),
       retireTestSession: vi.fn().mockResolvedValue(undefined),
       test: vi.fn().mockResolvedValue('session-test'),
       sessionState: vi.fn(() => ({ running: true, completed: false, error: null })),
@@ -285,6 +290,18 @@ describe('Agent Center business UI', () => {
 
     await waitFor(() => expect(policy.getSnapshot()).toMatchObject({ status: 'ready', enabled: true, policyRevision: 2 }))
     expect(getUserSkillPolicy).toHaveBeenCalledTimes(2)
+    policy.dispose()
+  })
+
+  it('recovers authoring after a transient policy failure using the same policy owner', async () => {
+    const getUserSkillPolicy = vi.fn().mockRejectedValueOnce(new Error('not ready')).mockResolvedValue({ ok: true, value: {
+      schema: 'paimind.user-skill-policy/v1', revision: 2,
+      enabledOptionalSystemSkillNames: ['paimind-agent-authoring'], enabledBusinessSkillNames: [], directBusinessSkillNames: [],
+    } })
+    const policy = new PaimindAgentAuthoringPolicyController({ listInstalled: vi.fn(), getUserSkillPolicy } as never, window)
+    await waitFor(() => expect(policy.getSnapshot().status).toBe('error'))
+    await policy.refresh()
+    expect(policy.getSnapshot()).toMatchObject({ status: 'ready', enabled: true, policyRevision: 2 })
     policy.dispose()
   })
 
@@ -622,6 +639,7 @@ describe('Agent Center business UI', () => {
       sessionId: 'session-test-visible', agentId: 'mine', presetId: 'mine', configVersion: 'v1-a', boundAt: 1,
     } })
     const rename = vi.fn().mockResolvedValue({ result: { ok: true, value: { title: 'Test · Research Agent', seq: 1 } } })
+    const history = vi.fn().mockResolvedValue({ result: { ok: true, value: { events: [], hasMore: false } } })
     const runtime = new AgentCenterRuntime(
       seat as never,
       {
@@ -635,7 +653,7 @@ describe('Agent Center business UI', () => {
       sessions as never,
       workspaces as never,
       { input: { for: () => ({ setDraft: vi.fn() }) } } as never,
-      { rename } as never,
+      { rename, history } as never,
     )
 
     await expect(runtime.beginTest('mine', profile)).resolves.toBe('session-test-visible')
@@ -651,6 +669,11 @@ describe('Agent Center business UI', () => {
     expect(sessions.open).toHaveBeenCalledWith('session-test-visible')
     await runtime.retireTestSession('session-test-visible')
     expect(workspaces.archiveSession).toHaveBeenCalledWith('session-test-visible')
+    const controller = new AbortController()
+    await expect(runtime.readTestHistory('mine', 'session-test-visible', 12, controller.signal)).resolves.toMatchObject({ ok: true })
+    expect(history).toHaveBeenCalledWith({ sessionId: 'session-test-visible', maxMessages: 20, beforeSeq: 12 }, controller.signal)
+    await expect(runtime.readTestHistory('other-agent', 'session-test-visible')).rejects.toThrow('不属于当前智能体')
+    expect(history).toHaveBeenCalledOnce()
     runtime.dispose()
   })
 
@@ -1432,6 +1455,42 @@ describe('Agent Center business UI', () => {
     await waitFor(() => expect(fixture.runtime.retireTestSession).toHaveBeenCalledWith('session-test'))
   })
 
+  it('reads archived Test Chat messages without selecting, creating or rebinding a Session', async () => {
+    const fixture = services()
+    const onNativeConversationChange = vi.fn()
+    fixture.runtime.listTestSessions.mockResolvedValue([
+      { sessionId: 'session-test', title: 'Current check', boundAt: 2, running: false, completed: true, error: null },
+      { sessionId: 'session-old', title: 'Earlier failed check', boundAt: 1, running: false, completed: true, error: 'previous failure' },
+    ])
+    render(<AgentCenterSection close={() => {}} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} onNativeConversationChange={onNativeConversationChange} />)
+    await screen.findByRole('tab', { name: 'My Agents' })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Test chat' }))
+    await waitFor(() => expect(fixture.runtime.beginTest).toHaveBeenCalledOnce())
+
+    const previous = await screen.findByRole('button', { name: /Earlier failed check/ })
+    fireEvent.click(previous)
+    await waitFor(() => expect(onNativeConversationChange).toHaveBeenLastCalledWith({
+      sessionId: null, interactive: false,
+    }))
+    expect(previous).toHaveAttribute('aria-current', 'page')
+    expect(await screen.findByText('The earlier reply')).toBeInTheDocument()
+    expect(screen.getByText('Check the earlier prompt')).toBeInTheDocument()
+    expect(screen.getByText('Original test failure')).toBeInTheDocument()
+    expect(fixture.runtime.readTestHistory).toHaveBeenCalledWith('mine', 'session-old', undefined, expect.any(AbortSignal))
+    expect(fixture.runtime.openSession).not.toHaveBeenCalledWith('session-old')
+
+    fireEvent.click(screen.getByRole('button', { name: /Current check/ }))
+    await waitFor(() => expect(fixture.runtime.readTestHistory).toHaveBeenLastCalledWith('mine', 'session-test', undefined, expect.any(AbortSignal)))
+    fireEvent.click(screen.getByRole('button', { name: 'Return to current test' }))
+    await waitFor(() => expect(onNativeConversationChange).toHaveBeenLastCalledWith({
+      sessionId: 'session-test', interactive: true, lockedAgentName: 'Research Agent',
+    }))
+    expect(fixture.runtime.beginTest).toHaveBeenCalledOnce()
+    expect(fixture.profiles.bindSession).not.toHaveBeenCalled()
+    expect(fixture.profiles.saveProfile).not.toHaveBeenCalled()
+  })
+
   it('retries a failed native Test Chat without returning to the configuration form', async () => {
     const fixture = services()
     vi.mocked(fixture.runtime.beginTest)
@@ -1874,7 +1933,8 @@ describe('Agent Center business UI', () => {
     expect(AGENT_CENTER_STYLE).toContain('inset: auto 0 0 !important;')
     expect(AGENT_CENTER_STYLE).toContain('height: var(--paimind-agent-native-conversation-height) !important;')
     expect(AGENT_CENTER_STYLE).toContain('grid-template-columns: repeat(3, minmax(0, 1fr));')
-    expect(AGENT_CENTER_STYLE).toContain('@media(prefers-reduced-motion:reduce)')
+    expect(AGENT_CENTER_STYLE).toContain('var(--paimind-motion-loop)')
+    expect(AGENT_CENTER_STYLE).toContain('var(--paimind-motion-iterations)')
     expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-splitter]')
     expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-draft-question-recovered] > :not([data-paimind-agent-draft-projection])')
     expect(AGENT_CENTER_STYLE).toContain('cursor: col-resize;')

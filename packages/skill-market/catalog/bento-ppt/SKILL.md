@@ -1,6 +1,7 @@
 ---
+display-name: 演示制作
 name: bento-ppt
-description: Create an evidence-backed Bento presentation with a validated outline, object-level provenance, and an interactive editable Bento Artifact as the final deliverable. Use for proposal decks, buyer presentations, traceable slides, or sources and facts linked to slide objects.
+description: 根据已核实的资料制作网页演示，支持查看数据来源。
 ---
 
 # Traceable Bento Delivery for Harness

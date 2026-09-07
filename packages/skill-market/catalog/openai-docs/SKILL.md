@@ -1,6 +1,7 @@
 ---
+display-name: OpenAI 官方文档
 name: openai-docs
-description: Find current OpenAI product and API guidance from official documentation and answer with direct citations. Use when an answer depends on exact OpenAI APIs, models, prompting, Agents, Realtime, evaluations, ChatGPT, or Codex documentation.
+description: 查阅 OpenAI 官方产品与开发文档，并提供原文来源。
 ---
 
 # OpenAI Docs

@@ -33,6 +33,7 @@
     }
   },
   "dependencies": {
+    "@paimind/ui-foundation": "workspace:^",
     "@deepseek-ai/dsh-home-paths": "0.1.1-rc.2",
     "@paimind/contracts": "workspace:^",
     "@paimind/harness-compat": "workspace:^",

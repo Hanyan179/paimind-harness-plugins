@@ -1,3 +1,5 @@
+import { markHarnessClientStyle } from './index.js'
+
 /** Read-only projection of live footer contributions, never a product registry. */
 export interface PaimindNavigationEntry {
   readonly id: string
@@ -33,6 +35,7 @@ export function installPaimindCompactNavigation(
 [data-paimind-navigation-footer]:has([data-paimind-resource-navigation][data-wide="false"]){grid-template-columns:36px;justify-content:center}
 [data-paimind-navigation-footer]:has([data-paimind-resource-navigation][data-wide="false"]) [data-paimind-navigation-settings]{grid-column:1;grid-row:3}
 `
+  markHarnessClientStyle(style, '@paimind/visual-experience')
   doc.head.append(style)
   const marked = new Map<HTMLElement, Map<string, string | null>>()
   let sources = new Map<string, HTMLButtonElement>()

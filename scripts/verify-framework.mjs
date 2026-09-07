@@ -343,16 +343,18 @@ for (const forbidden of ['AGENT_AUTHORING_SYSTEM_PROTOCOL', 'capabilityPrompt'])
 }
 
 const userSettingsClient = await readFile(resolve(packagesRoot, 'user-settings/src/client/index.tsx'), 'utf8')
+const userSettingsEditor = await readFile(resolve(packagesRoot, 'user-settings/src/client/editor.ts'), 'utf8')
 const userSettingsHost = await readFile(resolve(packagesRoot, 'user-settings/src/index.ts'), 'utf8')
 for (const marker of [
   "category: 'experience'", "surface: 'settings'", 'remote.$mount(TYPERT_REMOTE)',
-  'expectedRevision: current.revision', 'renderPaimindPersonalizationContext', 'No persistence is simulated',
+  'expectedRevision: revision', 'data-paimind-saved-preview', 'personalization.aboutMe', 'personalization.customInstructions', 'getPersonalizationEditor',
 ]) {
   if (!userSettingsClient.includes(marker)) failures.push(`@paimind/user-settings: native Settings client boundary is missing ${marker}`)
 }
 for (const marker of [
   'installPaimindHostSettings<PaimindPersonalization>', "name: 'paimind:personalization'",
-  'systemPrompt.context',
+  'systemPrompt.context', 'renderPaimindPersonalizationContext(this.source())',
+  'async saveText(', 'mutatePaimindHostSettingsOperations',
 ]) {
   if (!userSettingsHost.includes(marker)) failures.push(`@paimind/user-settings: live Host consumer is missing ${marker}`)
 }
@@ -360,12 +362,17 @@ for (const forbidden of [
   'window.localStorage', 'localStorage.', 'window.sessionStorage', 'sessionStorage.',
   'memoryStore', 'theme:', 'language:', 'model:', 'agentPreset:',
 ]) {
-  if (userSettingsClient.includes(forbidden)) failures.push(`@paimind/user-settings: duplicate or browser-only preference marker is forbidden: ${forbidden}`)
+  if (`${userSettingsClient}\n${userSettingsEditor}`.includes(forbidden)) failures.push(`@paimind/user-settings: duplicate or browser-only preference marker is forbidden: ${forbidden}`)
 }
 const runtimeOrbClient = await readFile(resolve(packagesRoot, 'runtime-orbs/src/client/index.tsx'), 'utf8')
-if (!runtimeOrbClient.includes("matchMedia?.('(prefers-reduced-motion: reduce)')")
+// User-controlled motion supersedes the former OS-only policy. The shared
+// foundation resolves preference; runtime-orbs remains only a consumer.
+if (!runtimeOrbClient.includes("from '@paimind/ui-foundation'")
+  || !runtimeOrbClient.includes('readPaimindMotion')
+  || !runtimeOrbClient.includes('subscribePaimindMotion')
+  || runtimeOrbClient.includes('prefers-reduced-motion')
   || runtimeOrbClient.includes('data-paimind-motion')) {
-  failures.push('@paimind/runtime-orbs: reduced motion must follow the operating-system preference only')
+  failures.push('@paimind/runtime-orbs: motion must consume the shared foundation, without a second preference resolver or store')
 }
 const notificationHost = await readFile(resolve(packagesRoot, 'notifications/src/index.ts'), 'utf8')
 if (notificationHost.includes('paimindUserSettings') || notificationHost.includes('shouldPublishNotification')) {

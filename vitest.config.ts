@@ -10,6 +10,7 @@ const packageModule = (name: string, module: string): string =>
 export default defineConfig({
   resolve: {
     alias: {
+      '@paimind/ui-foundation': packageSource('ui-foundation'),
       '@paimind/contracts': packageSource('contracts'),
       '@paimind/presentation-contracts': packageSource('presentation-contracts'),
       '@paimind/harness-compat/native-mcp': packageModule('harness-compat', 'native-mcp'),

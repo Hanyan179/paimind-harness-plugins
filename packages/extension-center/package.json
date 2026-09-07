@@ -48,6 +48,7 @@
     }
   },
   "dependencies": {
+    "@paimind/ui-foundation": "workspace:^",
     "@paimind/contracts": "workspace:^",
     "@paimind/harness-compat": "workspace:^",
     "zod": "^4.4.3"

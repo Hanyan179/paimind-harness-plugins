@@ -18,7 +18,7 @@ Use PAIMind's native Agent Builder flow. Do not create Preset files, edit compos
    - When revising an existing Builder draft, you may provide only the fields that should change. The Tool merges omitted fields against the current structured draft and still returns one complete proposal.
    - `preferredSkillNames` must contain only exact installed Business Skill names visible in the current context. Use an empty array when none are visible.
    - Include `businessCategory` only when the current Builder context is for a Business Agent.
-4. After the Tool succeeds, briefly tell the user that the draft has opened in Agent Builder for review and Save. The Tool prepares a draft; it does not persist the Agent.
+4. After the Tool succeeds, briefly tell the user that the unsaved draft is ready to review in the Agent Center (智能体中心), where they can edit and save it. Use business language in the user's language. Do not expose internal Preset / Mode names, runtime architecture, tool identifiers, or raw Skill identifiers in ordinary progress or completion messages. The Tool prepares a draft; it does not persist the Agent.
 
 The Tool result is the authoritative handoff to Agent Builder. Do not infer or open the Builder from matching words in the user's message.
 

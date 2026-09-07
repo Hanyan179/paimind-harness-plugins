@@ -37,6 +37,7 @@
     }
   },
   "dependencies": {
+    "@paimind/ui-foundation": "workspace:^",
     "@paimind/better-sidebar-adapter": "workspace:^",
     "@paimind/contracts": "workspace:^",
     "@paimind/harness-compat": "workspace:^",

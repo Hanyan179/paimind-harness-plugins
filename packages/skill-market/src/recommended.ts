@@ -24,6 +24,7 @@ export interface SkillCatalogItem {
   readonly id: string
   readonly name: string
   readonly description: string
+  readonly displayNameZh?: string
   readonly version: string
   readonly source: string
   readonly license: string
@@ -40,6 +41,7 @@ interface RecommendedSkillSource {
   readonly id: string
   readonly name: string
   readonly description: string
+  readonly displayNameZh: string
   readonly version: string
   readonly source: string
   readonly license: string
@@ -62,44 +64,44 @@ const PAIMIND_SOURCE = 'PAIMind Internal · Adapted for Harness'
 
 const SOURCES: readonly RecommendedSkillSource[] = Object.freeze([
   {
-    id: 'openai-docs', name: 'openai-docs', version: '1.0.0', source: SOURCE, license: 'Apache-2.0',
+    id: 'openai-docs', name: 'openai-docs', version: '1.0.1', source: SOURCE, license: 'Apache-2.0',
     category: 'research', tags: Object.freeze(['official-docs', 'research']),
-    description: '查询 OpenAI 官方产品与 API 文档，并提供直接来源。', skill: openaiDocsSkill, notice: openaiDocsNotice, licenseText: apacheLicense,
+    displayNameZh: 'OpenAI 官方文档', description: '查阅 OpenAI 官方产品与开发文档，并提供原文来源。', skill: openaiDocsSkill, notice: openaiDocsNotice, licenseText: apacheLicense,
   },
   {
-    id: 'bento-ppt', name: 'bento-ppt', version: '1.4.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    id: 'bento-ppt', name: 'bento-ppt', version: '1.4.1', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
     category: 'content', tags: Object.freeze(['artifact', 'presentation']),
-    description: '用真实来源、稳定对象绑定与 Sidecar 溯源生成丰富的 Bento HTML 演示。', skill: bentoPptSkill, notice: bentoPptNotice, licenseText: internalLicense,
+    displayNameZh: '演示制作', description: '根据已核实的资料制作网页演示，支持查看数据来源。', skill: bentoPptSkill, notice: bentoPptNotice, licenseText: internalLicense,
   },
   {
-    id: 'fineline-investment-analysis', name: 'fineline-investment-analysis', version: '1.0.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    id: 'fineline-investment-analysis', name: 'fineline-investment-analysis', version: '1.0.1', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
     category: 'product', tags: Object.freeze(['data-analysis', 'pdm']),
-    description: '从脱敏冻结快照生成 Walmart Fine-line 投资分析 data_result 产物。', skill: finelineSkill, notice: finelineNotice, licenseText: internalLicense,
+    displayNameZh: '沃尔玛细分类目投资分析', description: '基于脱敏的历史数据快照，分析细分类目的投资机会。', skill: finelineSkill, notice: finelineNotice, licenseText: internalLicense,
   },
   {
-    id: 'white-space-analysis', name: 'white-space-analysis', version: '1.0.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    id: 'white-space-analysis', name: 'white-space-analysis', version: '1.0.1', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
     category: 'product', tags: Object.freeze(['data-analysis', 'pdm']),
-    description: '从脱敏冻结快照生成 Walmart White-space 分析 data_result 产物。', skill: whiteSpaceSkill, notice: whiteSpaceNotice, licenseText: internalLicense,
+    displayNameZh: '沃尔玛市场空白分析', description: '基于脱敏的历史数据快照，寻找尚未覆盖的商品机会。', skill: whiteSpaceSkill, notice: whiteSpaceNotice, licenseText: internalLicense,
   },
   {
-    id: 'build-walmart-buyer-proposal-outline', name: 'build-walmart-buyer-proposal-outline', version: '1.2.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    id: 'build-walmart-buyer-proposal-outline', name: 'build-walmart-buyer-proposal-outline', version: '1.2.1', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
     category: 'product', tags: Object.freeze(['pdm', 'proposal']),
-    description: '从两个已验证分析 Artifact 构建 Walmart Buyer Proposal 提纲。', skill: walmartOutlineSkill, notice: walmartOutlineNotice, licenseText: internalLicense,
+    displayNameZh: '沃尔玛采购提案大纲', description: '整理业务分析和采购建议，形成可审阅的提案大纲。', skill: walmartOutlineSkill, notice: walmartOutlineNotice, licenseText: internalLicense,
   },
   {
-    id: 'category-performance-analysis', name: 'category-performance-analysis', version: '1.0.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    id: 'category-performance-analysis', name: 'category-performance-analysis', version: '1.0.1', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
     category: 'data', tags: Object.freeze(['category-analysis', 'performance']),
-    description: '从冻结合成数据生成可溯源的品类经营分析 data_result。', skill: categoryPerformanceSkill, notice: categoryPerformanceNotice, licenseText: internalLicense,
+    displayNameZh: '类目经营分析', description: '分析商品类目的销售与经营表现，形成有数据依据的结论。', skill: categoryPerformanceSkill, notice: categoryPerformanceNotice, licenseText: internalLicense,
   },
   {
-    id: 'category-opportunity-analysis', name: 'category-opportunity-analysis', version: '1.0.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    id: 'category-opportunity-analysis', name: 'category-opportunity-analysis', version: '1.0.1', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
     category: 'data', tags: Object.freeze(['category-analysis', 'opportunity']),
-    description: '为 Cosmetics、Party Favors 与手工品生成可溯源的机会分析。', skill: categoryOpportunitySkill, notice: categoryOpportunityNotice, licenseText: internalLicense,
+    displayNameZh: '类目机会分析', description: '结合经营表现寻找商品机会，并说明判断依据。', skill: categoryOpportunitySkill, notice: categoryOpportunityNotice, licenseText: internalLicense,
   },
   {
-    id: 'proposal-assistant-orchestration', name: 'proposal-assistant-orchestration', version: '1.0.0', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
+    id: 'proposal-assistant-orchestration', name: 'proposal-assistant-orchestration', version: '1.0.1', source: PAIMIND_SOURCE, license: 'UNLICENSED / Internal Use Only',
     category: 'product', tags: Object.freeze(['orchestration', 'proposal']),
-    description: 'AI 驱动 Proposal Assistant，从澄清提问编排到 Fact Layer、Bento Deck 与 Trace Mode。', skill: proposalAssistantSkill, notice: proposalAssistantNotice, licenseText: internalLicense,
+    displayNameZh: '采购提案助手', description: '澄清提案需求，组织分析、演示制作和数据来源说明。', skill: proposalAssistantSkill, notice: proposalAssistantNotice, licenseText: internalLicense,
   },
 ])
 
@@ -119,7 +121,7 @@ function buildPackage(source: RecommendedSkillSource): RecommendedSkillPackage {
   const digest = `sha256:${createHash('sha256').update(archive).digest('hex')}`
   return Object.freeze({
     item: Object.freeze({
-      id: source.id, name: source.name, description: source.description, version: source.version,
+      id: source.id, name: source.name, description: source.description, displayNameZh: source.displayNameZh, version: source.version,
       source: source.source, license: source.license, digest, category: source.category, tags: source.tags,
     }),
     archive,

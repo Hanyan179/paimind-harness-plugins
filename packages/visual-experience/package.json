@@ -47,7 +47,8 @@
   },
   "dependencies": {
     "@paimind/branding": "workspace:^",
-    "@paimind/harness-compat": "workspace:^"
+    "@paimind/harness-compat": "workspace:^",
+    "@paimind/ui-foundation": "workspace:^"
   },
   "peerDependencies": {
     "react": ">=18.0.0 <20.0.0",

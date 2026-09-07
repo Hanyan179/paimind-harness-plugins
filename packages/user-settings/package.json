@@ -30,6 +30,7 @@
   "dependencies": {
     "@paimind/contracts": "workspace:^",
     "@paimind/harness-compat": "workspace:^",
+    "@paimind/ui-foundation": "workspace:^",
     "zod": "^4.4.3"
   },
   "peerDependencies": {

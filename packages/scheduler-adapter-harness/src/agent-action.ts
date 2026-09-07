@@ -19,18 +19,18 @@ export function installPaimindAgentScheduleAction(ctx: PaimindAgentScheduleActio
       : (() => { throw new Error('PAIMIND_SCHEDULE_AGENT_PROVIDER and PAIMIND_SCHEDULE_AGENT_MODEL must be configured together') })()
   const briefReady = ctx.paimindHarnessScheduleAdapter.registerAction({
     actionId: PAIMIND_AGENT_BRIEF_ACTION_ID,
-    source: { id: 'paimind.agent', nameZh: 'PAIMind Agent', nameEn: 'PAIMind Agent' },
-    nameZh: 'Agent · 新建会话并生成工作区简报',
+    source: { id: 'paimind.agent', nameZh: 'PAIMind 智能任务', nameEn: 'PAIMind Agent' },
+    nameZh: '生成工作区简报',
     nameEn: 'Agent · Create a session and generate a workspace brief',
-    descriptionZh: '按时新建独立 Agent 会话，检查工作区并生成进展、风险和下一步简报。',
+    descriptionZh: '按时新建独立对话，检查工作区并生成进展、风险和下一步简报。',
     descriptionEn: 'Create an independent Agent session on schedule and summarize workspace progress, risks, and next steps.',
     category: 'ai',
     ...(configuredCwd === undefined || configuredCwd === '' ? {} : { cwd: configuredCwd }),
     ...modelRoute,
     prompt: [
-      'Review the current workspace and produce a concise workspace brief.',
-      'Cover current progress, material risks, and the next recommended actions.',
-      'Do not modify files or call external systems.',
+      '请审阅当前工作区，用中文生成简短的工作简报。',
+      '说明当前进展、需要关注的问题和下一步安排。仅报告有依据的事实，使用业务用户能理解的名称。',
+      '不要修改文件或调用外部系统。',
     ].join('\n'),
   })
   const promptReady = ctx.paimindHarnessScheduleAdapter.registerAction({

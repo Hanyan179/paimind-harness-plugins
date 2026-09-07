@@ -1,6 +1,6 @@
 import { Component, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
 import { installPaimindCompactNavigation, type PaimindNavigationEntry } from '@paimind/harness-compat/client-surface'
-import type { PaimindLocaleSource } from '@paimind/harness-compat'
+import { markHarnessClientStyle, type PaimindLocaleSource } from '@paimind/harness-compat'
 import { PaimindAgentIcon, PaimindSkillIcon, PaimindConnectionIcon, PaimindTemplateIcon,
   PaimindExtensionIcon, PaimindSearchIcon, PaimindCloseIcon, PaimindChevronRightIcon,
   PaimindPlusIcon, PaimindCheckIcon } from '@paimind/harness-compat/client-icons'
@@ -68,7 +68,7 @@ export function ResourceNavigation({ wide, locale }: {
     if (!root.current) return
     const installed = installPaimindCompactNavigation(root.current, setEntries)
     bridge.current = installed
-    const style = document.createElement('style'); style.textContent = STYLE; document.head.append(style)
+    const style = document.createElement('style'); style.textContent = STYLE; markHarnessClientStyle(style, '@paimind/visual-experience'); document.head.append(style)
     const syncPin = (event: StorageEvent): void => { if (event.key === PIN_KEY || event.key === null) setPin(readPin()) }
     window.addEventListener('storage', syncPin)
     return () => { installed.dispose(); bridge.current = null; style.remove(); window.removeEventListener('storage', syncPin) }

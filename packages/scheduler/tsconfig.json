@@ -3,6 +3,7 @@
   "compilerOptions": { "rootDir": "src", "outDir": "lib/types", "emitDeclarationOnly": true },
   "include": ["src"],
   "references": [
+    { "path": "../ui-foundation" },
     { "path": "../contracts" },
     { "path": "../harness-compat" }
   ]

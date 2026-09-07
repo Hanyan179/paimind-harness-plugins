@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { PAIMIND_UI_FOUNDATION_CSS } from '@paimind/ui-foundation'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
+  markHarnessClientStyle,
   contributePaimindExtension,
   resolveHarnessSettingsNamespace,
   type PaimindClientContext,
@@ -47,24 +49,20 @@ interface ConversationTitleClientContext extends PaimindClientContext {
 }
 
 const STYLE = `
-[data-paimind-model-services]{display:grid;align-content:start;gap:20px;min-height:720px;padding:28px 30px;box-sizing:border-box;color:var(--dsw-alias-label-primary,#17223a);font:inherit}
+[data-paimind-model-services]{display:grid;align-content:start;gap:20px;min-height:0;padding:28px 30px;box-sizing:border-box;color:var(--dsw-alias-label-primary,#17223a);font:inherit}
 [data-paimind-model-services] *{box-sizing:border-box}
 [data-paimind-model-services] h2{margin:0;font-size:24px;line-height:32px;font-weight:600}
 [data-paimind-model-service-card]{overflow:hidden;border:1px solid var(--dsw-alias-border-l1,rgba(110,128,154,.16));border-radius:16px;background:var(--dsw-alias-bg-layer-1,#fff)}
 [data-paimind-model-service-head]{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;padding:18px 20px;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(110,128,154,.14))}
 [data-paimind-model-service-head] strong{display:block;font-size:15px;line-height:22px;font-weight:600}
-[data-paimind-model-service-head] small{display:block;margin-top:3px;color:var(--dsw-alias-label-tertiary,#78849a);font-size:11px;line-height:17px}
+[data-paimind-model-service-head] small{display:block;margin-top:3px;color:var(--dsw-alias-label-tertiary,#78849a);font-size:12px;line-height:17px}
 [data-paimind-model-service-row]{display:grid;grid-template-columns:minmax(180px,1fr) minmax(260px,420px);gap:24px;align-items:center;padding:18px 20px}
 [data-paimind-model-service-row] label{display:grid;gap:3px;font-size:13px;line-height:20px;font-weight:600}
-[data-paimind-model-service-row] label span{color:var(--dsw-alias-label-tertiary,#78849a);font-size:10px;line-height:16px;font-weight:400}
+[data-paimind-model-service-row] label span{color:var(--dsw-alias-label-tertiary,#78849a);font-size:12px;line-height:16px;font-weight:400}
 [data-paimind-model-service-row] select{width:100%;min-height:40px;padding:8px 34px 8px 12px;border:1px solid var(--dsw-alias-border-l2,rgba(110,128,154,.24));border-radius:11px;color:var(--dsw-alias-label-primary,#17223a);background:var(--dsw-alias-bg-layer-2,#fff);font:inherit;font-size:12px;outline:none}
 [data-paimind-model-service-row] select:focus-visible{border-color:var(--dsw-alias-state-business-primary,#3471f5);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary,#3471f5) 16%,transparent)}
-[data-paimind-model-service-switch]{position:relative;width:42px;height:24px;padding:0;border:0;border-radius:999px;background:var(--dsw-alias-fill-tertiary,rgba(128,128,128,.28));cursor:pointer;transition:background .16s ease}
-[data-paimind-model-service-switch]::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.22);transition:transform .16s ease}
-[data-paimind-model-service-switch][aria-checked='true']{background:var(--dsw-alias-state-business-primary,#3471f5)}
-[data-paimind-model-service-switch][aria-checked='true']::after{transform:translateX(18px)}
-[data-paimind-model-service-switch]:disabled,[data-paimind-model-service-row] select:disabled{opacity:.5;cursor:not-allowed}
 [data-paimind-model-services-state]{padding:32px 12px;color:var(--dsw-alias-label-tertiary,#78849a);text-align:center}
+[data-paimind-model-service-feedback]{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0;padding:12px 20px;font-size:12px;line-height:1.6}
 @media(max-width:680px){[data-paimind-model-services]{min-height:100%;padding:18px}[data-paimind-model-service-row]{grid-template-columns:1fr;gap:10px}}
 `
 
@@ -72,8 +70,8 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = STYLE_ID
-  style.textContent = STYLE
+  style.dataset.paimindPlugin = STYLE_ID; markHarnessClientStyle(style, STYLE_ID)
+  style.textContent = `${PAIMIND_UI_FOUNDATION_CSS}\n${STYLE}`
   document.head.append(style)
   return () => { style.remove() }
 }
@@ -88,6 +86,9 @@ export function ConversationTitleModelService(props: {
   const [groups, setGroups] = useState<readonly ModelCatalogGroup[]>([])
   const [catalogStatus, setCatalogStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [busy, setBusy] = useState(false)
+  const writing = useRef(false)
+  const [saveError, setSaveError] = useState(false)
+  const [catalogRevision, setCatalogRevision] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -102,7 +103,7 @@ export function ConversationTitleModelService(props: {
       setCatalogStatus('ready')
     }, () => { if (active) setCatalogStatus('error') })
     return () => { active = false }
-  }, [props.api])
+  }, [props.api, catalogRevision])
 
   const route = decodePaimindConversationTitleModelRoute(settings.modelRoute)
   const choices = useMemo(() => groups.flatMap(group => group.models.map(model => ({
@@ -113,20 +114,22 @@ export function ConversationTitleModelService(props: {
   const writable = snapshot.status === 'ready' && snapshot.writable && !busy
 
   const setField = async (field: keyof PaimindConversationTitleSettings, value: unknown): Promise<void> => {
-    if (!writable) return
+    if (!writable || writing.current) return
+    writing.current = true
     setBusy(true)
-    try { await props.scope.set(field, value) } finally { setBusy(false) }
+    setSaveError(false)
+    try { await props.scope.set(field, value) } catch { setSaveError(true) } finally { writing.current = false; setBusy(false) }
   }
 
   if (snapshot.status === 'loading') return <div data-paimind-model-services-state aria-busy="true">{props.zh ? '正在读取设置…' : 'Reading settings…'}</div>
-  if (snapshot.status === 'unavailable') return <div data-paimind-model-services-state role="status">{props.zh ? '模型服务设置当前不可用' : 'Model service settings are unavailable'}</div>
+  if (snapshot.status === 'unavailable') return <div data-paimind-model-services-state role="status">{props.zh ? '对话命名设置暂不可用，请稍后重新打开此页' : 'Conversation naming settings are unavailable. Reopen this page to retry.'}</div>
 
-  return <section data-paimind-model-services aria-label={props.zh ? '模型服务' : 'Model services'}>
-    <h2>{props.zh ? '模型服务' : 'Model services'}</h2>
+  return <section data-paimind-ui-scope="conversation-title" data-paimind-model-services aria-label={props.zh ? '对话命名' : 'Conversation naming'}>
+    <h2>{props.zh ? '对话命名' : 'Conversation naming'}</h2>
     <article data-paimind-model-service-card>
       <header data-paimind-model-service-head>
-        <span><strong>{props.zh ? '对话自动命名' : 'Conversation auto-naming'}</strong><small>{props.zh ? '首条有效消息生成简洁标题' : 'Generate a concise title from the first eligible message'}</small></span>
-        <button type="button" role="switch" data-paimind-model-service-switch aria-label={props.zh ? '启用对话自动命名' : 'Enable conversation auto-naming'} aria-checked={settings.enabled} disabled={!writable} onClick={() => { void setField('enabled', !settings.enabled) }} />
+        <span><strong>{props.zh ? '对话自动命名' : 'Conversation auto-naming'}</strong><small>{props.zh ? '根据第一条消息自动生成标题，方便查找对话' : 'Generate a title from the first message to make conversations easier to find'}</small></span>
+        <button type="button" role="switch" data-paimind-ui-switch data-paimind-model-service-switch aria-label={props.zh ? '启用对话自动命名' : 'Enable conversation auto-naming'} aria-checked={settings.enabled} aria-disabled={!writable} onClick={() => { void setField('enabled', !settings.enabled) }} />
       </header>
       <div data-paimind-model-service-row>
         <label>{props.zh ? '模型' : 'Model'}<span>{props.zh ? '仅用于生成对话标题' : 'Used only for conversation titles'}</span></label>
@@ -136,7 +139,11 @@ export function ConversationTitleModelService(props: {
           {choices.map(choice => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
         </select>
       </div>
-      {catalogStatus === 'error' ? <span hidden>{props.zh ? '模型列表暂不可用' : 'Model catalog unavailable'}</span> : null}
+      {catalogStatus === 'loading' ? <p data-paimind-model-service-feedback role="status">{props.zh ? '正在加载可选模型…' : 'Loading available models…'}</p> : null}
+      {catalogStatus === 'error' ? <div data-paimind-model-service-feedback role="alert"><span>{props.zh ? '模型列表加载失败，已保存的选择保持不变。' : 'Could not load models. Your saved selection is unchanged.'}</span><button type="button" data-paimind-ui-button onClick={() => { setCatalogRevision(value => value + 1) }}>{props.zh ? '重新加载模型' : 'Reload models'}</button></div> : null}
+      {saveError ? <p data-paimind-model-service-feedback data-paimind-ui-state="error" role="alert">{props.zh ? '保存失败，设置尚未更改。请重新操作以重试。' : 'Could not save. Settings are unchanged. Try your change again.'}</p> : null}
+      {busy ? <p data-paimind-model-service-feedback role="status">{props.zh ? '正在保存…' : 'Saving…'}</p> : null}
+      {!snapshot.writable ? <p data-paimind-model-service-feedback role="status">{props.zh ? '当前设置为只读。' : 'These settings are read-only.'}</p> : null}
     </article>
   </section>
 }
@@ -157,6 +164,6 @@ export function apply(ctx: ConversationTitleClientContext): void {
   })
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section', id: 'paimind-model-services', order: 12,
-    label: () => ctx.locale.getLocale().active.startsWith('zh') ? '模型服务' : 'Model services',
+    label: () => ctx.locale.getLocale().active.startsWith('zh') ? '对话命名' : 'Conversation naming',
   }, () => <ConversationTitleModelService scope={scope} api={api} zh={ctx.locale.getLocale().active.startsWith('zh')} />))
 }

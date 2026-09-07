@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-07",
+  "featureCommit": "70043f1",
+  "previousMain": "8c76d76",
+  "artifactDirectory": "/Users/hansen/.codex/visualizations/2026/09/07/01a079c7-204f-7d50-8b82-a65499caeda5/mainline-merge",
+  "tests": {
+    "files": 126,
+    "passed": 684
+  },
+  "typecheck": "passed",
+  "build": "passed",
+  "packageGates": "passed after explicit review of 20 snapshot fields",
+  "harnessComposition": "full install/boot/remove/restore and source-isolation probes passed; zero upstream delta",
+  "browser": {
+    "url": "http://127.0.0.1:3080/",
+    "profile": "original full web profile and original DSH_HOME",
+    "checks": [
+      "history preserved after restart",
+      "all skills 15 / installed 12 / built-in 4",
+      "catalog display names and local upload union preserved",
+      "resource library navigation",
+      "Feishu read-only protocol test discovered 4 tools",
+      "writer still selects human-writing, lark-doc, lark-shared and one Feishu connection",
+      "parallel Agent skill/connection panels",
+      "Settings controls normal at desktop and 720x800",
+      "Escape closes narrow Skill details while leaving Skill Center open",
+      "viewport override reset"
+    ]
+  },
+  "limits": [
+    "No new Feishu business document writes during merge validation",
+    "No remote push",
+    "No enterprise merge or worktree cleanup"
+  ]
+}

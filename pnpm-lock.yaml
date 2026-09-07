@@ -154,6 +154,9 @@ importers:
       '@paimind/renderer-bento':
         specifier: workspace:^
         version: link:../renderer-bento
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
       '@paimind/workspace-project':
         specifier: workspace:^
         version: link:../workspace-project
@@ -195,6 +198,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
     devDependencies:
       '@paimind/testkit':
         specifier: workspace:^
@@ -235,6 +241,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
     devDependencies:
       '@paimind/testkit':
         specifier: workspace:^
@@ -251,6 +260,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
     devDependencies:
       '@paimind/testkit':
         specifier: workspace:^
@@ -270,6 +282,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
     devDependencies:
       '@paimind/testkit':
         specifier: workspace:^
@@ -289,6 +304,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -697,6 +715,9 @@ importers:
       '@paimind/renderer-bento':
         specifier: workspace:^
         version: link:../renderer-bento
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
       '@paimind/workspace-project':
         specifier: workspace:^
         version: link:../workspace-project
@@ -716,6 +737,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
     devDependencies:
       '@paimind/testkit':
         specifier: workspace:^
@@ -735,6 +759,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
     devDependencies:
       '@paimind/testkit':
         specifier: workspace:^
@@ -754,6 +781,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
       pdfjs-dist:
         specifier: 6.2.108
         version: 6.2.108
@@ -773,6 +803,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
       thinking-orbs:
         specifier: 0.3.1
         version: 0.3.1(react@18.3.1)
@@ -798,6 +831,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -880,6 +916,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
       fflate:
         specifier: ^0.8.3
         version: 0.8.3
@@ -917,6 +956,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
       '@paimind/workspace-project':
         specifier: workspace:^
         version: link:../workspace-project
@@ -959,6 +1001,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -981,6 +1026,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
     devDependencies:
       '@paimind/testkit':
         specifier: workspace:^
@@ -1025,6 +1073,9 @@ importers:
       '@paimind/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
+      '@paimind/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
       zod:
         specifier: ^4.4.3
         version: 4.4.3

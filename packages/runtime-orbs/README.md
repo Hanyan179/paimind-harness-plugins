@@ -17,9 +17,13 @@ Role: **Client plugin**. It owns the product projection described above; Harness
 | `./client` | `./lib/types/client/index.d.ts`, `./lib/client.js` | Public package export. |
 | `./package.json` | `./package.json` | Public package export. |
 
+## UI foundation
+
+Shared tokens, controls and motion: [UI foundation contract](../../docs/standards/ui-foundation.md).
+
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/harness-compat` (`workspace:^`).
+- Internal runtime dependencies: `@paimind/ui-foundation` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`).
 - External runtime or peer dependencies: `thinking-orbs` (`^0.2.0`), `react` (`>=18.0.0 <20.0.0`), `react-dom` (`>=18.0.0 <20.0.0`).
 - Client service injection: `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-locale`, `@deepseek-ai/dsh-client-ui-slots`, `@deepseek-ai/dsh-client-ui-conversation`, `@deepseek-ai/dsh-client-ui-layout`.
 

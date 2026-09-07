@@ -389,6 +389,15 @@ def build_outline(args: argparse.Namespace) -> None:
         raise ValueError("fineline Artifact content is invalid")
     if white_doc.get("schema") != "paimind.data-result/v1" or white_doc.get("analysisKind") != "white-space-analysis":
         raise ValueError("white-space Artifact content is invalid")
+    # Keep the source's explicit demo classification visible in the deliverable.
+    # The classification comes from the exact frozen manifest, never from a
+    # model guess, file name, or business value in the analysis payload.
+    demo_sources = []
+    for document in (fineline_doc, white_doc):
+        manifest = workspace_file(document["sourceManifest"])
+        if sha(manifest) != document["sourceManifestSha256"]:
+            raise ValueError("analysis source manifest hash mismatch")
+        demo_sources.append(json.loads(manifest.read_text(encoding="utf-8")).get("synthetic") is True)
     output = output_file(args.output)
     with tempfile.TemporaryDirectory(prefix="paimind-outline-") as temp:
         target = Path(temp)
@@ -402,7 +411,17 @@ def build_outline(args: argparse.Namespace) -> None:
         # The former default of ten Finelines produced a padded 40-slide deck.
         run([sys.executable, str(ROOT / "outline" / "scripts" / "build_outline.py"), "--fineline-json", str(fineline_payload), "--white-space-json", str(white_payload), "--top-n", "5", "--trend-mode", "pending", "--narrative-mode", "draft", "--path-mode", "relative", "--output-dir", str(legacy_dir)])
         legacy = json.loads((legacy_dir / "proposal_presentation_outline.json").read_text(encoding="utf-8"))
-        output.write_text(canonical(convert_outline(legacy, fineline, white, args.fineline_artifact_id, args.white_space_artifact_id)), encoding="utf-8")
+        outline = convert_outline(legacy, fineline, white, args.fineline_artifact_id, args.white_space_artifact_id)
+        if args.title:
+            outline["title"] = args.title
+            outline["slides"][0]["title"] = args.title
+        if any(demo_sources):
+            notice = "演示数据 · 非真实经营数据" if all(demo_sources) else "包含演示数据 · 不可作为真实经营结果"
+            outline["subtitle"] = notice
+            for slide in outline["slides"]:
+                slide["eyebrow"] = notice + " · " + slide["eyebrow"]
+            outline["slides"][0]["narrative"] = notice + "。" + outline["slides"][0]["narrative"]
+        output.write_text(canonical(outline), encoding="utf-8")
 
 
 def parser() -> argparse.ArgumentParser:
@@ -421,6 +440,7 @@ def parser() -> argparse.ArgumentParser:
     outline.add_argument("--fineline-artifact-id", required=True)
     outline.add_argument("--white-space-artifact-id", required=True)
     outline.add_argument("--output", required=True)
+    outline.add_argument("--title")
     return root
 
 

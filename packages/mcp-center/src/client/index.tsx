@@ -1,6 +1,6 @@
 import { Component, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { contributePaimindExtension, type HarnessRemoteResult, type HarnessRemoteMountService, type PaimindClientContext } from '@paimind/harness-compat'
+import { markHarnessClientStyle, contributePaimindExtension, type HarnessRemoteResult, type HarnessRemoteMountService, type PaimindClientContext } from '@paimind/harness-compat'
 import { PaimindConnectionIcon } from '@paimind/harness-compat/client-icons'
 import { PaimindProductSurfaceController, resolvePaimindProductCenterHost, installPaimindProductCenterHost, installPaimindProductSurfaceInteraction, type PaimindProductCenterHost } from '@paimind/harness-compat/client-surface'
 import TYPERT_REMOTE from '../remote.js'
@@ -129,7 +129,7 @@ interface McpClientContext extends PaimindClientContext {
 }
 export async function apply(ctx: McpClientContext): Promise<() => Promise<void>> {
   const disposeRemote = await ctx.remote.$mount(TYPERT_REMOTE)
-  ctx.effect(() => { const style = document.createElement('style'); style.id = STYLE_ID; style.textContent = STYLE; document.head.append(style); return () => { style.remove() } }, 'paimind-mcp-center: style')
+  ctx.effect(() => { const style = document.createElement('style'); style.id = STYLE_ID; style.textContent = STYLE; markHarnessClientStyle(style, '@paimind/mcp-center'); document.head.append(style); return () => { style.remove() } }, 'paimind-mcp-center: style')
   const mounted = ctx.inject([...inject, 'remote.paimindMcpConnections'], scope => {
   const api = scope.remote.paimindMcpConnections
   if (!api) throw new Error('Connection Center Remote did not mount')

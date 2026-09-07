@@ -1,6 +1,7 @@
 ---
+display-name: 采购提案助手
 name: proposal-assistant-orchestration
-description: Orchestrate adaptive proposal background questions, internal Skill matching, user-facing content and data selection, verified analysis, and a traceable Bento presentation final deliverable. Use when a user starts, resumes, edits, or goes back in a proposal workflow.
+description: 澄清提案需求，组织分析、演示制作和数据来源说明。
 ---
 
 # Proposal Assistant Orchestration for Harness

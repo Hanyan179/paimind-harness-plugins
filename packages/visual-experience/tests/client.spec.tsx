@@ -25,7 +25,7 @@ class FakeModeScope implements PaimindSettingsScope<PaimindVisualExperienceSetti
 
   constructor(mode: 'paimind' | 'native' = 'paimind') {
     this.snapshot = Object.freeze({
-      status: 'ready', value: Object.freeze({ mode }), base: {}, user: {}, revision: 1,
+      status: 'ready', value: Object.freeze({ mode, motion: 'system' }), base: {}, user: {}, revision: 1,
       writable: true, mode: 'host',
     })
   }
@@ -35,7 +35,7 @@ class FakeModeScope implements PaimindSettingsScope<PaimindVisualExperienceSetti
   async set(_field: 'mode', value: unknown): Promise<void> { this.push(value === 'native' ? 'native' : 'paimind') }
   async unset(): Promise<void> { this.push('paimind') }
   push(mode: 'paimind' | 'native'): void {
-    this.snapshot = Object.freeze({ ...this.snapshot, value: Object.freeze({ mode }), revision: (this.snapshot.revision ?? 0) + 1 })
+    this.snapshot = Object.freeze({ ...this.snapshot, value: Object.freeze({ mode, motion: 'system' }), revision: (this.snapshot.revision ?? 0) + 1 })
     for (const listener of [...this.listeners]) listener()
   }
 }
@@ -303,11 +303,11 @@ describe('PAIMind visual experience client', () => {
     document.body.append(trigger)
 
     await waitFor(() => expect(trigger).toHaveAttribute('aria-label', '设置'))
-    expect(trigger).toHaveAttribute('data-paimind-settings-trigger-label', '设置')
+    document.documentElement.lang = 'en'
+    await waitFor(() => expect(trigger).toHaveAttribute('aria-label', 'Settings'))
 
     fixture.disposeEffects()
     expect(trigger).not.toHaveAttribute('aria-label')
-    expect(trigger).not.toHaveAttribute('data-paimind-settings-trigger-label')
   })
 
   it('enables the reversible experience, renders the welcome entry and restores native mode', async () => {
@@ -726,7 +726,8 @@ describe('PAIMind visual experience client', () => {
     expect(style).toContain('grid-template-columns:minmax(250px,36%) minmax(360px,1fr)')
     expect(style).toContain('[data-paimind-candidate-description]{display:none!important}')
     expect(style).toContain('[data-paimind-agent-avatar]{display:block')
-    expect(style).toContain('@media(prefers-reduced-motion:reduce)')
+    expect(style).toContain('@media (prefers-reduced-motion: reduce)')
+    expect(style).not.toContain('animation-iteration-count:1!important')
     fixture.disposeEffects()
   })
 

@@ -26,9 +26,13 @@ The optional shortcut id is a browser-local preference owned by this package
 | `./client` | `./lib/types/client/index.d.ts`, `./lib/client.js` | Browser experience contribution. |
 | `./package.json` | `./package.json` | Harness client discovery export. |
 
+## UI foundation
+
+Shared tokens, controls and motion: [UI foundation contract](../../docs/standards/ui-foundation.md).
+
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/branding`, `@paimind/harness-compat` (`workspace:^`).
+- Internal runtime dependencies: `@paimind/ui-foundation` (`workspace:^`), `@paimind/branding`, `@paimind/harness-compat` (`workspace:^`).
 - Host Settings dependencies: `@deepseek-ai/cordis`, `@deepseek-ai/dsh-settings`, `@deepseek-ai/schemastery`.
 - External peer dependencies: `react`, `react-dom` (`>=18.0.0 <20.0.0`).
 - Client injection: native connection, locale, runtime, Agent Preset, conversation, layout, primitives, Settings, slots, theme and workspace services.
@@ -55,3 +59,9 @@ The manifest allowlist contains built JavaScript, declarations, source maps, opt
 - `pnpm run check:packs`
 - `pnpm run check:api`
 - Selected Harness + Better Sidebar browser matrix and reversible install/uninstall rehearsal
+
+## Motion preference
+
+The existing native Settings namespace `paimind.visual-experience` owns `motion: system | on | off`, defaulting to `system`. The client controller projects it to document attributes for independently bundled consumers, handles live OS changes, rejects overlapping writes, and rolls back failures. No browser persistence is introduced. Native visual mode preserves the separate motion preference for PAIMind consumers.
+
+The client contributes to the optional `paimind.personalization.appearance` child slot owned by User Settings. When that owner is absent, General Settings renders the same source-owned component. Unload removes both contribution and DOM projection; consumers revert to the system preference.

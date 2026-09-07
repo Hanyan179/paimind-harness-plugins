@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { relative, resolve } from 'node:path'
@@ -19,7 +20,8 @@ describe('frozen PAIMind Python parity baseline', () => {
       await invoke(['prepare', '--output-dir', `${workspacePath}/frozen`])
       await invoke(['fineline', '--manifest', `${workspacePath}/frozen/source-manifest.json`, '--output', `${workspacePath}/analysis/walmart.fineline.data-result.json`, '--category', 'KIDS CRAFTS'])
       await invoke(['white-space', '--manifest', `${workspacePath}/frozen/source-manifest.json`, '--output', `${workspacePath}/analysis/walmart.white-space.data-result.json`, '--category', 'KIDS CRAFTS'])
-      await invoke(['outline', '--fineline', `${workspacePath}/analysis/walmart.fineline.data-result.json`, '--white-space', `${workspacePath}/analysis/walmart.white-space.data-result.json`, '--fineline-artifact-id', 'artifact:demo-fineline', '--white-space-artifact-id', 'artifact:demo-white-space', '--output', `${workspacePath}/deck/walmart-demo.outline.json`])
+      const outlineArgs = ['outline', '--fineline', `${workspacePath}/analysis/walmart.fineline.data-result.json`, '--white-space', `${workspacePath}/analysis/walmart.white-space.data-result.json`, '--fineline-artifact-id', 'artifact:demo-fineline', '--white-space-artifact-id', 'artifact:demo-white-space', '--output', `${workspacePath}/deck/walmart-demo.outline.json`, '--title', '零售机会演示']
+      await invoke(outlineArgs)
 
       const manifest = JSON.parse(await readFile(resolve(temp, 'frozen/source-manifest.json'), 'utf8'))
       const fineline = JSON.parse(await readFile(resolve(temp, 'analysis/walmart.fineline.data-result.json'), 'utf8'))
@@ -32,6 +34,25 @@ describe('frozen PAIMind Python parity baseline', () => {
       expect(outline).toMatchObject({ schema: 'paimind.presentation-outline/v1' })
       expect(outline.slides).toHaveLength(25)
       expect(outline.facts.length).toBeGreaterThan(0)
+      expect(outline.title).toBe('零售机会演示')
+      expect(outline.slides[0].title).toBe('零售机会演示')
+      expect(outline.slides.every((slide: { eyebrow: string }) => slide.eyebrow.includes('演示数据 · 非真实经营数据'))).toBe(true)
+
+      // A changed manifest cannot silently remove the disclosure from a frozen
+      // analysis. A separately hash-bound non-demo fixture must not gain one.
+      const businessManifest = JSON.stringify({ ...manifest, synthetic: false })
+      await writeFile(resolve(temp, 'frozen/source-manifest.json'), businessManifest)
+      await expect(invoke(outlineArgs)).rejects.toThrow(/source manifest hash mismatch/)
+      const businessHash = createHash('sha256').update(businessManifest).digest('hex')
+      for (const [filename, document] of [['walmart.fineline.data-result.json', fineline], ['walmart.white-space.data-result.json', whiteSpace]] as const) {
+        const path = resolve(temp, 'analysis', filename)
+        const original = await readFile(path, 'utf8')
+        await writeFile(path, original.replace(document.sourceManifestSha256, businessHash))
+      }
+      await invoke(outlineArgs)
+      const businessOutline = JSON.parse(await readFile(resolve(temp, 'deck/walmart-demo.outline.json'), 'utf8'))
+      expect(businessOutline.slides.every((slide: { eyebrow: string }) => !slide.eyebrow.includes('演示数据'))).toBe(true)
+      expect(businessOutline.facts).toEqual(outline.facts)
     } finally {
       await rm(temp, { recursive: true, force: true })
     }

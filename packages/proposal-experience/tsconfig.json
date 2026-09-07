@@ -2,5 +2,5 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "lib/types", "emitDeclarationOnly": true },
   "include": ["src"],
-  "references": [{ "path": "../harness-compat" }]
+  "references": [{ "path": "../ui-foundation" },{ "path": "../harness-compat" }]
 }

@@ -1,6 +1,7 @@
 ---
+display-name: 沃尔玛采购提案大纲
 name: build-walmart-buyer-proposal-outline
-description: Build a validated Walmart buyer-proposal presentation outline from exactly one fineline and one white-space data_result Artifact. Use after both Walmart analyses, before bento-ppt, or whenever a buyer narrative must preserve Artifact-level evidence.
+description: 整理业务分析和采购建议，形成可审阅的提案大纲。
 ---
 
 # Walmart Buyer Proposal Outline for Harness

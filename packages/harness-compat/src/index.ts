@@ -961,6 +961,28 @@ function resolveHarnessSettingsLabel(entry: HarnessInspectableSlotEntry): string
   } catch { return undefined }
 }
 
+/** RC2 Settings reuses one scroll container between sections. Reset only on navigation. */
+export function installHarnessSettingsSectionScrollReset(doc: Document = document): () => void {
+  const selected = new WeakMap<HTMLElement, Element>()
+  const refresh = (): void => {
+    for (const slot of doc.querySelectorAll<HTMLElement>('[data-slot="settings.section"]')) {
+      const dialog = slot.closest<HTMLElement>('[role="dialog"]')
+      const container = slot.parentElement
+      if (dialog === null || container === null || !dialog.contains(container)) continue
+      const active = dialog.querySelectorAll('nav button[aria-current="true"]')
+      if (active.length !== 1 || selected.get(dialog) === active[0]) continue
+      selected.set(dialog, active[0]!)
+      container.scrollTop = 0
+      container.scrollLeft = 0
+    }
+  }
+  const Observer = doc.defaultView?.MutationObserver ?? MutationObserver
+  const observer = new Observer(refresh)
+  observer.observe(doc.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-current'] })
+  refresh()
+  return () => { observer.disconnect() }
+}
+
 function resolveHarnessSettingsTrigger(doc: Document): HTMLButtonElement | null {
   const eligible = (button: HTMLButtonElement): boolean => button.closest('[role="dialog"]') === null && !button.disabled
   const slotted = [...new Set(
@@ -976,8 +998,8 @@ function resolveHarnessSettingsTrigger(doc: Document): HTMLButtonElement | null 
 }
 
 /**
- * Hide only the exact native `agent-presets` navigation row while retaining its
- * registered page. RC8 keeps active-section state inside the Settings shell and
+ * Hide the exact native `agent-presets` navigation and General-settings picker
+ * while retaining the registered page for the developer entry. RC2 keeps active-section state inside the Settings shell and
  * exposes no public navigation controller, so the DOM lookup is isolated here,
  * exact-label matched, reversible, and deliberately fail-open on markup drift.
  */
@@ -986,7 +1008,7 @@ export function installHarnessAgentPresetSettingsNavigation(
   doc: Document = document,
 ): HarnessAgentPresetSettingsNavigation {
   let pendingOpen = false
-  const hidden = new Map<HTMLButtonElement, {
+  const hidden = new Map<HTMLElement, {
     readonly hidden: boolean
     readonly display: string
     readonly displayPriority: string
@@ -1002,6 +1024,17 @@ export function installHarnessAgentPresetSettingsNavigation(
     hidden.clear()
   }
 
+  const hide = (element: HTMLElement, surface: string): void => {
+    hidden.set(element, {
+      hidden: element.hasAttribute('hidden'),
+      display: element.style.getPropertyValue('display'),
+      displayPriority: element.style.getPropertyPriority('display'),
+    })
+    element.hidden = true
+    element.style.setProperty('display', 'none', 'important')
+    element.dataset.paimindHiddenSettingsSection = surface
+  }
+
   const refresh = (): HTMLButtonElement | null => {
     restore()
     const entries = slots.entries('settings.section')
@@ -1011,18 +1044,19 @@ export function installHarnessAgentPresetSettingsNavigation(
     if (label === undefined) return null
     const dialog = doc.querySelector<HTMLElement>('[role="dialog"]')
     if (dialog === null) return null
+    // RC2 exposes the same native mode picker in General. Only match a unique
+    // direct row in that native slot with the roster's exact localized label.
+    // Never hide the whole General slot, unrelated controls or ambiguous rows.
+    const generalRows = [...dialog.querySelectorAll<HTMLElement>('[data-slot="settings.general.item"] > div')]
+      .filter(row => row.firstElementChild?.firstElementChild?.textContent?.trim() === label
+        && row.querySelectorAll('button').length === 1
+        && row.querySelector('button[aria-haspopup="menu"]') !== null)
+    if (generalRows.length === 1) hide(generalRows[0]!, 'agent-presets-default')
     const matches = [...dialog.querySelectorAll<HTMLButtonElement>('nav button')]
       .filter(button => button.textContent?.trim() === label)
     if (matches.length !== 1) return null
     const button = matches[0]!
-    hidden.set(button, {
-      hidden: button.hasAttribute('hidden'),
-      display: button.style.getPropertyValue('display'),
-      displayPriority: button.style.getPropertyPriority('display'),
-    })
-    button.hidden = true
-    button.style.setProperty('display', 'none', 'important')
-    button.dataset.paimindHiddenSettingsSection = 'agent-presets'
+    hide(button, 'agent-presets')
     return button
   }
 
@@ -1454,3 +1488,37 @@ export interface PaimindBentoHostContext {
   readonly sessions: PaimindHostSessionService
 }
 export * from './client-input-trigger.js'
+
+/** Native Settings trigger adapter; keep its accessible name in sync with the host locale. */
+export function installHarnessSettingsTriggerAccessibility(doc: Document): () => void {
+  const labelled = new Map<HTMLButtonElement, string>()
+  const sync = (): void => {
+    const button = doc.querySelector<HTMLElement>('[data-slot="settings.trigger"]')?.closest<HTMLButtonElement>('button')
+    if (button == null) return
+    const owned = labelled.get(button)
+    const existing = button.getAttribute('aria-label')
+    // Never take ownership of a name supplied or replaced by Harness/another plugin.
+    if (existing !== null && existing !== owned) return
+    const label = doc.documentElement.lang.toLowerCase().startsWith('zh') ? '设置' : 'Settings'
+    button.setAttribute('aria-label', label)
+    labelled.set(button, label)
+  }
+  const observer = new MutationObserver(sync)
+  observer.observe(doc.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['lang'] })
+  sync()
+  return () => {
+    observer.disconnect()
+    for (const [button, label] of labelled) {
+      if (button.getAttribute('aria-label') === label) button.removeAttribute('aria-label')
+    }
+    labelled.clear()
+  }
+}
+/**
+ * RC client-modules claims untagged styles for the next materialized module.
+ * Tag dynamically created plugin styles before insertion so HMR cannot assign
+ * them to an unrelated plugin. The caller still owns insertion and disposal.
+ */
+export function markHarnessClientStyle(style: HTMLStyleElement, packageName: string): void {
+  style.setAttribute('data-plugin', packageName)
+}
