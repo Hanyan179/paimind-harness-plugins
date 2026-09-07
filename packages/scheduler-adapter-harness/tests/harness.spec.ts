@@ -21,8 +21,8 @@ describe('Harness Scheduler Adapter', () => {
     expect(registerAction).toHaveBeenCalledWith(expect.objectContaining({
       actionId: PAIMIND_AGENT_BRIEF_ACTION_ID,
       category: 'ai',
-      nameZh: 'Agent · 新建会话并生成工作区简报',
-      prompt: expect.stringContaining('Review the current workspace'),
+      nameZh: '生成工作区简报',
+      prompt: expect.stringContaining('请审阅当前工作区'),
     }))
     expect(registerAction.mock.calls[0]?.[0]).not.toHaveProperty('cwd')
     expect(registerAction).toHaveBeenCalledWith(expect.objectContaining({
@@ -45,6 +45,8 @@ describe('Harness Scheduler Adapter', () => {
     const routes: object[] = []
     const metas: object[] = []
     const jobs: object[] = []
+    const observedJobs = new Set<string>()
+    const completionWakeups = vi.fn()
     const mounted: string[] = []
     const agentPresets = {
       resolve: vi.fn(async (id?: string) => ({ id: id ?? 'paramont' })),
@@ -77,7 +79,18 @@ describe('Harness Scheduler Adapter', () => {
       }),
     }
     const nativeJobs = {
-      start: vi.fn(spec => { jobs.push(spec); spec.run(); return `paimind-schedule-${jobs.length}` }),
+      start: vi.fn(spec => {
+        jobs.push(spec)
+        const id = `paimind-schedule-${jobs.length}`
+        void spec.run().done.then(() => {
+          if (!observedJobs.has(id)) completionWakeups(spec.owner)
+        })
+        return id
+      }),
+      wait: vi.fn(async (id: string) => {
+        observedJobs.add(id)
+        return { id, status: 'completed' }
+      }),
     }
     const sessionTitle = { rename: vi.fn() }
     const agentDefaultModel = { currentSelection: vi.fn(() => ({ provider: 'provider:default', model: 'model:default' })) }
@@ -121,6 +134,7 @@ describe('Harness Scheduler Adapter', () => {
     expect(two).toEqual({ status: 'accepted', message: 'Harness Session started' })
     await vi.waitFor(() => { expect(scheduler.reportRun).toHaveBeenCalledTimes(2) })
     await vi.waitFor(() => { expect(publish).toHaveBeenCalledTimes(2) })
+    expect(completionWakeups).not.toHaveBeenCalled()
     expect(publish).toHaveBeenNthCalledWith(1, expect.objectContaining({
       idempotencyKey: 'schedule-run:run:one', title: 'Weekly project brief 已完成',
       target: { kind: 'session', sessionId: created[0] },

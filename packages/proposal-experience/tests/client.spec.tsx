@@ -13,6 +13,17 @@ function wait(question: HarnessQuestionWait['payload']['questions'][number]): Ha
 }
 
 describe('Proposal Assistant Experience', () => {
+  it('localizes business labels while submitting the exact native option identity', async () => {
+    const pending = wait({ id: PROPOSAL_QUESTION_IDS.deckStyle, question: '选择演示风格', options: [{ label: 'Strategy Consulting (Recommended)' }, { label: 'Playful Storybook' }] })
+    render(<ProposalQuestionComposer matched={pending} locale="zh-CN" />)
+    expect(screen.getByText('演示风格预览')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '使用此风格' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('radio', { name: '趣味故事' }))
+    expect(pending.respond).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '使用此风格' }))
+    await waitFor(() => expect(pending.respond).toHaveBeenCalledWith({ ok: true, value: { sessionId: 'session-one', answer: { answers: [{ id: PROPOSAL_QUESTION_IDS.deckStyle, selected: ['Playful Storybook'] }] } } }))
+  })
+
   it('registers exactly one AI-question renderer and disposes cleanly', () => {
     const fixture = createClientContextFixture()
     apply(fixture.context)

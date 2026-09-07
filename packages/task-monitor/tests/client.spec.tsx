@@ -105,7 +105,7 @@ describe('Task Monitor client', () => {
     expect(screen.queryByText(/Refresh preserves process-local Jobs/)).toBeNull()
     expect(screen.getByRole('heading', { name: 'Task Summary' })).toBeInTheDocument()
     expect(screen.getAllByRole('heading', { level: 3 }).map(node => node.textContent)).toEqual([
-      'Task Progress', 'Agent, Skill & MCP', 'Input Files', 'Outputs & Artifacts',
+      'Task Progress', 'Assistants and capabilities', 'Input Files', 'Outputs & Artifacts',
     ])
     const subagentSummary = screen.getByRole('button', { name: 'View 1 Subagents' })
     expect(subagentSummary).toHaveTextContent('1Subagents')
@@ -214,7 +214,7 @@ describe('Task Monitor client', () => {
     }
     render(<TaskMonitorAction {...sparse} />)
     fireEvent.click(screen.getByRole('button', { name: 'Task Monitor' }))
-    expect(screen.queryByRole('heading', { name: 'Agent, Skill & MCP' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Assistants and capabilities' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Outputs & Artifacts' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Input Files' })).toBeNull()
     expect(screen.queryByText('No Project')).toBeNull()

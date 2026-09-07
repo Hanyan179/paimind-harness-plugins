@@ -81,6 +81,9 @@ permanent rule.
 - Client rendering failures collapse only the package-owned surface. Native
   Harness conversation and unrelated plugins remain usable.
 
+Shared client presentation uses the [UI foundation contract](ui-foundation.md);
+per-plugin adoption and user review follow the [UI quality roadmap](../plans/ui-quality-foundation-roadmap.md).
+
 ## Published files
 
 - The package tarball contains only declared runtime JavaScript, declarations,

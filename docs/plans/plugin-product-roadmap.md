@@ -54,6 +54,14 @@ The review fails if two packages claim the same primary surface, write the same 
 - Present scheduled work as readable task cards with state overview and progressive detail.
 - Present notifications as a message center with unread, attention, time grouping, and progressive detail.
 
+### UI Quality（界面质量）长期交付线
+
+当前界面质量工作按[统一基座长期计划](ui-quality-foundation-roadmap.md)执行：
+已有缺陷优先，扩展 `@paimind/ui-foundation` 形成统一核心定义，再逐个插件完成
+真实验证与用户效果评审。用户明确确认当前插件后，才进入下一插件。
+动效作为用户可选择的个性化能力规划；该计划不代表偏好开关或全产品迁移已经实现。
+业务、共享视觉与宿主适配继续保持原有所有权边界。
+
 ### Phase 2 — ecosystem intake
 
 - Add a read-only candidate catalog for external DSH plugins.

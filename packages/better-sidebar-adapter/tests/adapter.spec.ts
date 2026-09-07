@@ -94,8 +94,26 @@ describe('FP05 Better Sidebar adapter', () => {
       .toBe('one:session-1:workspace-1')
     expect(adapter.openTab('paimind:tasks', { title: 'Quarterly proposal' })).toBe(true)
     expect(external.openTab).toHaveBeenCalledWith({ type: 'paimind:tasks', title: 'Quarterly proposal' })
+    expect(adapter.openTab('paimind:tasks', { title: 'Quarterly proposal', path: '/workspace/proposal.bento.html' })).toBe(true)
+    expect(external.openTab).toHaveBeenLastCalledWith({ type: 'paimind:tasks', title: 'Quarterly proposal', path: '/workspace/proposal.bento.html' })
     off()
     expect(external.dispose).toHaveBeenCalledTimes(1)
+  })
+
+  it('refreshes a reused owned workbench title without changing another tab', () => {
+    const updateTab = vi.fn()
+    const adapter = new BetterSidebarAdapter({
+      registerTab: () => () => {}, openTab: vi.fn(), updateTab,
+      getSnapshot: () => ({ state: {
+        splits: { kind: 'leaf', tabs: [
+          { id: 'owned-instance', type: 'paimind:tasks', title: 'Old title', path: '/workspace/old.html' },
+          { id: 'other-instance', type: 'editor', title: 'Keep this title', path: '/workspace/other.md' },
+        ] }, bottomSplits: { kind: 'leaf', tabs: [] }, floats: [],
+      } }),
+    }, locale(), projects())
+    adapter.registerTab(definition('one'))
+    expect(adapter.openTab('paimind:tasks', { title: 'Updated proposal', path: '/workspace/new.html' })).toBe(true)
+    expect(updateTab).toHaveBeenCalledExactlyOnceWith('owned-instance', { title: 'Updated proposal', path: '/workspace/new.html' })
   })
 
   it('maps hidden on-demand tabs without exposing provider details', () => {

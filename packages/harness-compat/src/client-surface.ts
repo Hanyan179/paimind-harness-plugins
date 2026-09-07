@@ -747,6 +747,11 @@ export function installPaimindProductSurfaceInteraction(
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== 'Escape') return
+    const view = doc.defaultView
+    const nestedDialog = view !== null && event.target instanceof view.Element
+      ? event.target.closest('[role="dialog"]') : null
+    // Nested dialogs own their Escape handling before the outer Center closes.
+    if (nestedDialog !== null && nestedDialog !== root && root.contains(nestedDialog)) return
     event.preventDefault()
     if (!controller.close()) event.stopImmediatePropagation()
   }

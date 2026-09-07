@@ -1,5 +1,8 @@
-import { useMemo, useState } from 'react'
+import { PAIMIND_UI_FOUNDATION_CSS } from '@paimind/ui-foundation'
+import { useMemo, useState, useSyncExternalStore } from 'react'
+import { proposalText } from './copy.js'
 import {
+  markHarnessClientStyle,
   answerHarnessQuestion,
   contributePaimindExtension,
   selectHarnessNamespacedQuestion,
@@ -7,6 +10,7 @@ import {
   type HarnessQuestionOption,
   type HarnessQuestionWait,
   type PaimindClientContext,
+  type PaimindLocaleSource,
 } from '@paimind/harness-compat'
 import { PaimindCheckIcon } from '@paimind/harness-compat/client-icons'
 import DOLLAR_GENERAL_MARK from '../../assets/dollar-general-mark.webp'
@@ -19,7 +23,7 @@ import PLAYFUL_STORYBOOK_STORYBOARD from '../../assets/playful-storybook-storybo
 import STRATEGY_CONSULTING_STORYBOARD from '../../assets/strategy-consulting-storyboard.webp'
 import { PROPOSAL_QUESTION_IDS, PROPOSAL_QUESTION_NAMESPACE } from '../index.js'
 
-export const inject = ['slots']
+export const inject = ['slots', 'locale']
 const STYLE_ID = '@paimind/proposal-experience'
 
 const STYLE = `
@@ -28,21 +32,21 @@ const STYLE = `
 [data-paimind-proposal-speaker]{display:flex;align-items:center;gap:12px;padding:0 3px}
 [data-paimind-proposal-avatar-seat]{position:relative;display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border:1px solid rgba(37,76,112,.16);border-radius:50%;background:#e8f0f7;overflow:hidden;box-shadow:0 7px 18px rgba(22,55,89,.16)}
 [data-paimind-proposal-avatar-seat]>img[data-paimind-agent-avatar]{display:block;width:100%;height:100%;border:0;border-radius:50%;object-fit:cover;box-shadow:none}
-[data-paimind-proposal-avatar-fallback]{display:grid;place-items:center;width:100%;height:100%;background:#174a76;color:#fff;font-size:11px;font-weight:780;letter-spacing:.04em}
+[data-paimind-proposal-avatar-fallback]{display:grid;place-items:center;width:100%;height:100%;background:#174a76;color:#fff;font-size:12px;font-weight:780;letter-spacing:.04em}
 [data-paimind-proposal-avatar-seat][data-paimind-agent-avatar-ready='true']>[data-paimind-proposal-avatar-fallback],[data-paimind-proposal-avatar-seat]:has(>img[data-paimind-agent-avatar])>[data-paimind-proposal-avatar-fallback]{display:none}
 [data-paimind-proposal-speaker] strong{display:block;font-size:14px;line-height:19px;font-weight:700}
-[data-paimind-proposal-speaker] small{display:block;color:var(--dsw-alias-label-tertiary,#7b8796);font-size:10px;line-height:15px}
+[data-paimind-proposal-speaker] small{display:block;color:var(--dsw-alias-label-tertiary,#7b8796);font-size:12px;line-height:15px}
 [data-paimind-proposal-card],[data-paimind-proposal-card] *{box-sizing:border-box}
 [data-paimind-proposal-card]{container-type:inline-size;width:calc(100% - 52px);margin-left:52px;overflow:hidden;border:1px solid rgba(133,159,190,.26);border-radius:22px 22px 22px 8px;background:#101925;color:#eef3f9;box-shadow:0 24px 60px rgba(4,10,18,.34)}
 [data-paimind-proposal-head]{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:23px 26px 18px;border-bottom:1px solid rgba(133,159,190,.18);background:#131e2c}
 [data-paimind-proposal-heading]{min-width:0}
 [data-paimind-proposal-kicker-row]{display:flex;align-items:center;gap:8px;margin-bottom:5px}
-[data-paimind-proposal-kicker]{margin:0;color:#86b6e4;font-size:11px;font-weight:800;letter-spacing:.17em;text-transform:uppercase}
-[data-paimind-proposal-step-count]{color:#8796a9;font-size:11px;font-weight:680}
+[data-paimind-proposal-kicker]{margin:0;color:#86b6e4;font-size:12px;font-weight:800;letter-spacing:.17em;text-transform:uppercase}
+[data-paimind-proposal-step-count]{color:#8796a9;font-size:12px;font-weight:680}
 [data-paimind-proposal-title]{margin:0;font-size:24px;line-height:31px;font-weight:700;letter-spacing:-.025em}
 [data-paimind-proposal-detail]{max-width:740px;margin:8px 0 0;color:#9ba9bb;font-size:13px;line-height:20px}
 [data-paimind-proposal-progress]{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:5px 0 0;padding:0;list-style:none}
-[data-paimind-proposal-progress] li{position:relative;min-width:0;padding-top:10px;color:#758397;font-size:10px;font-weight:680;line-height:14px}
+[data-paimind-proposal-progress] li{position:relative;min-width:0;padding-top:10px;color:#758397;font-size:12px;font-weight:680;line-height:14px}
 [data-paimind-proposal-progress] li::before{content:'';position:absolute;inset:0 0 auto;height:2px;border-radius:999px;background:#29384a}
 [data-paimind-proposal-progress] li[data-state='complete'],[data-paimind-proposal-progress] li[data-state='current']{color:#dfe8f3}
 [data-paimind-proposal-progress] li[data-state='complete']::before{background:#527da7}
@@ -58,19 +62,19 @@ const STYLE = `
 [data-paimind-proposal-options][data-stage='content-data'] [data-paimind-proposal-option]{align-items:flex-start;min-height:108px;padding:16px;background:linear-gradient(145deg,#172334,#121c29)}
 [data-paimind-proposal-options][data-stage='content-data'] [data-paimind-proposal-option-copy]{gap:6px}
 [data-paimind-proposal-options][data-stage='content-data'] [data-paimind-proposal-option-copy] small{line-height:18px}
-[data-paimind-content-data-kind]{display:inline-flex;width:max-content;padding:2px 7px;border:1px solid #405167;border-radius:999px;color:#8eb8df;font-size:8px;font-weight:780;letter-spacing:.09em;text-transform:uppercase}
-[data-paimind-proposal-option]{display:flex;align-items:center;gap:13px;width:100%;min-height:68px;padding:13px 15px;border:1px solid #2b3a4d;border-radius:17px;background:#151f2e;color:inherit;text-align:left;cursor:pointer;transition:transform .16s ease,border-color .16s ease,background-color .16s ease,box-shadow .16s ease}
+[data-paimind-content-data-kind]{display:inline-flex;width:max-content;padding:2px 7px;border:1px solid #405167;border-radius:999px;color:#8eb8df;font-size:11px;font-weight:780;letter-spacing:.09em;text-transform:uppercase}
+[data-paimind-proposal-option]{display:flex;align-items:center;gap:13px;width:100%;min-height:68px;padding:13px 15px;border:1px solid #2b3a4d;border-radius:17px;background:#151f2e;color:inherit;text-align:left;cursor:pointer;transition:transform var(--paimind-motion-fast) ease,border-color var(--paimind-motion-fast) ease,background-color var(--paimind-motion-fast) ease,box-shadow var(--paimind-motion-fast) ease}
 [data-paimind-proposal-option]:hover,[data-paimind-proposal-option]:focus-visible{outline:none;border-color:#5e8fb9;background:#19283a;box-shadow:0 12px 30px rgba(2,8,16,.28);transform:translateY(-1px)}
 [data-paimind-proposal-option][data-focused='true']:not(:hover):not(:focus-visible):not([aria-checked='true']){border-color:#3d5066;background:#172334}
 [data-paimind-proposal-option][aria-checked='true']{border-color:#7aafe0;background:#1b3148;box-shadow:0 0 0 1px rgba(122,175,224,.14),0 12px 30px rgba(2,8,16,.3)}
 [data-paimind-proposal-options][data-stage='customer'] [data-paimind-proposal-option]{min-height:104px;padding:16px}
-[data-paimind-proposal-indicator]{display:grid;place-items:center;flex:0 0 27px;width:27px;height:27px;border:1px solid #46566a;border-radius:8px;color:#a8b5c5;font-size:11px;font-weight:760}
+[data-paimind-proposal-indicator]{display:grid;place-items:center;flex:0 0 27px;width:27px;height:27px;border:1px solid #46566a;border-radius:8px;color:#a8b5c5;font-size:12px;font-weight:760}
 [data-paimind-proposal-indicator] svg{width:13px;height:13px}
 [data-paimind-proposal-option][aria-checked='true'] [data-paimind-proposal-indicator]{border-color:#82b7e9;background:#5d91c0;color:#fff}
 [data-paimind-department-avatar]{position:relative;display:grid;place-items:center;flex:0 0 52px;width:52px;height:52px;padding:3px;border:1px solid #3b4b60;border-radius:50%;background:#091423;overflow:visible;box-shadow:0 8px 20px rgba(2,8,16,.28)}
 [data-paimind-department-avatar][data-selected='true']{border-color:#91c0ea;box-shadow:0 0 0 3px rgba(99,158,211,.16),0 10px 24px rgba(2,8,16,.36)}
 [data-paimind-department-avatar]>img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}
-[data-paimind-department-meta]{display:inline-flex;align-items:center;min-height:18px;padding:1px 6px;border:1px solid #405167;border-radius:999px;color:#91a2b6;font-size:8px;font-weight:760;letter-spacing:.08em;text-transform:uppercase}
+[data-paimind-department-meta]{display:inline-flex;align-items:center;min-height:18px;padding:1px 6px;border:1px solid #405167;border-radius:999px;color:#91a2b6;font-size:11px;font-weight:760;letter-spacing:.08em;text-transform:uppercase}
 [data-paimind-department-check]{position:absolute;right:-3px;bottom:-3px;display:grid;place-items:center;width:18px;height:18px;border:2px solid #151f2e;border-radius:999px;background:#82b7e9;color:#0b1724;box-shadow:0 3px 9px rgba(2,8,16,.34)}
 [data-paimind-department-check] svg{width:10px;height:10px}
 [data-paimind-deck-style-thumb-shell]{position:relative;display:block;flex:0 0 72px;width:72px;height:48px;border:1px solid rgba(31,43,62,.13);border-radius:10px;background:#fff;overflow:hidden;box-shadow:0 5px 14px rgba(26,42,61,.09)}
@@ -85,57 +89,57 @@ const STYLE = `
 [data-paimind-proposal-option-line]{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
 [data-paimind-proposal-option-line] strong{font-size:14px;line-height:20px;font-weight:690}
 [data-paimind-proposal-option-copy] small{color:#9caabd;font-size:12px;line-height:17px}
-[data-paimind-proposal-recommended]{padding:2px 6px;border-radius:999px;background:color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 14%,transparent);color:var(--dsw-alias-brand-primary,#356fa8);font-size:8px;font-style:normal;font-weight:780;letter-spacing:.08em;text-transform:uppercase}
+[data-paimind-proposal-recommended]{padding:2px 6px;border-radius:999px;background:color-mix(in srgb,var(--dsw-alias-brand-primary,#356fa8) 14%,transparent);color:#b9ddff;font-size:11px;font-style:normal;font-weight:780;letter-spacing:.08em;text-transform:uppercase}
 [data-paimind-proposal-custom]{display:flex;align-items:center;gap:9px;grid-column:1/-1;margin-top:1px;padding:9px 11px;border:1px dashed #3a4b60;border-radius:13px;background:#121c2a}
 [data-paimind-proposal-custom] input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:inherit;font:inherit;font-size:12px}
 [data-paimind-proposal-actions]{display:flex;align-items:center;justify-content:space-between;grid-column:1/-1;gap:12px;margin-top:2px;padding-top:2px}
 [data-paimind-proposal-action-leading]{display:flex;align-items:center;gap:10px;min-width:0}
-[data-paimind-proposal-action-leading]>span{color:#8391a4;font-size:10px}
-[data-paimind-proposal-back]{min-height:34px;padding:7px 10px;border:1px solid #35465b;border-radius:10px;background:#141f2e;color:#a8b5c5;font-size:10px;font-weight:680;white-space:nowrap;cursor:pointer}
+[data-paimind-proposal-action-leading]>span{color:#8391a4;font-size:12px}
+[data-paimind-proposal-back]{min-height:34px;padding:7px 10px;border:1px solid #35465b;border-radius:10px;background:#141f2e;color:#a8b5c5;font-size:12px;font-weight:680;white-space:nowrap;cursor:pointer}
 [data-paimind-proposal-back]:hover,[data-paimind-proposal-back]:focus-visible{outline:none;border-color:#6698c3;color:#c7def3}
 [data-paimind-proposal-submit]{min-height:40px;padding:10px 17px;border:1px solid rgba(150,198,240,.28);border-radius:11px;background:#356b9d;color:#fff;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;box-shadow:0 9px 22px rgba(4,12,22,.3)}
 [data-paimind-proposal-submit]:disabled{opacity:.45;cursor:default}
 [data-paimind-proposal-utility]{display:flex;justify-content:flex-end;padding:0 18px 12px}
-[data-paimind-proposal-utility] button{padding:4px 0;border:0;background:transparent;color:#78879a;font-size:9px;cursor:pointer}
+[data-paimind-proposal-utility] button{padding:4px 0;border:0;background:transparent;color:#78879a;font-size:12px;cursor:pointer}
 [data-paimind-proposal-utility] button:hover{color:#c6d4e3;text-decoration:underline;text-underline-offset:3px}
-[data-paimind-proposal-error]{grid-column:1/-1;margin:0;color:#c64242;font-size:11px;line-height:17px}
+[data-paimind-proposal-error]{grid-column:1/-1;margin:0;color:#c64242;font-size:12px;line-height:17px}
 [data-paimind-deck-preview]{display:flex;flex-direction:column;min-width:0;padding:24px 26px 22px;border-left:1px solid rgba(133,159,190,.18);background:#121d2b}
 [data-paimind-deck-preview][data-tone='consulting']{background:#171e27}
 [data-paimind-deck-preview][data-tone='paramont']{background:#102033}
 [data-paimind-deck-preview][data-tone='playful']{background:#282215}
-[data-paimind-deck-preview] > small{color:#86b6e4;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+[data-paimind-deck-preview] > small{color:#86b6e4;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
 [data-paimind-deck-preview] > h3{margin:7px 0 5px;font-family:Georgia,'Times New Roman',serif;font-size:25px;line-height:30px;font-weight:650;letter-spacing:-.02em}
 [data-paimind-deck-preview] > p{margin:0;color:#9caabd;font-size:12px;line-height:18px}
 [data-paimind-storyboard-frame]{position:relative;display:flex;align-items:center;justify-content:center;aspect-ratio:1672/941;min-height:0;margin-top:16px;padding:9px;border:1px solid #34465b;border-radius:18px;background:#081321;box-shadow:0 18px 38px rgba(2,8,16,.3);overflow:hidden}
 [data-paimind-storyboard]{display:block;width:100%;height:100%;border-radius:11px;object-fit:contain}
-[data-paimind-storyboard-caption]{position:absolute;right:16px;bottom:15px;padding:4px 7px;border-radius:999px;background:rgba(7,20,35,.76);color:#fff;font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(8px)}
+[data-paimind-storyboard-caption]{position:absolute;right:16px;bottom:15px;padding:4px 7px;border-radius:999px;background:rgba(7,20,35,.76);color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(8px)}
 [data-paimind-preview-meta]{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px}
 [data-paimind-preview-meta] div{padding:10px 11px;border:1px solid #304156;border-radius:12px;background:#152131}
-[data-paimind-preview-meta] span{display:block;color:#8291a5;font-size:9px;font-weight:760;letter-spacing:.09em;text-transform:uppercase}
-[data-paimind-preview-meta] strong{display:block;margin-top:4px;font-size:11px;line-height:15px;font-weight:650}
-[data-paimind-preview-hint]{margin-top:9px!important;font-size:9px!important}
+[data-paimind-preview-meta] span{display:block;color:#8291a5;font-size:12px;font-weight:760;letter-spacing:.09em;text-transform:uppercase}
+[data-paimind-preview-meta] strong{display:block;margin-top:4px;font-size:12px;line-height:15px;font-weight:650}
+[data-paimind-preview-hint]{margin-top:9px!important;font-size:12px!important}
 [data-paimind-deck-type-preview]{display:flex;flex-direction:column;min-width:0;padding:24px 26px 22px;border-left:1px solid rgba(133,159,190,.18);background:#121d2b}
-[data-paimind-deck-type-preview]>small{color:#86b6e4;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+[data-paimind-deck-type-preview]>small{color:#86b6e4;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
 [data-paimind-deck-type-preview]>h3{margin:7px 0 5px;font-size:25px;line-height:30px;font-weight:720;letter-spacing:-.025em}
 [data-paimind-deck-type-preview]>p{margin:0;color:#9caabd;font-size:12px;line-height:18px}
 [data-paimind-deck-type-application]{display:grid;gap:10px;margin-top:18px}
 [data-paimind-deck-type-application] div{padding:12px 13px;border:1px solid #304156;border-radius:13px;background:#152131}
-[data-paimind-deck-type-application] span{display:block;color:#8291a5;font-size:9px;font-weight:760;letter-spacing:.09em;text-transform:uppercase}
+[data-paimind-deck-type-application] span{display:block;color:#8291a5;font-size:12px;font-weight:760;letter-spacing:.09em;text-transform:uppercase}
 [data-paimind-deck-type-application] strong{display:block;margin-top:4px;font-size:12px;line-height:17px;font-weight:650}
-[data-paimind-deck-type-next]{margin-top:auto!important;padding-top:14px;color:#8291a5!important;font-size:9px!important}
+[data-paimind-deck-type-next]{margin-top:auto!important;padding-top:14px;color:#8291a5!important;font-size:12px!important}
 [data-ds-dark-theme] [data-paimind-brand-logo-shell]{border-color:rgba(255,255,255,.18)}
 @container (max-width:760px){[data-paimind-proposal-body][data-preview='true']{grid-template-columns:1fr}[data-paimind-deck-preview],[data-paimind-deck-type-preview]{border-top:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.16));border-left:0}}
 @media(max-width:900px){[data-paimind-proposal-body][data-preview='true']{grid-template-columns:1fr}[data-paimind-deck-preview],[data-paimind-deck-type-preview]{border-top:1px solid var(--dsw-alias-border-l1,rgba(110,120,135,.16));border-left:0}}
-@media(max-width:620px){[data-paimind-proposal-frame]{padding-right:10px;padding-left:10px}[data-paimind-proposal-thread]{padding-right:0;padding-left:0}[data-paimind-proposal-card]{width:100%;margin-left:0}[data-paimind-proposal-head]{padding:16px 15px 13px}[data-paimind-proposal-progress] li{font-size:0}[data-paimind-proposal-progress] li::after{content:attr(data-step);font-size:9px}[data-paimind-proposal-options]{padding:12px}[data-paimind-proposal-options][data-stage='customer'],[data-paimind-proposal-options][data-stage='department'],[data-paimind-proposal-options][data-stage='content-data']{grid-template-columns:1fr}}
-@media(prefers-reduced-motion:reduce){[data-paimind-proposal-option]{transition:none}}
+@media(max-width:620px){[data-paimind-proposal-frame]{padding-right:10px;padding-left:10px}[data-paimind-proposal-thread]{padding-right:0;padding-left:0}[data-paimind-proposal-card]{width:100%;margin-left:0}[data-paimind-proposal-head]{padding:16px 15px 13px}[data-paimind-proposal-progress] li{font-size:0}[data-paimind-proposal-progress] li::after{content:attr(data-step);font-size:12px}[data-paimind-proposal-options]{padding:12px}[data-paimind-proposal-options][data-stage='customer'],[data-paimind-proposal-options][data-stage='department'],[data-paimind-proposal-options][data-stage='content-data']{grid-template-columns:1fr}}
+
 `
 
 function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = STYLE_ID
-  style.textContent = STYLE
+  style.dataset.paimindPlugin = STYLE_ID; markHarnessClientStyle(style, STYLE_ID)
+  style.textContent = `${PAIMIND_UI_FOUNDATION_CSS}\n${STYLE}`
   document.head.append(style)
   return () => { style.remove() }
 }
@@ -219,18 +223,18 @@ function deckTypePreviewFor(option: HarnessQuestionOption | undefined): DeckType
   return DECK_TYPE_PREVIEWS[label] ?? DECK_TYPE_PREVIEWS['Category Analysis']!
 }
 
-function DeckTypePreview({ option }: { readonly option: HarnessQuestionOption | undefined }): React.JSX.Element {
+function DeckTypePreview({ option, zh }: { readonly option: HarnessQuestionOption | undefined; readonly zh: boolean }): React.JSX.Element {
   const preview = deckTypePreviewFor(option)
   return <aside data-paimind-deck-type-preview aria-live="polite">
-    <small>Application preview</small>
-    <h3>{preview.title}</h3>
-    <p>{preview.description}</p>
+    <small>{proposalText("Application preview", zh)}</small>
+    <h3>{proposalText(preview.title, zh)}</h3>
+    <p>{proposalText(preview.description, zh)}</p>
     <div data-paimind-deck-type-application>
-      <div><span>Application</span><strong>{preview.application}</strong></div>
-      <div><span>Primary audience</span><strong>{preview.audience}</strong></div>
-      <div><span>Core story</span><strong>{preview.structure}</strong></div>
+      <div><span>{proposalText("Application", zh)}</span><strong>{proposalText(preview.application, zh)}</strong></div>
+      <div><span>{proposalText("Primary audience", zh)}</span><strong>{proposalText(preview.audience, zh)}</strong></div>
+      <div><span>{proposalText("Core story", zh)}</span><strong>{proposalText(preview.structure, zh)}</strong></div>
     </div>
-    <p data-paimind-deck-type-next>Visual style is selected in the next AI-requested step.</p>
+    <p data-paimind-deck-type-next>{proposalText("Visual style is selected in the next AI-requested step.", zh)}</p>
   </aside>
 }
 
@@ -290,33 +294,33 @@ function deckPreviewFor(option: HarnessQuestionOption | undefined): DeckPreviewS
   return DECK_PREVIEWS[label] ?? DECK_PREVIEWS['Paramont Signature']!
 }
 
-function DeckPreview({ option }: { readonly option: HarnessQuestionOption | undefined }): React.JSX.Element {
+function DeckPreview({ option, zh }: { readonly option: HarnessQuestionOption | undefined; readonly zh: boolean }): React.JSX.Element {
   const preview = deckPreviewFor(option)
   return <aside data-paimind-deck-preview data-tone={preview.tone} aria-live="polite">
-    <small>Deck style preview</small>
-    <h3>{preview.title}</h3>
-    <p>{preview.description}</p>
+    <small>{proposalText("Deck style preview", zh)}</small>
+    <h3>{proposalText(preview.title, zh)}</h3>
+    <p>{proposalText(preview.description, zh)}</p>
     <div data-paimind-storyboard-frame>
-      <img data-paimind-storyboard src={preview.image} alt={preview.imageAlt} />
-      <span data-paimind-storyboard-caption>3-slide style system</span>
+      <img data-paimind-storyboard src={preview.image} alt={proposalText(preview.imageAlt, zh)} />
+      <span data-paimind-storyboard-caption>{proposalText("3-slide style system", zh)}</span>
     </div>
     <div data-paimind-preview-meta>
-      <div><span>Best for</span><strong>{preview.bestFor}</strong></div>
-      <div><span>Story rhythm</span><strong>{preview.story}</strong></div>
+      <div><span>{proposalText("Best for", zh)}</span><strong>{proposalText(preview.bestFor, zh)}</strong></div>
+      <div><span>{proposalText("Story rhythm", zh)}</span><strong>{proposalText(preview.story, zh)}</strong></div>
     </div>
-    <p data-paimind-preview-hint>Preview by hover or focus. After style confirmation, the Agent matches capabilities and offers available content and data.</p>
+    <p data-paimind-preview-hint>{proposalText("Preview by hover or focus. After style confirmation, the Agent matches capabilities and offers available content and data.", zh)}</p>
   </aside>
 }
 
 const PROPOSAL_CANCEL_INTENT = 'PAIMIND_PROPOSAL_NAVIGATION:CANCEL'
 const PROPOSAL_BACK_INTENT = 'PAIMIND_PROPOSAL_NAVIGATION:BACK'
 
-function ProposalSpeaker(): React.JSX.Element {
+function ProposalSpeaker({ zh }: { readonly zh: boolean }): React.JSX.Element {
   return <div data-paimind-proposal-speaker>
     <span data-paimind-proposal-avatar-seat data-paimind-agent-avatar-seat="" data-paimind-agent-id="proposal-assistant" aria-hidden="true">
       <span data-paimind-proposal-avatar-fallback>PA</span>
     </span>
-    <span><strong>Proposal Assistant</strong><small>AI-requested decision · your answer returns to the agent</small></span>
+    <span><strong>{proposalText("Proposal Assistant", zh)}</strong><small>{proposalText("AI-requested decision \u00b7 your answer returns to the agent", zh)}</small></span>
   </div>
 }
 
@@ -341,10 +345,11 @@ function optionDetail(option: HarnessQuestionOption): string | undefined {
 
 interface ProposalQuestionComposerProps {
   readonly matched: HarnessQuestionWait
+  readonly zh: boolean
 }
 
 function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.Element {
-  const { matched } = props
+  const { matched, zh } = props
   const question = matched.payload.questions[0]!
   const options = question.options ?? []
   const [selected, setSelected] = useState<readonly string[]>([])
@@ -361,7 +366,7 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
   const focusedOption = useMemo(() => options.find(option => option.label === focused) ?? options[0], [focused, options])
 
   const answer = async (labels: readonly string[], customAnswer = '', action = 'Sending your answer to Proposal Assistant…'): Promise<void> => {
-    setBusy(true); setError(null); setPendingAction(action)
+    setBusy(true); setError(null); setPendingAction(proposalText(action, zh))
     try {
       await answerHarnessQuestion(matched, [{
         id: question.id,
@@ -399,19 +404,19 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
 
   const actionLabel = hasContentData ? 'Use selected content' : hasDeckStylePreview ? 'Use this deck style' : hasDeckTypePreview ? 'Use this deck type' : 'Continue'
   const actionStatus = hasContentData
-    ? selected.length === 0 ? 'Select the content and data to include' : `${selected.length} content area${selected.length === 1 ? '' : 's'} selected`
+    ? selected.length === 0 ? 'Select the content and data to include' : zh ? `已选择 ${selected.length} 项内容` : `${selected.length} content area${selected.length === 1 ? '' : 's'} selected`
     : hasDeckStylePreview
-    ? selected.length === 0 ? 'Preview and select one style' : `${optionPresentation(selected[0]!).label} selected`
+    ? selected.length === 0 ? 'Preview and select one style' : zh ? `已选择：${proposalText(optionPresentation(selected[0]!).label, zh)}` : `${optionPresentation(selected[0]!).label} selected`
     : hasDeckTypePreview
-      ? selected.length === 0 ? 'Preview and select one deck type' : `${optionPresentation(selected[0]!).label} selected`
-    : selected.length === 0 && custom.trim() === '' ? 'Select an option to continue' : `${selected.length || 1} selected`
+      ? selected.length === 0 ? 'Preview and select one deck type' : zh ? `已选择：${proposalText(optionPresentation(selected[0]!).label, zh)}` : `${optionPresentation(selected[0]!).label} selected`
+    : selected.length === 0 && custom.trim() === '' ? 'Select an option to continue' : zh ? `已选择 ${selected.length || 1} 项` : `${selected.length || 1} selected`
 
   const card = <section data-paimind-proposal-card data-stage={stage} aria-labelledby={`proposal-question-${matched.key}`}>
       <header data-paimind-proposal-head>
         <div data-paimind-proposal-heading>
           <div data-paimind-proposal-kicker-row>
-            <p data-paimind-proposal-kicker>Proposal setup · {questionStage(question)}</p>
-            <span data-paimind-proposal-step-count>AI-selected question</span>
+            <p data-paimind-proposal-kicker>{proposalText('Proposal setup', zh)} · {proposalText(questionStage(question), zh)}</p>
+            <span data-paimind-proposal-step-count>{proposalText("AI-selected question", zh)}</span>
           </div>
           <h2 data-paimind-proposal-title id={`proposal-question-${matched.key}`}>{question.question}</h2>
           {question.detail === undefined ? null : <p data-paimind-proposal-detail>{question.detail}</p>}
@@ -432,7 +437,7 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
               data-focused={hasPreview && focused === option.label}
               role={question.multiSelect === true ? 'checkbox' : 'radio'}
               aria-checked={active}
-              aria-label={display.label}
+              aria-label={proposalText(display.label, zh)}
               disabled={busy}
               onMouseEnter={() => { setFocused(option.label) }}
               onFocus={() => { setFocused(option.label) }}
@@ -450,9 +455,9 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
                   </span>
                 : <span data-paimind-proposal-indicator aria-hidden="true">{active ? <PaimindCheckIcon /> : index + 1}</span>)}
               <span data-paimind-proposal-option-copy>
-                {hasContentData ? <span data-paimind-content-data-kind>Available from matched capability</span> : null}
-                <span data-paimind-proposal-option-line><strong>{department?.name ?? display.label}</strong>{department === null ? null : <span data-paimind-department-meta>DG {department.code}</span>}{display.recommended ? <em data-paimind-proposal-recommended>Recommended</em> : null}</span>
-                {detail === undefined ? null : <small>{detail}</small>}
+                {hasContentData ? <span data-paimind-content-data-kind>{proposalText("Available from matched capability", zh)}</span> : null}
+                <span data-paimind-proposal-option-line><strong>{proposalText(department?.name ?? display.label, zh)}</strong>{department === null ? null : <span data-paimind-department-meta>DG {department.code}</span>}{display.recommended ? <em data-paimind-proposal-recommended>{proposalText("Recommended", zh)}</em> : null}</span>
+                {detail === undefined ? null : <small>{proposalText(detail, zh)}</small>}
               </span>
             </button>
           })}
@@ -461,7 +466,7 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
             <input
               type="text"
               value={custom}
-              placeholder="Enter another option"
+              placeholder={proposalText("Enter another option", zh)}
               disabled={busy}
               onChange={event => { setSelected([]); setCustom(event.currentTarget.value); setError(null) }}
               onKeyDown={event => { if (event.key === 'Enter' && custom.trim() !== '') { event.preventDefault(); void answer([], custom.trim()) } }}
@@ -469,32 +474,37 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
           </label>
           <div data-paimind-proposal-actions data-kind={hasPreview ? 'deck' : question.multiSelect === true ? 'multi-select' : 'single-select'}>
             <div data-paimind-proposal-action-leading>
-              <button type="button" data-paimind-proposal-back data-navigation="ai-request" disabled={busy} onClick={navigateBack}>Back</button>
-              <span aria-live="polite">{pendingAction ?? actionStatus}</span>
+              <button type="button" data-paimind-proposal-back data-navigation="ai-request" disabled={busy} onClick={navigateBack}>{proposalText("Back", zh)}</button>
+              <span aria-live="polite">{pendingAction ?? proposalText(actionStatus, zh)}</span>
             </div>
-            <button type="button" data-paimind-proposal-submit disabled={busy || (selected.length === 0 && custom.trim() === '')} onClick={() => { void answer(selected, custom.trim()) }}>{actionLabel}</button>
+            <button type="button" data-paimind-proposal-submit disabled={busy || (selected.length === 0 && custom.trim() === '')} onClick={() => { void answer(selected, custom.trim()) }}>{proposalText(actionLabel, zh)}</button>
           </div>
           {error === null ? null : <p data-paimind-proposal-error role="status">{error}</p>}
         </div>
-        {hasDeckTypePreview ? <DeckTypePreview option={focusedOption} /> : hasDeckStylePreview ? <DeckPreview option={focusedOption} /> : null}
+        {hasDeckTypePreview ? <DeckTypePreview option={focusedOption} zh={zh} /> : hasDeckStylePreview ? <DeckPreview option={focusedOption} zh={zh} /> : null}
       </div>
-      <footer data-paimind-proposal-utility><button type="button" aria-label="Cancel proposal question" disabled={busy} onClick={cancel}>Cancel intake</button></footer>
+      <footer data-paimind-proposal-utility><button type="button" aria-label={proposalText("Cancel proposal question", zh)} disabled={busy} onClick={cancel}>{proposalText("Cancel intake", zh)}</button></footer>
     </section>
 
-  return <div data-paimind-proposal-frame data-question-key={matched.key}>
-    <div data-paimind-proposal-thread data-mode="ai-tool-question" data-trigger="ask-user-question"><ProposalSpeaker />{card}</div>
+  return <div data-paimind-ui-scope="proposal-experience" data-paimind-proposal-frame data-question-key={matched.key}>
+    <div data-paimind-proposal-thread data-mode="ai-tool-question" data-trigger="ask-user-question"><ProposalSpeaker zh={zh} />{card}</div>
   </div>
 }
 
-export function ProposalQuestionComposer({ matched }: { readonly matched: HarnessQuestionWait }): React.JSX.Element {
-  return <ProposalQuestionCard matched={matched} />
+export function ProposalQuestionComposer({ matched, locale = 'en-US' }: { readonly matched: HarnessQuestionWait; readonly locale?: string }): React.JSX.Element {
+  return <ProposalQuestionCard matched={matched} zh={locale.startsWith('zh')} />
+}
+
+function LocalizedProposalComposer({ matched, locale }: { readonly matched: HarnessQuestionWait; readonly locale: PaimindLocaleSource }): React.JSX.Element {
+  const active = useSyncExternalStore(locale.subscribe.bind(locale), () => locale.getLocale().active, () => locale.getLocale().active)
+  return <ProposalQuestionComposer matched={matched} locale={active} />
 }
 
 export function apply(ctx: PaimindClientContext): void {
   contributePaimindExtension(ctx.slots, {
     id: 'paimind:proposal-experience', packageName: '@paimind/proposal-experience', category: 'agents',
     nameZh: '提案助手交互', nameEn: 'Proposal Assistant Experience',
-    descriptionZh: '在 Harness 原生提问链路中提供客户品牌、Deck Type 与风格预览。',
+    descriptionZh: '通过提问确定客户、演示用途和视觉风格，并预览选择效果。',
     descriptionEn: 'Adds customer brands, deck types and style previews to native Harness proposal questions.',
     surface: 'conversation', maturity: 'technical-preview', order: 30,
   })
@@ -503,5 +513,5 @@ export function apply(ctx: PaimindClientContext): void {
     name: 'conversation.composer',
     priority: -20,
     select: selectProposalQuestion,
-  }, ProposalQuestionComposer))
+  }, (props: { readonly matched: HarnessQuestionWait }) => <LocalizedProposalComposer matched={props.matched} locale={ctx.locale} />))
 }

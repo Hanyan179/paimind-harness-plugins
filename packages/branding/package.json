@@ -36,6 +36,7 @@
     }
   },
   "dependencies": {
+    "@paimind/ui-foundation": "workspace:^",
     "@paimind/harness-compat": "workspace:^"
   },
   "peerDependencies": {

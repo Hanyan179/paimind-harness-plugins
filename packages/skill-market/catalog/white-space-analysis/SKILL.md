@@ -1,6 +1,7 @@
 ---
+display-name: 沃尔玛市场空白分析
 name: white-space-analysis
-description: Run the PAIMind Walmart white-space analysis from a frozen, redacted, hash-locked source manifest. Use for assortment gaps, unmet demand, buyer opportunities, Walmart proposal evidence, or when outline generation needs a verified white-space data_result Artifact.
+description: 基于脱敏的历史数据快照，寻找尚未覆盖的商品机会。
 ---
 
 # White Space Analysis for Harness

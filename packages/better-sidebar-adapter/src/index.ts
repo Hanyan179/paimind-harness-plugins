@@ -77,6 +77,8 @@ export interface PaimindSidebarService {
 export interface PaimindSidebarOpenTabOptions {
   /** Per-open title used by on-demand workbenches. */
   readonly title?: string
+  /** A content open reveals its landing panel through the provider's native layout contract. */
+  readonly path?: string
 }
 
 export type PaimindSidebarFileCapability =
@@ -171,6 +173,7 @@ export interface ExternalBetterSidebarService {
     readonly id?: string
   }): void
   closeTab?(tabId: string): void
+  updateTab?(tabId: string, patch: { readonly title?: string; readonly path?: string }): void
   getTab?(id: string): ExternalSidebarTabDescriptor | undefined
   getFileViewers?(): readonly ExternalSidebarFileViewerDescriptor[]
   isTabEnabled?(id: string): boolean
@@ -398,7 +401,31 @@ export class BetterSidebarAdapter implements PaimindSidebarService {
       || (typeof this.provider.isTabEnabled === 'function' && !this.provider.isTabEnabled(id))
     ) return false
     try {
-      this.provider.openTab({ type: id, ...(options.title === undefined ? {} : { title: options.title }) })
+      this.provider.openTab({
+        type: id,
+        ...(options.title === undefined ? {} : { title: options.title }),
+        ...(options.path === undefined ? {} : { path: options.path }),
+      })
+      // The provider focuses an existing single tab without replacing its
+      // metadata. Keep this owned workbench's label aligned with its content.
+      if (this.registrations.get(id)?.definitions.at(-1)?.single === true
+        && this.provider.updateTab !== undefined && this.provider.getSnapshot !== undefined) {
+        const state = this.provider.getSnapshot().state
+        if (state !== undefined) {
+          const collect = (node: ExternalSidebarSplitSnapshot): readonly ExternalSidebarTabSnapshot[] =>
+            node.kind === 'leaf' ? node.tabs : node.children.flatMap(collect)
+          const tabs = [...collect(state.splits), ...collect(state.bottomSplits), ...state.floats.map(row => row.tab)]
+            .filter(tab => tab.type === id)
+          const tab = tabs.length === 1 ? tabs[0] : undefined
+          if (tab !== undefined && ((options.title !== undefined && options.title !== tab.title)
+            || (options.path !== undefined && options.path !== tab.path))) {
+            this.provider.updateTab(tab.id, {
+              ...(options.title === undefined ? {} : { title: options.title }),
+              ...(options.path === undefined ? {} : { path: options.path }),
+            })
+          }
+        }
+      }
       return true
     } catch (error) {
       this.fail(error)

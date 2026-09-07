@@ -18,6 +18,7 @@ import {
   type PaimindUserSkillPolicyV1,
 } from '@paimind/contracts'
 import {
+  markHarnessClientStyle,
   contributePaimindExtension,
   installHarnessAgentPresetSettingsNavigation,
   resolveHarnessAgentPresetSeatControl,
@@ -104,7 +105,7 @@ import {
   type AgentAuthoringTurnResult,
   type AgentAuthoringWatchCallbacks,
 } from './authoring-session.js'
-import { PAIMIND_UI_FOUNDATION_CSS } from '@paimind/ui-foundation'
+import { PAIMIND_UI_FOUNDATION_CSS, handlePaimindTabKey } from '@paimind/ui-foundation'
 
 export type {
   AgentAuthoringDraftContext,
@@ -121,7 +122,7 @@ const STYLE_ID = '@paimind/agent-market'
 function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
-  style.id = STYLE_ID; style.dataset.paimindPlugin = STYLE_ID; style.textContent = `${PAIMIND_UI_FOUNDATION_CSS}\n${AGENT_CENTER_STYLE}`
+  style.id = STYLE_ID; style.dataset.paimindPlugin = STYLE_ID; markHarnessClientStyle(style, STYLE_ID); style.textContent = `${PAIMIND_UI_FOUNDATION_CSS}\n${AGENT_CENTER_STYLE}`
   document.head.append(style)
   return () => { style.remove() }
 }
@@ -213,6 +214,7 @@ export interface PaimindAgentAuthoringPolicySnapshot {
 }
 
 export interface PaimindAgentAuthoringPolicySource {
+  refresh?(): Promise<void>
   getSnapshot(): Readonly<PaimindAgentAuthoringPolicySnapshot>
   subscribe(listener: () => void): () => void
 }
@@ -261,7 +263,7 @@ export class PaimindAgentAuthoringPolicyController implements PaimindAgentAuthor
 
   private readonly onPolicyChanged = (): void => { void this.refresh() }
 
-  private async refresh(): Promise<void> {
+  async refresh(): Promise<void> {
     const request = this.request + 1
     this.request = request
     this.publish(LOADING_AGENT_AUTHORING_POLICY)
@@ -543,7 +545,7 @@ export class AgentCenterRuntime {
       this.watchFirstRun(sessionId)
     }
     const binding = this.sessions.binding?.(sessionId)
-    if (binding?.ctx === undefined) throw new Error('真实对话尚未就绪')
+    if (binding?.ctx === undefined) throw new Error('对话尚未就绪')
     this.conversation.input.for(binding.ctx).setDraft(starterPromptForProfile(profile))
     this.sessions.open(sessionId)
     return sessionId
@@ -1702,7 +1704,7 @@ function applyAuthoringProposal(
       .filter(name => installed.has(name)))]
     if (JSON.stringify(preferredSkillNames) !== JSON.stringify(next.preferredSkillNames)) {
       next = { ...next, preferredSkillNames }
-      changed.push(zh ? '会话技能' : 'Session Skills')
+      changed.push(zh ? '工作技能' : 'Session Skills')
     }
   }
   return { draft: next, changed }
@@ -1740,7 +1742,7 @@ function copyDraft(preset: HarnessAgentPresetEntry, zh: boolean): Draft {
 function skillCategoryLabel(category: SkillProductCategoryFilter, zh: boolean): string {
   const labels: Record<SkillProductCategoryFilter, readonly [string, string]> = {
     all: ['全部', 'All'], general: ['通用', 'General'], research: ['调研与知识', 'Research'],
-    data: ['数据分析', 'Data'], content: ['内容与演示', 'Content'], product: ['产品与 PDM', 'Product & PDM'],
+    data: ['数据分析', 'Data'], content: ['内容与演示', 'Content'], product: ['产品与业务', 'Product & Business'],
     engineering: ['工程研发', 'Engineering'], 'agent-tools': ['智能体工具', 'Agent tools'],
   }
   return labels[category][zh ? 0 : 1]
@@ -1797,6 +1799,9 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
     props.builderRequests?.getSnapshot ?? idleBuilderRequest,
     props.builderRequests?.getSnapshot ?? idleBuilderRequest,
   )
+  useEffect(() => {
+    if (props.authoringPolicy?.getSnapshot().status === 'error') void props.authoringPolicy.refresh?.()
+  }, [props.authoringPolicy])
   const agentAuthoringEnabled = authoringPolicy.enabled
   const currentAuthoringSessionId = useSyncExternalStore(
     props.runtime.subscribeSessions.bind(props.runtime),
@@ -2191,7 +2196,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
       else setRoster({ status: 'ready', roster: native.result.value, error: null })
       setProfileRows(remoteValue(profiles).profiles)
       setInstalledSkills(remoteValue(skills).items)
-    }, cause => { if (current) setRoster({ status: 'error', roster: null, error: messageOf(cause) }) })
+    }).catch(cause => { if (current) setRoster({ status: 'error', roster: null, error: messageOf(cause) }) })
     return () => { current = false }
   }, [props.api, props.profiles, props.skills, revision])
 
@@ -2305,7 +2310,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
       const metadata = metadataForSkill(skill)
       if (skillCategory !== 'all' && metadata.category !== skillCategory) return false
       if (selectedSkillsOnly && !draft?.preferredSkillNames.includes(skill.name)) return false
-      return normalizedQuery === '' || [skill.name, skill.description, skill.whenToUse ?? '', ...metadata.tags]
+      return normalizedQuery === '' || [skill.name, skill.displayName ?? '', skill.description, skill.whenToUse ?? '', ...metadata.tags]
         .some(value => value.toLocaleLowerCase().includes(normalizedQuery))
     })
   }, [draft?.preferredSkillNames, installedSkills, selectedSkillsOnly, skillCategory, skillQuery])
@@ -2612,20 +2617,20 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
       <div data-paimind-agent-card-head><span data-paimind-agent-card-icon data-paimind-agent-avatar-seat="" data-paimind-agent-id={profile.agentId} data-paimind-agent-avatar-kind={business ? 'business' : 'personal'} role="img" aria-label={zh ? `${profile.name} 头像` : `${profile.name} avatar`}><span data-paimind-agent-avatar-fallback="" aria-hidden="true">{business ? <PaimindAgentIcon size={23} /> : <PaimindUserIcon size={23} />}</span></span><div data-paimind-agent-card-title><h3>{profile.name}</h3><span data-paimind-agent-card-kicker>{business ? (zh ? '业务智能体 · 本地维护' : 'Business Agent · Locally managed') : (zh ? '个人智能体' : 'Personal Agent')}</span></div></div>
       <div data-paimind-agent-badges><span data-paimind-agent-badge data-category="true">{business ? profile.businessCategory : (zh ? '个人' : 'Personal')}</span><span data-paimind-agent-badge>{zh ? `第 ${profile.revision} 版` : `Revision ${profile.revision}`}</span>{preset?.isDefault === true && <span data-paimind-agent-badge data-success="true">{zh ? '默认' : 'Default'}</span>}{broken && <span data-paimind-agent-badge>{zh ? '需修复' : 'Needs repair'}</span>}</div>
       <p>{profile.description || profile.role}</p>
-      <div data-paimind-agent-card-context><span><PaimindSkillIcon size={13} />{profile.preferredSkillNames.length === 0 ? (zh ? '未封装会话技能' : 'No packaged session Skills') : (zh ? `${profile.preferredSkillNames.length} 个会话技能` : `${profile.preferredSkillNames.length} session Skills`)}</span><span>{zh ? 'Harness 原生预设' : 'Native Harness Preset'}</span></div>
+      <div data-paimind-agent-card-context><span><PaimindSkillIcon size={13} />{profile.preferredSkillNames.length === 0 ? (zh ? '尚未添加工作技能' : 'No packaged Skills') : (zh ? `${profile.preferredSkillNames.length} 个工作技能` : `${profile.preferredSkillNames.length} Skills`)}</span></div>
       {broken && <p role="alert" data-paimind-agent-card-alert>{legacyBase ? (zh ? '这是旧版非标准基座智能体，请删除后重新创建。' : 'This legacy Agent uses a non-standard base. Delete and recreate it.') : (zh ? '原生预设缺失或损坏，请前往高级配置修复。' : 'The native Preset is missing or damaged. Repair it in advanced configuration.')}</p>}
       <div data-paimind-agent-actions><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || broken} onClick={() => { if (preset !== undefined) void start(preset, profile) }}><PaimindNewConversationIcon size={14} />{zh ? '开始对话' : 'Start conversation'}</button><button type="button" data-paimind-agent-button disabled={busy || legacyBase} onClick={() => { setSkillQuery(''); setSkillCategory('all'); setSelectedSkillsOnly(false); openBuilder(editDraft(profile)) }}><PaimindEditIcon size={14} />{zh ? '编辑' : 'Edit'}</button><button type="button" data-paimind-agent-button data-quiet="true" disabled={busy || broken || preset?.isDefault === true} onClick={() => { void setDefault(profile) }}>{zh ? '设为默认' : 'Set default'}</button><button type="button" data-paimind-agent-button data-danger="true" data-icon-only="true" aria-label={`${zh ? '删除' : 'Delete'} ${profile.name}`} disabled={busy} onClick={() => { void remove(profile) }}><PaimindTrashIcon size={14} /></button></div>
     </li>
   }
 
-  return <section data-paimind-agent-center data-builder-open={builderOpen} aria-label={zh ? '智能体中心' : 'Agent Center'} aria-busy={busy}>
+  return <section data-paimind-ui-scope="agent-center" data-paimind-agent-center data-builder-open={builderOpen} aria-label={zh ? '智能体中心' : 'Agent Center'} aria-busy={busy}>
     <header data-paimind-agent-hero>
       <div>
-        <p data-paimind-agent-eyebrow><PaimindAgentIcon size={15} />{zh ? '真实 Harness 智能体' : 'Live Harness Agents'}</p>
+        <p data-paimind-agent-eyebrow><PaimindAgentIcon size={15} />{zh ? '按需协作的工作助手' : 'Assistants for your work'}</p>
         <h1 id="paimind-agent-center-title" tabIndex={-1} data-paimind-product-initial-focus>{zh ? '智能体中心' : 'Agent Center'}</h1>
         <p data-paimind-agent-hero-copy>{agentAuthoringEnabled
-          ? (zh ? '选择一个智能体、创建自己的智能体，或直接开始真实对话。' : 'Choose an Agent, create your own, or start a real conversation.')
-          : (zh ? '选择一个已有智能体，编辑配置或直接开始真实对话。' : 'Choose an existing Agent, edit its configuration, or start a real conversation.')}</p>
+          ? (zh ? '选择一个智能体、创建自己的智能体，或直接开始对话。' : 'Choose an Agent, create your own, or start a conversation.')
+          : (zh ? '选择一个已有智能体，编辑配置或直接开始对话。' : 'Choose an existing Agent, edit its configuration, or start a conversation.')}</p>
       </div>
       <div data-paimind-agent-hero-actions>
         <div data-paimind-agent-search-row><div data-paimind-agent-search-wrap><span data-paimind-agent-search-icon><PaimindSearchIcon size={17} /></span><input data-paimind-agent-search type="search" aria-label={zh ? '搜索智能体' : 'Search Agents'} placeholder={zh ? '搜索名称、说明、角色或目标' : 'Search names, descriptions, roles, or goals'} value={query} onChange={event => { setQuery(event.currentTarget.value) }} /></div><button type="button" data-paimind-agent-button data-icon-only="true" aria-label={zh ? '返回对话' : 'Back to conversation'} onClick={() => { props.close() }}><PaimindCloseIcon size={16} /></button></div>
@@ -2636,17 +2641,19 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
       </div>
     </header>
 
+    {authoringPolicy.status === 'error' || authoringPolicy.status === 'unavailable' ? <div data-paimind-agent-error role="alert"><p>{zh ? '创建功能暂不可用，已有智能体仍可浏览和编辑。' : 'Creation is unavailable. You can still browse and edit existing Agents.'}</p>{props.authoringPolicy?.refresh !== undefined && <button type="button" data-paimind-agent-button onClick={() => { void props.authoringPolicy?.refresh?.() }}>{zh ? '重试创建功能' : 'Retry creation'}</button>}</div> : null}
+    {authoringPolicy.status === 'ready' && !agentAuthoringEnabled ? <p data-paimind-agent-note role="status">{zh ? '创建智能体已关闭，可在技能中心的“内置”中开启。' : 'Agent creation is off. Enable it under Built-in in the Skill Center.'}</p> : null}
     <div data-paimind-agent-tabs-shell>
       <div role="tablist" aria-label={zh ? '智能体类型' : 'Agent types'} data-paimind-agent-tabs>
-        <button role="tab" type="button" data-paimind-agent-tab aria-label={zh ? '业务智能体' : 'Business Agents'} aria-selected={tab === 'platform'} onClick={() => { setTab('platform'); setQuery('') }}><PaimindAgentIcon size={16} />{zh ? '业务智能体' : 'Business Agents'}<span data-paimind-agent-count>{businessAgentCount}</span></button>
-        <button role="tab" type="button" data-paimind-agent-tab aria-label={zh ? '我的智能体' : 'My Agents'} aria-selected={tab === 'mine'} onClick={() => { setTab('mine'); setQuery('') }}><PaimindUserIcon size={16} />{zh ? '我的智能体' : 'My Agents'}<span data-paimind-agent-count>{personalProfiles.length}</span></button>
+        <button role="tab" type="button" data-paimind-agent-tab aria-label={zh ? '业务智能体' : 'Business Agents'} aria-selected={tab === 'platform'} tabIndex={tab === 'platform' ? 0 : -1} onKeyDown={handlePaimindTabKey} onClick={() => { setTab('platform'); setQuery('') }}><PaimindAgentIcon size={16} />{zh ? '业务智能体' : 'Business Agents'}<span data-paimind-agent-count>{businessAgentCount}</span></button>
+        <button role="tab" type="button" data-paimind-agent-tab aria-label={zh ? '我的智能体' : 'My Agents'} aria-selected={tab === 'mine'} tabIndex={tab === 'mine' ? 0 : -1} onKeyDown={handlePaimindTabKey} onClick={() => { setTab('mine'); setQuery('') }}><PaimindUserIcon size={16} />{zh ? '我的智能体' : 'My Agents'}<span data-paimind-agent-count>{personalProfiles.length}</span></button>
       </div>
       {tab === 'platform' && businessCategories.length > 0 && <label data-paimind-agent-business-filter>{zh ? '业务分类' : 'Business category'}<select aria-label={zh ? '业务分类' : 'Business category'} value={businessCategory} onChange={event => { setBusinessCategory(event.currentTarget.value) }}><option value="all">{zh ? '全部业务分类' : 'All business categories'}</option>{businessCategories.map(category => <option key={category.id} value={businessCategoryLabel(category, zh)}>{businessCategoryLabel(category, zh)} · {category.count}</option>)}</select></label>}
     </div>
 
     {(runtimeState.notice !== null || runtimeState.error !== null) && <p data-paimind-agent-note role="status">{runtimeState.error ?? runtimeState.notice}</p>}
     {error !== null && draft === null && starterDraft === null && <p role="alert" data-paimind-agent-error>{error}</p>}
-    <div data-paimind-agent-section-head><div><h2>{tab === 'platform' ? (zh ? '业务智能体' : 'Business Agents') : (zh ? '我的智能体' : 'My Agents')}</h2><p>{tab === 'mine' ? (zh ? '为自己的高频任务配置稳定角色、目标和会话技能。' : 'Configure stable roles, goals, and session Skills for your recurring work.') : (zh ? '按业务场景选择官方或本地维护的智能体。' : 'Choose an official or locally maintained Agent for a business scenario.')}</p></div><div data-paimind-agent-section-actions><span data-paimind-agent-result-count>{zh ? `${visibleCount} 个结果` : `${visibleCount} results`}</span></div></div>
+    <div data-paimind-agent-section-head><div><h2>{tab === 'platform' ? (zh ? '业务智能体' : 'Business Agents') : (zh ? '我的智能体' : 'My Agents')}</h2><p>{tab === 'mine' ? (zh ? '为自己的高频任务配置稳定角色、目标和工作技能。' : 'Configure stable roles, goals, and Skills for your recurring work.') : (zh ? '按业务场景选择官方或本地维护的智能体。' : 'Choose an official or locally maintained Agent for a business scenario.')}</p></div><div data-paimind-agent-section-actions><span data-paimind-agent-result-count>{zh ? `${visibleCount} 个结果` : `${visibleCount} results`}</span></div></div>
     {roster.status === 'loading' && <div data-paimind-agent-loading-grid aria-busy="true" aria-label={zh ? '正在读取智能体' : 'Reading Agents'}>{[0, 1, 2, 3].map(index => <div key={index} data-paimind-agent-loading-card><span /><strong /><i /></div>)}</div>}
     {roster.status === 'error' && <div data-paimind-agent-status role="alert"><span data-paimind-agent-status-icon><PaimindSettingsIcon size={22} /></span><strong>{zh ? '智能体连接失败' : 'Agent connection failed'}</strong><p>{roster.error}</p><button type="button" data-paimind-agent-button onClick={() => { setRevision(value => value + 1) }}>{zh ? '重新加载' : 'Retry'}</button></div>}
     {roster.status === 'ready' && tab === 'platform' && (visibleCount === 0 ? <div data-paimind-agent-status><span data-paimind-agent-status-icon><PaimindSearchIcon size={22} /></span><strong>{query.trim() !== '' ? (zh ? '没有匹配结果' : 'No matching results') : (zh ? '暂无业务智能体' : 'No Business Agents yet')}</strong><p>{query.trim() !== '' ? (zh ? '试试更短的关键词，或清空搜索。' : 'Try a shorter search or clear the query.') : agentAuthoringEnabled ? (zh ? '当前还没有业务智能体，可以先创建一个。' : 'There are no Business Agents yet. Create one to get started.') : (zh ? '当前没有可浏览的业务智能体。' : 'There are no Business Agents to browse.')}</p>{query.trim() !== '' && <button type="button" data-paimind-agent-button onClick={() => { setQuery('') }}>{zh ? '清空搜索' : 'Clear search'}</button>}{query.trim() === '' && agentAuthoringEnabled && <button type="button" data-paimind-agent-button data-primary="true" onClick={createBusinessAgent} disabled={templates.length === 0}><PaimindPlusIcon size={14} />{zh ? '创建业务智能体' : 'Create Business Agent'}</button>}</div> : <ul data-paimind-agent-grid>{platform.map(preset => { const metadata = metadataForPreset(preset); const presentation = platformPresetPresentation(preset, zh); return <li key={preset.id} data-paimind-agent-card data-paimind-agent-preset-id={preset.id} data-broken={preset.broken !== undefined}>
@@ -2656,7 +2663,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
       {preset.broken !== undefined && <p role="alert">{zh ? `当前不可用：${preset.broken}` : `Unavailable: ${preset.broken}`}</p>}
       <div data-paimind-agent-actions>{preset.id === 'cordis' ? <>{agentAuthoringEnabled && <button type="button" data-paimind-agent-button data-primary="true" disabled={busy || preset.broken !== undefined || templates.length === 0} onClick={createPersonalAgent}><PaimindPlusIcon size={14} />{zh ? '创建个人智能体' : 'Create Personal Agent'}</button>}<button type="button" data-paimind-agent-button disabled={busy} onClick={openAdvanced}><PaimindSettingsIcon size={14} />{zh ? '管理预设' : 'Manage Presets'}</button></> : <>{agentAuthoringEnabled && <button type="button" data-paimind-agent-button disabled={busy || preset.broken !== undefined} onClick={() => { copyPlatformAgent(preset) }}><PaimindEditIcon size={14} />{zh ? '复制并编辑' : 'Copy and edit'}</button>}<button type="button" data-paimind-agent-button data-primary="true" disabled={busy || preset.broken !== undefined} onClick={() => { void start(preset) }}><PaimindPlayIcon size={14} />{zh ? '开始对话' : 'Start conversation'}</button></>}</div>
     </li> })}{visibleBusinessProfiles.map(managedProfileCard)}</ul>)}
-    {roster.status === 'ready' && tab === 'mine' && (mine.length === 0 ? <div data-paimind-agent-status><span data-paimind-agent-status-icon><PaimindUserIcon size={22} /></span><strong>{query.trim() === '' ? (zh ? '还没有个人智能体' : 'No personal Agents yet') : (zh ? '没有匹配的个人智能体' : 'No matching personal Agents')}</strong><p>{query.trim() === '' ? agentAuthoringEnabled ? (zh ? '创建一个智能体，配置角色、目标与会话技能。' : 'Create an Agent and configure its role, goal, and session Skills.') : (zh ? '当前没有可浏览的个人智能体。' : 'There are no personal Agents to browse.') : (zh ? '试试更短的关键词，或清空搜索。' : 'Try a shorter search or clear the query.')}</p>{(query.trim() !== '' || agentAuthoringEnabled) && <button type="button" data-paimind-agent-button data-primary="true" onClick={query.trim() === '' ? createPersonalAgent : () => { setQuery('') }} disabled={query.trim() === '' && templates.length === 0}><PaimindPlusIcon size={14} />{query.trim() === '' ? (zh ? '创建个人智能体' : 'Create Personal Agent') : (zh ? '清空搜索' : 'Clear search')}</button>}</div> : <ul data-paimind-agent-grid>{mine.map(managedProfileCard)}</ul>)}
+    {roster.status === 'ready' && tab === 'mine' && (mine.length === 0 ? <div data-paimind-agent-status><span data-paimind-agent-status-icon><PaimindUserIcon size={22} /></span><strong>{query.trim() === '' ? (zh ? '还没有个人智能体' : 'No personal Agents yet') : (zh ? '没有匹配的个人智能体' : 'No matching personal Agents')}</strong><p>{query.trim() === '' ? agentAuthoringEnabled ? (zh ? '创建一个智能体，配置角色、目标与工作技能。' : 'Create an Agent and configure its role, goal, and Skills.') : (zh ? '当前没有可浏览的个人智能体。' : 'There are no personal Agents to browse.') : (zh ? '试试更短的关键词，或清空搜索。' : 'Try a shorter search or clear the query.')}</p>{(query.trim() !== '' || agentAuthoringEnabled) && <button type="button" data-paimind-agent-button data-primary="true" onClick={query.trim() === '' ? createPersonalAgent : () => { setQuery('') }} disabled={query.trim() === '' && templates.length === 0}><PaimindPlusIcon size={14} />{query.trim() === '' ? (zh ? '创建个人智能体' : 'Create Personal Agent') : (zh ? '清空搜索' : 'Clear search')}</button>}</div> : <ul data-paimind-agent-grid>{mine.map(managedProfileCard)}</ul>)}
 
     {agentAuthoringEnabled && starterDraft !== null && <div data-paimind-agent-starter-backdrop>
       <section ref={starterRef} data-paimind-agent-starter role="dialog" aria-modal="true" aria-labelledby="paimind-agent-starter-title">
@@ -2688,7 +2695,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
         <header data-paimind-agent-form-head><div><p data-paimind-agent-form-kicker>{draft.productKind === 'business' ? (zh ? '业务智能体' : 'Business Agent') : (zh ? '个人智能体' : 'Personal Agent')}</p><h2 id="paimind-agent-builder-title">{builderTab === 'test' ? (zh ? `测试 ${draft.name}` : `Test ${draft.name}`) : draft.editing !== null ? (zh ? '编辑智能体' : 'Edit Agent') : (zh ? '创建智能体' : 'Create Agent')}</h2></div><div data-paimind-agent-form-head-actions><span data-paimind-agent-save-state data-dirty={builderTab === 'configure' && draftDirty}>{builderTab === 'test' ? (zh ? '测试' : 'Test') : draftDirty ? (zh ? '未保存' : 'Unsaved') : (zh ? '已保存' : 'Saved')}</span><button type="button" data-paimind-agent-builder-close data-paimind-builder-autofocus aria-label={zh ? '关闭并返回原对话' : 'Close and return to conversation'} disabled={busy} onClick={closeBuilder}><PaimindCloseIcon size={18} /></button></div></header>
         {builderTab === 'configure' && <div data-paimind-agent-form-message>{error !== null && <p role="alert" data-paimind-agent-form-error>{error}</p>}</div>}
         <div data-paimind-agent-native-toolbar>
-          <div role="tablist" aria-label={zh ? '创建助手模式' : 'Creation assistant modes'} data-paimind-agent-conversation-tabs><button type="button" role="tab" aria-selected={builderTab === 'configure'} disabled={busy} onClick={openConfigurationChat}>{zh ? '配置对话' : 'Configuration chat'}</button><button type="button" role="tab" aria-selected={builderTab === 'test'} disabled={busy} onClick={openTestChat}>{zh ? '测试对话' : 'Test chat'}</button></div>
+          <div role="tablist" aria-label={zh ? '创建助手模式' : 'Creation assistant modes'} data-paimind-agent-conversation-tabs><button type="button" role="tab" aria-selected={builderTab === 'configure'} tabIndex={builderTab === 'configure' ? 0 : -1} onKeyDown={handlePaimindTabKey} disabled={busy} onClick={openConfigurationChat}>{zh ? '配置对话' : 'Configuration chat'}</button><button type="button" role="tab" aria-selected={builderTab === 'test'} tabIndex={builderTab === 'test' ? 0 : -1} onKeyDown={handlePaimindTabKey} disabled={busy} onClick={openTestChat}>{zh ? '测试对话' : 'Test chat'}</button></div>
           {builderTab === 'configure' && <div data-paimind-agent-native-status data-tone={nativeConversationStatus.tone} role="status" aria-live="polite">{nativeConversationStatus.tone === 'ready' ? <PaimindCheckIcon size={16} /> : nativeConversationStatus.tone === 'busy' ? <PaimindAgentIcon size={16} /> : <PaimindWarningIcon size={16} />}<span><strong>{nativeConversationStatus.title}</strong>{nativeConversationStatus.detail !== null && <small>{nativeConversationStatus.detail}</small>}</span></div>}
         </div>
         {builderTab === 'configure' && <div data-paimind-agent-form-body>
@@ -2705,12 +2712,12 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
               <div data-paimind-agent-ai-update-actions><button type="button" onClick={() => { setDraft(undoableUpdate.previous); setUndoableUpdate(null); setAuthoringContextReady(false) }}>{zh ? '撤销本轮建议' : 'Undo this proposal'}</button></div>
             </section>}
 
-            <section data-paimind-agent-form-panel aria-labelledby="paimind-agent-role-title"><div data-paimind-agent-panel-head><span>1</span><div><h3 id="paimind-agent-role-title">{zh ? '它是谁' : 'Who it is'}</h3><p>{zh ? '定义智能体的角色、身份与定位。' : 'Define the Agent’s role and identity.'}</p></div></div><label data-paimind-agent-field><span>{zh ? '角色' : 'Role'}</span><textarea value={draft.role} maxLength={2000} placeholder={zh ? '例如：你是一位擅长帮助用户建立高质量人际关系的沟通教练。' : 'For example: You are a communication coach who helps users build stronger relationships.'} onChange={event => { setDraft({ ...draft, role: event.currentTarget.value }) }} /></label></section>
-            <section data-paimind-agent-form-panel aria-labelledby="paimind-agent-goal-title"><div data-paimind-agent-panel-head><span>2</span><div><h3 id="paimind-agent-goal-title">{zh ? '要完成什么' : 'What it accomplishes'}</h3><p>{zh ? '明确核心目标与可交付结果。' : 'Define the core goal and expected outcome.'}</p></div></div><label data-paimind-agent-field><span>{zh ? '目标' : 'Goal'}</span><textarea value={draft.goal} maxLength={2000} placeholder={zh ? '例如：诊断互动难点，提供可落地的策略与沟通建议。' : 'For example: diagnose interaction problems and provide practical strategies.'} onChange={event => { setDraft({ ...draft, goal: event.currentTarget.value }) }} /></label></section>
+            <section data-paimind-agent-form-panel aria-labelledby="paimind-agent-role-title"><div data-paimind-agent-panel-head><span>1</span><div><h3 id="paimind-agent-role-title">{zh ? '它是谁' : 'Who it is'}</h3><p>{zh ? '定义智能体的角色、身份与定位。' : 'Define the Agent’s role and identity.'}</p></div></div><label data-paimind-agent-field><span>{zh ? '角色' : 'Role'}</span><textarea value={draft.role} maxLength={2000} placeholder={zh ? '例如：你是一位帮助业务团队核对客户需求和交期风险的项目助手。' : 'For example: You are a communication coach who helps users build stronger relationships.'} onChange={event => { setDraft({ ...draft, role: event.currentTarget.value }) }} /></label></section>
+            <section data-paimind-agent-form-panel aria-labelledby="paimind-agent-goal-title"><div data-paimind-agent-panel-head><span>2</span><div><h3 id="paimind-agent-goal-title">{zh ? '要完成什么' : 'What it accomplishes'}</h3><p>{zh ? '明确核心目标与可交付结果。' : 'Define the core goal and expected outcome.'}</p></div></div><label data-paimind-agent-field><span>{zh ? '目标' : 'Goal'}</span><textarea value={draft.goal} maxLength={2000} placeholder={zh ? '例如：整理本周进展，指出交付风险，并列出需要协助的事项。' : 'For example: diagnose interaction problems and provide practical strategies.'} onChange={event => { setDraft({ ...draft, goal: event.currentTarget.value }) }} /></label></section>
             <section data-paimind-agent-form-panel aria-labelledby="paimind-agent-behavior-title"><div data-paimind-agent-panel-head><span>3</span><div><h3 id="paimind-agent-behavior-title">{zh ? '如何工作' : 'How it works'}</h3><p>{zh ? '描述工作流程、方法与原则。' : 'Describe its workflow, methods, and principles.'}</p></div></div><div data-paimind-agent-fields><label data-paimind-agent-field data-wide="true"><span>{zh ? '行为规范' : 'Behavior'}</span><textarea value={draft.behavior} maxLength={4000} placeholder={zh ? '工作原则、边界和质量要求' : 'Working principles, boundaries, and quality requirements'} onChange={event => { setDraft({ ...draft, behavior: event.currentTarget.value }) }} /></label><label data-paimind-agent-field data-wide="true">{zh ? '补充要求（可选）' : 'Additional requirements (optional)'}<textarea value={draft.instructions} maxLength={4000} placeholder={zh ? '例如：优先使用中文，所有结论给出证据。' : 'For example: answer concisely and cite evidence.'} onChange={event => { setDraft({ ...draft, instructions: event.currentTarget.value }) }} /></label></div></section>
 
-            <section data-paimind-agent-form-panel data-paimind-agent-skills-panel aria-labelledby="paimind-agent-skills-title"><button type="button" data-paimind-agent-skills-toggle aria-expanded={skillPickerOpen} onClick={() => { setSkillPickerOpen(value => !value) }}><span data-paimind-agent-panel-head><span><PaimindSkillIcon size={15} /></span><span><strong id="paimind-agent-skills-title">{zh ? '业务技能（可选）' : 'Business Skills (optional)'}</strong><small>{zh ? '只挂载这个智能体需要的业务技能。' : 'Attach only the Business Skills required by this Agent.'}</small></span></span><span>{zh ? `已选择 ${draft.preferredSkillNames.length} 项` : `${draft.preferredSkillNames.length} selected`}</span></button>{skillPickerOpen && <fieldset data-paimind-agent-field data-paimind-agent-skill-picker><legend>{zh ? '智能体业务技能' : 'Agent Business Skills'}</legend><p data-paimind-agent-skill-policy>{zh ? '技能中心中的业务技能默认不进入全局目录；只有这里选中的技能会挂载到这个智能体。' : 'Business Skills in Skill Center stay out of the global catalog; only selected Skills are attached to this Agent.'}</p>{installedSkills.length === 0 ? <div data-paimind-agent-skill-empty>{zh ? '暂无已安装业务技能' : 'No installed Business Skills'}</div> : <><div data-paimind-agent-skill-toolbar><label data-paimind-agent-skill-search><PaimindSearchIcon size={15} /><input type="search" aria-label={zh ? '搜索业务技能' : 'Search Business Skills'} placeholder={zh ? '搜索名称、说明或标签' : 'Search names, descriptions, or tags'} value={skillQuery} onChange={event => { setSkillQuery(event.currentTarget.value) }} /></label><button type="button" data-paimind-agent-skill-selected aria-pressed={selectedSkillsOnly} onClick={() => { setSelectedSkillsOnly(value => !value) }}>{zh ? `只看已选 ${draft.preferredSkillNames.length}` : `Selected ${draft.preferredSkillNames.length}`}</button></div><div data-paimind-agent-skill-categories role="group" aria-label={zh ? '技能分类' : 'Skill categories'}>{SKILL_PRODUCT_CATEGORIES.map(category => <button key={category} type="button" aria-label={`${skillCategoryLabel(category, zh)} ${skillCategoryCounts[category]}`} aria-pressed={skillCategory === category} onClick={() => { setSkillCategory(category) }}><span>{skillCategoryLabel(category, zh)}</span><small>{skillCategoryCounts[category]}</small></button>)}</div><div data-paimind-agent-skill-summary><span>{zh ? `已选择 ${draft.preferredSkillNames.length} / 已安装 ${installedSkills.length}` : `${draft.preferredSkillNames.length} selected / ${installedSkills.length} installed`}</span><span>{zh ? `${visibleSkills.length} 个结果` : `${visibleSkills.length} results`}</span></div><div data-paimind-agent-skill-results>{visibleSkills.length === 0 ? <div data-paimind-agent-skill-empty>{zh ? '当前筛选没有匹配技能。' : 'No Skills match the filters.'}</div> : visibleSkills.map(skill => { const metadata = metadataForSkill(skill); return <label key={skill.name} data-paimind-agent-skill data-selected={draft.preferredSkillNames.includes(skill.name)}><input type="checkbox" checked={draft.preferredSkillNames.includes(skill.name)} onChange={event => { setDraft({ ...draft, preferredSkillNames: event.currentTarget.checked ? [...draft.preferredSkillNames, skill.name] : draft.preferredSkillNames.filter(value => value !== skill.name) }) }} /><span><strong>{skill.name}</strong><small>{skillCategoryLabel(metadata.category, zh)}</small><em>{skill.description}</em></span></label> })}</div></>}</fieldset>}</section>
-            <p data-paimind-agent-runtime-note>{zh ? '运行时资源与权限由 Harness 平台统一管理与执行。' : 'Runtime resources and permissions are managed and executed by Harness.'}</p>
+            <section data-paimind-agent-form-panel data-paimind-agent-skills-panel aria-labelledby="paimind-agent-skills-title"><button type="button" data-paimind-agent-skills-toggle aria-expanded={skillPickerOpen} onClick={() => { setSkillPickerOpen(value => !value) }}><span data-paimind-agent-panel-head><span><PaimindSkillIcon size={15} /></span><span><strong id="paimind-agent-skills-title">{zh ? '业务技能（可选）' : 'Business Skills (optional)'}</strong><small>{zh ? '只挂载这个智能体需要的业务技能。' : 'Attach only the Business Skills required by this Agent.'}</small></span></span><span>{zh ? `已选择 ${draft.preferredSkillNames.length} 项` : `${draft.preferredSkillNames.length} selected`}</span></button>{skillPickerOpen && <fieldset data-paimind-agent-field data-paimind-agent-skill-picker><legend>{zh ? '智能体业务技能' : 'Agent Business Skills'}</legend><p data-paimind-agent-skill-policy>{zh ? '只为这个智能体添加所选技能，不影响其他智能体。' : 'Business Skills in Skill Center stay out of the global catalog; only selected Skills are attached to this Agent.'}</p>{installedSkills.length === 0 ? <div data-paimind-agent-skill-empty>{zh ? '暂无已安装业务技能' : 'No installed Business Skills'}</div> : <><div data-paimind-agent-skill-toolbar><label data-paimind-agent-skill-search><PaimindSearchIcon size={15} /><input type="search" aria-label={zh ? '搜索业务技能' : 'Search Business Skills'} placeholder={zh ? '搜索名称、说明或标签' : 'Search names, descriptions, or tags'} value={skillQuery} onChange={event => { setSkillQuery(event.currentTarget.value) }} /></label><button type="button" data-paimind-agent-skill-selected aria-pressed={selectedSkillsOnly} onClick={() => { setSelectedSkillsOnly(value => !value) }}>{zh ? `只看已选 ${draft.preferredSkillNames.length}` : `Selected ${draft.preferredSkillNames.length}`}</button></div><div data-paimind-agent-skill-categories role="group" aria-label={zh ? '技能分类' : 'Skill categories'}>{SKILL_PRODUCT_CATEGORIES.map(category => <button key={category} type="button" aria-label={`${skillCategoryLabel(category, zh)} ${skillCategoryCounts[category]}`} aria-pressed={skillCategory === category} onClick={() => { setSkillCategory(category) }}><span>{skillCategoryLabel(category, zh)}</span><small>{skillCategoryCounts[category]}</small></button>)}</div><div data-paimind-agent-skill-summary><span>{zh ? `已选择 ${draft.preferredSkillNames.length} / 已安装 ${installedSkills.length}` : `${draft.preferredSkillNames.length} selected / ${installedSkills.length} installed`}</span><span>{zh ? `${visibleSkills.length} 个结果` : `${visibleSkills.length} results`}</span></div><div data-paimind-agent-skill-results>{visibleSkills.length === 0 ? <div data-paimind-agent-skill-empty>{zh ? '当前筛选没有匹配技能。' : 'No Skills match the filters.'}</div> : visibleSkills.map(skill => { const metadata = metadataForSkill(skill); return <label key={skill.name} data-paimind-agent-skill data-selected={draft.preferredSkillNames.includes(skill.name)}><input type="checkbox" checked={draft.preferredSkillNames.includes(skill.name)} onChange={event => { setDraft({ ...draft, preferredSkillNames: event.currentTarget.checked ? [...draft.preferredSkillNames, skill.name] : draft.preferredSkillNames.filter(value => value !== skill.name) }) }} /><span><strong>{skill.displayName ?? skill.name}</strong><small>{skillCategoryLabel(metadata.category, zh)}</small><em>{skill.description}</em></span></label> })}</div></>}</fieldset>}</section>
+            <p data-paimind-agent-runtime-note>{zh ? '文件访问和操作范围遵循平台的权限设置。' : 'Runtime resources and permissions are managed and executed by Harness.'}</p>
           </div>
 
         </div>}
@@ -2725,7 +2732,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
               : testStatus === 'starting' || testSessionId === null ? <div data-paimind-agent-test-gate><PaimindAgentIcon size={22} /><strong>{zh ? '正在准备真实测试会话' : 'Preparing the real test conversation'}</strong><p>{zh ? '正在创建新会话并绑定已保存的智能体，请稍候。' : 'Creating a fresh Session and binding the saved Agent.'}</p></div>
                 : null}
         </div>}
-        {builderTab === 'configure' && <div data-paimind-agent-form-actions><p>{zh ? '所有对话建议和手工修改都作用于这一个智能体；保存后，当前测试对话与其他已打开的智能体会话会从下一轮开始使用新配置，历史消息不变。' : 'All conversation suggestions and manual edits update this Agent. After saving, the Test Chat and other open Agent conversations use the new configuration from their next turn; message history is unchanged.'}</p><div><button type="button" data-paimind-agent-button disabled={busy} onClick={closeBuilder}>{zh ? '关闭并返回原对话' : 'Close and return'}</button><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || !draftDirty} onClick={() => { void save() }}>{authoringStatus === 'running' ? (zh ? '创建助手思考中…' : 'Creation assistant thinking…') : busy ? (zh ? '保存中…' : 'Saving…') : draftDirty ? (draft.productKind === 'business' ? (zh ? '保存业务智能体' : 'Save Business Agent') : (zh ? '保存个人智能体' : 'Save Personal Agent')) : (zh ? '已保存' : 'Saved')}</button></div></div>}
+        {builderTab === 'configure' && <div data-paimind-agent-form-actions><p>{zh ? '所有建议和手工修改都作用于这个智能体。保存后请新建测试验证效果；已有测试保留原版本，普通对话再次打开时会使用最新版接续，历史记录保留。' : 'All suggestions and manual edits update this Agent. Start a new test after saving. Existing tests retain their original version; reopening a regular conversation continues with the latest version and preserves its history.'}</p><div><button type="button" data-paimind-agent-button disabled={busy} onClick={closeBuilder}>{zh ? '关闭并返回原对话' : 'Close and return'}</button><button type="button" data-paimind-agent-button data-primary="true" disabled={busy || !draftDirty} onClick={() => { void save() }}>{authoringStatus === 'running' ? (zh ? '创建助手思考中…' : 'Creation assistant thinking…') : busy ? (zh ? '保存中…' : 'Saving…') : draftDirty ? (draft.productKind === 'business' ? (zh ? '保存业务智能体' : 'Save Business Agent') : (zh ? '保存个人智能体' : 'Save Personal Agent')) : (zh ? '已保存' : 'Saved')}</button></div></div>}
       </section>
     </div>}
   </section>

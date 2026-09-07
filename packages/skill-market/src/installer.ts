@@ -120,6 +120,8 @@ function openZip(path: string, options: yauzl.Options): Promise<ZipFile> {
 }
 
 export interface SkillPackageMetadata {
+  /** User-facing title; never used as the runtime identity or binding key. */
+  readonly displayName?: string
   readonly name: string
   readonly description: string
   readonly whenToUse?: string
@@ -747,7 +749,12 @@ export function parseSkillMetadata(source: string): SkillPackageMetadata {
   if (description === '' || description.length > 1_000 || CONTROL.test(description)) {
     throw new Error('Skill description 缺失或无效')
   }
-  return Object.freeze({ name, description, ...(whenToUse === '' ? {} : { whenToUse }) })
+  const heading = /^#\s+([^\n]+?)(?:\s+#+)?\s*(?:\n|$)/.exec(normalized.slice(end + 4).trimStart())?.[1]
+  const displayName = metadataString(fields['display-name'] ?? heading)
+  return Object.freeze({ name, description,
+    ...(displayName === '' || displayName.length > 200 || CONTROL.test(displayName) ? {} : { displayName }),
+    ...(whenToUse === '' ? {} : { whenToUse }),
+  })
 }
 
 async function readPrefix(path: string): Promise<string> {
@@ -986,6 +993,7 @@ async function readInstallManifest(path: string): Promise<SkillInstallRecord | u
       || typeof value.sourceFileName !== 'string' || typeof value.name !== 'string' || typeof value.description !== 'string') return undefined
     return Object.freeze({
       skillId: value.skillId, name: value.name, description: value.description,
+      ...(typeof value.displayName === 'string' ? { displayName: value.displayName } : {}),
       ...(typeof value.whenToUse === 'string' ? { whenToUse: value.whenToUse } : {}),
       digest: value.digest, sourceFileName: value.sourceFileName,
       installedAt: value.installedAt, updatedAt: value.updatedAt, managed: true,
@@ -1216,7 +1224,10 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       && agentSource.describeAgentAuthoringCapability !== undefined) {
       names.push(PAIMIND_AGENT_AUTHORING_SKILL)
     }
-    if (this.installerCtx.loader !== undefined) names.push(PAIMIND_GENUI_SKILL)
+    if (this.installerCtx.loader !== undefined
+      && describePaimindHostLoaderEntry(this.installerCtx.loader, PAIMIND_GENUI_LOADER_ENTRY_ID).installed) {
+      names.push(PAIMIND_GENUI_SKILL)
+    }
     return Object.freeze(names.sort())
   }
 
@@ -1234,9 +1245,11 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
     }
   }
 
-  private assertOptionalSystemSkillPolicy(names: readonly string[]): void {
+  private assertOptionalSystemSkillPolicy(names: readonly string[], previousNames: readonly string[]): void {
     const available = new Set(this.defaultOptionalSystemSkillNames())
-    const unsupported = names.find(name => !PAIMIND_OPTIONAL_SYSTEM_SKILL_NAMES.has(name) || !available.has(name))
+    const previous = new Set(previousNames)
+    const unsupported = names.find(name => !PAIMIND_OPTIONAL_SYSTEM_SKILL_NAMES.has(name)
+      || (!available.has(name) && !previous.has(name)))
     if (unsupported !== undefined) {
       throw new Error(`当前 System Skill 不是可原子启停的 Optional 能力：${unsupported}`)
     }
@@ -1351,9 +1364,8 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
     const loader = this.installerCtx.loader
     if (loader !== undefined) {
       const state = describePaimindHostLoaderEntry(loader, PAIMIND_GENUI_LOADER_ENTRY_ID)
-      if (!state.installed && enabled.has(PAIMIND_GENUI_SKILL)) {
-        throw new Error('GenUI System Skill 来源插件当前未安装')
-      }
+      // A stored preference is not proof that the optional provider is installed.
+      // Keep it inert while absent, just as for the Agent-authoring source above.
       if (state.installed) {
         await setPaimindHostLoaderEntryEnabled(loader, PAIMIND_GENUI_LOADER_ENTRY_ID, enabled.has(PAIMIND_GENUI_SKILL))
       }
@@ -1919,6 +1931,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       const now = this.now()
       const record: SkillInstallRecord = Object.freeze({
         skillId: preview.name, name: preview.name, description: preview.description,
+        ...(preview.displayName === undefined ? {} : { displayName: preview.displayName }),
         ...(preview.whenToUse === undefined ? {} : { whenToUse: preview.whenToUse }),
         digest: preview.digest, sourceFileName: preview.fileName,
         installedAt: previous?.installedAt ?? now, updatedAt: now, managed: true,
@@ -2009,13 +2022,23 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       const root = join(this.skillRoot, entry.name)
       if (!(await pathExists(join(root, 'SKILL.md')))) continue
       const managed = await readInstallManifest(join(root, INSTALL_MANIFEST))
-      if (managed !== undefined) { items.push(managed); continue }
+      if (managed !== undefined) {
+        // Read titles from the current source, including packages installed before titles were projected.
+        try {
+          const metadata = parseSkillMetadata(await readPrefix(join(root, 'SKILL.md')))
+          if (metadata.name !== managed.name) continue
+          const { displayName: _oldTitle, ...identity } = managed
+          items.push(Object.freeze({ ...identity, ...(metadata.displayName === undefined ? {} : { displayName: metadata.displayName }) }))
+        } catch { items.push(managed) }
+        continue
+      }
       try {
         const metadata = parseSkillMetadata(await readPrefix(join(root, 'SKILL.md')))
         const info = await stat(join(root, 'SKILL.md'))
         items.push(Object.freeze({
           skillId: entry.name, name: metadata.name, description: metadata.description,
-          ...(metadata.whenToUse === undefined ? {} : { whenToUse: metadata.whenToUse }),
+          ...(metadata.displayName === undefined ? {} : { displayName: metadata.displayName }),
+        ...(metadata.whenToUse === undefined ? {} : { whenToUse: metadata.whenToUse }),
           digest: await digestFile(join(root, 'SKILL.md')), sourceFileName: 'SKILL.md',
           installedAt: info.birthtimeMs, updatedAt: info.mtimeMs, managed: false,
           runtimeRequirements: Object.freeze([]),
@@ -2105,7 +2128,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
         throw new Error('用户 Skill Policy 引用了未安装的 Business Skill')
       }
       const systemSkillNames = await this.currentSystemSkillNames()
-      this.assertOptionalSystemSkillPolicy(candidate.enabledOptionalSystemSkillNames)
+      this.assertOptionalSystemSkillPolicy(candidate.enabledOptionalSystemSkillNames, current.enabledOptionalSystemSkillNames)
       const collision = candidate.enabledBusinessSkillNames.find(name => systemSkillNames.has(name))
       if (collision !== undefined) throw new Error(`Skill 名称与当前系统能力冲突：${collision}`)
       const enabledBusiness = new Set(candidate.enabledBusinessSkillNames)
@@ -2189,6 +2212,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       const record: SkillInstallRecord = Object.freeze({
         skillId: name, name,
         description: savedMetadata.description,
+        ...(savedMetadata.displayName === undefined ? {} : { displayName: savedMetadata.displayName }),
         ...(savedMetadata.whenToUse === undefined ? {} : { whenToUse: savedMetadata.whenToUse }),
         digest, sourceFileName: previous?.sourceFileName ?? 'Skill Center authoring',
         installedAt: previous?.installedAt ?? now, updatedAt: now, managed: true,
@@ -2341,6 +2365,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       const now = this.now()
       const record: SkillInstallRecord = Object.freeze({
         skillId, name: skillId, description: checked.description,
+        ...(checked.displayName === undefined ? {} : { displayName: checked.displayName }),
         ...(checked.whenToUse === undefined ? {} : { whenToUse: checked.whenToUse }),
         // Preserve the source-artifact digest used by market update checks;
         // package editing concurrency uses the independent folder revision.

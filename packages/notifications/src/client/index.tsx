@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import {
+  markHarnessClientStyle,
   contributePaimindExtension,
   type HarnessRemoteMountService,
   type HarnessRemoteResult,
@@ -287,7 +288,7 @@ const STYLE = `${PAIMIND_UI_FOUNDATION_CSS}
 [data-paimind-notification-level='warning'] { color: var(--paimind-ui-warning); }
 [data-paimind-notification-title] { margin: 6px 0 0; font-size: 13px; line-height: 19px; font-weight: 680; overflow-wrap: anywhere; }
 [data-paimind-notification-summary] { display: -webkit-box; margin: 4px 0 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
-[data-paimind-notification-details] { max-height: 220px; margin: 9px 0 0; padding: 10px; overflow: auto; border-radius: var(--paimind-ui-radius-sm); color: var(--paimind-ui-muted); background: var(--paimind-ui-subtle); font: 11px/17px ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+[data-paimind-notification-details] { max-height: 320px; margin: 9px 0 0; padding: 10px; overflow: auto; border-radius: var(--paimind-ui-radius-sm); color: var(--paimind-ui-muted); background: var(--paimind-ui-subtle); font-size: 13px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 [data-paimind-notification-actions] { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 9px; padding-top:8px; border-top:1px solid color-mix(in srgb,var(--paimind-ui-border) 70%,transparent); }
 [data-paimind-notification-action] { min-height: 30px; padding: 4px 8px; border-color: transparent; color: var(--paimind-ui-accent); background: transparent; font-size: 11px; }
 [data-paimind-notification-action]:hover { background: color-mix(in srgb, var(--paimind-ui-accent) 9%, transparent); }
@@ -300,7 +301,7 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = '@paimind/notifications'
+  style.dataset.paimindPlugin = '@paimind/notifications'; markHarnessClientStyle(style, '@paimind/notifications')
   style.textContent = STYLE
   document.head.append(style)
   return () => { style.remove() }

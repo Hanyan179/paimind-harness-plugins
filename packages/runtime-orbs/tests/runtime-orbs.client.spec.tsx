@@ -1,3 +1,4 @@
+import { installPaimindMotionPreference } from '@paimind/ui-foundation'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { HarnessConversationSnapshot, HarnessSessionListSnapshot } from '@paimind/harness-compat'
@@ -51,6 +52,18 @@ describe('FP01 runtime orbs', () => {
     window.history.replaceState({}, '', '/')
     document.head.querySelectorAll('style[data-paimind-plugin]').forEach(node => { node.remove() })
     delete document.documentElement.dataset.paimindMotion
+  })
+
+  it('uses the shared user override without removing status meaning, including provider unload', async () => {
+    const source = installPaimindMotionPreference()
+    render(<RuntimeOrbDock useSession={useSnapshot(snapshot({ running: true, partial: { blocks: [{ kind: 'reasoning' }] } }))} useSessions={useSessionList()} />)
+    await act(async () => { source.set('off') })
+    expect(screen.getByRole('status', { name: '正在思考…' })).toBeInTheDocument()
+    expect(document.querySelector('canvas')).toHaveAttribute('data-thinking-orb-paused', 'true')
+    await act(async () => { source.set('on') })
+    expect(document.querySelector('canvas')).toHaveAttribute('data-thinking-orb-paused', 'false')
+    await act(async () => { source.dispose() })
+    expect(document.querySelector('canvas')).toHaveAttribute('data-thinking-orb-paused', 'false')
   })
 
   it('renders every locked FP01 animation in the explicit QA preview', () => {

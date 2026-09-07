@@ -11,7 +11,7 @@
 1. **密度先于装饰**：欢迎页保持 Calm Density（平静密度），活跃对话使用 Focus Density（专注密度），Better Sidebar 展开时使用 Workbench Density（工作台密度）。
 2. **克制的高级感**：以海军蓝、暖白、蓝灰、清晰排版、透明材质和大面积留白建立层次；阴影只用于悬浮选择器和主输入区。
 3. **图片不承载信息**：明暗山脊环境图只用于欢迎页与空状态；对话、Tool、审批、错误和安全提示页不展示装饰图片。
-4. **动效服务状态**：只使用 160–240ms 淡入、位移和材质变化；`prefers-reduced-motion` 下关闭非必要动效。
+4. **动效服务状态**：短过渡采用共享 160–240ms 时长，持续状态动效保留语义；用户选择跟随系统、开启或关闭。跟随系统时响应 `prefers-reduced-motion`，显式选择优先。
 5. **原生能力不缩水**：Agent、Session、Preset、Settings、侧栏开关和运行历史继续由 Harness 管理；插件只改变投影与交互呈现。
 
 ## 架构与所有权
@@ -23,6 +23,7 @@
 | Agent Preset roster 与选择 | Harness | `HarnessAgentChoiceBridge` 读取并调用原生选择器，不创建影子 Agent。 |
 | 页面根、侧栏、对话、输入区 | Harness | `HarnessExperienceMarkers` 只增加语义标记，不替换根节点。 |
 | 视觉模式偏好 | Harness Settings | 命名空间 `paimind.visual-experience`，默认 `paimind`。 |
+| 界面动效偏好 | FP-17 + Harness Settings | 同一命名空间中的 `motion`，默认 `system`；共享解析由 `@paimind/ui-foundation` 提供。 |
 | 欢迎环境资产 | FP-17 | 两张优化 WebP；来源与用途见包内根级 `ASSETS.md`。 |
 | Agent 头像投影 | FP-17 | 96×96 WebP；exact mapping 与纯函数 deterministic projection 共用一个 canonical-Preset resolver，来源见 `assets/ASSETS.md`。 |
 | Composer `@` / `+` / `/` | Harness + `@paimind/harness-compat` | 原生 controller、codec、CAS、pick 与 execution 仍由 Harness 拥有；兼容层只做 rc.8 可逆语义桥接。 |
@@ -40,6 +41,8 @@
 - Uninstall（卸载）：移除样式、主题覆盖、观察器、监听器、Portal、DOM 标记和所有槽位贡献。偏好可保留用于重装，但不影响卸载后的 Harness。
 
 ### Density（密度）
+
+界面动效按[基座契约](../standards/ui-foundation.md)独立于视觉模式保存和生效。设置通过个性化页面的可选子插槽贡献；该页面缺席时回退到通用设置。来源卸载后清理临时投影，消费者跟随系统。2026-09-07 首版接线与边界见[本轮预验收](../acceptance/ui-foundation-v1-2026-09-07.md)。
 
 - `calm`：新会话；展示欢迎环境、任务标题、主 Composer 与最多四个官方 Quick Agents。
 - `focus`：活跃对话；隐藏欢迎装饰，压缩折叠 Tool 行，展开内容、错误、审批和安全提示保持完整。
@@ -81,6 +84,7 @@
 ### 自动化门禁
 
 - 默认启用、原生切换、刷新恢复、卸载复位、重新安装。
+- 动效三态、系统偏好变化、失败回读、协作开关独立、来源缺席回退及样式／画布消费者共同生效。
 - 主题覆盖注册、叠加、撤销。
 - Agent 分类、选择、失败回退、原生 Session 绑定。
 - `@` 在无 Session Skill 与有 Session Skill 的 canonical Preset 下分别验收；有 Skill 时选择结果必须通过原生 pick route 写入可执行 `/<skill> ` draft。

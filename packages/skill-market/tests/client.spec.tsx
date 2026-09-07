@@ -126,6 +126,64 @@ function runtime(current: string | undefined | null = 'session-1'): { sessions: 
 afterEach(() => { cleanup(); document.head.querySelectorAll('style[data-paimind-plugin="@paimind/skill-market"]').forEach(node => { node.remove() }) })
 
 describe('Skill Market business UI', () => {
+  it('opens mobile details at the top, traps focus, and restores the original list position', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }))
+    try {
+      const view = render(<main data-paimind-product-surface="skill-center"><SkillMarketSection installer={installer()} sessions={runtime().sessions} locale={locale()} close={() => {}} /></main>)
+      const surface = view.container.firstElementChild as HTMLElement
+      const trigger = await screen.findByRole('button', { name: 'View: bento-ppt' })
+      surface.scrollTop = 540
+      trigger.focus()
+      fireEvent.click(trigger)
+      const back = screen.getByRole('button', { name: 'Back to Skill list' })
+      expect(surface.scrollTop).toBe(0)
+      expect(back).toHaveFocus()
+      fireEvent.keyDown(back, { key: 'Tab', shiftKey: true })
+      expect(screen.getByRole('button', { name: 'Review and install' })).toHaveFocus()
+      fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
+      expect(trigger).toHaveFocus()
+      expect(surface.scrollTop).toBe(540)
+    } finally {
+      cleanup()
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('keeps an unsaved folder when the Center closes, isolates client instances and discards explicitly', async () => {
+    const first = installer()
+    const sessions = runtime().sessions
+    const props = { installer: first, sessions, locale: locale(), close: () => {} }
+    const view = render(<SkillMarketSection {...props} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add Skill' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /Create manually/ }))
+    const content = '---\nname: review-draft\ndescription: "unsaved review"\n---\nKeep this text.'
+    fireEvent.change(screen.getByRole('textbox', { name: 'Skill file editor' }), { target: { value: content } })
+    view.unmount()
+    const other = render(<SkillMarketSection {...props} installer={installer()} />)
+    expect(screen.queryByRole('textbox', { name: 'Skill file editor' })).toBeNull()
+    other.unmount()
+    const restored = render(<SkillMarketSection {...props} />)
+    expect(screen.getByRole('textbox', { name: 'Skill file editor' })).toHaveValue(content)
+    const event = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    restored.unmount()
+    render(<SkillMarketSection {...props} />)
+    expect(screen.queryByRole('textbox', { name: 'Skill file editor' })).toBeNull()
+    expect(first.saveSkillPackage).not.toHaveBeenCalled()
+  })
+
+  it('renders a structured catalog failure and can retry the same service', async () => {
+    const service = installer()
+    service.listCatalog.mockResolvedValueOnce({ ok: false, error: { message: 'catalog unavailable' } })
+    render(<SkillMarketSection installer={service} sessions={runtime().sessions} locale={locale()} close={() => {}} />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('catalog unavailable')
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await screen.findByRole('button', { name: 'View: openai-docs' })
+    expect(service.listCatalog).toHaveBeenCalledTimes(2)
+  })
+
   it('stacks the shared footer actions in expanded and collapsed sidebars', () => {
     expect(SKILL_CENTER_STYLE).toContain("button[data-paimind-product-trigger='skill-center'][data-wide='true']){width:100%!important;height:auto!important;flex-direction:column!important")
     expect(SKILL_CENTER_STYLE).toContain("button[data-paimind-product-trigger='skill-center'][data-wide='false']){width:36px!important;height:auto!important;flex-direction:column!important")

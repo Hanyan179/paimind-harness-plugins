@@ -1,5 +1,7 @@
+import { PAIMIND_UI_FOUNDATION_CSS } from '@paimind/ui-foundation'
 import { useState, useSyncExternalStore } from 'react'
 import {
+  markHarnessClientStyle,
   contributePaimindExtension,
   selectPaimindProducedFiles,
   type HarnessSessionService,
@@ -102,11 +104,11 @@ const STYLE_ID = '@paimind/conversation-artifact-renderer'
 const STYLE = `
 [data-paimind-conversation-artifacts]{margin:14px 0 6px;min-width:0}
 [data-paimind-conversation-artifacts] *{box-sizing:border-box}
-[data-paimind-conversation-artifact-header]{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 9px;color:var(--dsw-alias-label-tertiary,#7a808a);font-size:11px;line-height:16px}
+[data-paimind-conversation-artifact-header]{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 9px;color:var(--dsw-alias-label-tertiary,#7a808a);font-size:12px;line-height:16px}
 [data-paimind-conversation-artifact-heading]{display:flex;align-items:center;gap:7px;font-weight:600;letter-spacing:.01em}
 [data-paimind-conversation-artifact-heading]::before{content:'';width:6px;height:6px;border-radius:99px;background:var(--dsw-alias-state-business-primary,#5d78ff);box-shadow:0 0 0 4px color-mix(in srgb,var(--dsw-alias-state-business-primary,#5d78ff) 12%,transparent)}
 [data-paimind-conversation-artifact-grid]{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:8px}
-[data-paimind-conversation-artifact-card]{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto;column-gap:11px;row-gap:2px;width:100%;min-width:0;min-height:96px;padding:12px;border:1px solid var(--dsw-alias-border-l1,rgba(120,130,150,.2));border-radius:13px;color:var(--dsw-alias-label-primary,#202124);background:linear-gradient(145deg,color-mix(in srgb,var(--artifact-accent,#5d78ff) 8%,var(--dsw-alias-bg-layer-3,#fff)),var(--dsw-alias-bg-layer-2,rgba(255,255,255,.75)));box-shadow:0 4px 15px rgba(20,30,50,.045);font:inherit;text-align:left;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+[data-paimind-conversation-artifact-card]{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto;column-gap:11px;row-gap:2px;width:100%;min-width:0;min-height:96px;padding:12px;border:1px solid var(--dsw-alias-border-l1,rgba(120,130,150,.2));border-radius:13px;color:var(--dsw-alias-label-primary,#202124);background:linear-gradient(145deg,color-mix(in srgb,var(--artifact-accent,#5d78ff) 8%,var(--dsw-alias-bg-layer-3,#fff)),var(--dsw-alias-bg-layer-2,rgba(255,255,255,.75)));box-shadow:0 4px 15px rgba(20,30,50,.045);font:inherit;text-align:left;cursor:pointer;transition:border-color var(--paimind-motion-fast) ease,box-shadow var(--paimind-motion-fast) ease,transform var(--paimind-motion-fast) ease}
 [data-paimind-conversation-artifact-card]:hover:not(:disabled){border-color:color-mix(in srgb,var(--artifact-accent,#5d78ff) 52%,transparent);box-shadow:0 7px 22px color-mix(in srgb,var(--artifact-accent,#5d78ff) 13%,transparent);transform:translateY(-1px)}
 [data-paimind-conversation-artifact-card]:focus-visible{outline:2px solid var(--artifact-accent,#5d78ff);outline-offset:2px}
 [data-paimind-conversation-artifact-card]:disabled{opacity:.58;cursor:not-allowed}
@@ -119,12 +121,12 @@ const STYLE = `
 [data-paimind-conversation-artifact-card][data-format='sheet']{--artifact-accent:#22865b}
 [data-paimind-conversation-artifact-card][data-format='word']{--artifact-accent:#3978ce}
 [data-paimind-conversation-artifact-card][data-format='image']{--artifact-accent:#178f9e}
-[data-paimind-conversation-artifact-badge]{grid-row:1/4;display:grid;place-items:center;align-self:start;width:38px;height:38px;border-radius:10px;color:var(--artifact-accent,#5d78ff);background:color-mix(in srgb,var(--artifact-accent,#5d78ff) 13%,transparent);font-size:10px;font-weight:750;letter-spacing:-.02em}
+[data-paimind-conversation-artifact-badge]{grid-row:1/4;display:grid;place-items:center;align-self:start;width:38px;height:38px;border-radius:10px;color:var(--artifact-accent,#5d78ff);background:color-mix(in srgb,var(--artifact-accent,#5d78ff) 13%,transparent);font-size:12px;font-weight:750;letter-spacing:-.02em}
 [data-paimind-conversation-artifact-title]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:18px;font-weight:650}
-[data-paimind-conversation-artifact-meta]{min-width:0;overflow:hidden;color:var(--dsw-alias-label-tertiary,#7a808a);font-size:10px;line-height:16px;text-overflow:ellipsis;white-space:nowrap}
-[data-paimind-conversation-artifact-action]{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;color:var(--artifact-accent,#5d78ff);font-size:10px;line-height:15px;font-weight:600}
+[data-paimind-conversation-artifact-meta]{min-width:0;overflow:hidden;color:var(--dsw-alias-label-tertiary,#7a808a);font-size:12px;line-height:16px;text-overflow:ellipsis;white-space:nowrap}
+[data-paimind-conversation-artifact-action]{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;color:var(--artifact-accent,#5d78ff);font-size:12px;line-height:15px;font-weight:600}
 [data-paimind-conversation-artifact-action]::after{content:'↗';font-size:13px;font-weight:400}
-[data-paimind-conversation-artifact-more]{display:block;margin:8px 0 0;padding:4px 0;border:0;color:var(--dsw-alias-state-business-primary,#4f7ff8);background:transparent;font:inherit;font-size:11px;cursor:pointer}
+[data-paimind-conversation-artifact-more]{display:block;margin:8px 0 0;padding:4px 0;border:0;color:var(--dsw-alias-state-business-primary,#4f7ff8);background:transparent;font:inherit;font-size:12px;cursor:pointer}
 @media(max-width:560px){[data-paimind-conversation-artifact-grid]{grid-template-columns:1fr}[data-paimind-conversation-artifact-card]{min-height:88px}}
 `
 
@@ -132,8 +134,8 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = '@paimind/conversation-artifact-renderer'
-  style.textContent = STYLE
+  style.dataset.paimindPlugin = '@paimind/conversation-artifact-renderer'; markHarnessClientStyle(style, '@paimind/conversation-artifact-renderer')
+  style.textContent = `${PAIMIND_UI_FOUNDATION_CSS}\n${STYLE}`
   document.head.append(style)
   return () => { style.remove() }
 }
@@ -172,7 +174,7 @@ export function ConversationArtifactCards(props: ConversationArtifactCardsProps)
   const remaining = props.matched.length - shown.length
 
   return <section
-    data-paimind-conversation-artifacts
+    data-paimind-ui-scope="conversation-artifact-renderer" data-paimind-conversation-artifacts
     data-artifact-count={artifactSnapshot.artifacts.length}
     data-artifact-diagnostic-count={artifactSnapshot.diagnostics.length}
     aria-label={zh ? '已生成文件' : 'Generated files'}
@@ -228,9 +230,9 @@ export function apply(ctx: ConversationArtifactRendererContext): void {
     id: 'paimind:conversation-artifact-renderer',
     packageName: '@paimind/conversation-artifact-renderer',
     category: 'content-rendering',
-    nameZh: '对话产物渲染器',
+    nameZh: '对话文件卡片',
     nameEn: 'Conversation Artifact Renderer',
-    descriptionZh: '将对话中原生已生成文件投影为格式专属卡片，并复用现有安全查看器。',
+    descriptionZh: '在对话中展示已生成的文件，点击即可查看。',
     descriptionEn: 'Projects native produced files as format-aware cards and delegates to existing safe viewers.',
     surface: 'conversation',
     maturity: 'technical-preview',

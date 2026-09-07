@@ -1,5 +1,7 @@
+import { PAIMIND_UI_FOUNDATION_CSS } from '@paimind/ui-foundation'
 import { Component, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ErrorInfo, type ReactNode } from 'react'
-import { contributePaimindExtension, type PaimindClientContext } from '@paimind/harness-compat'
+import {
+  markHarnessClientStyle, contributePaimindExtension, type PaimindClientContext } from '@paimind/harness-compat'
 import type { PaimindSidebarService, PaimindSidebarTabScope } from '@paimind/better-sidebar-adapter'
 import {
   BENTO_INFO_PATH,
@@ -83,7 +85,7 @@ export class BentoPreviewStore implements PaimindBentoPreviewService {
       slideTarget: null,
     })
     for (const listener of [...this.listeners]) listener()
-    return this.sidebar.openTab('paimind:bento-preview', { title: request.title })
+    return this.sidebar.openTab('paimind:bento-preview', { title: request.title, path: request.path })
   }
   publishRuntimeEvent(event: PaimindBentoRuntimeEvent): void {
     if (this.snapshot.request === null || event.mode !== this.snapshot.mode) return
@@ -102,7 +104,7 @@ export class BentoPreviewStore implements PaimindBentoPreviewService {
     }
     this.snapshot = Object.freeze({ ...this.snapshot, revision: this.snapshot.revision + 1, mode })
     for (const listener of [...this.listeners]) listener()
-    return this.sidebar.openTab('paimind:bento-preview', { title: request.title })
+    return this.sidebar.openTab('paimind:bento-preview', { title: request.title, path: request.path })
   }
   navigate(target: PaimindBentoSlideTarget): boolean {
     if (this.snapshot.request === null || target.slideId.trim() === '' || !Number.isInteger(target.slide) || target.slide < 1 || target.slide > 10_000) return false
@@ -139,7 +141,7 @@ const STYLE = `
 [data-paimind-bento-header] { padding: 10px 12px 6px; }
 [data-paimind-bento-heading] { min-width:0; }
 [data-paimind-bento-header] strong { display: block; overflow: hidden; font-size: 12px; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
-[data-paimind-bento-heading] span { display: block; margin-top: 2px; color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 10px; line-height: 15px; }
+[data-paimind-bento-heading] span { display: block; margin-top: 2px; color: var(--dsw-alias-label-tertiary, #7a808a); font-size:12px; line-height: 15px; }
 [data-paimind-bento-toolbar] { display:flex; align-items:center; justify-content:flex-start; padding:4px 12px; border-bottom:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16)); }
 [data-paimind-bento-canvas] { min-width:0; min-height:0; display:grid; grid-template-columns:minmax(0,1fr); overflow:hidden; }
 [data-paimind-bento-canvas][data-has-slide-rail='true'] { grid-template-columns:118px minmax(0,1fr); }
@@ -151,11 +153,11 @@ const STYLE = `
 [data-paimind-bento-workbench][data-mode='preview'] [data-paimind-bento-stage] > iframe { border-radius:8px; box-shadow:0 18px 55px #07172530; }
 [data-paimind-bento-inspector] { min-width:0; min-height:0; overflow:hidden; border-left:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16)); }
 [data-paimind-bento-slide-rail] { min-width:0; min-height:0; padding:10px 8px 14px; overflow-y:auto; border-right:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16)); background:var(--dsw-alias-bg-layer-2,#f5f7fa); scrollbar-width:thin; }
-[data-paimind-bento-slide-rail] > header { padding:0 2px 10px; color:var(--dsw-alias-label-tertiary,#7a808a); font-size:9px; font-weight:650; line-height:14px; letter-spacing:.02em; white-space:nowrap; }
+[data-paimind-bento-slide-rail] > header { padding:0 2px 10px; color:var(--dsw-alias-label-tertiary,#7a808a); font-size:12px; font-weight:650; line-height:14px; letter-spacing:.02em; white-space:nowrap; }
 [data-paimind-bento-slide-list] { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
-[data-paimind-bento-slide-item] { position:relative; min-width:0; display:grid; grid-template-columns:14px minmax(0,1fr); align-items:center; gap:4px; padding:5px 4px; border:1px solid transparent; border-radius:10px; transition:border-color .15s ease,background .15s ease,box-shadow .15s ease,transform .15s ease; }
+[data-paimind-bento-slide-item] { position:relative; min-width:0; display:grid; grid-template-columns:14px minmax(0,1fr); align-items:center; gap:4px; padding:5px 4px; border:1px solid transparent; border-radius:10px; transition:border-color var(--paimind-motion-fast) ease,background var(--paimind-motion-fast) ease,box-shadow var(--paimind-motion-fast) ease,transform var(--paimind-motion-fast) ease; }
 [data-paimind-bento-slide-item][data-active='true'] { border-color:color-mix(in srgb,var(--dsw-alias-state-business-primary,#4f7ff8) 58%,transparent); background:var(--dsw-alias-bg-layer-1,#fff); box-shadow:0 6px 18px color-mix(in srgb,var(--dsw-alias-state-business-primary,#4f7ff8) 14%,transparent); }
-[data-paimind-bento-slide-number] { color:var(--dsw-alias-label-tertiary,#7a808a); font-size:9px; font-weight:650; line-height:14px; text-align:center; }
+[data-paimind-bento-slide-number] { color:var(--dsw-alias-label-tertiary,#7a808a); font-size:12px; font-weight:650; line-height:14px; text-align:center; }
 [data-paimind-bento-slide-item][data-active='true'] [data-paimind-bento-slide-number] { color:var(--dsw-alias-state-business-primary,#2f6df6); }
 [data-paimind-bento-thumbnail-frame] { position:relative; min-width:0; aspect-ratio:16/9; overflow:hidden; border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.22)); border-radius:6px; background:#071725; box-shadow:0 2px 7px #0717251a; }
 [data-paimind-bento-thumbnail-frame] iframe { position:absolute; top:0; left:0; width:1280px; height:720px; display:block; border:0; pointer-events:none; transform:scale(var(--paimind-thumbnail-scale,.06)); transform-origin:0 0; }
@@ -163,35 +165,35 @@ const STYLE = `
 [data-paimind-bento-slide-item] > button:hover,[data-paimind-bento-slide-item] > button:focus-visible { outline:2px solid color-mix(in srgb,var(--dsw-alias-state-business-primary,#4f7ff8) 75%,transparent); outline-offset:1px; }
 [data-paimind-bento-modes] { display:flex; align-items:center; gap:4px; padding:3px; border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.14)); border-radius:11px; background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.08)); }
 [data-paimind-bento-mode-option] { position:relative; display:grid; place-items:center; }
-[data-paimind-bento-mode-option] button { width:32px; height:32px; display:grid; place-items:center; padding:0; border:0; border-radius:8px; color:var(--dsw-alias-label-secondary,#59606b); background:transparent; cursor:pointer; transition:color .16s ease,background .16s ease,box-shadow .16s ease,transform .16s ease; }
+[data-paimind-bento-mode-option] button { width:32px; height:32px; display:grid; place-items:center; padding:0; border:0; border-radius:8px; color:var(--dsw-alias-label-secondary,#59606b); background:transparent; cursor:pointer; transition:color var(--paimind-motion-fast) ease,background var(--paimind-motion-fast) ease,box-shadow var(--paimind-motion-fast) ease,transform var(--paimind-motion-fast) ease; }
 [data-paimind-bento-mode-option] button:hover:not(:disabled),[data-paimind-bento-mode-option] button:focus-visible { color:var(--dsw-alias-label-primary,#202124); background:var(--dsw-alias-bg-layer-3,rgba(128,128,128,.12)); transform:translateY(-1px); }
 [data-paimind-bento-mode-option] button:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:2px; }
 [data-paimind-bento-mode-option] button[aria-pressed='true'] { color:#fff; background:var(--dsw-alias-state-business-primary,#4f7ff8); box-shadow:0 5px 14px color-mix(in srgb,var(--dsw-alias-state-business-primary,#4f7ff8) 30%,transparent); }
 [data-paimind-bento-mode-option] button:disabled { opacity:.34; cursor:not-allowed; }
-[data-paimind-bento-mode-tooltip] { position:absolute; z-index:20; top:calc(100% + 8px); left:50%; min-width:max-content; padding:5px 8px; border-radius:6px; color:#fff; background:#1f2329; box-shadow:0 8px 24px #0004; font-size:11px; line-height:16px; white-space:nowrap; opacity:0; pointer-events:none; transform:translate(-50%,-4px); transition:opacity .14s ease,transform .14s ease; }
+[data-paimind-bento-mode-tooltip] { position:absolute; z-index:20; top:calc(100% + 8px); left:50%; min-width:max-content; padding:5px 8px; border-radius:6px; color:#fff; background:#1f2329; box-shadow:0 8px 24px #0004; font-size:12px; line-height:16px; white-space:nowrap; opacity:0; pointer-events:none; transform:translate(-50%,-4px); transition:opacity var(--paimind-motion-fast) ease,transform var(--paimind-motion-fast) ease; }
 [data-paimind-bento-mode-option]:hover [data-paimind-bento-mode-tooltip] { opacity:1; transform:translate(-50%,0); }
-[data-paimind-bento-edit-guidance] { position:absolute; z-index:5; top:10px; left:50%; max-width:calc(100% - 24px); padding:6px 10px; border:1px solid color-mix(in srgb,var(--dsw-alias-state-business-primary,#4f7ff8) 35%,transparent); border-radius:999px; color:var(--dsw-alias-label-primary,#202124); background:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#fff) 92%,transparent); box-shadow:0 8px 24px #0002; font-size:10px; line-height:15px; text-align:center; transform:translateX(-50%); backdrop-filter:blur(12px); }
-[data-paimind-bento-stage] > iframe { width:100%; height:100%; min-height:0; display:block; border:0; background:#071725; }
+[data-paimind-bento-edit-guidance] { position:absolute; z-index:5; top:10px; left:50%; max-width:calc(100% - 24px); padding:6px 10px; border:1px solid color-mix(in srgb,var(--dsw-alias-state-business-primary,#4f7ff8) 35%,transparent); border-radius:999px; color:var(--dsw-alias-label-primary,#202124); background:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#fff) 92%,transparent); box-shadow:0 8px 24px #0002; font-size:12px; line-height:15px; text-align:center; transform:translateX(-50%); backdrop-filter:blur(12px); }
+[data-paimind-bento-stage] > iframe { position:absolute; left:50%; top:50%; width:1280px; height:720px; max-width:none; min-height:0; display:block; border:0; background:#071725; transform:translate(-50%,-50%) scale(var(--paimind-bento-stage-scale,0)); transform-origin:center; }
 [data-paimind-bento-player-controls] { position:absolute; z-index:6; left:50%; bottom:16px; display:flex; align-items:center; gap:8px; padding:5px 7px; border:1px solid color-mix(in srgb,var(--dsw-alias-border-l1,rgba(128,128,128,.2)) 82%,transparent); border-radius:999px; color:var(--dsw-alias-label-primary,#202124); background:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#fff) 92%,transparent); box-shadow:0 10px 30px #07172533; transform:translateX(-50%); backdrop-filter:blur(14px); }
 [data-paimind-bento-player-controls] button { width:30px; height:30px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; color:inherit; background:transparent; cursor:pointer; font-size:22px; line-height:1; }
 [data-paimind-bento-player-controls] button:hover:not(:disabled),[data-paimind-bento-player-controls] button:focus-visible { color:#fff; background:var(--dsw-alias-state-business-primary,#4f7ff8); }
 [data-paimind-bento-player-controls] button:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:2px; }
 [data-paimind-bento-player-controls] button:disabled { opacity:.3; cursor:not-allowed; }
-[data-paimind-bento-player-position] { min-width:52px; color:var(--dsw-alias-label-secondary,#59606b); font-size:11px; font-weight:650; line-height:16px; text-align:center; font-variant-numeric:tabular-nums; }
+[data-paimind-bento-player-position] { min-width:52px; color:var(--dsw-alias-label-secondary,#59606b); font-size:12px; font-weight:650; line-height:16px; text-align:center; font-variant-numeric:tabular-nums; }
 [data-paimind-bento-state] { min-height: 240px; display: grid; place-items: center; padding: 24px; color: var(--dsw-alias-label-tertiary, #7a808a); font-size: 12px; line-height: 19px; text-align: center; }
 [data-paimind-bento-state][data-error='true'] { color: var(--dsw-alias-state-error-primary, #d04444); }
 @container paimind-bento (max-width:1040px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr)}[data-paimind-bento-canvas][data-has-slide-rail='true']{grid-template-columns:104px minmax(0,1fr)}}
 @container paimind-bento (max-width:900px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(280px,58%) minmax(0,42%);overflow:hidden}[data-paimind-bento-inspector]{border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16));border-left:0}[data-paimind-bento-canvas][data-has-slide-rail='true']{grid-template-columns:76px minmax(0,1fr)}[data-paimind-bento-slide-rail]{padding-inline:5px}[data-paimind-bento-slide-item]{grid-template-columns:1fr}[data-paimind-bento-slide-number]{position:absolute;z-index:2;top:5px;left:5px;min-width:14px;padding:1px 3px;border-radius:4px;color:var(--dsw-alias-label-primary-inverted,#fff);background:color-mix(in srgb,var(--dsw-alias-bg-base,#071725) 86%,transparent)}}
 @container paimind-bento (max-width:620px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(240px,54%) minmax(0,46%)}[data-paimind-bento-canvas][data-has-slide-rail='true']{grid-template-columns:64px minmax(0,1fr)}[data-paimind-bento-slide-rail]{padding-inline:3px}[data-paimind-bento-workbench][data-mode='preview'] [data-paimind-bento-stage]{padding:8px}[data-paimind-bento-player-controls]{bottom:10px}}
-@media(prefers-reduced-motion:reduce){[data-paimind-bento] *,[data-paimind-bento] *::before,[data-paimind-bento] *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
 `
 
 function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = '@paimind/renderer-bento'
-  style.textContent = STYLE
+  style.dataset.paimindPlugin = '@paimind/renderer-bento'; markHarnessClientStyle(style, '@paimind/renderer-bento')
+  style.textContent = `${PAIMIND_UI_FOUNDATION_CSS}\n${STYLE}`
   document.head.append(style)
   return () => { style.remove() }
 }
@@ -334,12 +336,34 @@ export function BentoPreviewPanel(props: { readonly store: BentoPreviewStore; re
   const [source, setSource] = useState<{ readonly requestRevision: number; readonly origin: string; readonly url: string } | null>(null)
   const [readySourceUrl, setReadySourceUrl] = useState<string | null>(null)
   const [error, setError] = useState(false)
+  const [modeError, setModeError] = useState(false)
   const frameRef = useRef<HTMLIFrameElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const [stageScale, setStageScale] = useState(0)
+  useEffect(() => {
+    const stage = stageRef.current
+    if (stage === null) return
+    const update = (): void => {
+      const style = getComputedStyle(stage)
+      const inset = (value: string): number => Number.parseFloat(value) || 0
+      const width = stage.clientWidth - inset(style.paddingLeft) - inset(style.paddingRight)
+      const height = stage.clientHeight - inset(style.paddingTop) - inset(style.paddingBottom)
+      // Keep the same document viewport as the thumbnails. Scaling only the
+      // data cards leaves a responsive title consuming the entire mobile slide.
+      setStageScale(Math.max(0, Math.min(width / 1280, height / 720)))
+    }
+    update()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(update)
+    observer.observe(stage)
+    return () => { observer.disconnect() }
+  }, [snapshot.mode])
   useEffect(() => {
     const request = snapshot.request
     setSource(null)
     setReadySourceUrl(null)
     setError(false)
+    setModeError(false)
     if (request === null) return
     const controller = new AbortController()
     void fetch(BENTO_INFO_PATH, { credentials: 'same-origin', headers: { accept: 'application/json' }, signal: controller.signal })
@@ -391,22 +415,23 @@ export function BentoPreviewPanel(props: { readonly store: BentoPreviewStore; re
   const activeSlide = Math.min(slides.length, Math.max(1, snapshot.runtimeEvent?.slide ?? snapshot.slideTarget?.slide ?? 1))
   const showSlideRail = snapshot.mode !== 'preview' && source !== null && slides.length > 0
   return (
-    <section data-paimind-bento aria-label={zh ? 'Bento 隔离预览' : 'Isolated Bento preview'}>
+    <section data-paimind-ui-scope="renderer-bento" data-paimind-bento aria-label={zh ? '演示预览' : 'Isolated Bento preview'}>
       <header data-paimind-bento-header>
         <div data-paimind-bento-heading><strong>{request?.title ?? (zh ? 'Bento 预览' : 'Bento Preview')}</strong>
-        <span>{zh ? '独立 Origin · 无外部网络资源' : 'Isolated origin · no external network resources'}</span></div>
+        <span>{zh ? '安全预览 · 不加载外部资源' : 'Isolated origin · no external network resources'}</span></div>
       </header>
       <div data-paimind-bento-toolbar>
-        <div data-paimind-bento-modes aria-label={zh ? '工作台模式' : 'Workbench mode'}>{(['preview', 'edit', 'trace'] as const).map(mode => <BentoModeButton key={mode} mode={mode} active={snapshot.mode === mode} disabled={mode === 'trace' && props.store.getInspector() === null} zh={zh} onClick={() => { props.store.setMode(mode) }} />)}</div>
+        <div data-paimind-bento-modes aria-label={zh ? '工作台模式' : 'Workbench mode'}>{(['preview', 'edit', 'trace'] as const).map(mode => <BentoModeButton key={mode} mode={mode} active={snapshot.mode === mode} disabled={mode === 'trace' && props.store.getInspector() === null} zh={zh} onClick={() => { setModeError(!props.store.setMode(mode)) }} />)}</div>
+      {modeError && <p role="alert" data-paimind-bento-error>{zh ? '此演示的来源记录暂不可用，请重新打开文件后重试。' : 'Sources for this presentation are unavailable. Reopen the file and retry.'}</p>}
       </div>
       <div data-paimind-bento-workbench data-mode={snapshot.mode}>
       <div data-paimind-bento-canvas data-has-slide-rail={showSlideRail}>
       {showSlideRail && <BentoSlideRail slides={slides} activeSlide={activeSlide} source={source} store={props.store} zh={zh} />}
-      <div data-paimind-bento-stage>
-        {snapshot.mode === 'edit' && <div role="status" data-paimind-bento-edit-guidance>{zh ? '可编辑标题、说明与展示文案 · 事实值和派生指标已锁定' : 'Edit titles, explanations, and presentation copy · facts and derived metrics are locked'}</div>}
-        {request === null ? <div data-paimind-bento-state>{zh ? '请打开一个 Bento 产物。' : 'Open a Bento artifact.'}</div>
-          : error ? <div role="alert" data-paimind-bento-state data-error="true">{zh ? 'Bento 隔离服务不可用；原生会话不受影响。' : 'The isolated Bento service is unavailable; native conversation remains available.'}</div>
-            : source === null ? <div data-paimind-bento-state>{zh ? '正在建立隔离预览…' : 'Preparing isolated preview…'}</div>
+      <div ref={stageRef} data-paimind-bento-stage style={{ '--paimind-bento-stage-scale': String(stageScale) } as CSSProperties}>
+        {snapshot.mode === 'edit' && <div role="status" data-paimind-bento-edit-guidance>{zh ? '可试改标题和说明，刷新后恢复；需要保存请让助手修订文件。数据与计算结果不可直接修改。' : 'Edits last for this preview only; ask the assistant to revise the file to save changes. Evidence-backed facts and derived metrics are locked.'}</div>}
+        {request === null ? <div data-paimind-bento-state>{zh ? '打开一个演示文件，即可在这里预览。' : 'Open a Bento artifact.'}</div>
+          : error ? <div role="alert" data-paimind-bento-state data-error="true">{zh ? '演示暂时无法打开，请稍后重新打开文件。' : 'The isolated Bento service is unavailable; native conversation remains available.'}</div>
+            : source === null ? <div data-paimind-bento-state>{zh ? '正在打开演示…' : 'Preparing isolated preview…'}</div>
               : <iframe
                   ref={frameRef}
                   key={`${source.requestRevision}:${source.url}`}
@@ -437,9 +462,9 @@ export function apply(ctx: BentoClientContext): void {
     id: 'paimind:renderer-bento',
     packageName: '@paimind/renderer-bento',
     category: 'content-rendering',
-    nameZh: 'Bento 渲染器',
+    nameZh: '演示预览',
     nameEn: 'Bento Renderer',
-    descriptionZh: 'PAIMind 自研的隔离式 Bento 预览通道，仅依赖稳定的预览与侧卡适配契约。',
+    descriptionZh: '预览网页演示，切换幻灯片，并查看引用的数据来源。',
     descriptionEn: 'PAIMind-owned isolated Bento preview channel using only stable preview and side-card adapters.',
     surface: 'preview',
     maturity: 'technical-preview',
@@ -451,7 +476,7 @@ export function apply(ctx: BentoClientContext): void {
     ctx.paimindSidebar.closeTab('paimind:bento-preview')
     const disposeTab = ctx.paimindSidebar.registerTab({
       id: 'paimind:bento-preview',
-      titleZh: 'Bento 预览',
+      titleZh: '演示预览',
       titleEn: 'Bento Preview',
       order: 52,
       single: true,

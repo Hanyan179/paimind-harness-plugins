@@ -288,6 +288,18 @@ describe('Agent Center business UI', () => {
     policy.dispose()
   })
 
+  it('recovers authoring after a transient policy failure using the same policy owner', async () => {
+    const getUserSkillPolicy = vi.fn().mockRejectedValueOnce(new Error('not ready')).mockResolvedValue({ ok: true, value: {
+      schema: 'paimind.user-skill-policy/v1', revision: 2,
+      enabledOptionalSystemSkillNames: ['paimind-agent-authoring'], enabledBusinessSkillNames: [], directBusinessSkillNames: [],
+    } })
+    const policy = new PaimindAgentAuthoringPolicyController({ listInstalled: vi.fn(), getUserSkillPolicy } as never, window)
+    await waitFor(() => expect(policy.getSnapshot().status).toBe('error'))
+    await policy.refresh()
+    expect(policy.getSnapshot()).toMatchObject({ status: 'ready', enabled: true, policyRevision: 2 })
+    policy.dispose()
+  })
+
   it('does not receive creator requests or auto-route stale drafts while Agent authoring is disabled', async () => {
     const authoringPolicy = mutableAuthoringPolicy(false)
     const surface = new PaimindProductSurfaceController('agent-center', window, document)
@@ -1874,7 +1886,8 @@ describe('Agent Center business UI', () => {
     expect(AGENT_CENTER_STYLE).toContain('inset: auto 0 0 !important;')
     expect(AGENT_CENTER_STYLE).toContain('height: var(--paimind-agent-native-conversation-height) !important;')
     expect(AGENT_CENTER_STYLE).toContain('grid-template-columns: repeat(3, minmax(0, 1fr));')
-    expect(AGENT_CENTER_STYLE).toContain('@media(prefers-reduced-motion:reduce)')
+    expect(AGENT_CENTER_STYLE).toContain('var(--paimind-motion-loop)')
+    expect(AGENT_CENTER_STYLE).toContain('var(--paimind-motion-iterations)')
     expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-splitter]')
     expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-draft-question-recovered] > :not([data-paimind-agent-draft-projection])')
     expect(AGENT_CENTER_STYLE).toContain('cursor: col-resize;')

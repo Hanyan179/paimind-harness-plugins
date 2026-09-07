@@ -1,6 +1,7 @@
 ---
+display-name: 沃尔玛细分类目投资分析
 name: fineline-investment-analysis
-description: Run the PAIMind Walmart fineline investment analysis from a frozen, redacted, hash-locked source manifest. Use for Walmart buyer proposals, fine-line investment prioritization, category allocation, or when downstream outline generation needs a verified fineline data_result Artifact.
+description: 基于脱敏的历史数据快照，分析细分类目的投资机会。
 ---
 
 # Fineline Investment Analysis for Harness

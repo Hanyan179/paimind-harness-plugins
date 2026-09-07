@@ -40,14 +40,14 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
   pack({
     id: 'paimind:pack:experience', loaderEntryId: 'paimind-pack-experience', order: 10,
     nameZh: '产品体验', nameEn: 'Product Experience', defaultEnabled: true,
-    descriptionZh: 'Paramont 品牌界面、视觉体验、对话命名、运行状态提示和个性化。',
+    descriptionZh: '品牌界面、显示样式、对话命名、任务状态提示和助手偏好。',
     descriptionEn: 'Paramont branding, visual experience, conversation naming, runtime presence, and personalization.',
     requiredPackIds: [],
     packageNames: ['@paimind/branding', '@paimind/visual-experience', '@paimind/conversation-title', '@paimind/runtime-orbs', '@paimind/user-settings'],
     capabilities: [{
       id: 'paimind:capability:runtime-orbs', loaderEntryId: 'paimind-capability-runtime-orbs',
       packageNames: ['@paimind/runtime-orbs'],
-      nameZh: '动态状态球', nameEn: 'Runtime Orbs', defaultEnabled: true,
+      nameZh: '动态状态提示', nameEn: 'Runtime Orbs', defaultEnabled: true,
       descriptionZh: '在对话与输入区域显示真实运行状态；可独立关闭，不影响其他产品体验。',
       descriptionEn: 'Shows real runtime state in conversation surfaces and can be disabled independently.',
     }],
@@ -64,7 +64,7 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
   pack({
     id: 'paimind:pack:content', loaderEntryId: 'paimind-pack-content', order: 30,
     nameZh: '内容与交付物', nameEn: 'Content & Deliverables', defaultEnabled: true,
-    descriptionZh: '工作区模板、工作区产物、网页与 Office 生成、文件预览和对话交付物展示。',
+    descriptionZh: '使用工作区模板，生成网页、文档、表格和演示，并查看交付文件。',
     descriptionEn: 'Workspace blueprints, workspace artifacts, web and Office generation, file preview, and conversation deliverables.',
     requiredPackIds: [],
     packageNames: [
@@ -77,7 +77,7 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
   pack({
     id: 'paimind:pack:proposal', loaderEntryId: 'paimind-pack-proposal', order: 40,
     nameZh: '提案与演示', nameEn: 'Proposal & Presentation', defaultEnabled: true,
-    descriptionZh: '类目分析、事实层、Bento 演示生成、来源追踪和零售商提案体验。',
+    descriptionZh: '分析商品类目，制作采购提案和演示，并查看结论的数据来源。',
     descriptionEn: 'Category analysis, fact grounding, Bento generation, provenance, and retailer proposal experience.',
     requiredPackIds: ['paimind:pack:content'],
     packageNames: [
@@ -89,7 +89,7 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
   pack({
     id: 'paimind:pack:automation', loaderEntryId: 'paimind-pack-automation', order: 50,
     nameZh: '自动化', nameEn: 'Automation', defaultEnabled: true,
-    descriptionZh: '通知、平台定时任务、Harness 执行适配、HTTP 接口和飞书机器人交付。',
+    descriptionZh: '按计划执行任务，接收通知，并通过飞书机器人交付结果。',
     descriptionEn: 'Notifications, scheduled work, Harness execution, HTTP APIs, and Feishu bot delivery.',
     requiredPackIds: ['paimind:pack:content'],
     packageNames: [
@@ -100,7 +100,7 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
   }),
   pack({
     id: 'paimind:pack:operations', loaderEntryId: 'paimind-pack-operations', order: 60,
-    nameZh: '工作运营', nameEn: 'Work Operations', defaultEnabled: true,
+    nameZh: '任务与诊断', nameEn: 'Work Operations', defaultEnabled: true,
     descriptionZh: '任务摘要、运行诊断和面向开发者的资源入口。',
     descriptionEn: 'Task summaries, runtime diagnostics, and developer-facing resources.',
     requiredPackIds: ['paimind:pack:content'],

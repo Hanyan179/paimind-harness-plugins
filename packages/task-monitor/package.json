@@ -44,6 +44,7 @@
     }
   },
   "dependencies": {
+    "@paimind/ui-foundation": "workspace:^",
     "@paimind/artifacts": "workspace:^",
     "@paimind/contracts": "workspace:^",
     "@paimind/harness-compat": "workspace:^",

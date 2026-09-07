@@ -306,6 +306,24 @@ describe('PAIMind product surface interaction', () => {
     controller.dispose()
   })
 
+  it('lets a nested dialog consume Escape without closing its Center', () => {
+    const root = document.createElement('main')
+    root.innerHTML = '<section role="dialog"><button>Close dialog</button></section>'
+    document.body.append(root)
+    const dialog = root.querySelector('section')!
+    const button = root.querySelector('button')!
+    const controller = new PaimindProductSurfaceController('skill-center', window, document)
+    controller.open()
+    const dispose = installPaimindProductSurfaceInteraction(root, controller, document)
+    const dismiss = vi.fn((event: KeyboardEvent) => { event.preventDefault(); event.stopPropagation() })
+    dialog.addEventListener('keydown', dismiss)
+    button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(dismiss).toHaveBeenCalledOnce()
+    expect(controller.getSnapshot().open).toBe(true)
+    dispose()
+    controller.dispose()
+  })
+
   it('prevents Escape and outside navigation while close is blocked', () => {
     const trigger = document.createElement('button')
     trigger.dataset.paimindProductTrigger = 'skill-center'

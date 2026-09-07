@@ -1,6 +1,7 @@
 ---
+display-name: 类目机会分析
 name: category-opportunity-analysis
-description: Run deterministic category opportunity analysis from the PAIMind synthetic frozen-data manifest. Use for Cosmetics, Party Favors, Stickers and Craft Kits opportunity prioritization or when a traceable deck needs verified recommendation inputs.
+description: 结合经营表现寻找商品机会，并说明判断依据。
 ---
 
 # Category Opportunity Analysis for Harness

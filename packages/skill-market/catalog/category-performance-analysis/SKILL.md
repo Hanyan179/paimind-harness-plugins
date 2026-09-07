@@ -1,6 +1,7 @@
 ---
+display-name: 类目经营分析
 name: category-performance-analysis
-description: Run deterministic category performance analysis from the PAIMind synthetic frozen-data manifest. Use for the Proposal Assistant demo, category momentum, department performance, POS trends, or when a traceable deck needs verified performance Facts.
+description: 分析商品类目的销售与经营表现，形成有数据依据的结论。
 ---
 
 # Category Performance Analysis for Harness

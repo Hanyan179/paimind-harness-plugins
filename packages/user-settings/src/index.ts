@@ -18,6 +18,7 @@ import {
   renderPaimindPersonalizationContext,
   type PaimindPersonalization,
   type PaimindPersonalizationMutationRequest,
+  type PaimindPersonalizationTextRequest,
   type PaimindPersonalizationView,
 } from './preferences.js'
 
@@ -81,7 +82,7 @@ export class PaimindUserSettingsService extends PaimindHostRemoteService {
 
   constructor(private readonly settingsCtx: PaimindUserSettingsHostContext) {
     super(settingsCtx, 'paimindUserSettings')
-    markPaimindHostRemoteMethods(this, ['describe', 'mutate'])
+    markPaimindHostRemoteMethods(this, ['describe', 'mutate', 'saveText'])
     let removeContext = (): void => {}
     const projectContext = (): void => {
       removeContext()
@@ -139,6 +140,21 @@ export class PaimindUserSettingsService extends PaimindHostRemoteService {
       request.value,
       request.expectedRevision,
     )
+    return await this.describe()
+  }
+
+  /** Save the form atomically; failure cannot leave only one text field committed. */
+  async saveText(request: PaimindPersonalizationTextRequest): Promise<Readonly<PaimindPersonalizationView>> {
+    if (decodePaimindPersonalization({ ...DEFAULT_PAIMIND_PERSONALIZATION, ...request }) === undefined
+      || !Number.isSafeInteger(request.expectedRevision) || request.expectedRevision < 0) {
+      throw new Error('Invalid personalization text request')
+    }
+    const settings = this.settingsCtx.get('settings')
+    if (settings === undefined) return Object.freeze({ status: 'unavailable' })
+    await mutatePaimindHostSettingsOperations(settings, PAIMIND_USER_SETTINGS_NAMESPACE, [
+      { op: 'set', path: ['aboutMe'], value: request.aboutMe },
+      { op: 'set', path: ['customInstructions'], value: request.customInstructions },
+    ], request.expectedRevision)
     return await this.describe()
   }
 }

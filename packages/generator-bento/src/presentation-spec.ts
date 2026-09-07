@@ -107,7 +107,9 @@ body[data-template-id="generic-dark"] .layout-cover,body[data-template-id="gener
 body[data-template-id="strategy-grid"] .slide{background:linear-gradient(90deg,var(--accent) 0 10px,var(--bg) 10px);border-radius:0}
 body[data-template-id="strategy-grid"] .slide::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 24.9%,var(--line) 25%,transparent 25.1%,transparent 49.9%,var(--line) 50%,transparent 50.1%,transparent 74.9%,var(--line) 75%,transparent 75.1%);pointer-events:none;opacity:.28}
 body[data-template-id="strategy-grid"] .layout-cover{background:linear-gradient(90deg,var(--accent) 0 12px,var(--bg) 12px 66%,#171c22 66%)}
+body[data-template-id="strategy-grid"] .layout-cover .slide-head{align-self:flex-start;max-width:60%}
 body[data-template-id="strategy-grid"] .layout-section{background:linear-gradient(115deg,#171c22 0 72%,var(--accent) 72%);color:#fff}
+body[data-template-id="strategy-grid"] .layout-section .eyebrow,body[data-template-id="strategy-grid"] .layout-section .narrative{color:#dce5eb}
 body[data-template-id="paramont-mountain"] .slide{background:radial-gradient(circle at 82% 13%,#78bdf228,transparent 32%),linear-gradient(145deg,var(--bg),var(--panel));border:1px solid #78bdf233}
 body[data-template-id="paramont-mountain"] .slide::after{content:"";position:absolute;right:-4%;bottom:-10%;width:58%;height:48%;background:linear-gradient(145deg,transparent 0 42%,#78bdf21f 42% 43%,transparent 43% 52%,#d7b36a24 52% 53%,transparent 53%);clip-path:polygon(0 100%,35% 28%,52% 62%,70% 12%,100% 100%);pointer-events:none}
 body[data-template-id="paramont-mountain"] .layout-cover,body[data-template-id="paramont-mountain"] .layout-section{background:radial-gradient(circle at 22% 15%,#78bdf233,transparent 34%),linear-gradient(145deg,#071523,#133657)}

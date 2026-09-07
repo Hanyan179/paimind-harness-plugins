@@ -983,6 +983,8 @@ export interface PaimindNativeJobRegistry {
     }
   }): string
   get(id: string, caller?: PaimindHostAgent): PaimindNativeJobSnapshot
+  /** A live native waiter claims completion delivery, suppressing duplicate owner wakeups. */
+  wait(id: string, timeoutMs: number, caller?: PaimindHostAgent, signal?: AbortSignal): Promise<PaimindNativeJobSnapshot>
   kill(id: string, caller?: PaimindHostAgent, reason?: string): 'requested' | 'already-finished'
 }
 

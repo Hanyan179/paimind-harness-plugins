@@ -1,3 +1,4 @@
+import { PAIMIND_UI_FOUNDATION_CSS, installPaimindMotionPreference, readPaimindMotion, subscribePaimindMotion, type PaimindMotionPreference } from '@paimind/ui-foundation'
 import {
   useEffect,
   useMemo,
@@ -9,8 +10,11 @@ import {
 import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import {
+  markHarnessClientStyle,
   contributePaimindExtension,
   installHarnessSettingsNavigationIcons,
+  installHarnessSettingsTriggerAccessibility,
+  installHarnessSettingsSectionScrollReset,
   resolveHarnessSettingsNamespace,
   resolveHarnessAgentPresetSeatControl,
   type HarnessAgentChoice,
@@ -49,6 +53,7 @@ import {
   PaimindPlusIcon,
   PaimindSchedulerIcon,
 } from '@paimind/harness-compat/client-icons'
+import { APPEARANCE_STYLE } from './appearance-style.js'
 import HERO_LIGHT from '../../assets/hero-ridge-light.webp'
 import HERO_DARK from '../../assets/hero-ridge-dark.webp'
 import {
@@ -82,6 +87,8 @@ interface VisualExperienceClientContext extends PaimindClientContext {
 
 interface ExperienceModeSnapshot {
   readonly mode: PaimindExperienceMode
+  readonly motion: PaimindMotionPreference
+  readonly error: boolean
   readonly status: 'loading' | 'ready' | 'unavailable'
   readonly writable: boolean
   readonly busy: boolean
@@ -90,6 +97,8 @@ interface ExperienceModeSnapshot {
 export class PaimindExperienceModeController {
   private snapshot: ExperienceModeSnapshot = Object.freeze({
     mode: DEFAULT_PAIMIND_EXPERIENCE_MODE,
+    motion: 'system',
+    error: false,
     status: 'loading',
     writable: false,
     busy: false,
@@ -111,20 +120,28 @@ export class PaimindExperienceModeController {
     return () => { this.listeners.delete(listener) }
   }
 
-  async set(mode: PaimindExperienceMode): Promise<void> {
-    if (this.disposed || this.snapshot.busy || !this.snapshot.writable || this.snapshot.mode === mode) return
-    const previous = this.snapshot.mode
-    this.publish({ ...this.snapshot, mode, busy: true })
+  async set(mode: PaimindExperienceMode): Promise<void> { await this.update('mode', mode) }
+  async setMotion(motion: PaimindMotionPreference): Promise<void> { await this.update('motion', motion) }
+
+  private async update<Key extends keyof PaimindVisualExperienceSettings>(field: Key, value: PaimindVisualExperienceSettings[Key]): Promise<void> {
+    if (this.disposed || this.snapshot.busy || !this.snapshot.writable || this.snapshot[field] === value) return
+    const previous = this.snapshot
+    this.publish({ ...previous, [field]: value, busy: true, error: false })
+    let failed = false
     try {
-      await this.scope.set('mode', mode)
+      await this.scope.set(field, value)
+    } catch {
+      failed = true
     } finally {
       if (!this.disposed) {
         const state = this.scope.getSnapshot()
         this.publish({
-          mode: state.value?.mode ?? previous,
+          mode: state.value?.mode ?? previous.mode,
+          motion: state.value?.motion ?? previous.motion,
           status: state.status,
           writable: state.writable,
           busy: false,
+          error: failed || state.status !== 'ready' || state.value?.[field] !== value,
         })
       }
     }
@@ -142,14 +159,18 @@ export class PaimindExperienceModeController {
     const state = this.scope.getSnapshot()
     this.publish({
       mode: state.value?.mode ?? DEFAULT_PAIMIND_EXPERIENCE_MODE,
+      motion: state.value?.motion ?? 'system',
+      error: false,
       status: state.status,
       writable: state.writable,
-      busy: false,
+      busy: this.snapshot.busy,
     })
   }
 
   private publish(snapshot: ExperienceModeSnapshot): void {
-    if (this.snapshot.mode === snapshot.mode
+    if (this.snapshot.motion === snapshot.motion
+      && this.snapshot.error === snapshot.error
+      && this.snapshot.mode === snapshot.mode
       && this.snapshot.status === snapshot.status
       && this.snapshot.writable === snapshot.writable
       && this.snapshot.busy === snapshot.busy) return
@@ -176,7 +197,9 @@ const THEME_TOKENS = Object.freeze({
   '--dsw-alias-state-business-primary': { light: '#356fa8', dark: '#78a9d9' },
 })
 
-const STYLE = `
+const STYLE = `${PAIMIND_UI_FOUNDATION_CSS}
+${APPEARANCE_STYLE}
+
 body[data-paimind-experience='paimind']{
   --paimind-navy:#123d68;--paimind-navy-deep:#0b2f54;--paimind-accent:#4f83b8;
   --paimind-canvas:#f7f8fb;--paimind-warm:#fffdf9;--paimind-ink:#142842;
@@ -216,7 +239,7 @@ body[data-paimind-experience='paimind'] [data-paimind-paramont-hero-mark]{width:
 [data-paimind-experience-eyebrow]{margin-top:-2px;color:var(--paimind-navy);font-size:10px;font-weight:750;line-height:14px;letter-spacing:.22em;text-transform:uppercase}
 [data-paimind-experience-title]{max-width:760px;margin-top:1px;color:var(--paimind-ink);font-size:38px;font-weight:660;line-height:1.18;letter-spacing:-.035em;text-wrap:balance}
 [data-paimind-experience-subtitle]{max-width:700px;color:var(--paimind-muted);font-size:13px;line-height:20px;text-wrap:balance}
-body[data-paimind-experience='paimind'] [data-composer-card]{border:1px solid color-mix(in srgb,var(--paimind-line) 76%,white 24%)!important;border-radius:var(--paimind-radius)!important;background:var(--paimind-glass)!important;box-shadow:var(--paimind-shadow)!important;backdrop-filter:blur(20px) saturate(1.12);-webkit-backdrop-filter:blur(20px) saturate(1.12);transition:border-color .18s ease,background .18s ease,box-shadow .2s ease,transform .18s ease}
+body[data-paimind-experience='paimind'] [data-composer-card]{border:1px solid color-mix(in srgb,var(--paimind-line) 76%,white 24%)!important;border-radius:var(--paimind-radius)!important;background:var(--paimind-glass)!important;box-shadow:var(--paimind-shadow)!important;backdrop-filter:blur(20px) saturate(1.12);-webkit-backdrop-filter:blur(20px) saturate(1.12);transition:border-color var(--paimind-motion-enter,180ms) ease,background var(--paimind-motion-enter,180ms) ease,box-shadow var(--paimind-motion-slow,240ms) ease,transform var(--paimind-motion-enter,180ms) ease}
 body[data-paimind-experience='paimind'] [data-composer-card]:focus-within{border-color:color-mix(in srgb,var(--paimind-accent) 62%,var(--paimind-line))!important;box-shadow:0 20px 58px rgba(30,61,93,.14),0 0 0 3px color-mix(in srgb,var(--paimind-accent) 20%,transparent)!important}
 body[data-paimind-experience='paimind'] [data-composer-card] [data-input-backdrop='true']{color:var(--paimind-ink)!important}
 body[data-paimind-experience='paimind'] [data-composer-card] textarea[data-phase]{background:transparent!important;color:transparent!important;-webkit-text-fill-color:transparent!important;caret-color:var(--paimind-accent)!important}
@@ -232,7 +255,7 @@ body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [
   box-sizing:border-box!important;top:auto!important;right:auto!important;bottom:calc(100% + 8px)!important;left:0!important;width:min(820px,100%)!important;min-width:0!important;max-width:100%!important;
   height:min(400px,var(--paimind-composer-overlay-room,400px))!important;max-height:min(400px,var(--paimind-composer-overlay-room,400px))!important;padding:0!important;border:1px solid var(--paimind-line)!important;
   border-radius:18px!important;background:var(--paimind-glass-strong)!important;box-shadow:0 24px 72px rgba(17,39,63,.2)!important;
-  backdrop-filter:blur(24px) saturate(1.12);-webkit-backdrop-filter:blur(24px) saturate(1.12);animation:paimind-composer-menu-in .18s ease-out;
+  backdrop-filter:blur(24px) saturate(1.12);-webkit-backdrop-filter:blur(24px) saturate(1.12);animation:paimind-composer-menu-in var(--paimind-motion-enter,180ms) ease-out;
 }
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox']:has(>[data-paimind-composer-disclosure]){display:grid!important;grid-template-columns:minmax(250px,36%) minmax(360px,1fr);grid-template-rows:minmax(0,1fr);overflow:hidden!important}
 body[data-paimind-experience='paimind'] [data-paimind-composer-overlay-anchor] [role='listbox']:has(>[data-paimind-composer-disclosure])>:first-child{min-width:0;min-height:0;padding:8px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;border-right:1px solid var(--paimind-line)}
@@ -273,7 +296,7 @@ body[data-paimind-experience='paimind'][data-paimind-composer-overlay='open'] [d
 [data-paimind-quick-agents]{display:grid;gap:8px;width:calc(100% - 32px);margin-inline:16px;color:var(--paimind-muted)}
 [data-paimind-quick-agents-label]{display:flex;align-items:center;gap:6px;padding:0 2px;font-size:11px;font-weight:650;line-height:16px;letter-spacing:.02em}
 [data-paimind-quick-agents-list]{display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden}
-[data-paimind-quick-agent],[data-paimind-quick-all]{display:inline-flex;align-items:center;gap:6px;min-width:0;min-height:38px;border:1px solid var(--paimind-line);border-radius:999px;color:var(--paimind-muted);background:color-mix(in srgb,var(--paimind-glass-strong) 82%,transparent);font:inherit;font-size:12px;line-height:18px;white-space:nowrap;cursor:pointer;transition:color .16s ease,border-color .16s ease,background .16s ease,transform .16s ease}
+[data-paimind-quick-agent],[data-paimind-quick-all]{display:inline-flex;align-items:center;gap:6px;min-width:0;min-height:38px;border:1px solid var(--paimind-line);border-radius:999px;color:var(--paimind-muted);background:color-mix(in srgb,var(--paimind-glass-strong) 82%,transparent);font:inherit;font-size:12px;line-height:18px;white-space:nowrap;cursor:pointer;transition:color var(--paimind-motion-fast,160ms) ease,border-color var(--paimind-motion-fast,160ms) ease,background var(--paimind-motion-fast,160ms) ease,transform var(--paimind-motion-fast,160ms) ease}
 [data-paimind-quick-agent]{padding:4px 10px 4px 4px}
 [data-paimind-quick-all]{padding:6px 11px}
 [data-paimind-quick-agent] [data-paimind-agent-avatar]{width:28px;height:28px}
@@ -281,12 +304,12 @@ body[data-paimind-experience='paimind'][data-paimind-composer-overlay='open'] [d
 [data-paimind-quick-agent]:hover,[data-paimind-quick-agent]:focus-visible,[data-paimind-quick-all]:hover,[data-paimind-quick-all]:focus-visible{border-color:color-mix(in srgb,var(--paimind-accent) 42%,var(--paimind-line));color:var(--paimind-navy);background:var(--paimind-glass-strong);outline:none;transform:translateY(-1px)}
 [data-paimind-quick-agent][aria-pressed='true']{border-color:color-mix(in srgb,var(--paimind-accent) 50%,var(--paimind-line));color:var(--paimind-navy);background:color-mix(in srgb,var(--paimind-accent) 10%,var(--paimind-glass-strong))}
 [data-paimind-quick-agent]:disabled,[data-paimind-quick-all]:disabled{opacity:.46;cursor:not-allowed;transform:none}
-[data-paimind-agent-picker-trigger]{display:inline-flex;align-items:center;gap:7px;max-width:260px;min-height:34px;padding:6px 10px;border:1px solid transparent;border-radius:999px;color:var(--paimind-ink);background:color-mix(in srgb,var(--paimind-ink) 5%,transparent);font:inherit;font-size:13px;line-height:18px;cursor:pointer;transition:background .16s ease,border-color .16s ease}
+[data-paimind-agent-picker-trigger]{display:inline-flex;align-items:center;gap:7px;max-width:260px;min-height:34px;padding:6px 10px;border:1px solid transparent;border-radius:999px;color:var(--paimind-ink);background:color-mix(in srgb,var(--paimind-ink) 5%,transparent);font:inherit;font-size:13px;line-height:18px;cursor:pointer;transition:background var(--paimind-motion-fast,160ms) ease,border-color var(--paimind-motion-fast,160ms) ease}
 [data-paimind-agent-picker-trigger] span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 [data-paimind-agent-picker-trigger]:hover,[data-paimind-agent-picker-trigger]:focus-visible{border-color:var(--paimind-line);background:color-mix(in srgb,var(--paimind-ink) 8%,transparent);outline:none}
 [data-paimind-agent-picker-layer]{position:fixed;inset:0;z-index:1200;pointer-events:none}
 [data-paimind-agent-picker-scrim]{display:none}
-[data-paimind-agent-picker]{position:fixed;display:grid;grid-template-columns:minmax(190px,42%) minmax(240px,1fr);grid-template-rows:minmax(0,1fr) auto;height:min(360px,calc(100vh - 24px));max-height:360px;overflow:hidden;border:1px solid var(--paimind-line);border-radius:18px;background:var(--paimind-glass-strong);box-shadow:0 24px 72px rgba(17,39,63,.2);backdrop-filter:blur(24px) saturate(1.12);-webkit-backdrop-filter:blur(24px) saturate(1.12);pointer-events:auto;animation:paimind-pop-in .18s ease-out}
+[data-paimind-agent-picker]{position:fixed;display:grid;grid-template-columns:minmax(190px,42%) minmax(240px,1fr);grid-template-rows:minmax(0,1fr) auto;height:min(360px,calc(100vh - 24px));max-height:360px;overflow:hidden;border:1px solid var(--paimind-line);border-radius:18px;background:var(--paimind-glass-strong);box-shadow:0 24px 72px rgba(17,39,63,.2);backdrop-filter:blur(24px) saturate(1.12);-webkit-backdrop-filter:blur(24px) saturate(1.12);pointer-events:auto;animation:paimind-pop-in var(--paimind-motion-enter,180ms) ease-out}
 [data-paimind-agent-picker-list]{min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:8px;border-right:1px solid var(--paimind-line)}
 [data-paimind-agent-picker-group]+[data-paimind-agent-picker-group]{margin-top:8px;padding-top:8px;border-top:1px solid var(--paimind-line)}
 [data-paimind-agent-picker-group] h3{margin:0;padding:4px 8px;color:var(--paimind-muted);font-size:10px;font-weight:700;line-height:15px;letter-spacing:.08em;text-transform:uppercase}
@@ -354,21 +377,21 @@ body[data-paimind-experience='paimind'] [data-paimind-skill-center],body[data-pa
   body[data-paimind-experience='paimind'] [data-paimind-popup-select]>[data-paimind-composer-disclosure]{grid-column:1;grid-row:3;max-height:150px}
   [data-paimind-context-launcher] span{display:none}
   [data-paimind-agent-picker-scrim]{display:block;position:absolute;inset:0;background:rgba(4,11,20,.42);pointer-events:auto}
-  [data-paimind-agent-picker]{right:0!important;bottom:0!important;left:0!important;top:auto!important;grid-template-columns:1fr;grid-template-rows:auto auto;width:auto!important;height:auto;max-height:min(76vh,620px);border-width:1px 0 0;border-radius:22px 22px 0 0;animation:paimind-sheet-in .2s ease-out}
+  [data-paimind-agent-picker]{right:0!important;bottom:0!important;left:0!important;top:auto!important;grid-template-columns:1fr;grid-template-rows:auto auto;width:auto!important;height:auto;max-height:min(76vh,620px);border-width:1px 0 0;border-radius:22px 22px 0 0;animation:paimind-sheet-in var(--paimind-motion-slow,240ms) ease-out}
   [data-paimind-agent-picker-list]{max-height:44vh;border-right:0;border-bottom:1px solid var(--paimind-line)}
   [data-paimind-agent-picker-detail]{padding:16px 18px 22px}
   [data-paimind-experience-setting]{grid-template-columns:1fr;gap:10px}
   [data-paimind-experience-mode]{width:100%}[data-paimind-experience-mode] label{flex:1}[data-paimind-experience-mode] span{min-width:0}
 }
 @keyframes paimind-sheet-in{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
-@media(prefers-reduced-motion:reduce){body[data-paimind-experience='paimind'] *,body[data-paimind-experience='paimind'] *::before,body[data-paimind-experience='paimind'] *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
 `
 
 function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = STYLE_ID
+  style.dataset.paimindPlugin = STYLE_ID; markHarnessClientStyle(style, STYLE_ID)
   style.textContent = STYLE
   document.head.append(style)
   return () => { style.remove() }
@@ -1077,7 +1100,7 @@ export function QuickAgents({ bridge, mode, locale }: {
   if (experience.mode !== 'paimind' || snapshot.status !== 'ready' || choices.length === 0) return null
   const centerAvailable = isPaimindProductSurfaceAvailable('agent-center')
   return <section data-paimind-quick-agents aria-label={zh ? '快捷智能体' : 'Quick Agents'}>
-    <div data-paimind-quick-agents-label><PaimindAgentIcon size={13} />{zh ? '快捷 Agent' : 'Quick Agents'}</div>
+    <div data-paimind-quick-agents-label><PaimindAgentIcon size={13} />{zh ? '常用智能体' : 'Quick Agents'}</div>
     <div data-paimind-quick-agents-list>
       {choices.map(choice => <button
         key={choice.id}
@@ -1258,10 +1281,10 @@ export function ExperienceSettingsRow({ mode, locale }: {
   const zh = useChinese(locale)
   return <section data-paimind-experience-setting>
     <div data-paimind-experience-setting-copy>
-      <strong>{zh ? 'PAIMind 视觉体验' : 'PAIMind visual experience'}</strong>
-      <span>{zh ? 'PAIMind 模式启用完整视觉与交互；原生模式立即撤销并恢复 Harness。' : 'PAIMind enables the full visual layer; Native immediately restores Harness.'}</span>
+      <strong>{zh ? '界面样式' : 'Display style'}</strong>
+      <span>{zh ? '标准样式提供配色、布局和快捷入口；基础样式使用系统默认界面。' : 'Standard includes styled layouts and shortcuts. Basic uses the system’s default interface.'}</span>
     </div>
-    <div data-paimind-experience-mode role="radiogroup" aria-label={zh ? '视觉体验模式' : 'Visual experience mode'}>
+    <div data-paimind-experience-mode role="radiogroup" aria-label={zh ? '选择界面样式' : 'Choose display style'}>
       {(['paimind', 'native'] as const).map(value => <label key={value}>
         <input
           type="radio"
@@ -1271,16 +1294,69 @@ export function ExperienceSettingsRow({ mode, locale }: {
           disabled={!snapshot.writable || snapshot.busy}
           onChange={() => { void mode.set(value) }}
         />
-        <span>{value === 'paimind' ? 'PAIMind' : (zh ? '原生' : 'Native')}</span>
+        <span>{value === 'paimind' ? (zh ? '标准样式' : 'Standard') : (zh ? '基础样式' : 'Basic')}</span>
       </label>)}
     </div>
   </section>
+}
+
+/** One persisted controller backs both the contributed page and standalone fallback. */
+export function AppearanceSettings({ mode, locale }: {
+  readonly mode: PaimindExperienceModeController
+  readonly locale: PaimindClientContext['locale']
+}): React.JSX.Element {
+  const snapshot = useMode(mode)
+  const zh = useChinese(locale)
+  const enabled = useSyncExternalStore(subscribePaimindMotion, readPaimindMotion, () => true)
+  const choices = [
+    { value: 'system', title: zh ? '跟随系统' : 'Follow system', detail: zh ? '使用设备的动画设置' : 'Use your device’s animation setting' },
+    { value: 'on', title: zh ? '开启' : 'On', detail: zh ? '显示页面切换和状态动画' : 'Animate page transitions and status indicators' },
+    { value: 'off', title: zh ? '关闭' : 'Off', detail: zh ? '静态显示，保留状态提示' : 'Keep status information without animation' },
+  ] as const
+  return <section data-paimind-ui-scope data-paimind-ui-card data-paimind-appearance aria-label={zh ? '界面设置' : 'Display settings'}>
+    <div data-paimind-motion-title><h3>{zh ? '界面设置' : 'Display settings'}</h3>
+      <p data-paimind-ui-summary>{zh ? '选择界面样式和动画效果，修改后自动保存并立即生效。' : 'Choose a display style and animations. Changes save automatically and apply immediately.'}</p></div>
+    <ExperienceSettingsRow mode={mode} locale={locale} />
+    <div data-paimind-motion-title><strong id="paimind-motion-title">{zh ? '界面动画' : 'Interface animations'}</strong>
+      <p id="paimind-motion-description" data-paimind-ui-summary>{zh ? '调整页面切换和状态提示中的动画，不影响工作内容里的视频、演示动画及其他插件的独立动画。' : 'Adjust animations in page transitions and status indicators. Videos, presentation animations, and other plugins’ own animations are unaffected.'}</p></div>
+    <div data-paimind-ui-choices role="radiogroup" aria-labelledby="paimind-motion-title" aria-describedby="paimind-motion-description" aria-busy={snapshot.busy}>
+      {choices.map(choice => <label key={choice.value} data-paimind-ui-choice>
+        <input type="radio" name="paimind-motion" value={choice.value} checked={snapshot.motion === choice.value}
+          disabled={!snapshot.writable || snapshot.busy} onChange={() => { void mode.setMotion(choice.value) }} />
+        <span><strong>{choice.title}</strong><small>{choice.detail}</small></span>
+      </label>)}
+    </div>
+    <div data-paimind-motion-preview data-motion-enabled={enabled}>
+      <i data-paimind-motion-indicator aria-hidden="true" />
+      <span><strong>{zh ? '动画预览' : 'Animation preview'}</strong><small data-paimind-ui-summary>{enabled
+        ? (zh ? '动画已开启，圆点正在缓慢闪动' : 'Animations are on; the dot gently pulses')
+        : (zh ? '动画已关闭，状态提示仍然显示' : 'Animations are off; status information remains visible')}</small></span>
+    </div>
+    <p data-paimind-ui-state={snapshot.error ? 'error' : 'neutral'} role={snapshot.error ? 'alert' : 'status'}>{snapshot.error
+      ? (zh ? '未能保存，已恢复当前设置。请重新选择以重试。' : 'Could not save. Current settings restored; select again to retry.')
+      : snapshot.status === 'loading' ? (zh ? '正在读取界面设置…' : 'Loading display settings…')
+      : !snapshot.writable ? (zh ? '暂时无法保存界面设置，请检查连接。' : 'Display settings cannot be saved right now. Check the connection.')
+      : snapshot.busy ? (zh ? '正在保存…' : 'Saving…')
+      : (zh ? '设置自动保存，重新打开后仍然生效。' : 'Settings save automatically and remain after reopening.')}</p>
+  </section>
+}
+
+function AppearanceSettingsFallback(props: Parameters<typeof AppearanceSettings>[0] & { readonly slots: HarnessInspectableSlotRegistry }): React.JSX.Element | null {
+  const hasPersonalization = useSyncExternalStore(
+    listener => props.slots.subscribe('settings.section', listener),
+    () => props.slots.entries('settings.section').some(entry => entry.options.id === 'paimind-user-settings'),
+  )
+  return hasPersonalization ? null : <AppearanceSettings {...props} />
 }
 
 function installExperienceRuntime(
   ctx: VisualExperienceClientContext,
   mode: PaimindExperienceModeController,
 ): () => void {
+  const motion = installPaimindMotionPreference(document, window)
+  // Inherit durations only; no native host rule consumes these variables.
+  const previousMotionScope = document.body.getAttribute('data-paimind-motion-scope')
+  document.body.setAttribute('data-paimind-motion-scope', 'visual-experience')
   const markers = new HarnessExperienceMarkers(document)
   const composerOverlay = new PaimindComposerOverlayPresenter(document, window)
   let themeDispose: (() => void) | null = null
@@ -1288,6 +1364,7 @@ function installExperienceRuntime(
 
   const sync = (): void => {
     if (disposed) return
+    motion.set(mode.getSnapshot().motion)
     const active = mode.getSnapshot().mode === 'paimind'
     markers.setMode(active ? 'paimind' : 'native')
     composerOverlay.setMode(active ? 'paimind' : 'native')
@@ -1303,6 +1380,11 @@ function installExperienceRuntime(
     themeDispose?.()
     composerOverlay.dispose()
     markers.dispose()
+    motion.dispose()
+    if (document.body.getAttribute('data-paimind-motion-scope') === 'visual-experience') {
+      if (previousMotionScope === null) document.body.removeAttribute('data-paimind-motion-scope')
+      else document.body.setAttribute('data-paimind-motion-scope', previousMotionScope)
+    }
   }
 }
 
@@ -1440,44 +1522,17 @@ function installAgentExperience(
   }
 }
 
-const PAIMIND_SETTINGS_TRIGGER_LABEL_MARKER = 'paimindSettingsTriggerLabel'
-
-/** Keep the compact native Settings rail trigger discoverable by keyboard and assistive tech. */
-export function installHarnessSettingsTriggerAccessibility(doc: Document): () => void {
-  const labelled = new Set<HTMLButtonElement>()
-  const sync = (): void => {
-    const slot = doc.querySelector<HTMLElement>('[data-slot="settings.trigger"]')
-    const button = slot?.closest<HTMLButtonElement>('button') ?? null
-    if (button === null || button.hasAttribute('aria-label')) return
-    const label = doc.documentElement.lang.toLowerCase().startsWith('zh') ? '设置' : 'Settings'
-    button.setAttribute('aria-label', label)
-    button.dataset[PAIMIND_SETTINGS_TRIGGER_LABEL_MARKER] = label
-    labelled.add(button)
-  }
-  const observer = new MutationObserver(sync)
-  observer.observe(doc.documentElement, { childList: true, subtree: true })
-  sync()
-  return () => {
-    observer.disconnect()
-    for (const button of labelled) {
-      const label = button.dataset[PAIMIND_SETTINGS_TRIGGER_LABEL_MARKER]
-      if (label !== undefined && button.getAttribute('aria-label') === label) {
-        button.removeAttribute('aria-label')
-      }
-      delete button.dataset[PAIMIND_SETTINGS_TRIGGER_LABEL_MARKER]
-    }
-    labelled.clear()
-  }
-}
+// Preserve the published client export while keeping host DOM coupling in compat.
+export { installHarnessSettingsTriggerAccessibility } from '@paimind/harness-compat'
 
 export function apply(ctx: VisualExperienceClientContext): void {
   contributePaimindExtension(ctx.slots, {
     id: 'paimind:visual-experience',
     packageName: PACKAGE_NAME,
     category: 'experience',
-    nameZh: 'PAIMind 视觉体验',
+    nameZh: '界面显示',
     nameEn: 'PAIMind Visual Experience',
-    descriptionZh: '为 Harness 提供可逆的 PAIMind 主题、密度、欢迎页与 Agent 选择体验。',
+    descriptionZh: '选择界面样式和动画，调整欢迎页与智能体选择体验。',
     descriptionEn: 'Adds a reversible PAIMind theme, density, welcome and Agent choice experience to Harness.',
     surface: 'shell',
     maturity: 'available',
@@ -1491,6 +1546,7 @@ export function apply(ctx: VisualExperienceClientContext): void {
   const mode = new PaimindExperienceModeController(scope)
   ctx.effect(installStyle, 'paimind-visual-experience: style')
   ctx.effect(() => installHarnessSettingsTriggerAccessibility(document), 'paimind-visual-experience: Settings trigger accessibility')
+  ctx.effect(() => installHarnessSettingsSectionScrollReset(document), 'paimind-visual-experience: Settings section scroll position')
   ctx.effect(() => installHarnessSettingsNavigationIcons(ctx.slots, [
     { id: 'paimind-extensions', mount(container) { const root = createRoot(container); root.render(<PaimindExtensionIcon />); return () => { root.unmount() } } },
     { id: 'paimind-model-services', mount(container) { const root = createRoot(container); root.render(<PaimindNewConversationIcon />); return () => { root.unmount() } } },
@@ -1509,10 +1565,15 @@ export function apply(ctx: VisualExperienceClientContext): void {
     inject: () => ({ mode, locale: ctx.locale }),
   }, ExperienceHeroPortal))
 
+  ctx.slots.inject('paimind.personalization.appearance', () => ctx.slots.register({
+    name: 'paimind.personalization.appearance', id: 'paimind-visual-preferences', order: 0,
+    inject: () => ({ mode, locale: ctx.locale }),
+  }, AppearanceSettings))
+
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({
     name: 'settings.general.item',
     id: 'paimind-visual-experience',
     order: 15,
-    inject: () => ({ mode, locale: ctx.locale }),
-  }, ExperienceSettingsRow))
+    inject: () => ({ mode, locale: ctx.locale, slots: ctx.slots }),
+  }, AppearanceSettingsFallback))
 }

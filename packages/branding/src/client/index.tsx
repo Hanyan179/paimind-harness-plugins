@@ -1,6 +1,8 @@
+import { PAIMIND_UI_FOUNDATION_CSS } from '@paimind/ui-foundation'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
+  markHarnessClientStyle,
   contributePaimindExtension,
   installHarnessDocumentBranding,
   locateHarnessBrandSeats,
@@ -60,7 +62,7 @@ function ParamontOfficialWordmark(): JSX.Element {
 }
 
 function ParamontSidebarName(): JSX.Element {
-  return <span data-paimind-paramont-brand="name" aria-label={PRODUCT_NAME}>
+  return <span data-paimind-ui-scope="branding" data-paimind-paramont-brand="name" aria-label={PRODUCT_NAME}>
     <ParamontOfficialWordmark />
     <span data-paimind-paramont-harness>HARNESS</span>
   </span>
@@ -79,7 +81,7 @@ function ParamontHero({ locale }: { readonly locale: HarnessHeroBrandSeat['local
   const headline = locale === 'zh' ? '共攀高山之巅' : 'Reach New Heights'
   return <>
     <span data-paimind-paramont-hero-mark aria-hidden="true"><ParamontMark /></span>
-    <span data-paimind-paramont-hero-headline>{headline}</span>
+    <span data-paimind-ui-scope="branding" data-paimind-paramont-hero-headline>{headline}</span>
   </>
 }
 
@@ -135,8 +137,8 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = STYLE_ID
-  style.textContent = STYLE
+  style.dataset.paimindPlugin = STYLE_ID; markHarnessClientStyle(style, STYLE_ID)
+  style.textContent = `${PAIMIND_UI_FOUNDATION_CSS}\n${STYLE}`
   document.head.append(style)
   return () => { style.remove() }
 }
@@ -148,7 +150,7 @@ export function apply(ctx: PaimindClientContext): void {
     category: 'experience',
     nameZh: 'Paramont 品牌',
     nameEn: 'Paramont Branding',
-    descriptionZh: '统一 Paramont Harness 名称与标识，不修改 Harness 原生主题。',
+    descriptionZh: '统一应用名称、品牌标识和欢迎页。',
     descriptionEn: 'Applies Paramont Harness identity without changing the native Harness theme.',
     surface: 'shell',
     maturity: 'available',

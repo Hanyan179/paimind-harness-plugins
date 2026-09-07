@@ -4,6 +4,7 @@
   "include": ["src"],
   "references": [
     { "path": "../harness-compat" },
+    { "path": "../ui-foundation" },
     { "path": "../testkit" }
   ]
 }

@@ -5,6 +5,7 @@
   "references": [
     { "path": "../branding" },
     { "path": "../harness-compat" },
+    { "path": "../ui-foundation" },
     { "path": "../testkit" }
   ]
 }

@@ -60,8 +60,9 @@ describe('Workspace Blueprint materializer', () => {
       source: 'builtin',
       composition: blueprint.composition,
     })
+    // Assert the shipped template tree, including no phantom directories from a developer checkout.
     expect((await readdir(workspace)).sort()).toEqual([
-      '.paimind', 'PROJECT.md', 'delivery', 'docs', 'execution', 'inputs', 'outputs', 'planning',
+      '.paimind', 'PROJECT.md', 'delivery', 'execution', 'inputs', 'planning',
     ])
   })
 

@@ -21,13 +21,30 @@ const mutation = z.object({
   expectedRevision: z.number().int().nonnegative(),
 }).readonly()
 
+const textMutation = z.object({
+  aboutMe: z.string().max(2_000),
+  customInstructions: z.string().max(3_000),
+  expectedRevision: z.number().int().nonnegative(),
+}).strict().readonly()
+
 export const PAIMIND_USER_SETTINGS_REMOTE_DESCRIPTORS = Object.freeze([
+  {
+    id: '@paimind/user-settings#paimindUserSettings/saveText',
+    service: 'paimindUserSettings', namespace: 'paimindUserSettings', method: 'saveText',
+    invocation: { kind: 'direct' as const },
+    parameters: [{
+      name: 'request', wire: 'request', source: 'json' as const,
+      codec: { mode: 'strict' as const, typeSymbol: '@paimind/user-settings#PaimindPersonalizationTextRequest', schema: textMutation },
+    }],
+    result: { mode: 'strict' as const, typeSymbol: '@paimind/user-settings#PaimindPersonalizationView', schema: view },
+    sourceLocation: { file: 'packages/user-settings/src/index.ts', line: 147, column: 3 },
+  },
   {
     id: '@paimind/user-settings#paimindUserSettings/describe',
     service: 'paimindUserSettings', namespace: 'paimindUserSettings', method: 'describe',
     invocation: { kind: 'direct' as const }, parameters: [],
     result: { mode: 'strict' as const, typeSymbol: '@paimind/user-settings#PaimindPersonalizationView', schema: view },
-    sourceLocation: { file: 'packages/user-settings/src/index.ts', line: 65, column: 3 },
+    sourceLocation: { file: 'packages/user-settings/src/index.ts', line: 119, column: 3 },
   },
   {
     id: '@paimind/user-settings#paimindUserSettings/mutate',
@@ -38,7 +55,7 @@ export const PAIMIND_USER_SETTINGS_REMOTE_DESCRIPTORS = Object.freeze([
       codec: { mode: 'strict' as const, typeSymbol: '@paimind/user-settings#PaimindPersonalizationMutationRequest', schema: mutation },
     }],
     result: { mode: 'strict' as const, typeSymbol: '@paimind/user-settings#PaimindPersonalizationView', schema: view },
-    sourceLocation: { file: 'packages/user-settings/src/index.ts', line: 79, column: 3 },
+    sourceLocation: { file: 'packages/user-settings/src/index.ts', line: 133, column: 3 },
   },
 ])
 
