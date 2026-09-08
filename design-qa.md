@@ -1047,3 +1047,27 @@ same final traceable Bento artifact.
 - P3: the narrow live deck is intentionally smaller because the user requested a persistent no-scroll Trace sidebar while retaining both the real slide rail and host conversation. No host surface is automatically hidden.
 
 final result: passed
+
+
+## 2026-09-08 Task summary identity pill
+
+Scope: task-monitor only; one avatar/name summary trigger replaces the standalone checklist icon. Existing native action overrides remain reversible. No second plugin or state owner added.
+
+Source: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-1761d7a0-344f-4a56-81ed-d66c1173bc69.png` (618 × 144 cropped reference).
+Implementation: `http://127.0.0.1:3198`, isolated copy of the local Harness profile, package links pointing to this worktree.
+Evidence: `/tmp/task-pill-evidence/default-desktop.png` (1280 × 720), `/tmp/task-pill-evidence/open-desktop.png`, `/tmp/task-pill-evidence/open-mobile.png` (390 × 844), `/tmp/task-pill-evidence/default-detail.png` (focused crop).
+
+Compared source and rendered screenshots together, including the focused header region. Source is a cropped enlarged reference with no declared device density; treated its roughly 76px pill as a 38 CSS px target, not a full-screen pixel-exact requirement. Default identity differs intentionally from the Proposal Assistant reference. Screenshot crop scaling differs, so full-view evidence grounds geometry.
+
+- Typography: existing product font, 13px label, single-line ellipsis, readable default label.
+- Spacing: 38px rounded pill, 28px round avatar, 8px gap; constrained width preserves nearby controls at 390px.
+- Colors: existing light/dark semantic tokens; transparent surface and subtle outline match the reference structure. Dark mode was not browser-tested.
+- Assets: existing source-owned avatar projection, configured avatar ID when available, library icon fallback without the visual plugin. No generated duplicate imagery.
+- Content: standard conversations show 默认助手 / Default Assistant; named presets use their source-owned display name. No user-facing raw preset ID on the pill. Summary contents remain unchanged.
+- Interaction: one summary trigger observed; click opens native-fact summary; Escape closes it; desktop and mobile panels usable; browser error logs empty.
+
+Comparison history: initial 38px pill retained the old 11px lift and default roster label 标准模式. Corrected lift to 8px and explicit 默认助手. New desktop/mobile screenshots show the corrected result. No remaining actionable P0/P1/P2 issues in this scope.
+
+Verification: 126 test files / 685 tests, typecheck, build, bundle budgets, API snapshot, package/packs/publint/NodeNext/examples/framework/docs gates passed. Real Harness composition passed install/boot/remove/restore and independent feature absence checks. Named identities and late responses across session switches covered by tests; browser capture covers the default identity.
+
+final result: passed

@@ -5,6 +5,7 @@ import type { McpConnectionSummary, McpSummaryReader } from '@paimind/mcp-center
 export interface TaskResourceConfiguration {
   readonly sessionId: string
   readonly presetId?: string
+  readonly avatarId?: string
   readonly names: Readonly<Record<string, string>>
   readonly skillNames: readonly string[]
   readonly connectionIds: readonly string[]
@@ -40,6 +41,7 @@ export function taskResourceReader(ctx: { get?(name: string): unknown }): TaskRe
     if (profileResult.status === 'fulfilled') for (const row of profileResult.value?.profiles ?? []) names[row.presetId] = row.name
     return {
       sessionId, ...(presetId === undefined ? {} : { presetId }), names,
+      ...(profile?.avatarId === undefined ? {} : { avatarId: profile.avatarId }),
       skillNames: profile?.preferredSkillNames ?? [], connectionIds: profile?.connectionIds ?? [],
       connections: mcpResult.status === 'fulfilled' ? mcpResult.value?.items ?? [] : [],
       profiles: profileResult.status === 'rejected' ? 'error' : profileResult.value === undefined ? 'unavailable' : 'ready',

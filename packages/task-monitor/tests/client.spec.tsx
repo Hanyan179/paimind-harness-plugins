@@ -99,7 +99,7 @@ describe('Task Monitor client', () => {
     const nextSnapshot = { current: 'session-2', byId: { 'session-2': { id: 'session-2', displayTitle: 'Other', running: false, agentPreset: 'other-id' } } }
     const next = { ...base, sessionId: 'session-2', sessions: { ...base.sessions, list: { getSnapshot: () => nextSnapshot, subscribe: () => () => {} } } }
     rerender(<TaskMonitorAction {...next} readResources={readResources} />)
-    await waitFor(() => { expect(screen.getByText('另一位助手')).toBeInTheDocument() })
+    await waitFor(() => { expect(screen.getAllByText('另一位助手')).toHaveLength(2) })
     await act(async () => { finish!({ sessionId: 'session-1', presetId: 'Analyst', names: { Analyst: 'Wrong old name' }, skillNames: ['private-old-skill'], connectionIds: [], connections: [], profiles: 'ready', mcps: 'ready' }) })
     expect(screen.queryByText('Wrong old name')).toBeNull()
     expect(screen.queryByText('private-old-skill')).toBeNull()
@@ -111,7 +111,7 @@ describe('Task Monitor client', () => {
     const base = props(locale('zh'))
     render(<TaskMonitorAction {...base} readResources={async (sessionId, presetId) => ({ sessionId, ...(presetId === undefined ? {} : { presetId }), names: { Analyst: '飞书写作助手' }, skillNames: ['human-writing'], connectionIds: ['a'.repeat(32)], connections: [{ id: 'a'.repeat(32), name: '个人文档连接', server: `paimind_${'b'.repeat(20)}`, enabled: true, mounted: true }], profiles: 'ready', mcps: 'ready' })} />)
     fireEvent.click(screen.getByRole('button', { name: '任务监控' }))
-    await waitFor(() => { expect(screen.getByText('飞书写作助手')).toBeInTheDocument() })
+    await waitFor(() => { expect(screen.getAllByText('飞书写作助手')).toHaveLength(2) })
     const row = screen.getByText('个人文档连接').closest('li')
     expect(row).toHaveTextContent('已挂载')
     expect(row).not.toHaveTextContent('已使用')
@@ -120,7 +120,19 @@ describe('Task Monitor client', () => {
     expect(document.querySelector('[data-paimind-task-resource-list]')).not.toHaveTextContent('paimind_')
   })
 
-  it('uses an icon trigger, orders the summary, loads exact resources, navigates outputs, and restores focus', async () => {
+  it('keeps a default identity when no preset or profile service is available', () => {
+    const base = props(locale('zh'))
+    const { readResources: _readResources, ...withoutReader } = base
+    const snapshot = { current: 'session-1', byId: { 'session-1': { id: 'session-1', displayTitle: 'New conversation', running: false } } }
+    render(<TaskMonitorAction {...withoutReader} sessions={{ ...base.sessions, list: { getSnapshot: () => snapshot, subscribe: () => () => {} } }} />)
+    const trigger = screen.getByRole('button', { name: '任务监控' })
+    expect(trigger).toHaveTextContent('默认助手')
+    expect(trigger.querySelector('[data-paimind-agent-id="standard"]')).not.toBeNull()
+    fireEvent.click(trigger)
+    expect(screen.getByRole('region', { name: '任务监控' })).toBeInTheDocument()
+  })
+
+  it('uses an identity pill, orders the summary, loads exact resources, navigates outputs, and restores focus', async () => {
     const language = locale('en')
     const history = vi.fn(async () => ({ result: { ok: true as const, value: { hasMore: false, events: [
         { event: { type: 'user/message', seq: 41, data: { source: { kind: 'skill-invocation', name: 'bento-ppt' } } } },
@@ -131,7 +143,8 @@ describe('Task Monitor client', () => {
     const value: TaskMonitorActionProps = { ...props(language), sessionHistory: { history } }
     render(<TaskMonitorAction {...value} />)
     const trigger = screen.getByRole('button', { name: 'Task Monitor' })
-    expect(trigger).toHaveTextContent('')
+    await waitFor(() => { expect(trigger).toHaveTextContent('Analyst') })
+    expect(trigger.querySelector('[data-paimind-task-identity-avatar]')).not.toBeNull()
     expect(trigger.querySelector('[data-paimind-task-badge]')).toBeNull()
     expect(screen.getByRole('tooltip', { name: 'Task Monitor' })).toBeInTheDocument()
     await waitFor(() => { expect(history).toHaveBeenCalledTimes(1) })
@@ -348,7 +361,7 @@ describe('Task Monitor client', () => {
     apply(fixture.context)
     const style = document.head.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@paimind/task-monitor"]')
     expect(style?.textContent).toContain(
-      'body[data-dsh-sidebar-collapsed] [data-paimind-task-action] { transform:translateY(-11px); }',
+      'body[data-dsh-sidebar-collapsed] [data-paimind-task-action] { transform:translateY(-8px); }',
     )
     fixture.disposeEffects()
   })
