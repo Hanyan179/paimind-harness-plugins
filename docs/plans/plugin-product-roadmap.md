@@ -93,3 +93,9 @@ A capability is not complete until all applicable checks pass:
 ## 2026-09-07 approved connection-center slice
 
 The approved [MCP Center and local Feishu plan](mcp-center-feishu.md) adds a separate connection-management plugin to the existing Agent/Skill product pack, plus a separate CLI protocol adapter. The ownership/conflict review is recorded in that plan. Human-writing and managed Feishu resources remain user-installed Business Skills in `resources/business-skills`; installing the plugin never injects them globally. This local acceptance slice does not implement enterprise identity, remote employee devices, shared tenancy or multi-user isolation, and does not displace the user's enterprise priority.
+
+## 2026-09-08 approved context and editable workspace slice
+
+The approved local slice adds context-library as the sole owner of file collections, mounts and access policy; workspace-editors is a support capability in the existing content pack. Agent Market contributes only a generic saved-identity extension slot. Workspace Blueprints adds three folder templates, while Harness retains Workspace, Session and execution ownership. No scheduler domain changes are included.
+
+Ownership, dependency direction, lifecycle and conflict review: [implementation scope](context-library-workspace-editors.md). Current interface and storage boundaries: [integration contract](../integration/context-library-workspace-editors-contract.md). Product flow and limits: [product guide](../product/context-library-workspaces.md). Evidence is recorded separately in [acceptance](../acceptance/context-library-workspaces.md).

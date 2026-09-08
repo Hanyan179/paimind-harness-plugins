@@ -1,0 +1,34 @@
+{
+  "schema": "paimind.workspace-document/v1",
+  "format": "docs",
+  "title": "文档草稿",
+  "data": {
+    "document:v2": {
+      "revision": 1,
+      "title": "文档草稿",
+      "blocks": [
+        {
+          "id": "intro",
+          "html": "<h1>任务文档</h1>",
+          "version": 1
+        },
+        {
+          "id": "goal",
+          "html": "<p>示例内容：请描述本次任务的目标、受众和完成标准。</p>",
+          "version": 1
+        },
+        {
+          "id": "body",
+          "html": "<h2>关键内容</h2>",
+          "version": 1
+        },
+        {
+          "id": "start",
+          "html": "<p>从这里开始编辑。用户与模型修改同一份工作文件。</p>",
+          "version": 1
+        }
+      ],
+      "lastModified": 0
+    }
+  }
+}

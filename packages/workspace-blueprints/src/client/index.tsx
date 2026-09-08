@@ -545,9 +545,15 @@ export function WorkspaceBlueprintCenter(props: WorkspaceBlueprintCenterProps): 
     }
   }
 
-  const startEntrySession = async (workspace: Readonly<HarnessWorkspaceView>, item: Readonly<WorkspaceBlueprintCatalogItem>): Promise<void> => {
+  const startEntrySession = async (workspace: Readonly<HarnessWorkspaceView>, item: Readonly<WorkspaceBlueprintCatalogItem>): Promise<string|undefined> => {
     const agent = item.composition.agent
     if (agent === null) {
+      if(props.sessionApi!==undefined&&props.sessions!==undefined){
+        const created=remoteValue((await props.sessionApi.create({workspaceId:workspace.workspaceId})).result)
+        if(!created.sessionId.trim())throw new Error('Native entry Session identity is missing')
+        props.sessions.open(created.sessionId)
+        return created.sessionId
+      }
       props.workspaces.startSession(workspace.workspaceId)
       return
     }
@@ -571,11 +577,13 @@ export function WorkspaceBlueprintCenter(props: WorkspaceBlueprintCenterProps): 
       throw new Error('Workspace Blueprint entry Session binding did not match the materialized package composition')
     }
     props.sessions.open(created.sessionId)
+    return created.sessionId
   }
 
+  const [adoptionPath,setAdoptionPath]=useState('')
   const adoptBlueprint = async (item: Readonly<WorkspaceBlueprintCatalogItem>): Promise<void> => {
     if (operationInFlight.current) return
-    if (props.workspaces.pickDirectory === undefined || props.workspaces.create === undefined) {
+    if ((props.workspaces.pickDirectory === undefined && !adoptionPath.trim()) || props.workspaces.create === undefined) {
       setStage('error'); setOperationError(zh ? '当前 Harness 不支持目录选择或工作区注册。' : 'This Harness host does not support directory picking or Workspace registration.'); return
     }
     const baseline = props.workspaces.list.getSnapshot()
@@ -598,7 +606,7 @@ export function WorkspaceBlueprintCenter(props: WorkspaceBlueprintCenterProps): 
       }
       if (item.composition.agent !== null && (props.sessionApi === undefined || props.sessions === undefined)) throw new Error(zh ? '当前 Harness 缺少入口智能体对话绑定能力。' : 'This Harness host is missing entry Agent conversation binding support.')
       setStage('picking')
-      const path = await props.workspaces.pickDirectory()
+      const path = adoptionPath.trim() || await props.workspaces.pickDirectory?.() || null
       if (path === null) { setStage('idle'); return }
       setStage('registering')
       const workspace = await props.workspaces.create({ path })
@@ -613,7 +621,7 @@ export function WorkspaceBlueprintCenter(props: WorkspaceBlueprintCenterProps): 
           : `The template files were copied, but cleanup reported: ${result.warnings.join('; ')}. Review this warning before creating the entry conversation.`)
         return
       }
-      setStage('starting'); await startEntrySession(workspace, item); closeAfterSuccess = true
+      setStage('starting'); const sessionId=await startEntrySession(workspace, item); window.dispatchEvent(new CustomEvent('paimind:workspace-adopted',{detail:{workspaceId:workspace.workspaceId,sessionId}})); closeAfterSuccess = true
     } catch (error) {
       setStage('error')
       const reason = localizedErrorMessage(error, zh)
@@ -632,7 +640,7 @@ export function WorkspaceBlueprintCenter(props: WorkspaceBlueprintCenterProps): 
     const release = props.acquireCloseBlock?.() ?? (() => {})
     let closeAfterSuccess = false
     setOperationError(null)
-    try { setStage('starting'); await startEntrySession(pending.workspace, pending.blueprint); closeAfterSuccess = true }
+    try { setStage('starting'); const sessionId=await startEntrySession(pending.workspace, pending.blueprint); window.dispatchEvent(new CustomEvent('paimind:workspace-adopted',{detail:{workspaceId:pending.workspace.workspaceId,sessionId}})); closeAfterSuccess = true }
     catch (error) { setStage('error'); setOperationError(localizedErrorMessage(error, zh)) }
     finally {
       release(); operationInFlight.current = false
@@ -723,7 +731,7 @@ export function WorkspaceBlueprintCenter(props: WorkspaceBlueprintCenterProps): 
     })
   }
 
-  const hostSupported = props.workspaces.pickDirectory !== undefined && props.workspaces.create !== undefined
+  const hostSupported = props.workspaces.create !== undefined && (props.workspaces.pickDirectory !== undefined || adoptionPath.trim()!=='')
   const workspaceReady = workspaceSnapshot.baselinesReady && workspaceSnapshot.state === 'idle'
   const busy = operationInFlight.current || !['idle', 'error', 'warning'].includes(stage)
   const resultCount = catalog.status === 'ready' ? catalog.items.length : 0
@@ -838,6 +846,7 @@ export function WorkspaceBlueprintCenter(props: WorkspaceBlueprintCenterProps): 
                 </div> : selectedCompositionCount === 0 ? <p data-paimind-workspace-blueprints-compact-composition><PaimindCheckIcon size={14} />{zh ? '纯文件夹模板，没有添加智能体或业务技能。' : 'Folder-only template with no Agent or Business Skill extensions.'}</p> : !compositionExpanded ? <p data-paimind-workspace-blueprints-compact-composition><PaimindCheckIcon size={14} />{zh ? `已由作者配置 ${selectedCompositionCount} 项扩展。` : `${selectedCompositionCount} extensions configured by the author.`}</p> : <>{choicesLoading && <p role="status">{zh ? '正在读取扩展名称…' : 'Loading extension names…'}</p>}{choicesRequestError !== null && <p role="alert">{choicesRequestError} <button type="button" onClick={retryChoices}>{zh ? '重试' : 'Retry'}</button></p>}<div data-paimind-workspace-blueprints-bindings>{selected.composition.agent !== null && <div data-paimind-workspace-blueprints-binding><PaimindAgentIcon size={18} /><span><strong>{choices.agents.items.find(candidate => candidate.agentId === selected.composition.agent?.agentId && candidate.presetId === selected.composition.agent.presetId)?.name ?? (zh ? '已选智能体（名称暂不可用）' : 'Selected agent (name unavailable)')}</strong><small>{zh ? '用于采用时创建的首个对话' : 'Used for the first conversation created during adoption'}</small></span></div>}{selected.composition.businessSkills.map(skill => <div key={`${skill.name}:${skill.digest}`} data-paimind-workspace-blueprints-binding><PaimindSkillIcon size={18} /><span><strong>{choices.businessSkills.items.find(candidate => candidate.name === skill.name)?.displayName ?? skill.name}</strong><small>{zh ? '已固定保存此技能版本' : 'This Skill revision is saved exactly'}</small></span></div>)}</div><p data-paimind-workspace-blueprints-note><PaimindWarningIcon size={14} />{zh ? '业务技能用于新工作区的所有对话；智能体仅用于首个对话，不会修改用户默认设置。' : 'Business Skills apply to every conversation in the new Workspace. The Agent applies only to the first conversation and does not change user defaults.'}</p></>}
               </section>
               <section data-paimind-workspace-blueprints-section>
+                <label>{zh ? '目标文件夹（可选）' : 'Destination folder (optional)'}<input aria-label={zh ? '目标文件夹路径' : 'Destination folder path'} value={adoptionPath} disabled={busy} placeholder={zh ? '填写已有空文件夹路径，或留空使用目录选择器' : 'Existing empty folder path, or leave blank to use the picker'} onChange={event=>setAdoptionPath(event.currentTarget.value)}/></label>
                 <div data-paimind-workspace-blueprints-actions>{selected.source === 'user' && <button type="button" data-paimind-workspace-blueprints-button disabled={busy} onClick={() => { openPublish(selected) }}><PaimindEditIcon size={14} />{zh ? '从工作区发布新版本' : 'Publish new version from Workspace'}</button>}<button type="button" data-paimind-workspace-blueprints-button data-primary="true" disabled={busy || (pending === null && (!hostSupported || !workspaceReady))} onClick={() => { if (pending === null) void adoptBlueprint(selected); else void openPendingWorkspace() }}>{busy || pending !== null ? <PaimindCheckIcon size={15} /> : <PaimindPlusIcon size={15} />}{busy ? stageLabel(stage, zh) : pending !== null ? (zh ? '创建首个对话' : 'Create entry conversation') : (zh ? '复制为新工作区' : 'Copy to new Workspace')}</button></div>
                 {pending === null && hostSupported && <p data-paimind-workspace-blueprints-copy-hint>{zh ? '继续后请选择一个空文件夹；模板会复制到新工作区。' : 'Continue by choosing an empty folder. The template will be copied into a native Harness Workspace.'}</p>}
                 {!hostSupported && <p data-paimind-workspace-blueprints-feedback role="alert">{zh ? '当前环境暂不支持选择文件夹和创建工作区。' : 'This Harness host does not expose directory picking and Workspace registration.'}</p>}

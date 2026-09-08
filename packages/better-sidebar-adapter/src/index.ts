@@ -75,6 +75,8 @@ export interface PaimindSidebarService {
 }
 
 export interface PaimindSidebarOpenTabOptions {
+  /** Exact native entry Session returned by creation; avoids a navigation/store race. */
+  readonly sessionId?: string
   /** Per-open title used by on-demand workbenches. */
   readonly title?: string
   /** A content open reveals its landing panel through the provider's native layout contract. */
@@ -171,7 +173,7 @@ export interface ExternalBetterSidebarService {
     readonly title?: string
     readonly path?: string
     readonly id?: string
-  }): void
+  }, scope?:{readonly sessionId:string}): void
   closeTab?(tabId: string): void
   updateTab?(tabId: string, patch: { readonly title?: string; readonly path?: string }): void
   getTab?(id: string): ExternalSidebarTabDescriptor | undefined
@@ -272,7 +274,7 @@ export class BetterSidebarAdapter implements PaimindSidebarService {
         this.disposeProviderRegistry = provider.subscribe(() => { this.onProviderRegistryChange() })
       }
       if (typeof provider.subscribeState === 'function') {
-        this.disposeProviderState = provider.subscribeState(() => { this.queueProviderRehydrate() })
+        this.disposeProviderState = provider.subscribeState(() => { this.queueProviderRehydrate(); for(const listener of [...this.listeners])listener() })
       }
       this.queueProviderRehydrate()
     }
@@ -398,6 +400,7 @@ export class BetterSidebarAdapter implements PaimindSidebarService {
       || this.status.state !== 'active'
       || this.provider === null
       || !this.registrations.has(id)
+      || (options.sessionId!==undefined&&this.provider.getSnapshot?.().sessionId!==options.sessionId)
       || (typeof this.provider.isTabEnabled === 'function' && !this.provider.isTabEnabled(id))
     ) return false
     try {
@@ -405,7 +408,7 @@ export class BetterSidebarAdapter implements PaimindSidebarService {
         type: id,
         ...(options.title === undefined ? {} : { title: options.title }),
         ...(options.path === undefined ? {} : { path: options.path }),
-      })
+      }, ...(options.sessionId===undefined?[]:[{sessionId:options.sessionId}] as const))
       // The provider focuses an existing single tab without replacing its
       // metadata. Keep this owned workbench's label aligned with its content.
       if (this.registrations.get(id)?.definitions.at(-1)?.single === true

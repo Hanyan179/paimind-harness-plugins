@@ -10,6 +10,12 @@ const packageModule = (name: string, module: string): string =>
 export default defineConfig({
   resolve: {
     alias: {
+      '@hansen/harness-compat/managed-files': packageModule('harness-compat','managed-files'),
+      '@hansen/harness-compat/context-access': packageModule('harness-compat','context-access'),
+      '@hansen/context-library/contract': packageModule('context-library','contract'),
+      '@hansen/context-library': packageSource('context-library'),
+      '@hansen/workspace-editors/contract': packageModule('workspace-editors','contract'),
+      '@hansen/workspace-editors': packageSource('workspace-editors'),
       '@hansen/ui-foundation': packageSource('ui-foundation'),
       '@hansen/contracts': packageSource('contracts'),
       '@hansen/presentation-contracts': packageSource('presentation-contracts'),

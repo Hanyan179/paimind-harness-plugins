@@ -32,6 +32,9 @@ describe('Workspace Blueprint catalog', () => {
       'data-analysis-workbench',
       'enterprise-project-delivery',
       'research-decision-brief',
+      'workspace-docs',
+      'workspace-sheets',
+      'workspace-slides',
     ])
     const delivery = page.items.find(item => item.blueprintId === 'enterprise-project-delivery')
     expect(delivery).toMatchObject({

@@ -34,7 +34,7 @@ const pack = (definition: PaimindFeaturePackDefinition): Readonly<PaimindFeature
 
 /**
  * The public product catalog. Technical packages stay independently built and
- * tested, while the Loader exposes only these six product composition groups.
+ * tested, while the Loader exposes the product composition groups.
  */
 export const PAIMIND_FEATURE_PACKS = Object.freeze([
   pack({
@@ -62,17 +62,32 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
     capabilities: [],
   }),
   pack({
+    id: 'paimind:pack:context', loaderEntryId: 'paimind-pack-context', order: 25,
+    nameZh: '资料库', nameEn: 'Context Library', defaultEnabled: true,
+    descriptionZh: '独立管理资料文件，并按智能体、工作区或会话配置读写连接。',
+    descriptionEn: 'Manage file collections and scoped read or write connections.',
+    requiredPackIds: [],
+    packageNames: ['@hansen/context-library'],
+    capabilities: [],
+  }),
+  pack({
     id: 'paimind:pack:content', loaderEntryId: 'paimind-pack-content', order: 30,
     nameZh: '内容与交付物', nameEn: 'Content & Deliverables', defaultEnabled: true,
     descriptionZh: '使用工作区模板，生成网页、文档、表格和演示，并查看交付文件。',
     descriptionEn: 'Workspace blueprints, workspace artifacts, web and Office generation, file preview, and conversation deliverables.',
     requiredPackIds: [],
     packageNames: [
-      '@hansen/workspace-project', '@hansen/workspace-blueprints', '@hansen/better-sidebar-adapter', '@hansen/artifact-runtime',
+      '@hansen/workspace-project', '@hansen/workspace-blueprints', '@hansen/workspace-editors', '@hansen/better-sidebar-adapter', '@hansen/artifact-runtime',
       '@hansen/generator-web', '@hansen/generator-office', '@hansen/renderer-bento',
       '@hansen/renderer-pdf', '@hansen/artifacts', '@hansen/conversation-artifact-renderer',
     ],
-    capabilities: [],
+    capabilities: [{
+      id: 'paimind:capability:workspace-editors', loaderEntryId: 'paimind-capability-workspace-editors',
+      packageNames: ['@hansen/workspace-editors'],
+      nameZh: '工作区编辑器', nameEn: 'Workspace Editors', defaultEnabled: true,
+      descriptionZh: '编辑文档、幻灯片与表格；停用后保留工作文件。',
+      descriptionEn: 'Edit documents, slides and sheets; disabling preserves files.',
+    }],
   }),
   pack({
     id: 'paimind:pack:proposal', loaderEntryId: 'paimind-pack-proposal', order: 40,

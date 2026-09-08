@@ -88,6 +88,17 @@
         - id: paimind-feishu-cli-mcp
           name: '@hansen/feishu-cli-mcp'
 
+    - id: paimind-pack-context
+      name: cordis:group
+      group: true
+      disabled: true
+      config:
+        - id: paimind-context-library-invariant
+          name: '@hansen/context-library/invariant'
+          inject: [invariants]
+        - id: paimind-context-library
+          name: '@hansen/context-library'
+
     - id: paimind-pack-content
       name: cordis:group
       group: true
@@ -108,6 +119,16 @@
           inject: [invariants]
         - id: paimind-better-sidebar-adapter
           name: '@hansen/better-sidebar-adapter'
+        - id: paimind-capability-workspace-editors
+          name: cordis:group
+          group: true
+          disabled: true
+          config:
+            - id: paimind-workspace-editors-invariant
+              name: '@hansen/workspace-editors/invariant'
+              inject: [invariants]
+            - id: paimind-workspace-editors
+              name: '@hansen/workspace-editors'
         - id: paimind-artifact-runtime-invariant
           name: '@hansen/artifact-runtime/invariant'
           inject: [invariants]

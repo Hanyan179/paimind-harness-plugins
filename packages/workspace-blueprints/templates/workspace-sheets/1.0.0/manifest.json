@@ -1,0 +1,20 @@
+{
+  "schema": "paimind.workspace-blueprint/v1",
+  "blueprintId": "workspace-sheets",
+  "version": "1.0.0",
+  "name": "表格工作区",
+  "description": "从可编辑的表格草稿开始，持续修改并导出同一份工作文件。",
+  "category": "general",
+  "tags": [
+    "sheets",
+    "editable",
+    "local"
+  ],
+  "source": "builtin",
+  "createdAt": 0,
+  "updatedAt": 0,
+  "composition": {
+    "agent": null,
+    "businessSkills": []
+  }
+}

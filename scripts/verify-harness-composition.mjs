@@ -62,6 +62,8 @@ const visualExperienceRoot = resolve(repositoryRoot, 'packages/visual-experience
 const conversationTitleRoot = resolve(repositoryRoot, 'packages/conversation-title')
 const workspaceProjectRoot = resolve(repositoryRoot, 'packages/workspace-project')
 const workspaceBlueprintsRoot = resolve(repositoryRoot, 'packages/workspace-blueprints')
+const contextLibraryRoot=resolve(repositoryRoot,'packages/context-library')
+const workspaceEditorsRoot=resolve(repositoryRoot,'packages/workspace-editors')
 const sidebarAdapterRoot = resolve(repositoryRoot, 'packages/better-sidebar-adapter')
 const taskMonitorRoot = resolve(repositoryRoot, 'packages/task-monitor')
 const artifactRuntimeRoot = resolve(repositoryRoot, 'packages/artifact-runtime')
@@ -670,6 +672,8 @@ try {
     conversationTitleRoot,
     workspaceProjectRoot,
     workspaceBlueprintsRoot,
+    contextLibraryRoot,
+    workspaceEditorsRoot,
     sidebarAdapterRoot,
     taskMonitorRoot,
     artifactRuntimeRoot,
@@ -714,6 +718,8 @@ try {
     'paimind-conversation-title', '@hansen/conversation-title',
     'paimind-workspace-project', '@hansen/workspace-project',
     'paimind-workspace-blueprints', '@hansen/workspace-blueprints',
+    'paimind-context-library', '@hansen/context-library',
+    'paimind-workspace-editors', '@hansen/workspace-editors',
     'paimind-better-sidebar-adapter', '@hansen/better-sidebar-adapter',
     'paimind-task-monitor', '@hansen/task-monitor',
     'paimind-artifact-runtime', '@hansen/artifact-runtime',
@@ -773,6 +779,8 @@ try {
     '@hansen/conversation-title',
     '@hansen/workspace-project',
     '@hansen/workspace-blueprints',
+    '@hansen/context-library',
+    '@hansen/workspace-editors',
     '@hansen/better-sidebar-adapter',
     '@hansen/task-monitor',
     '@hansen/generator-web',
@@ -810,6 +818,8 @@ try {
     '@hansen/conversation-title',
     '@hansen/workspace-project',
     '@hansen/workspace-blueprints',
+    '@hansen/context-library',
+    '@hansen/workspace-editors',
     '@hansen/better-sidebar-adapter',
     '@hansen/task-monitor',
     '@hansen/artifact-runtime',

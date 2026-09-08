@@ -2,7 +2,8 @@
   "$schema": "paimind.bundle-budget/v1",
   "defaultClientLimitBytes": 950000,
   "overrides": {
-    "@hansen/renderer-pdf": 2300000
+    "@hansen/renderer-pdf": 2300000,
+    "@hansen/workspace-editors": 1100000
   },
   "acceptedPayloads": [
     {
@@ -19,6 +20,11 @@
       "package": "multiple server-side plugin tarballs",
       "payload": "zod validation copies",
       "reason": "Each independently installable plugin keeps its own validation boundary; server dependencies are externalized from client bundles."
+    },
+    {
+      "package": "@hansen/workspace-editors",
+      "payload": "Pinned document, slide and spreadsheet renderers plus a sanitized iframe bridge",
+      "reason": "Three offline editors ship as one support plugin; the source code is pinned and no template scripts are executed. Budget is 1.1 MB for the unminified client."
     }
   ]
 }

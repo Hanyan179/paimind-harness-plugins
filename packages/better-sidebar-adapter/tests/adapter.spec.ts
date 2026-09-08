@@ -423,3 +423,12 @@ describe('FP05 Better Sidebar adapter', () => {
     expect(throwing.getStatus()).toMatchObject({ state: 'failed', error: 'editor crashed' })
   })
 })
+it('waits for the exact entry session before revealing its document tab',()=>{
+ let sessionId='previous';let notify=()=>{};const open=vi.fn()
+ const adapter=new BetterSidebarAdapter({registerTab:()=>()=>{},openTab:open,getSnapshot:()=>({sessionId}),subscribeState:(listener:()=>void)=>{notify=listener;return()=>{}}},locale(),projects())
+ adapter.registerTab({id:'paimind:workspace-editors',titleZh:'编辑',titleEn:'Edit',render:()=>null})
+ expect(adapter.openTab('paimind:workspace-editors',{sessionId:'created',path:'content/document.json'})).toBe(false)
+ const changed=vi.fn();adapter.subscribe(changed);sessionId='created';notify();expect(changed).toHaveBeenCalledOnce()
+ expect(adapter.openTab('paimind:workspace-editors',{sessionId:'created',path:'content/document.json'})).toBe(true)
+ expect(open).toHaveBeenCalledExactlyOnceWith({type:'paimind:workspace-editors',path:'content/document.json'},{sessionId:'created'});adapter.dispose()
+})

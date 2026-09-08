@@ -11,7 +11,7 @@ import type {
 export { installPaimindCompactNavigation, type PaimindNavigationEntry } from './client-navigation.js'
 
 /** Shared product-surface ids; Harness still owns shell routing and history. */
-export const PAIMIND_PRODUCT_SURFACE_IDS = ['agent-center', 'skill-center', 'mcp-center', 'workspace-blueprints'] as const
+export const PAIMIND_PRODUCT_SURFACE_IDS = ['agent-center', 'skill-center', 'mcp-center', 'workspace-blueprints', 'context-library'] as const
 
 export type PaimindProductSurfaceId = typeof PAIMIND_PRODUCT_SURFACE_IDS[number]
 

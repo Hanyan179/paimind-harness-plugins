@@ -1,0 +1,20 @@
+{
+  "repository": "https://github.com/cloudflare/cloudflare-os",
+  "commit": "b810d09f5358eeb4aeeef2acdde45aff54405277",
+  "license": "Apache-2.0",
+  "use": "Design reference only; no reference source is copied into context-library. Local collections, access policy, storage and runtime projection are PAIMind implementations.",
+  "references": [
+    {
+      "path": "packages/gatekeeper-context/src/library-read.ts",
+      "sha256": "234a928fdcfa1d6ba162fb4b54a8e1baf4ed444def3cc9dd9982a2609cf5f219"
+    },
+    {
+      "path": "packages/gatekeeper-context/src/library-gatekeeper.ts",
+      "sha256": "0cd2723a784ec87bd1909fb1346e9da14c3652513956050bdf053d68d062945d"
+    },
+    {
+      "path": "packages/gatekeeper-context/src/user-library.ts",
+      "sha256": "0d458c138391a717d23fbc356e9dbf080611cd9f0b87b3f5af627b55c8e82f75"
+    }
+  ]
+}

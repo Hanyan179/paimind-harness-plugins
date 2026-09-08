@@ -543,8 +543,7 @@ export class AgentCenterRuntime implements TestHistoryReader {
 
   async start(presetId: string, profile?: AgentBusinessProfile): Promise<string> {
     this.notice = null; this.error = null; this.publish()
-    const sessionId = await waitForBlankSession(this.sessions, this.workspaces)
-    await selectPresetInNativeSeat(this.seatControl(), this.sessions, sessionId, presetId)
+    const sessionId = await this.prepareConversation(presetId, true)
     if (profile !== undefined) {
       remoteValue(await this.remote.bindSession({ sessionId, agentId: profile.agentId, presetId, configVersion: profile.configVersion, purpose: 'conversation' }))
       this.watchFirstRun(sessionId)
@@ -554,6 +553,29 @@ export class AgentCenterRuntime implements TestHistoryReader {
     this.conversation.input.for(binding.ctx).setDraft(starterPromptForProfile(profile))
     this.sessions.open(sessionId)
     return sessionId
+  }
+
+  /** Materialize the native Session before attaching any product resource relation. */
+  private async prepareConversation(presetId: string, reuseCurrent: boolean): Promise<string> {
+    if (this.authoringApi === undefined) {
+      const id = await waitForBlankSession(this.sessions, this.workspaces, 10_000, reuseCurrent)
+      await selectPresetInNativeSeat(this.seatControl(), this.sessions, id, presetId)
+      return id
+    }
+    const current = this.sessions.list.getSnapshot().current
+    const workspaces = this.workspaces.list.getSnapshot()
+    const workspaceId = workspaces.items.find(workspace => current !== undefined && workspace.sessionIds.includes(current))?.workspaceId
+      ?? workspaces.recentWorkspaceId
+    const created = remoteValue((await boundedAuthoringRpc('创建 Harness 对话', Date.now() + 10_000, 10_000,
+      signal => this.authoringApi!.create({ ...(workspaceId ? { workspaceId } : {}), agentPreset: presetId }, signal))).result)
+    if (!created.sessionId || created.agentPreset !== presetId) throw new Error('原生对话未保留所选智能体身份')
+    this.sessions.open(created.sessionId)
+    const deadline = Date.now() + 10_000
+    while (!this.disposed && Date.now() < deadline) {
+      if (this.sessions.list.getSnapshot().current === created.sessionId && this.sessions.binding?.(created.sessionId)?.ctx !== undefined) return created.sessionId
+      await new Promise(resolve => { setTimeout(resolve, 50) })
+    }
+    throw new Error('原生对话已创建，输入框尚未就绪，请重新打开对话')
   }
 
   /** Run one saved Profile revision in a real Harness Session for Builder QA. */
@@ -569,8 +591,7 @@ export class AgentCenterRuntime implements TestHistoryReader {
   /** Prepare a saved Preset in a native blank Session; its native composer owns every test turn. */
   async beginTest(presetId: string, profile: AgentBusinessProfile): Promise<string> {
     this.notice = null; this.error = null; this.publish()
-    const sessionId = await waitForBlankSession(this.sessions, this.workspaces, 10_000, false)
-    await selectPresetInNativeSeat(this.seatControl(), this.sessions, sessionId, presetId)
+    const sessionId = await this.prepareConversation(presetId, false)
     remoteValue(await this.remote.bindSession({
       sessionId,
       agentId: profile.agentId,
@@ -1843,6 +1864,7 @@ function privatePresetId(name: string, roster: HarnessAgentPresetRoster): string
 }
 
 export interface AgentCenterSectionProps {
+  readonly renderSlot?: (name: 'paimind.agent.resources', owner: {agentId:string}) => ReactNode
   readonly connections?: McpRemoteApi | undefined
   /** Pass false only when intentionally keeping the newly opened native Session active. */
   readonly close: (restorePreviousSession?: boolean) => void
@@ -2764,6 +2786,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
             <section data-paimind-agent-form-panel aria-labelledby="paimind-agent-goal-title"><div data-paimind-agent-panel-head><span>2</span><div><h3 id="paimind-agent-goal-title">{zh ? '要完成什么' : 'What it accomplishes'}</h3><p>{zh ? '明确核心目标与可交付结果。' : 'Define the core goal and expected outcome.'}</p></div></div><label data-paimind-agent-field><span>{zh ? '目标' : 'Goal'}</span><textarea value={draft.goal} maxLength={2000} placeholder={zh ? '例如：整理本周进展，指出交付风险，并列出需要协助的事项。' : 'For example: diagnose interaction problems and provide practical strategies.'} onChange={event => { setDraft({ ...draft, goal: event.currentTarget.value }) }} /></label></section>
             <section data-paimind-agent-form-panel aria-labelledby="paimind-agent-behavior-title"><div data-paimind-agent-panel-head><span>3</span><div><h3 id="paimind-agent-behavior-title">{zh ? '如何工作' : 'How it works'}</h3><p>{zh ? '描述工作流程、方法与原则。' : 'Describe its workflow, methods, and principles.'}</p></div></div><div data-paimind-agent-fields><label data-paimind-agent-field data-wide="true"><span>{zh ? '行为规范' : 'Behavior'}</span><textarea value={draft.behavior} maxLength={4000} placeholder={zh ? '工作原则、边界和质量要求' : 'Working principles, boundaries, and quality requirements'} onChange={event => { setDraft({ ...draft, behavior: event.currentTarget.value }) }} /></label><label data-paimind-agent-field data-wide="true">{zh ? '补充要求（可选）' : 'Additional requirements (optional)'}<textarea value={draft.instructions} maxLength={4000} placeholder={zh ? '例如：优先使用中文，所有结论给出证据。' : 'For example: answer concisely and cite evidence.'} onChange={event => { setDraft({ ...draft, instructions: event.currentTarget.value }) }} /></label></div></section>
 
+            {draft.editing && props.renderSlot?.('paimind.agent.resources', {agentId:draft.editing.agentId})}
             <McpConnectionPicker zh={zh} api={props.connections} selected={draft.connectionIds ?? []} onChange={connectionIds => { setDraft({ ...draft, connectionIds }) }} />
             <AgentSelectionPanel id="paimind-agent-skills" title={zh ? '业务技能（可选）' : 'Business Skills (optional)'} description={zh ? '只挂载这个智能体需要的业务技能。' : 'Attach only the Business Skills required by this Agent.'} icon={<PaimindSkillIcon size={15} />} count={draft.preferredSkillNames.length} open={skillPickerOpen} onToggle={() => { setSkillPickerOpen(value => !value) }} zh={zh}><fieldset data-paimind-agent-field data-paimind-agent-skill-picker><legend>{zh ? '智能体业务技能' : 'Agent Business Skills'}</legend><p data-paimind-agent-skill-policy>{zh ? '只为这个智能体添加所选技能，不影响其他智能体。' : 'Business Skills in Skill Center stay out of the global catalog; only selected Skills are attached to this Agent.'}</p>{installedSkills.length === 0 ? <div data-paimind-agent-skill-empty>{zh ? '暂无已安装业务技能' : 'No installed Business Skills'}</div> : <><div data-paimind-agent-skill-toolbar><label data-paimind-agent-skill-search><PaimindSearchIcon size={15} /><input type="search" aria-label={zh ? '搜索业务技能' : 'Search Business Skills'} placeholder={zh ? '搜索名称、说明或标签' : 'Search names, descriptions, or tags'} value={skillQuery} onChange={event => { setSkillQuery(event.currentTarget.value) }} /></label><button type="button" data-paimind-agent-skill-selected aria-pressed={selectedSkillsOnly} onClick={() => { setSelectedSkillsOnly(value => !value) }}>{zh ? `只看已选 ${draft.preferredSkillNames.length}` : `Selected ${draft.preferredSkillNames.length}`}</button></div><div data-paimind-agent-skill-categories role="group" aria-label={zh ? '技能分类' : 'Skill categories'}>{SKILL_PRODUCT_CATEGORIES.map(category => <button key={category} type="button" aria-label={`${skillCategoryLabel(category, zh)} ${skillCategoryCounts[category]}`} aria-pressed={skillCategory === category} onClick={() => { setSkillCategory(category) }}><span>{skillCategoryLabel(category, zh)}</span><small>{skillCategoryCounts[category]}</small></button>)}</div><div data-paimind-agent-skill-summary><span>{zh ? `已选择 ${draft.preferredSkillNames.length} / 已安装 ${installedSkills.length}` : `${draft.preferredSkillNames.length} selected / ${installedSkills.length} installed`}</span><span>{zh ? `${visibleSkills.length} 个结果` : `${visibleSkills.length} results`}</span></div><div data-paimind-agent-skill-results>{visibleSkills.length === 0 ? <div data-paimind-agent-skill-empty>{zh ? '当前筛选没有匹配技能。' : 'No Skills match the filters.'}</div> : visibleSkills.map(skill => { const metadata = metadataForSkill(skill); return <label key={skill.name} data-paimind-agent-skill data-selected={draft.preferredSkillNames.includes(skill.name)}><input type="checkbox" checked={draft.preferredSkillNames.includes(skill.name)} onChange={event => { setDraft({ ...draft, preferredSkillNames: event.currentTarget.checked ? [...draft.preferredSkillNames, skill.name] : draft.preferredSkillNames.filter(value => value !== skill.name) }) }} /><span><strong>{skill.name}</strong><small>{skillCategoryLabel(metadata.category, zh)}</small><em>{skill.description}</em></span></label> })}</div></>}</fieldset></AgentSelectionPanel>
             <p data-paimind-agent-runtime-note>{zh ? '运行资源和权限由平台统一管理。' : 'Runtime resources and permissions are managed and executed by Harness.'}</p>
@@ -3185,6 +3208,7 @@ export async function apply(ctx: AgentCenterClientContext): Promise<() => Promis
     }, (props: { readonly wide: boolean; readonly controller: PaimindProductSurfaceController; readonly locale: PaimindLocaleSource }) => <AgentCenterBoundary><AgentCenterTrigger {...props} /></AgentCenterBoundary>))
     scope.slots.inject('shell.overlay', () => scope.slots.register({
       name: 'shell.overlay', id: 'paimind-agent-center-surface', order: 10, inject: injectProps,
+      children: { 'paimind.agent.resources': {kind:'list',scope:'root'} },
     }, (props: AgentCenterSurfaceProps) => <AgentCenterBoundary><AgentCenterSurface {...props} /></AgentCenterBoundary>))
   }, 'paimind-agent-market: Harness center surface')
   try { await mounted } catch (error) {

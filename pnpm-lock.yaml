@@ -231,6 +231,40 @@ importers:
         specifier: workspace:^
         version: link:../testkit
 
+  packages/context-library:
+    dependencies:
+      '@deepseek-ai/dsh-home-paths':
+        specifier: 0.1.1-rc.2
+        version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))
+      '@hansen/better-sidebar-adapter':
+        specifier: workspace:^
+        version: link:../better-sidebar-adapter
+      '@hansen/contracts':
+        specifier: workspace:^
+        version: link:../contracts
+      '@hansen/harness-compat':
+        specifier: workspace:^
+        version: link:../harness-compat
+      '@hansen/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@hansen/testkit':
+        specifier: workspace:^
+        version: link:../testkit
+      '@testing-library/react':
+        specifier: ^16.3.2
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+
   packages/contracts: {}
 
   packages/conversation-artifact-renderer:
@@ -460,6 +494,9 @@ importers:
       '@hansen/category-analysis-adapter':
         specifier: workspace:^
         version: link:../category-analysis-adapter
+      '@hansen/context-library':
+        specifier: workspace:^
+        version: link:../context-library
       '@hansen/conversation-artifact-renderer':
         specifier: workspace:^
         version: link:../conversation-artifact-renderer
@@ -541,6 +578,9 @@ importers:
       '@hansen/workspace-blueprints':
         specifier: workspace:^
         version: link:../workspace-blueprints
+      '@hansen/workspace-editors':
+        specifier: workspace:^
+        version: link:../workspace-editors
       '@hansen/workspace-project':
         specifier: workspace:^
         version: link:../workspace-project
@@ -1076,6 +1116,46 @@ importers:
       '@hansen/ui-foundation':
         specifier: workspace:^
         version: link:../ui-foundation
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@hansen/testkit':
+        specifier: workspace:^
+        version: link:../testkit
+      '@testing-library/react':
+        specifier: ^16.3.2
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+
+  packages/workspace-editors:
+    dependencies:
+      '@deepseek-ai/dsh-home-paths':
+        specifier: 0.1.1-rc.2
+        version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))
+      '@hansen/better-sidebar-adapter':
+        specifier: workspace:^
+        version: link:../better-sidebar-adapter
+      '@hansen/contracts':
+        specifier: workspace:^
+        version: link:../contracts
+      '@hansen/harness-compat':
+        specifier: workspace:^
+        version: link:../harness-compat
+      '@hansen/ui-foundation':
+        specifier: workspace:^
+        version: link:../ui-foundation
+      '@hansen/workspace-project':
+        specifier: workspace:^
+        version: link:../workspace-project
+      dompurify:
+        specifier: 3.4.14
+        version: 3.4.14
       zod:
         specifier: ^4.4.3
         version: 4.4.3

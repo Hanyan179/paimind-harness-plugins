@@ -1,0 +1,73 @@
+{
+  "schema": "paimind.workspace-document/v1",
+  "format": "slides",
+  "title": "幻灯片草稿",
+  "data": {
+    "deck": {
+      "slides": [
+        {
+          "id": "cover",
+          "background": {
+            "color": "#ffffff"
+          },
+          "blocks": [
+            {
+              "id": "title",
+              "type": "title",
+              "x": 80,
+              "y": 120,
+              "w": 1000,
+              "h": 140,
+              "props": {
+                "text": "任务演示",
+                "tone": "neutral"
+              }
+            },
+            {
+              "id": "subtitle",
+              "type": "text",
+              "x": 80,
+              "y": 330,
+              "w": 1000,
+              "h": 100,
+              "props": {
+                "text": "示例内容：补充本次演示的目标与受众。"
+              }
+            }
+          ]
+        },
+        {
+          "id": "content",
+          "background": {
+            "color": "#ffffff"
+          },
+          "blocks": [
+            {
+              "id": "heading",
+              "type": "title",
+              "x": 80,
+              "y": 70,
+              "w": 1000,
+              "h": 120,
+              "props": {
+                "text": "关键内容"
+              }
+            },
+            {
+              "id": "note",
+              "type": "text",
+              "x": 80,
+              "y": 250,
+              "w": 1000,
+              "h": 200,
+              "props": {
+                "text": "示例内容：说明事实、判断和下一步行动。"
+              }
+            }
+          ]
+        }
+      ],
+      "themeVersion": "workspace.1"
+    }
+  }
+}

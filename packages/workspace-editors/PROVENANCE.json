@@ -1,0 +1,96 @@
+{
+  "repository": "https://github.com/cloudflare/cloudflare-os",
+  "commit": "b810d09f5358eeb4aeeef2acdde45aff54405277",
+  "license": "Apache-2.0",
+  "files": [
+    {
+      "source": "packages/workshop-backend/format-blueprints/workspace-docs.gadget",
+      "extractedPath": "server.js",
+      "sha256": "74ee89164e27d11553577f341afb147d07e83524ce9d0a54fbbb68fa6ba4a67c",
+      "localPath": "src/vendor/docs/server.js",
+      "adaptedSha256": "a34f4bf5ba611a53365d2c3e7fcb8470bd4294d3796b01a6875fa74f8f163abb"
+    },
+    {
+      "source": "packages/workshop-backend/format-blueprints/workspace-docs.gadget",
+      "extractedPath": "README.md",
+      "sha256": "b272f9237433d6c368b6d8292a8fe62b6d1259054055975c1e4fc22ec6a73c2a",
+      "localPath": "src/vendor/docs/README.md",
+      "adaptedSha256": "b272f9237433d6c368b6d8292a8fe62b6d1259054055975c1e4fc22ec6a73c2a"
+    },
+    {
+      "source": "packages/workshop-backend/format-blueprints/workspace-docs.gadget",
+      "extractedPath": "client.js",
+      "sha256": "7fb5d1e9f114e5de4ecff73bdf464abdc1998aaf2edf4f736c7b8db2871acf50",
+      "localPath": "src/vendor/docs/client.js",
+      "adaptedSha256": "c54a18dc6f94e62c9675ebf7f3d1e10c9c54c16195d15856da3a8fa08b672dba"
+    },
+    {
+      "source": "packages/workshop-backend/format-blueprints/workspace-slides.gadget",
+      "extractedPath": "server.js",
+      "sha256": "2bcde080921a5fdd17f0dbbd65af657a7374116a074fb2907a5a21bb5bb169b6",
+      "localPath": "src/vendor/slides/server.js",
+      "adaptedSha256": "9c872960d8ed700d68c8193065c0360e9f821a707061f5641c137de965063b60"
+    },
+    {
+      "source": "packages/workshop-backend/format-blueprints/workspace-slides.gadget",
+      "extractedPath": "README.md",
+      "sha256": "014e27ef9262c5499b65bb846ed1d568e7e657a57e6006488357f93cf8f3d4df",
+      "localPath": "src/vendor/slides/README.md",
+      "adaptedSha256": "014e27ef9262c5499b65bb846ed1d568e7e657a57e6006488357f93cf8f3d4df"
+    },
+    {
+      "source": "packages/workshop-backend/format-blueprints/workspace-slides.gadget",
+      "extractedPath": "client.js",
+      "sha256": "85231617c1e1f6c28803880a216b080e69070bd5a4cbe5457008a028e7af8d38",
+      "localPath": "src/vendor/slides/client.js",
+      "adaptedSha256": "2a02379e27b969604a491f9ab2edd22ae7b3254dd1a5b5404233195c7f4a274c"
+    },
+    {
+      "source": "packages/workshop-backend/format-blueprints/workspace-sheets.gadget",
+      "extractedPath": "server.js",
+      "sha256": "f3815241aaf7e6fd7d6bfaa4b78549bcca06112b138fb392be60b8b8cd30c616",
+      "localPath": "src/vendor/sheets/server.js",
+      "adaptedSha256": "39634d4ce0d1486e557ebdb5434ba5125e67a3b2c7bdb29d5ae24cc921abff86"
+    },
+    {
+      "source": "packages/workshop-backend/format-blueprints/workspace-sheets.gadget",
+      "extractedPath": "README.md",
+      "sha256": "e8157c983e37f5d5ba58903b6c932606c2275aed21150290605d9d2c462a3be7",
+      "localPath": "src/vendor/sheets/README.md",
+      "adaptedSha256": "e8157c983e37f5d5ba58903b6c932606c2275aed21150290605d9d2c462a3be7"
+    },
+    {
+      "source": "packages/workshop-backend/format-blueprints/workspace-sheets.gadget",
+      "extractedPath": "client.js",
+      "sha256": "d0c9eaee37ba7e388c4fcf5133bed5c00de04030baadfcc231ce70bcede080bf",
+      "localPath": "src/vendor/sheets/client.js",
+      "adaptedSha256": "1a7322cc8dcf5bc6b0ffddde173f398a43541ce0dbf3e96f74223150f5437ba9"
+    }
+  ],
+  "modifications": [
+    "Replaced Cloudflare runtime base classes with local model stubs and a versioned, atomic local Workspace file transaction. The host owns identity and tool execution.",
+    "Replaced cloud RPC and presence with a parent bridge bound to the current document inside an opaque-origin, CSP-restricted iframe. No author connections or cloud credentials are included.",
+    "Translated editor controls and starter hints to Chinese, added accessible spreadsheet field labels, and exposed drafts including unsent field values.",
+    "Stopped automatic conflict retries. Missing/corrupt documents fail closed instead of bootstrap/reset. Slides no longer reseed existing decks for theme versions.",
+    "Preserved block/cell optimistic concurrency, invalidated cell versions after structural operations, acknowledged those versions to the client, and rejected deleted/recreated identity conflicts.",
+    "Added source-owned offline HTML/print rendering, Markdown/CSV export, local operation receipts, draft recovery and host lifecycle handling in surrounding PAIMind code."
+  ],
+  "archives": [
+    {
+      "path": "packages/workshop-backend/format-blueprints/workspace-docs.gadget",
+      "sha256": "0239fa86018160c2dc99af8030b62f728ff8a5aa5c6379b5d17ca132f30d3bd2"
+    },
+    {
+      "path": "packages/workshop-backend/format-blueprints/workspace-slides.gadget",
+      "sha256": "57ce686357cef5faf4b2f6f0cc8995c158299377f59a4f19544030fbe3807af9"
+    },
+    {
+      "path": "packages/workshop-backend/format-blueprints/workspace-sheets.gadget",
+      "sha256": "f13a93f5a63743ae1075a471822fd8a9a856b20736dc428d3360408b496b4eca"
+    }
+  ],
+  "licenseSource": {
+    "path": "LICENSE",
+    "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+  }
+}
