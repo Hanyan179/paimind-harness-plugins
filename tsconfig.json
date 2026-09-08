@@ -46,6 +46,8 @@
     },
     {
       "path": "packages/mcp-center"
-    }
+    },
+    { "path": "packages/context-library" },
+    { "path": "packages/workspace-editors" }
   ]
 }

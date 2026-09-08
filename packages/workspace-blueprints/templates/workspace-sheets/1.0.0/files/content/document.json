@@ -1,0 +1,59 @@
+{
+  "schema": "paimind.workspace-document/v1",
+  "format": "sheets",
+  "title": "表格草稿",
+  "data": {
+    "meta": {
+      "revision": 1,
+      "title": "任务表格",
+      "sheetOrder": [
+        "sheet1"
+      ],
+      "sheets": {
+        "sheet1": {
+          "id": "sheet1",
+          "name": "任务数据",
+          "rows": 100,
+          "cols": 26,
+          "colWidths": {},
+          "rowHeights": {},
+          "frozenRows": 0,
+          "frozenCols": 0
+        }
+      },
+      "lastModified": 0
+    },
+    "cells:sheet1": {
+      "A1": {
+        "value": "事项",
+        "fmt": null,
+        "version": 1
+      },
+      "B1": {
+        "value": "数量",
+        "fmt": null,
+        "version": 1
+      },
+      "A2": {
+        "value": "示例内容",
+        "fmt": null,
+        "version": 1
+      },
+      "B2": {
+        "value": "2",
+        "fmt": null,
+        "version": 1
+      },
+      "A3": {
+        "value": "合计",
+        "fmt": null,
+        "version": 1
+      },
+      "B3": {
+        "value": "=SUM(B2:B2)",
+        "fmt": null,
+        "version": 1
+      }
+    }
+  }
+}

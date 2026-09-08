@@ -53,6 +53,8 @@
     "@hansen/developer-resources": "workspace:^",
     "dsh-better-sidebar": "0.17.1",
     "@hansen/mcp-center": "workspace:^",
-    "@hansen/feishu-cli-mcp": "workspace:^"
+    "@hansen/feishu-cli-mcp": "workspace:^",
+    "@hansen/context-library": "workspace:^",
+    "@hansen/workspace-editors": "workspace:^"
   }
 }

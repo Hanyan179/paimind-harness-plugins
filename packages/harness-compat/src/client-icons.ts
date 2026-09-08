@@ -16,6 +16,8 @@ export {
   IconCodeOutline16 as PaimindDeveloperIcon,
   IconCordisPluginOutline14 as PaimindExtensionIcon,
   IconEditOutline16 as PaimindEditIcon,
+  IconEllipsisOutline16 as PaimindMoreIcon,
+  IconPaperclipOutline16 as PaimindAttachmentIcon,
   IconLikeFill16 as PaimindFavoriteFillIcon,
   IconLikeOutline16 as PaimindFavoriteIcon,
   IconNewChatOutline16 as PaimindNewConversationIcon,

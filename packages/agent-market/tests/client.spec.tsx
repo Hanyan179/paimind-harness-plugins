@@ -645,8 +645,10 @@ describe('Agent Center business UI', () => {
         subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } },
       },
       open: vi.fn((sessionId: string) => { current = sessionId }),
+      binding: () => ({ ctx: {}, session: { getSnapshot: () => ({ running: false }), subscribe: () => () => {} } }),
     }
     const workspaces = {
+      list: { getSnapshot: () => ({ items: [], recentWorkspaceId: 'workspace-test' }) },
       archiveSession: vi.fn().mockResolvedValue(undefined),
       startSession: vi.fn(() => {
         rows['session-test-visible'] = { id: 'session-test-visible', blank: true, agentPreset: 'standard' }
@@ -666,6 +668,10 @@ describe('Agent Center business UI', () => {
     const bindSession = vi.fn().mockResolvedValue({ ok: true, value: {
       sessionId: 'session-test-visible', agentId: 'mine', presetId: 'mine', configVersion: 'v1-a', boundAt: 1,
     } })
+    const create = vi.fn(async () => {
+      rows['session-test-visible'] = { id: 'session-test-visible', blank: true, agentPreset: 'mine' }
+      return { result: { ok: true, value: { sessionId: 'session-test-visible', agentPreset: 'mine' } } }
+    })
     const rename = vi.fn().mockResolvedValue({ result: { ok: true, value: { title: 'Test · Research Agent', seq: 1 } } })
     const history = vi.fn().mockResolvedValue({ result: { ok: true, value: { events: [], hasMore: false } } })
     const runtime = new AgentCenterRuntime(
@@ -681,11 +687,12 @@ describe('Agent Center business UI', () => {
       sessions as never,
       workspaces as never,
       { input: { for: () => ({ setDraft: vi.fn() }) } } as never,
-      { rename, history } as never,
+      { create, rename, history } as never,
     )
 
     await expect(runtime.beginTest('mine', profile)).resolves.toBe('session-test-visible')
-    expect(workspaces.startSession).toHaveBeenCalledOnce()
+    expect(workspaces.startSession).not.toHaveBeenCalled()
+    expect(create).toHaveBeenCalledWith({ workspaceId: 'workspace-test', agentPreset: 'mine' }, expect.any(AbortSignal))
     expect(rows['session-test-visible']).toMatchObject({ agentPreset: 'mine' })
     expect(bindSession).toHaveBeenCalledWith(expect.objectContaining({
       sessionId: 'session-test-visible', agentId: 'mine', presetId: 'mine', configVersion: 'v1-a', purpose: 'builder-test',

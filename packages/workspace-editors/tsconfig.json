@@ -1,0 +1,33 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "emitDeclarationOnly": true,
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../ui-foundation"
+    },
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../harness-compat"
+    },
+    {
+      "path": "../testkit"
+    },
+    {
+      "path": "../better-sidebar-adapter"
+    },
+    {
+      "path": "../workspace-project"
+    }
+  ]
+}

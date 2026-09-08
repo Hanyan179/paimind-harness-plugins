@@ -1,0 +1,20 @@
+{
+  "schema": "paimind.workspace-blueprint/v1",
+  "blueprintId": "workspace-slides",
+  "version": "1.0.0",
+  "name": "幻灯片工作区",
+  "description": "从可编辑的幻灯片草稿开始，持续修改并导出同一份工作文件。",
+  "category": "general",
+  "tags": [
+    "slides",
+    "editable",
+    "local"
+  ],
+  "source": "builtin",
+  "createdAt": 0,
+  "updatedAt": 0,
+  "composition": {
+    "agent": null,
+    "businessSkills": []
+  }
+}

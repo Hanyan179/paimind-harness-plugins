@@ -16,9 +16,9 @@
       "path": "packages/agent-market",
       "contractSha256": "581019cbac23cc923f2daa8f593de7424bd82ca8e03288328667e1b1b00b3e86",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "ce6742c8691dca557ff806fb6988d4cf7231babb30baa84a2cef8603d2ef01c3",
+      "runtimeExportSha256": "810705383db2e674e139fca097c89b0aa8ea473b64b2ad5c853efbfe3eefb22d",
       "declarationCount": 8,
-      "declarationSha256": "310c2f5139bc9f69eb744fb43648305b61caac333c18316c093cd58231af3b7e",
+      "declarationSha256": "2dba6f5258c0061e94107b0ea0d82ab6f43e76108cc14669dfe4fcbf16686d9e",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@hansen/artifact-runtime": {
@@ -43,9 +43,9 @@
       "path": "packages/better-sidebar-adapter",
       "contractSha256": "781335e04c9199bfc2e2e380188da76e1a5026228f1317d3edbbd6ff3ed69443",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "2b20fca02847c7a92cdc7dc659d4bcbb5a7a5d20f3f79815251702c672b463e4",
+      "runtimeExportSha256": "d2bb50596bfbfb2baf6b41ed6b5b4941f752e19ce5381a31d7bf88a8c2cfc851",
       "declarationCount": 3,
-      "declarationSha256": "8fcad6339fb191b4c510ca2a9c7ad8ae35d7e3b203fb226b32e612427ce885ea",
+      "declarationSha256": "394830d42f4b90aa00fabf570746385d193157930ef054df019d7ffb40d1f7ae",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@hansen/branding": {
@@ -106,9 +106,9 @@
       "path": "packages/extension-center",
       "contractSha256": "cdcdcbec3e9a68484c95412122b6ddb1e34b9c8229af0b33573950687ed5526d",
       "runtimeExportCount": 6,
-      "runtimeExportSha256": "315c1a31ceebda812c71960f5f0ed340c056ab4028eb8abc6faa6479b990796d",
+      "runtimeExportSha256": "749f60ab2a424900c12335ef04e3b4e11dfde43a64283987dc6afc48a10bb10a",
       "declarationCount": 7,
-      "declarationSha256": "0934d041e65a653cf404441e33743fefebb0329ff0b36687849ae1c580ea0412",
+      "declarationSha256": "f18cf040939cc49d33c2f55533f9d133c73726ced753aa5704eb605581884d5b",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@hansen/fact-layer": {
@@ -163,22 +163,22 @@
       "runtimeExportSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "declarationCount": 0,
       "declarationSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "bundleFileSha256": "23832ea6e2b85c4d7503d62cdd2a523bf9ad2781aec768621812ddae1148a643"
+      "bundleFileSha256": "81e7de5d30c48f93d615307e643fb4a8d66c25fd408872ea324b66826eb0fce3"
     },
     "@hansen/harness-compat": {
       "path": "packages/harness-compat",
-      "contractSha256": "848dbe5e0f01c97b219a0572b60690e9f79cb98c06c3eace1d77a59589b45f63",
-      "runtimeExportCount": 6,
-      "runtimeExportSha256": "b234308ca0a53f253fceec8ebf729b770544490e6a7621cf88e2b7f87ff0fbfe",
-      "declarationCount": 7,
-      "declarationSha256": "ae6fa167d99daa3f1e09cec77057ad0ce6a98978a657d6da46f882c75a5bd840",
+      "contractSha256": "f33aeee4380ccd2516e38c8ca248a92d16660bf303c24913b54a2263c0ec3253",
+      "runtimeExportCount": 8,
+      "runtimeExportSha256": "362b718b3a459cc599ba30789b57cfef5ab5cb94ecb4a6e77a43d400b1ba1be1",
+      "declarationCount": 9,
+      "declarationSha256": "5be028ae8156835bfd12eb7328ada7be0c507a9110939f09776418eeaa84f445",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@hansen/mcp-center": {
       "path": "packages/mcp-center",
       "contractSha256": "e5a773b8c2e84ba4a6adbe5c6f1eee61d09818b005d28d02bfc47dac516749c4",
       "runtimeExportCount": 6,
-      "runtimeExportSha256": "ea18b80ac82d0332a297771819bf2fa51c5b6b018d965a16472badbdb4306c32",
+      "runtimeExportSha256": "d104dcd393fefff4aabddfe9b9051bd595a4ff7cceffab1aa78680894bd46f39",
       "declarationCount": 9,
       "declarationSha256": "1d50294c113ea4ce0aaf826633e7fb210ff40f462c358f519584b3fa731a9d8a",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -304,7 +304,7 @@
       "path": "packages/skill-market",
       "contractSha256": "bbc726c88591281e6dd19f5f20598ae96d9a08affc0b674d40c24e185f6077ba",
       "runtimeExportCount": 7,
-      "runtimeExportSha256": "5d4040c1d985a78e351b78a1022b2e731676e0f9bbfe48df7f0b51cbedba2037",
+      "runtimeExportSha256": "1f7e8ef2c0f9b1d52a5f23d9b9f31a53edddf6633d4ca09424b914bbee8ae3e6",
       "declarationCount": 10,
       "declarationSha256": "a8e2137ea08f1b546ba188ba73b18fbb88f6f1237247ce960dbff0168a7d86c0",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -367,7 +367,7 @@
       "path": "packages/workspace-blueprints",
       "contractSha256": "e72dfe855875a6a70958f4b2f86446c9eb6c46f83a3285d56946240b11a370ce",
       "runtimeExportCount": 7,
-      "runtimeExportSha256": "91be50054e391a7fbc0dc9b883b3590f9f97b77a7f473a5a537e34059db4a271",
+      "runtimeExportSha256": "2c05cf1504267f41c7780adf2376b2fa7e08ebe135f8f766612dfcf300c6d932",
       "declarationCount": 8,
       "declarationSha256": "3045a01c3dae82c921f9110cbb14b5e5f127092621188a7afea287a7ae2201f8",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -379,6 +379,24 @@
       "runtimeExportSha256": "e5d276b6eacd08008940b8b0d774176bf4c549442376e9319573092a0da996d4",
       "declarationCount": 3,
       "declarationSha256": "6bfa4bdda4599efc50a0d733cfb5d23fb4ce987b1cd80e12b45908eaeb2c30e8",
+      "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "@hansen/context-library": {
+      "path": "packages/context-library",
+      "contractSha256": "19ae57526502352c5f2188935086530b1159a6ad188d6fe1864488eefb257537",
+      "runtimeExportCount": 6,
+      "runtimeExportSha256": "323dd9ea156aed95217e65c9d07e485481fe4c037318b46c4ff02e124e3cdf6d",
+      "declarationCount": 15,
+      "declarationSha256": "a95a87137a3da6f80ba2ef0be2fb0f15838bffc47c2e12195c55b2ee089ae04a",
+      "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "@hansen/workspace-editors": {
+      "path": "packages/workspace-editors",
+      "contractSha256": "7a4bee92664ac36d355cd00e4ff4a595f8c54a43231c75b179bbdbc789b6688c",
+      "runtimeExportCount": 6,
+      "runtimeExportSha256": "3dbe9c5eac00b6e4c5b9e95bb5940bf89318b8fde506d2f2e10f16d1c0cf14d7",
+      "declarationCount": 16,
+      "declarationSha256": "dbc712402b1d5f67295f0f578a242eb5b532d600b3b43ec05c27b19d895e1d2c",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     }
   }

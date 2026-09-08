@@ -210,6 +210,16 @@
       "name": "@hansen/feishu-cli-mcp",
       "path": "packages/feishu-cli-mcp",
       "role": "headless-plugin"
+    },
+    {
+      "name": "@hansen/context-library",
+      "path": "packages/context-library",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/workspace-editors",
+      "path": "packages/workspace-editors",
+      "role": "client-plugin"
     }
   ]
 }

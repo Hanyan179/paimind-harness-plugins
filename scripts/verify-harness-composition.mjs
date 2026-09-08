@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { spawn, spawnSync } from 'node:child_process'
 import { createServer } from 'node:net'
+import { randomUUID } from 'node:crypto'
 
 function option(name) {
   const index = process.argv.indexOf(name)
@@ -62,6 +63,8 @@ const visualExperienceRoot = resolve(repositoryRoot, 'packages/visual-experience
 const conversationTitleRoot = resolve(repositoryRoot, 'packages/conversation-title')
 const workspaceProjectRoot = resolve(repositoryRoot, 'packages/workspace-project')
 const workspaceBlueprintsRoot = resolve(repositoryRoot, 'packages/workspace-blueprints')
+const contextLibraryRoot=resolve(repositoryRoot,'packages/context-library')
+const workspaceEditorsRoot=resolve(repositoryRoot,'packages/workspace-editors')
 const sidebarAdapterRoot = resolve(repositoryRoot, 'packages/better-sidebar-adapter')
 const taskMonitorRoot = resolve(repositoryRoot, 'packages/task-monitor')
 const artifactRuntimeRoot = resolve(repositoryRoot, 'packages/artifact-runtime')
@@ -185,7 +188,7 @@ async function stopProcess(child) {
   if (child.exitCode === null) child.kill('SIGKILL')
 }
 
-async function bootAndProbe(expectedPackages, absentPackages = []) {
+async function bootAndProbe(expectedPackages, absentPackages = [], probeContextRemotes = false) {
   console.log('start: boot isolated Web profile and probe PAIMind client manifests')
   const port = await freePort()
   const child = spawn(process.execPath, [
@@ -233,6 +236,28 @@ async function bootAndProbe(expectedPackages, absentPackages = []) {
         `unexpected: ${unexpectedPackages.join(', ') || '(none)'}`,
         `boot output:\n${output}`,
       ].join('\n'))
+    }
+    if (probeContextRemotes) {
+      const invoke = async (method, input) => {
+        const response = await fetch(`http://127.0.0.1:${port}/api/${method}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ type: 'client-request', rpcId: randomUUID(), method, payload: { args: { input } } }),
+        })
+        if (!response.ok) throw new Error(`${method}: HTTP ${response.status}; a client manifest does not prove the Host Remote is registered`)
+        return (await response.json()).result
+      }
+      const library = await invoke('paimindContextLibrary/request', { action: 'collections' })
+      if (library?.ok !== true || !Array.isArray(library.value?.collections)) {
+        throw new Error(`Context Library Remote did not return collections: ${JSON.stringify(library)}`)
+      }
+      // An isolated profile has no workspaces. Require the service's domain
+      // rejection, which distinguishes a registered method from a missing route.
+      const editors = await invoke('paimindWorkspaceEditors/list', { workspaceId: 'composition-missing-workspace' })
+      if (editors?.ok !== false || !JSON.stringify(editors).includes('工作区不存在')) {
+        throw new Error(`Workspace Editors Remote did not validate workspace ownership: ${JSON.stringify(editors)}`)
+      }
+      console.log('passed: Context Library and Workspace Editors native Host Remotes')
     }
     console.log('passed: boot isolated Web profile and probe PAIMind client manifests')
   } finally {
@@ -670,6 +695,8 @@ try {
     conversationTitleRoot,
     workspaceProjectRoot,
     workspaceBlueprintsRoot,
+    contextLibraryRoot,
+    workspaceEditorsRoot,
     sidebarAdapterRoot,
     taskMonitorRoot,
     artifactRuntimeRoot,
@@ -714,6 +741,8 @@ try {
     'paimind-conversation-title', '@hansen/conversation-title',
     'paimind-workspace-project', '@hansen/workspace-project',
     'paimind-workspace-blueprints', '@hansen/workspace-blueprints',
+    'paimind-context-library', '@hansen/context-library',
+    'paimind-workspace-editors', '@hansen/workspace-editors',
     'paimind-better-sidebar-adapter', '@hansen/better-sidebar-adapter',
     'paimind-task-monitor', '@hansen/task-monitor',
     'paimind-artifact-runtime', '@hansen/artifact-runtime',
@@ -773,6 +802,8 @@ try {
     '@hansen/conversation-title',
     '@hansen/workspace-project',
     '@hansen/workspace-blueprints',
+    '@hansen/context-library',
+    '@hansen/workspace-editors',
     '@hansen/better-sidebar-adapter',
     '@hansen/task-monitor',
     '@hansen/generator-web',
@@ -798,7 +829,7 @@ try {
     '@hansen/scheduler-adapter-harness',
     '@hansen/scheduler-adapter-http',
     '@hansen/scheduler-adapter-feishu-bot',
-  ])
+  ], true)
 
   dsh([
     'plugin', '--profile', 'web', 'remove',
@@ -810,6 +841,8 @@ try {
     '@hansen/conversation-title',
     '@hansen/workspace-project',
     '@hansen/workspace-blueprints',
+    '@hansen/context-library',
+    '@hansen/workspace-editors',
     '@hansen/better-sidebar-adapter',
     '@hansen/task-monitor',
     '@hansen/artifact-runtime',
