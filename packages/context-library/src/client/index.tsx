@@ -14,7 +14,7 @@ import {
   type HarnessRemoteMountService,
   type PaimindClientContext,
 } from "@hansen/harness-compat";
-import { PaimindConnectionIcon } from "@hansen/harness-compat/client-icons";
+import { PaimindTemplateIcon } from "@hansen/harness-compat/client-icons";
 import {
   PaimindProductSurfaceController,
   resolvePaimindProductCenterHost,
@@ -23,6 +23,7 @@ import {
   type PaimindProductCenterHost,
 } from "@hansen/harness-compat/client-surface";
 import type { PaimindSidebarService } from "@hansen/better-sidebar-adapter";
+import { CONTEXT_LIBRARY_CSS } from "./styles.js";
 import TYPERT_REMOTE from "../remote.js";
 import { ContextAdoption } from "./adoption.js";
 import type { ContextResult } from "../contract.js";
@@ -41,8 +42,6 @@ export {
 export const name = "paimind-context-library-client";
 export const inject = ["slots", "remote", "locale"];
 const STYLE_ID = "paimind-context-library-style";
-const STYLE =
-  ".cl-modal-backdrop{position:fixed;inset:0;z-index:100;background:#0005;display:grid;place-items:center}.cl-modal{background:var(--dsw-alias-bg-layer-2,white);padding:24px;border-radius:16px;min-width:320px}.cl-modal input{width:100%;margin-bottom:20px}[data-paimind-product-surface=context-library]{position:absolute;inset:0;z-index:80;overflow:auto;pointer-events:auto;background:var(--dsw-alias-bg-base,#f5f6fa)}\n[data-paimind-product-trigger=context-library]{display:flex;align-items:center;gap:8px;border:0;background:none;color:inherit;padding:9px;cursor:pointer;width:100%;font:inherit}\n[data-context-library],[data-context-connections],[data-context-session]{font:14px/1.6 system-ui;color:var(--dsw-alias-label-primary,#242833)}\n[data-context-library]{padding:28px;max-width:1500px;margin:auto} [data-context-library] *{box-sizing:border-box}\n[data-context-library] h2{font-size:28px;margin:0}[data-context-library] p{white-space:pre-wrap;color:var(--dsw-alias-label-secondary,#687080)}\n[data-context-library] button,[data-context-connections] select,[data-context-library] input,[data-context-library] select{font:inherit;color:inherit;background:var(--dsw-alias-bg-layer-2,white);border:1px solid var(--dsw-alias-border-l1,#d7dbe4);border-radius:8px;padding:8px 12px}\n[data-context-library] button{cursor:pointer}[data-context-library] button:disabled{opacity:.5}[data-context-library] button[aria-current=page]{border-color:#6d75dc;background:#eaeaff}\n.cl-header,.cl-toolbar,.cl-search,.cl-create{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between;margin-bottom:14px}.cl-columns{display:grid;grid-template-columns:290px minmax(0,1fr);gap:28px}.cl-columns aside{border-right:1px solid #d7dbe4;padding-right:20px}.cl-columns aside input,.cl-columns aside select{max-width:100%;width:100%}.cl-create{flex-wrap:nowrap}.cl-folder{width:100%;display:grid;text-align:left;margin-top:10px;gap:4px}.cl-folder small{color:#6d7280}.cl-connection{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0}.cl-connection select{max-width:130px}.cl-row{display:flex;gap:8px;align-items:center;border-bottom:1px solid #dde0e5;padding:8px 0}.cl-row>button:first-child{flex:1;text-align:left;border:none}.cl-row small{color:#6d7280}.cl-editor{margin:24px 0;padding:20px;border:1px solid #d7dbe4;border-radius:12px}.cl-editor textarea{width:100%;min-height:320px;font:14px/1.6 monospace;background:var(--dsw-alias-bg-layer-2,white);color:inherit;padding:14px;border:1px solid #d7dbe4;border-radius:8px}.cl-editor img{max-width:100%}.cl-error,[data-context-library] [role=alert]{color:#b32d28!important;background:#fff0ec;padding:12px}.cl-empty{padding:80px 20px;text-align:center}[data-context-session]{padding:20px}[data-context-session] article{padding:12px;border-bottom:1px solid #d7dbe4}@media(max-width:800px){.cl-columns{grid-template-columns:1fr}.cl-columns aside{border:0}.cl-row{flex-wrap:wrap}}\n";
 function ContextSessionPanel({
   api,
   sessionId,
@@ -149,7 +148,7 @@ function ContextTrigger({
     <button
       data-paimind-product-trigger="context-library"
       data-paimind-navigation-label="资料"
-      data-paimind-navigation-description="整理资料与配置访问"
+      data-paimind-navigation-description="管理可复用的资料文件"
       data-paimind-navigation-group="能力与工具"
       data-wide={wide}
       aria-label="打开资料库"
@@ -159,7 +158,7 @@ function ContextTrigger({
         controller.toggle(event.currentTarget);
       }}
     >
-      <PaimindConnectionIcon size={wide ? 16 : 18} />
+      <PaimindTemplateIcon size={wide ? 16 : 18} />
       {wide && <span>资料库</span>}
     </button>
   );
@@ -230,7 +229,7 @@ export async function apply(
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent =
-      STYLE +
+      CONTEXT_LIBRARY_CSS +
       ".cl-adoption{width:min(560px,90vw);max-height:85vh;overflow:auto;padding:28px;border:1px solid var(--dsw-alias-border-l1,#d7dbe4);border-radius:16px;background:var(--dsw-alias-bg-layer-2,white);color:var(--dsw-alias-label-primary,#242833);font:14px/1.6 system-ui}.cl-adoption::backdrop{background:#0006}.cl-adoption>button{display:block;margin:20px 0 0 auto;padding:10px 16px;border:0;border-radius:8px;background:#5d63c7;color:white;font:inherit;cursor:pointer}.cl-adoption>button:disabled{opacity:.5}";
     markHarnessClientStyle(style, "@hansen/context-library");
     document.head.append(style);
@@ -295,8 +294,8 @@ export async function apply(
         packageName: "@hansen/context-library",
         nameZh: "资料库",
         nameEn: "Context Library",
-        descriptionZh: "管理资料文件与按会话生效的连接权限。",
-        descriptionEn: "Manage file collections and scoped connections.",
+        descriptionZh: "整理资料文件，查看资料被谁使用。",
+        descriptionEn: "Organize reusable files and see where they are used.",
         category: "skills-tools",
         surface: "shell",
         maturity: "technical-preview",

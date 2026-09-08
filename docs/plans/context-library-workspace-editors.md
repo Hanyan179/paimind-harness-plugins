@@ -7,7 +7,7 @@
 | 维度 | 决策 |
 | --- | --- |
 | 产品入口 | context-library 拥有资料库中心、会话资料面板及智能体扩展贡献；workspace-blueprints 保留模板入口；workspace-editors 通过侧栏适配器提供文件编辑器，不新增工作区中心 |
-| 领域对象 | 资料夹、文件元数据、连接及权限由 context-library 唯一持有；workspace-editors 只操作宿主已注册工作区的格式文件；宿主唯一拥有工作区和会话 |
+| 领域对象 | 资料夹、文件元数据、连接及权限由 context-library 唯一持有；连接选择位于使用方入口，资料库只读展示被谁使用；workspace-editors 只操作宿主已注册工作区的格式文件；宿主唯一拥有工作区和会话 |
 | 可写状态 | 资料库受管文件及连接独立存储；智能体和工作区不增加资料编号列表；三类编辑器数据只在工作区文件中保存 |
 | 运行时服务 | paimindContextLibrary 与 paimindWorkspaceEditors；资料解析按真实会话进行，不识别定时任务等入口类型 |
 | 兼容性 | 所有宿主身份、权限和工具桥接放在 harness-compat；所有侧栏能力通过 better-sidebar-adapter |

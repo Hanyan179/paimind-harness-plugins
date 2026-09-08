@@ -324,11 +324,15 @@ describe('PAIMind product surface interaction', () => {
     controller.dispose()
   })
 
-  it('lets a nested dialog consume Escape without closing its Center', () => {
+  it.each([
+    '<section role="dialog"><button>Close dialog</button></section>',
+    '<dialog open><button>Close dialog</button></dialog>',
+    '<section role="menu"><button>Close menu</button></section>',
+  ])('lets an owned overlay consume Escape without closing its Center: %s', markup => {
     const root = document.createElement('main')
-    root.innerHTML = '<section role="dialog"><button>Close dialog</button></section>'
+    root.innerHTML = markup
     document.body.append(root)
-    const dialog = root.querySelector('section')!
+    const dialog = root.firstElementChild as HTMLElement
     const button = root.querySelector('button')!
     const controller = new PaimindProductSurfaceController('skill-center', window, document)
     controller.open()
