@@ -6,7 +6,7 @@
 
 ## Canonical local baseline
 
-- 唯一本地开发与运行基线为 `codex/unified-product-baseline`，固定目录为 `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins`。
+- 唯一本地开发与运行基线为 `main`，固定目录为 `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins`。
 - 本地 `3080` 服务只加载此目录的插件；历史工作副本用于恢复和参考，不作为日常启动入口。新变更须从此分支派生并合回。
 - 保留现有 `.dsh-home` 中的会话、工作区与用户配置；包路径更新不迁移或重建业务数据。
 

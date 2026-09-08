@@ -96,11 +96,11 @@ const STYLE = `
 @media (max-width:720px) { [data-paimind-task-identity] { max-width:150px; } }
 @media (max-width:460px) { [data-paimind-task-identity] { max-width:110px; font-size:11px; gap:4px; margin-right:3px; } }
 /* Better Sidebar pins its collapsed 28px rail controls at top:3px, while the
-   Harness Session header starts at top:12px and gives this 32px utility its
+   Harness Session header starts at top:12px and gives this 28px utility its
    own center line. Lift only the collapsed-state utility by the exact 11px
    center-line delta so the three top-right controls read as one toolbar. */
 body[data-dsh-sidebar-collapsed] [data-paimind-task-action] { transform:translateY(-11px); }
-[data-paimind-task-trigger] { position:relative; width:32px; height:32px; display:grid; place-items:center; padding:0; border:0; border-radius:9px; color:var(--dsw-alias-label-secondary,#626872); background:transparent; cursor:pointer; }
+[data-paimind-task-trigger] { position:relative; width:28px; height:28px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; color:var(--dsw-alias-label-secondary,#626872); background:transparent; cursor:pointer; }
 [data-paimind-task-trigger]:hover,[data-paimind-task-trigger]:focus-visible,[data-paimind-task-trigger][aria-pressed='true'] { color:var(--dsw-alias-label-primary,#202124); background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.11)); }
 [data-paimind-task-trigger]:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:2px; }
 [data-paimind-task-tooltip] { position:absolute; z-index:2147482999; top:calc(100% + 7px); left:50%; min-width:max-content; padding:5px 8px; border-radius:6px; color:#fff; background:#1f2329; box-shadow:0 8px 24px #0004; font-size:12px; line-height:16px; opacity:0; pointer-events:none; transform:translate(-50%,-3px); transition:opacity var(--paimind-motion-fast) ease,transform var(--paimind-motion-fast) ease; }

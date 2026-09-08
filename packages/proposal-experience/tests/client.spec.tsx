@@ -93,6 +93,43 @@ describe('Proposal Assistant Experience', () => {
     expect(screen.getByText(/back-to-school Kids Crafts reset/)).toBeInTheDocument()
   })
 
+  it('shows maintained examples for each buyer purpose without submitting the choice', () => {
+    const pending = wait({ id: PROPOSAL_QUESTION_IDS.deckType, question: 'Buyer decision?', options: [
+      { label: 'Growth & investment ask' }, { label: 'Seasonal reset proposal' },
+      { label: 'Performance & partnership review' }, { label: 'Custom purpose', description: 'A specific customer decision.' },
+    ] })
+    const { container } = render(<ProposalQuestionComposer matched={pending} />)
+    for (const [label, example] of [
+      ['Growth & investment ask', 'focused Kids Crafts assortment expansion'],
+      ['Seasonal reset proposal', 'back-to-school Kids Crafts reset'],
+      ['Performance & partnership review', 'review Kids Crafts performance'],
+    ]) {
+      fireEvent.click(screen.getByRole('radio', { name: label }))
+      expect(container.querySelector('[data-paimind-deck-type-preview] h3')).toHaveTextContent(label!)
+      expect(container.querySelector('[data-paimind-deck-type-example]')).toHaveTextContent(example!)
+    }
+    fireEvent.click(screen.getByRole('radio', { name: 'Custom purpose' }))
+    expect(container.querySelector('[data-paimind-deck-type-preview]')).toHaveTextContent('A specific customer decision.')
+    expect(container.querySelector('[data-paimind-deck-type-example]')).toBeNull()
+    expect(pending.respond).not.toHaveBeenCalled()
+  })
+
+  it('matches maintained bilingual labels while preserving the actual answer', async () => {
+    const pending = wait({ id: PROPOSAL_QUESTION_IDS.deckStyle, question: 'Style?', options: [
+      { label: 'Strategy Consulting 战略咨询风' }, { label: 'Playful Storybook 趣味故事风' },
+    ] })
+    const { unmount } = render(<ProposalQuestionComposer matched={pending} />)
+    fireEvent.click(screen.getByRole('radio', { name: 'Playful Storybook 趣味故事风' }))
+    expect(screen.getByRole('heading', { name: 'Playful Storybook' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Use this deck style' }))
+    await waitFor(() => expect(pending.respond).toHaveBeenCalled())
+    expect(JSON.stringify(vi.mocked(pending.respond).mock.calls)).toContain('Playful Storybook 趣味故事风')
+    unmount()
+    render(<ProposalQuestionComposer matched={wait({ id: PROPOSAL_QUESTION_IDS.deckType, question: 'Purpose?', options: [{ label: '季节重置提案（Seasonal Reset）' }] })} />)
+    expect(screen.getByRole('heading', { name: 'Seasonal reset proposal' })).toBeInTheDocument()
+    expect(screen.getByText(/back-to-school Kids Crafts reset/)).toBeInTheDocument()
+  })
+
   it('claims only one namespaced proposal question and leaves generic waits native', () => {
     const proposal = wait({ id: PROPOSAL_QUESTION_IDS.customer, question: 'Choose a customer' })
     expect(selectProposalQuestion({ interactions: [proposal] })).toBe(proposal)

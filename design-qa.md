@@ -1047,3 +1047,40 @@ same final traceable Bento artifact.
 - P3: the narrow live deck is intentionally smaller because the user requested a persistent no-scroll Trace sidebar while retaining both the real slide rail and host conversation. No host surface is automatically hidden.
 
 final result: passed
+
+
+## 2026-09-08 Task summary identity pill
+
+Scope: task-monitor only; one avatar/name summary trigger replaces the standalone checklist icon. Existing native action overrides remain reversible. No second plugin or state owner added.
+
+Source: `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-1761d7a0-344f-4a56-81ed-d66c1173bc69.png` (618 × 144 cropped reference).
+Implementation: `http://127.0.0.1:3198`, isolated copy of the local Harness profile, package links pointing to this worktree.
+Evidence: `/tmp/task-pill-evidence/default-desktop.png` (1280 × 720), `/tmp/task-pill-evidence/open-desktop.png`, `/tmp/task-pill-evidence/open-mobile.png` (390 × 844), `/tmp/task-pill-evidence/default-detail.png` (focused crop).
+
+Compared source and rendered screenshots together, including the focused header region. Source is a cropped enlarged reference with no declared device density; treated its roughly 76px pill as a 38 CSS px target, not a full-screen pixel-exact requirement. Default identity differs intentionally from the Proposal Assistant reference. Screenshot crop scaling differs, so full-view evidence grounds geometry.
+
+- Typography: existing product font, 13px label, single-line ellipsis, readable default label.
+- Spacing: 38px rounded pill, 28px round avatar, 8px gap; constrained width preserves nearby controls at 390px.
+- Colors: existing light/dark semantic tokens; transparent surface and subtle outline match the reference structure. Dark mode was not browser-tested.
+- Assets: existing source-owned avatar projection, configured avatar ID when available, library icon fallback without the visual plugin. No generated duplicate imagery.
+- Content: standard conversations show 默认助手 / Default Assistant; named presets use their source-owned display name. No user-facing raw preset ID on the pill. Summary contents remain unchanged.
+- Interaction: one summary trigger observed; click opens native-fact summary; Escape closes it; desktop and mobile panels usable; browser error logs empty.
+
+Comparison history: initial 38px pill retained the old 11px lift and default roster label 标准模式. Corrected lift to 8px and explicit 默认助手. New desktop/mobile screenshots show the corrected result. No remaining actionable P0/P1/P2 issues in this scope.
+
+Verification: 126 test files / 685 tests, typecheck, build, bundle budgets, API snapshot, package/packs/publint/NodeNext/examples/framework/docs gates passed. Real Harness composition passed install/boot/remove/restore and independent feature absence checks. Named identities and late responses across session switches covered by tests; browser capture covers the default identity.
+
+final result: passed
+
+
+## 2026-09-08 Follow-up: restore utility icon
+
+Supersedes the identity-pill decision above following user review. The header is a utility toolbar, so an Agent identity pill implied switching rather than opening a task summary. Restored the single checklist icon and removed its avatar/name-specific resource reads; Agent identity remains in the summary content.
+
+Final geometry verified in the real isolated Harness browser: summary, bottom-panel and side-panel controls each 28 × 28 CSS px at y=3 in collapsed-rail mode. Summary uses circular interaction background and the existing 18px library icon. Expanded rail and 390 × 844 mobile states were also checked. Click opens summary, Escape closes it, and browser error logs are empty.
+
+Evidence: `/tmp/task-pill-evidence/icon-expanded.png`, `/tmp/task-pill-evidence/icon-collapsed.png`, `/tmp/task-pill-evidence/icon-mobile.png`. Desktop viewport 1844 × 1225. User references are the two clipboard screenshots supplied in the follow-up; the capsule is intentionally removed, not matched.
+
+Validation: full suite 126 files / 684 tests passed, final targeted task-monitor suite 19 tests passed, typecheck and build passed. Package, pack, API snapshot, publint, NodeNext, examples and framework checks passed. Pack verification was rerun after a concurrent build temporarily removed outputs; the completed build passes.
+
+final result: passed

@@ -38,6 +38,17 @@ describe('frozen PAIMind Python parity baseline', () => {
       expect(outline.slides[0].title).toBe('零售机会演示')
       expect(outline.slides.every((slide: { eyebrow: string }) => slide.eyebrow.includes('演示数据 · 非真实经营数据'))).toBe(true)
 
+      expect(outline.design).toMatchObject({ stylePreset: 'wmt-retail', templateId: 'wmt-kids-mod' })
+      for (const [style, template] of [['strategy-consulting', 'strategy-grid'], ['paramont-signature', 'paramont-mountain'], ['playful-storybook', 'storybook-cutpaper']]) {
+        await invoke([...outlineArgs, '--style-preset', style!])
+        const styled = JSON.parse(await readFile(resolve(temp, 'deck/walmart-demo.outline.json'), 'utf8'))
+        expect(styled.design).toMatchObject({ stylePreset: style, templateId: template })
+        expect(styled.slides).toEqual(outline.slides)
+        expect(styled.facts).toEqual(outline.facts)
+        expect(styled.sources).toEqual(outline.sources)
+      }
+      await expect(invoke([...outlineArgs, '--style-preset', 'unknown'])).rejects.toThrow(/invalid choice/)
+
       // A changed manifest cannot silently remove the disclosure from a frozen
       // analysis. A separately hash-bound non-demo fixture must not gain one.
       const businessManifest = JSON.stringify({ ...manifest, synthetic: false })

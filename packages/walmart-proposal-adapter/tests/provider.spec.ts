@@ -37,6 +37,14 @@ describe('Walmart proposal adapter', () => {
     expect(ctx.runWorkspaceCommand.mock.calls[1]?.[0].command).toMatch(/'18'.*'30'/)
   })
 
+  it.each(['strategy-consulting', 'paramont-signature', 'playful-storybook'])('passes selected style %s to the runtime', async style => {
+    const ctx = context()
+    const args = { output_path: 'proposal.outline.json', fineline_artifact_id: 'artifact:fineline', white_space_artifact_id: 'artifact:white', __fineline_path: '/workspace/fineline.json', __white_space_path: '/workspace/white.json', style_preset: style }
+    await walmartOutlineProvider.generate(args, ctx)
+    expect(ctx.runWorkspaceCommand.mock.calls[0]?.[0].command).toContain(`'--style-preset' '${style}'`)
+    expect(() => walmartOutlineProvider.describe({ ...args, style_preset: 'unknown' })).toThrow(/Unsupported/)
+  })
+
   it('resolves exact current-Session analysis Artifact IDs before outline generation', async () => {
     const definitions: any[] = []
     const execute = vi.fn(async () => ({ artifact: {} }))
