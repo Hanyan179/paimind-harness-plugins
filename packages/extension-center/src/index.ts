@@ -412,26 +412,26 @@ export function createPaimindBootReadinessInjection(
     const alert = document.createElement('div')
     alert.setAttribute('data-paimind-boot-readiness-error', '')
     alert.setAttribute('role', 'alert')
-    alert.textContent = '应用启动未在限定时间内完成。请刷新页面；启动诊断已保留。'
+    alert.textContent = '应用启动未在限定时间内完成，仍在等待插件。诊断已保留。'
+    const retry = document.createElement('button')
+    retry.type = 'button'
+    retry.textContent = '重新加载'
+    retry.addEventListener('click', () => window.location.reload())
+    alert.append(retry)
     boot.append(alert)
   }
   const failOrRecover = () => {
     if (disposed || shellReady()) { settleReady(); return }
     const receipt = snapshot()
-    const attempted = (() => { try { return sessionStorage.getItem(config.recoveryKey) === 'attempted' } catch { return true } })()
     try { sessionStorage.setItem(config.failureKey, JSON.stringify(receipt)) } catch {}
-    diagnostic.state = attempted ? 'failed' : 'reloading'
-    root.setAttribute('data-paimind-boot-readiness', diagnostic.state)
+    diagnostic.state = 'failed'
+    root.setAttribute('data-paimind-boot-readiness', 'failed')
     root.setAttribute('data-paimind-boot-consistency', 'failed')
-    record('deadline-exceeded', { attempted, registrationGapCount: diagnostic.registrationGaps.length })
+    record('deadline-exceeded', { registrationGapCount: diagnostic.registrationGaps.length })
     reportReceipt({ ...receipt, state: diagnostic.state, phase: 'deadline-exceeded' })
     console.error('[paimind-extension-center] Browser boot readiness deadline exceeded', receipt)
-    disposeTimers()
-    if (!attempted) {
-      try { sessionStorage.setItem(config.recoveryKey, 'attempted') } catch {}
-      window.setTimeout(() => window.location.reload(), config.recoveryDelayMs)
-      return
-    }
+    // Keep in-flight Loader work and readiness polling alive. A slow browser
+    // must not lose its progress to an automatic navigation.
     renderFailure()
   }
   function disposeTimers() {

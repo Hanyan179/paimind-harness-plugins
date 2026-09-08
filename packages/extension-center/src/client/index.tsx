@@ -657,12 +657,6 @@ export async function apply(ctx: ExtensionCenterClientContext): Promise<() => Pr
           return
         }
         if (!unsettled && gaps.length > 0) {
-          if (window.sessionStorage.getItem(BOOT_RECOVERY_SESSION_KEY) !== 'attempted') {
-            window.sessionStorage.setItem(BOOT_RECOVERY_SESSION_KEY, 'attempted')
-            document.documentElement.setAttribute(BOOT_CONSISTENCY_ATTRIBUTE, 'reloading')
-            window.location.reload()
-            return
-          }
           document.documentElement.setAttribute(BOOT_CONSISTENCY_ATTRIBUTE, 'failed')
           console.error('[paimind-extension-center] Client Feature Pack recovery remained incomplete', gaps)
           return

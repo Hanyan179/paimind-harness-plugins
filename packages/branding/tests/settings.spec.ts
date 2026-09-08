@@ -4,8 +4,8 @@ import { brandFallbackIcon, decodeBrandingSettings, DEFAULT_BRANDING, isBrandIma
 
 describe('Brand identity settings', () => {
   it('registers one native namespace with durable defaults', () => {
-    const register = vi.fn()
-    apply({ inject: (_names, callback) => callback({ settings: { register } as never }) })
+    const register = vi.fn(() => ({ get: () => DEFAULT_BRANDING }))
+    apply({ inject: (_names, callback) => callback({ settings: { register } as never, on: vi.fn() }) })
     expect(register).toHaveBeenCalledOnce()
     expect(String(register.mock.calls[0]![0])).toBe('hansen-branding')
   })

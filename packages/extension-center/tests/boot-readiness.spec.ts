@@ -44,7 +44,6 @@ describe('base Browser boot readiness injection', () => {
 
   it('turns a silent Loader stall into a bounded visible failure with graph, registration, import, and request diagnostics', async () => {
     document.body.innerHTML = '<div data-dsh-boot>Loading plugins…</div>'
-    window.sessionStorage.setItem('paimind:boot-readiness-recovery-v1', 'attempted')
     diagnosticGlobal.__DSH_BOOT__ = {
       rev: 'graph-r13',
       entries: [
@@ -85,6 +84,10 @@ describe('base Browser boot readiness injection', () => {
       registrationGaps: ['@hansen/missing'],
       pendingImports: [{ id: '@hansen/registered' }],
     })
+    expect(document.querySelector('[data-paimind-boot-readiness-error] button')).toHaveTextContent('重新加载')
+    document.querySelector('[data-dsh-boot]')?.remove()
+    await vi.advanceTimersByTimeAsync(10)
+    expect(diagnosticGlobal.__PAIMIND_BOOT_READINESS__?.state).toBe('ready')
     expect(consoleError).toHaveBeenCalledWith(
       '[paimind-extension-center] Browser boot readiness deadline exceeded',
       expect.objectContaining({ graphRev: 'graph-r13', hostInventoryCount: 2 }),
