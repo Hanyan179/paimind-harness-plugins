@@ -88,14 +88,12 @@ const STYLE_ID = '@paimind/task-monitor'
 const HEADER_SHADOW_PRIORITY = -10
 const STYLE = `
 [data-paimind-task-action] { position:relative; display:inline-flex; align-items:center; color:inherit; font:inherit; }
-/* Keep the 38px identity pill inside the viewport beside Better Sidebar's
-   fixed rail controls; the previous 32px icon used an 11px lift. */
-body[data-dsh-sidebar-collapsed] [data-paimind-task-action] { transform:translateY(-8px); }
-[data-paimind-task-trigger] { position:relative; max-width:min(260px,42vw); height:38px; display:inline-flex; align-items:center; gap:8px; padding:4px 11px 4px 5px; border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.22)); border-radius:999px; font:inherit; font-size:13px; color:var(--dsw-alias-label-secondary,#626872); background:transparent; cursor:pointer; }
-[data-paimind-task-identity-avatar] { width:28px; height:28px; flex:none; display:grid; place-items:center; overflow:hidden; border-radius:50%; background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.1)); }
-[data-paimind-task-identity-avatar] img { width:28px; height:28px; object-fit:cover; }
-[data-paimind-task-identity-avatar][data-paimind-agent-avatar-ready] > [data-paimind-agent-avatar-fallback] { display:none; }
-[data-paimind-task-identity-name] { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* Better Sidebar pins its collapsed 28px rail controls at top:3px, while the
+   Harness Session header starts at top:12px and gives this 28px utility its
+   own center line. Lift only the collapsed-state utility by the exact 11px
+   center-line delta so the three top-right controls read as one toolbar. */
+body[data-dsh-sidebar-collapsed] [data-paimind-task-action] { transform:translateY(-11px); }
+[data-paimind-task-trigger] { position:relative; width:28px; height:28px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; color:var(--dsw-alias-label-secondary,#626872); background:transparent; cursor:pointer; }
 [data-paimind-task-trigger]:hover,[data-paimind-task-trigger]:focus-visible,[data-paimind-task-trigger][aria-pressed='true'] { color:var(--dsw-alias-label-primary,#202124); background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.11)); }
 [data-paimind-task-trigger]:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:2px; }
 [data-paimind-task-tooltip] { position:absolute; z-index:2147482999; top:calc(100% + 7px); left:50%; min-width:max-content; padding:5px 8px; border-radius:6px; color:#fff; background:#1f2329; box-shadow:0 8px 24px #0004; font-size:12px; line-height:16px; opacity:0; pointer-events:none; transform:translate(-50%,-3px); transition:opacity var(--paimind-motion-fast) ease,transform var(--paimind-motion-fast) ease; }
@@ -639,13 +637,11 @@ export function TaskMonitorAction(props: TaskMonitorActionProps): React.JSX.Elem
     ...(project === undefined ? {} : { projectTitle: project.title, projectPath: project.path }),
   }), [props.sessionId, sessionsSnapshot, conversation, goal, todos, plan, artifactSnapshot, project, resourceHistory])
   const [open, setOpen] = useState(false)
-  const openRef = useRef(open)
-  openRef.current = open
   const [configuration, setConfiguration] = useState<TaskResourceConfiguration>()
   const [configurationLoading, setConfigurationLoading] = useState(false)
   const currentConfiguration = configuration?.sessionId === props.sessionId && configuration.presetId === view.session.agentPreset ? configuration : undefined
   useEffect(() => {
-    if (props.readResources === undefined) return
+    if (!open || props.readResources === undefined) return
     let active = true, pending = false
     setConfiguration(undefined)
     setConfigurationLoading(true)
@@ -660,9 +656,9 @@ export function TaskMonitorAction(props: TaskMonitorActionProps): React.JSX.Elem
       } finally { pending = false; if (active) setConfigurationLoading(false) }
     }
     void refresh()
-    const timer = setInterval(() => { if (openRef.current) void refresh() }, 5000)
-    return () => { active = false; if (timer !== undefined) clearInterval(timer) }
-  }, [props.readResources, props.sessionId, view.session.agentPreset])
+    const timer = setInterval(() => { void refresh() }, 5000)
+    return () => { active = false; clearInterval(timer) }
+  }, [open, props.readResources, props.sessionId, view.session.agentPreset])
   const [navigationError, setNavigationError] = useState<string | undefined>()
   const [now, setNow] = useState(() => Date.now())
   const [position, setPosition] = useState<CSSProperties>({})
@@ -801,11 +797,8 @@ export function TaskMonitorAction(props: TaskMonitorActionProps): React.JSX.Elem
       <details data-paimind-task-details data-paimind-task-technical><summary>{props.sessionLog === undefined ? (zh ? '详情' : 'Details') : (zh ? '详情与日志' : 'Details & Log')}</summary><div data-paimind-task-details-body>{view.error !== undefined && <div><strong>{zh ? '失败原因' : 'Failure details'}</strong><p data-paimind-task-error>{view.error}</p></div>}{props.sessionLog !== undefined && <div data-paimind-task-session-log><button type="button" aria-label={zh ? '下载会话日志' : 'Download Session Log'} disabled={sessionLog?.status === 'downloading'} onClick={requestSessionLog}><DownloadIcon />{zh ? '下载会话日志' : 'Download Session Log'}</button><small title={sessionLogStatus}>{sessionLogStatus}</small></div>}<dl><dt>{zh ? '对话编号' : 'Conversation ID'}</dt><dd>{view.session.id}</dd>{project !== undefined && <><dt>{zh ? '工作区编号' : 'Workspace ID'}</dt><dd>{project.workspaceId}</dd></>}{view.model !== undefined && <><dt>{zh ? '供应商' : 'Provider'}</dt><dd>{view.model.provider}</dd><dt>{zh ? '模型' : 'Model'}</dt><dd>{view.model.model}</dd></>}{view.jobs.length > 0 && <><dt>{zh ? '后台任务' : 'Background tasks'}</dt><dd>{view.jobs.length}</dd></>}{artifactCount > 0 && <><dt>{zh ? '交付文件' : 'Deliverables'}</dt><dd>{artifactCount}</dd></>}{view.queueCount > 0 && <><dt>{zh ? '排队消息' : 'Queued messages'}</dt><dd>{view.queueCount}</dd></>}</dl></div></details>
     </div>
   </section> : null
-  const presetId = view.session.agentPreset ?? 'standard'
-  const identityName = presetId === 'standard' ? (zh ? '默认助手' : 'Default Assistant') : (currentConfiguration?.names[presetId] ?? (zh ? '智能体助手' : 'Agent Assistant'))
-  const avatarId = currentConfiguration?.avatarId ?? presetId
   return <div ref={rootRef} data-paimind-task-action>
-    <button ref={triggerRef} type="button" data-paimind-task-trigger aria-label={label} aria-describedby={tooltipId} aria-controls={panelId} aria-expanded={open} aria-pressed={open} onClick={() => { setNow(Date.now()); setOpen(value => !value) }}><span key={avatarId} data-paimind-task-identity-avatar data-paimind-agent-avatar-seat="" data-paimind-agent-id={avatarId} aria-hidden="true"><span data-paimind-agent-avatar-fallback=""><PaimindAgentIcon size={18} /></span></span><span data-paimind-task-identity-name title={identityName}>{identityName}</span></button>
+    <button ref={triggerRef} type="button" data-paimind-task-trigger aria-label={label} aria-describedby={tooltipId} aria-controls={panelId} aria-expanded={open} aria-pressed={open} onClick={() => { setNow(Date.now()); setOpen(value => !value) }}><TaskIcon /></button>
     <span id={tooltipId} role="tooltip" data-paimind-task-tooltip>{label}</span>
     {panel !== null && typeof document !== 'undefined' ? createPortal(panel, document.body) : null}
   </div>

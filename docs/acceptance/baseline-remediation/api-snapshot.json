@@ -295,9 +295,9 @@
       "path": "packages/task-monitor",
       "contractSha256": "46caf0f9166250a1dcad208ee900138ef2526d048a061cc257f8be80faaa66bc",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "a8e026ec9ad6887f9ef4b4df589ea947b7a19c55e3407b73596c98b1cbb7d3cd",
+      "runtimeExportSha256": "dc5e837eab8105b9ace6972e02f4c608c59a049bbd3b7fd570cadc5e77608227",
       "declarationCount": 4,
-      "declarationSha256": "5e48a22ca9474ac036896ee5cfc1eb4cecb7e4e801a8c2b481944805168c6186",
+      "declarationSha256": "b3ca7b6a12f2b61c26535b3ecaecfe9d1729f4fdea1203324bb645ebc92a22aa",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@paimind/testkit": {

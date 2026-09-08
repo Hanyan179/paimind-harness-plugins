@@ -1071,3 +1071,16 @@ Comparison history: initial 38px pill retained the old 11px lift and default ros
 Verification: 126 test files / 685 tests, typecheck, build, bundle budgets, API snapshot, package/packs/publint/NodeNext/examples/framework/docs gates passed. Real Harness composition passed install/boot/remove/restore and independent feature absence checks. Named identities and late responses across session switches covered by tests; browser capture covers the default identity.
 
 final result: passed
+
+
+## 2026-09-08 Follow-up: restore utility icon
+
+Supersedes the identity-pill decision above following user review. The header is a utility toolbar, so an Agent identity pill implied switching rather than opening a task summary. Restored the single checklist icon and removed its avatar/name-specific resource reads; Agent identity remains in the summary content.
+
+Final geometry verified in the real isolated Harness browser: summary, bottom-panel and side-panel controls each 28 × 28 CSS px at y=3 in collapsed-rail mode. Summary uses circular interaction background and the existing 18px library icon. Expanded rail and 390 × 844 mobile states were also checked. Click opens summary, Escape closes it, and browser error logs are empty.
+
+Evidence: `/tmp/task-pill-evidence/icon-expanded.png`, `/tmp/task-pill-evidence/icon-collapsed.png`, `/tmp/task-pill-evidence/icon-mobile.png`. Desktop viewport 1844 × 1225. User references are the two clipboard screenshots supplied in the follow-up; the capsule is intentionally removed, not matched.
+
+Validation: full suite 126 files / 684 tests passed, final targeted task-monitor suite 19 tests passed, typecheck and build passed. Package, pack, API snapshot, publint, NodeNext, examples and framework checks passed. Pack verification was rerun after a concurrent build temporarily removed outputs; the completed build passes.
+
+final result: passed
