@@ -11,6 +11,7 @@ import type {
 import {
   apply,
   PaimindComposerOverlayPresenter,
+  PaimindAgentAvatarPresenter,
   type PaimindExperienceModeController,
 } from '../src/client/index.js'
 import {
@@ -142,6 +143,33 @@ afterEach(() => {
 })
 
 describe('PAIMind visual experience client', () => {
+  it('renders a configured portrait without Agent Center, follows reused seats, and restores fallback on failure or unload', async () => {
+    const seat = document.createElement('span')
+    seat.dataset.paimindAgentAvatarSeat = ''
+    seat.dataset.paimindAgentId = 'writer-preset'
+    seat.dataset.paimindAgentAvatarChoice = 'research-partner'
+    seat.innerHTML = '<span data-paimind-agent-avatar-fallback>native icon</span>'
+    document.body.append(seat)
+    const presenter = new PaimindAgentAvatarPresenter(document)
+    const portrait = (): HTMLImageElement | null => seat.querySelector('img')
+    expect(portrait()?.dataset.paimindAgentAvatarKey).toBe('research-partner')
+    fireEvent.load(portrait()!)
+    expect(seat.dataset.paimindAgentAvatarReady).toBe('true')
+    seat.dataset.paimindAgentId = 'finance-preset'
+    seat.dataset.paimindAgentAvatarChoice = 'finance-planner'
+    await waitFor(() => expect(portrait()?.dataset.paimindAgentAvatarKey).toBe('finance-planner'))
+    expect(portrait()?.dataset.paimindAgentAvatarId).toBe('finance-preset')
+    fireEvent.error(portrait()!)
+    await waitFor(() => expect(portrait()).toBeNull())
+    expect(seat).not.toHaveAttribute('data-paimind-agent-avatar-ready')
+    seat.dataset.paimindAgentAvatarChoice = 'data-analyst'
+    await waitFor(() => expect(portrait()?.dataset.paimindAgentAvatarKey).toBe('data-analyst'))
+    presenter.dispose()
+    expect(portrait()).toBeNull()
+    expect(seat).toHaveTextContent('native icon')
+    seat.remove()
+  })
+
   it('coalesces resize delivery without reconnecting the same composer or rewriting its room', () => {
     document.body.innerHTML = '<div data-composer-card><div id="anchor"><div data-slot="conversation.input.overlay"></div></div></div>'
     let resizeCallback: ResizeObserverCallback | undefined

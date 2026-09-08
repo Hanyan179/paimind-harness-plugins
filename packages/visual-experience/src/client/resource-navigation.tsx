@@ -1,5 +1,5 @@
 import { Component, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
-import { installPaimindCompactNavigation, type PaimindNavigationEntry } from '@paimind/harness-compat/client-surface'
+import { PaimindTooltip, installPaimindCompactNavigation, type PaimindNavigationEntry } from '@paimind/harness-compat/client-surface'
 import { markHarnessClientStyle, type PaimindLocaleSource } from '@paimind/harness-compat'
 import { PaimindAgentIcon, PaimindSkillIcon, PaimindConnectionIcon, PaimindTemplateIcon,
   PaimindExtensionIcon, PaimindSearchIcon, PaimindCloseIcon, PaimindChevronRightIcon,
@@ -103,16 +103,16 @@ export function ResourceNavigation({ wide, locale }: {
   const visible = entries.filter(entry => `${entry.label} ${entry.description} ${entry.id}`.toLowerCase().includes(query.trim().toLowerCase()))
   const groups = [...new Set(visible.map(entry => entry.group || (zh ? '更多功能' : 'More')))]
   return <div ref={root} data-paimind-resource-navigation data-wide={wide}>
-    {shortcuts.map(entry => <button key={entry.id} type="button" data-paimind-navigation-row data-paimind-navigation-target={entry.id}
-      title={entry.label} aria-label={entry.label} aria-current={entry.active ? 'page' : undefined} disabled={entry.disabled} onClick={() => { activate(entry) }}>
+    {shortcuts.map(entry => <PaimindTooltip key={entry.id} label={entry.label} side="right" delayMs={300} disabled={wide}><button type="button" data-paimind-navigation-row data-paimind-navigation-target={entry.id}
+      aria-label={entry.label} aria-current={entry.active ? 'page' : undefined} disabled={entry.disabled} onClick={() => { activate(entry) }}>
       <ResourceIcon id={entry.id} />{wide && <span>{entry.label}</span>}
-    </button>)}
-    <button ref={library} type="button" data-paimind-navigation-row data-paimind-resource-library-trigger aria-label={zh ? '资源库' : 'Library'}
+    </button></PaimindTooltip>)}
+    <PaimindTooltip label={zh ? '资源库' : 'Library'} side="right" delayMs={300} disabled={wide || open}><button ref={library} type="button" data-paimind-navigation-row data-paimind-resource-library-trigger aria-label={zh ? '资源库' : 'Library'}
       aria-expanded={open} aria-haspopup="dialog" aria-controls={open ? 'paimind-resource-library' : undefined}
       aria-current={entries.some(entry => entry.active && !shortcuts.includes(entry)) ? 'page' : undefined}
-      title={zh ? '资源库' : 'Library'} onClick={() => { setQuery(''); setOpen(!open) }}>
+      onClick={() => { setQuery(''); setOpen(!open) }}>
       <PaimindExtensionIcon size={17} />{wide && <><span>{zh ? '资源库' : 'Library'}</span><PaimindChevronRightIcon size={12} /></>}
-    </button>
+    </button></PaimindTooltip>
     {open && <div ref={panel} id="paimind-resource-library" role="dialog" aria-label={zh ? '资源库' : 'Library'} data-paimind-resource-popover style={position}
       onKeyDown={event => {
         if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close() }

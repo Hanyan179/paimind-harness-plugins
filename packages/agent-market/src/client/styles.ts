@@ -900,6 +900,9 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   font-weight: 650;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-avatar-picker] > div {
+  max-height: 232px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
@@ -929,7 +932,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-avatar-picker] small {
   width: 100%;
   overflow: hidden;
-  font-size: 8px;
+  font-size: 10px;
   line-height: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;

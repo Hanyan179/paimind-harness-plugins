@@ -990,6 +990,7 @@ export class PaimindAgentAvatarPresenter {
   private readonly observer: MutationObserver
   private disposed = false
   private readonly stopAvatarOverrides: () => void
+  private readonly failedSeats = new WeakMap<HTMLElement, string>()
 
   constructor(private readonly doc: Document = document) {
     this.observer = new MutationObserver(() => { this.hydrate() })
@@ -1002,7 +1003,7 @@ export class PaimindAgentAvatarPresenter {
       }
       this.hydrate()
     })
-    this.observer.observe(doc.body, { childList: true, subtree: true })
+    this.observer.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-paimind-agent-id', 'data-paimind-agent-avatar-choice'] })
     this.hydrate()
   }
 
@@ -1051,19 +1052,24 @@ export class PaimindAgentAvatarPresenter {
       host.replaceChildren(image)
     }
     const seats = this.doc.querySelectorAll<HTMLElement>(
-      '[data-paimind-agent-avatar-seat][data-paimind-agent-id]',
+      '[data-paimind-agent-avatar-seat]',
     )
     for (const seat of seats) {
       const canonicalId = seat.dataset.paimindAgentId?.trim() ?? ''
-      if (canonicalId === '') continue
       const owned = seat.querySelector<HTMLImageElement>(
         `:scope > img[data-paimind-agent-avatar-owner="${PaimindAgentAvatarPresenter.PROJECTION_OWNER}"]`,
       )
-      if (owned !== null) continue
+      if (canonicalId === '') { owned?.remove(); seat.removeAttribute('data-paimind-agent-avatar-ready'); continue }
+      const identity = resolvePaimindAgentAvatar({ id: seat.dataset.paimindAgentAvatarChoice ?? resolvePaimindAgentAvatarOverride(canonicalId) })
+      if (owned !== null) {
+        if (owned.dataset.paimindAgentAvatarId === canonicalId && owned.dataset.paimindAgentAvatarKey === identity.assetKey) continue
+        owned.remove()
+        seat.removeAttribute('data-paimind-agent-avatar-ready')
+      }
       // Native/avatar metadata, when Harness exposes it, wins over PAIMind's
       // deterministic visual projection without replacing identity semantics.
       if (seat.querySelector(':scope > img') !== null) continue
-      const identity = resolvePaimindAgentAvatar({ id: resolvePaimindAgentAvatarOverride(canonicalId) })
+      if (this.failedSeats.get(seat) === identity.assetKey) continue
       const image = this.doc.createElement('img')
       image.dataset.paimindAgentAvatar = ''
       image.dataset.paimindAgentAvatarOwner = PaimindAgentAvatarPresenter.PROJECTION_OWNER
@@ -1078,6 +1084,7 @@ export class PaimindAgentAvatarPresenter {
         if (!this.disposed && image.isConnected) seat.dataset.paimindAgentAvatarReady = 'true'
       }, { once: true })
       image.addEventListener('error', () => {
+        this.failedSeats.set(seat, identity.assetKey)
         image.remove()
         seat.removeAttribute('data-paimind-agent-avatar-ready')
       }, { once: true })

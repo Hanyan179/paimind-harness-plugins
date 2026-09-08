@@ -29,7 +29,7 @@ describe('task summary configured and used resource projection', () => {
     const read = taskResourceReader({ get: name => ({
       'remote.paimindAgentProfiles': { listProfiles: async () => ({ ok: true, value: { profiles: [
         { presetId: 'other', name: 'Other', preferredSkillNames: ['private-skill'] },
-        { presetId: 'internal-agent-id', name: 'Writing assistant', preferredSkillNames: ['human-writing'], connectionIds: config.connectionIds },
+        { presetId: 'internal-agent-id', name: 'Writing assistant', avatarId: 'research-partner', preferredSkillNames: ['human-writing'], connectionIds: config.connectionIds },
       ] } }) },
       'remote.paimindMcpConnections': { summarizeSession: vi.fn(async () => ({ ok: true, value: { items: config.connections } })) },
       connection: { api: { agentPresets: { list: async () => ({ result: { ok: true, value: { presets: [{ id: 'standard', name: 'General assistant' }] } } }) } } },
@@ -38,6 +38,7 @@ describe('task summary configured and used resource projection', () => {
     expect(result.skillNames).toEqual(['human-writing'])
     expect(result.names['internal-agent-id']).toBe('Writing assistant')
     expect(result.names.standard).toBe('General assistant')
+    expect(result.avatars).toEqual({ 'internal-agent-id': 'research-partner' })
     expect(result.connectionIds).toEqual(config.connectionIds)
     const missing = await taskResourceReader({ get: () => undefined })('b', 'other')
     expect(missing.profiles).toBe('unavailable')

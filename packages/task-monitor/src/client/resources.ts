@@ -6,6 +6,7 @@ export interface TaskResourceConfiguration {
   readonly sessionId: string
   readonly presetId?: string
   readonly names: Readonly<Record<string, string>>
+  readonly avatars?: Readonly<Record<string, string>>
   readonly skillNames: readonly string[]
   readonly connectionIds: readonly string[]
   readonly connections: readonly McpConnectionSummary[]
@@ -36,10 +37,14 @@ export function taskResourceReader(ctx: { get?(name: string): unknown }): TaskRe
     ])
     const profile = profileResult.status === 'fulfilled' ? profileResult.value?.profiles.find(row => row.presetId === presetId) : undefined
     const names: Record<string, string> = {}
+    const avatars: Record<string, string> = {}
     if (rosterResult.status === 'fulfilled') for (const row of rosterResult.value?.presets ?? []) if (row.name?.trim()) names[row.id] = row.name
-    if (profileResult.status === 'fulfilled') for (const row of profileResult.value?.profiles ?? []) names[row.presetId] = row.name
+    if (profileResult.status === 'fulfilled') for (const row of profileResult.value?.profiles ?? []) {
+      names[row.presetId] = row.name
+      if (row.avatarId !== undefined) avatars[row.presetId] = row.avatarId
+    }
     return {
-      sessionId, ...(presetId === undefined ? {} : { presetId }), names,
+      sessionId, ...(presetId === undefined ? {} : { presetId }), names, avatars,
       skillNames: profile?.preferredSkillNames ?? [], connectionIds: profile?.connectionIds ?? [],
       connections: mcpResult.status === 'fulfilled' ? mcpResult.value?.items ?? [] : [],
       profiles: profileResult.status === 'rejected' ? 'error' : profileResult.value === undefined ? 'unavailable' : 'ready',

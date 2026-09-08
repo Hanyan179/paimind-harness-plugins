@@ -95,11 +95,11 @@ describe('Task Monitor client', () => {
     const base = props(language)
     const { rerender, unmount } = render(<TaskMonitorAction {...base} readResources={readResources} />)
     fireEvent.click(screen.getByRole('button', { name: '任务监控' }))
-    await waitFor(() => { expect(readResources).toHaveBeenCalledTimes(1) })
+    await waitFor(() => { expect(readResources).toHaveBeenCalledWith('session-1', 'Analyst') })
     const nextSnapshot = { current: 'session-2', byId: { 'session-2': { id: 'session-2', displayTitle: 'Other', running: false, agentPreset: 'other-id' } } }
     const next = { ...base, sessionId: 'session-2', sessions: { ...base.sessions, list: { getSnapshot: () => nextSnapshot, subscribe: () => () => {} } } }
     rerender(<TaskMonitorAction {...next} readResources={readResources} />)
-    await waitFor(() => { expect(screen.getByText('另一位助手')).toBeInTheDocument() })
+    await waitFor(() => { expect(screen.getByRole('button', { name: '当前智能体：另一位助手' })).toBeInTheDocument() })
     await act(async () => { finish!({ sessionId: 'session-1', presetId: 'Analyst', names: { Analyst: 'Wrong old name' }, skillNames: ['private-old-skill'], connectionIds: [], connections: [], profiles: 'ready', mcps: 'ready' }) })
     expect(screen.queryByText('Wrong old name')).toBeNull()
     expect(screen.queryByText('private-old-skill')).toBeNull()
@@ -109,9 +109,10 @@ describe('Task Monitor client', () => {
 
   it('shows a readable configured Agent and connection without leaking IDs or inventing a call', async () => {
     const base = props(locale('zh'))
-    render(<TaskMonitorAction {...base} readResources={async (sessionId, presetId) => ({ sessionId, ...(presetId === undefined ? {} : { presetId }), names: { Analyst: '飞书写作助手' }, skillNames: ['human-writing'], connectionIds: ['a'.repeat(32)], connections: [{ id: 'a'.repeat(32), name: '个人文档连接', server: `paimind_${'b'.repeat(20)}`, enabled: true, mounted: true }], profiles: 'ready', mcps: 'ready' })} />)
+    render(<TaskMonitorAction {...base} readResources={async (sessionId, presetId) => ({ sessionId, ...(presetId === undefined ? {} : { presetId }), names: { Analyst: '飞书写作助手' }, avatars: { Analyst: 'research-partner' }, skillNames: ['human-writing'], connectionIds: ['a'.repeat(32)], connections: [{ id: 'a'.repeat(32), name: '个人文档连接', server: `paimind_${'b'.repeat(20)}`, enabled: true, mounted: true }], profiles: 'ready', mcps: 'ready' })} />)
     fireEvent.click(screen.getByRole('button', { name: '任务监控' }))
-    await waitFor(() => { expect(screen.getByText('飞书写作助手')).toBeInTheDocument() })
+    await waitFor(() => { expect(screen.getByRole('button', { name: '当前智能体：飞书写作助手' })).toBeInTheDocument() })
+    expect([...document.querySelectorAll('[data-paimind-task-avatar]')].map(seat => seat.getAttribute('data-paimind-agent-avatar-choice'))).toEqual(['research-partner', 'research-partner'])
     const row = screen.getByText('个人文档连接').closest('li')
     expect(row).toHaveTextContent('已挂载')
     expect(row).not.toHaveTextContent('已使用')

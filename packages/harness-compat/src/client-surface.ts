@@ -1,3 +1,5 @@
+export { Tooltip as PaimindTooltip } from '@deepseek-ai/dsh-client-ui-primitives'
+
 import type {
   HarnessAgentChoice,
   HarnessAgentChoiceBridge,
@@ -13,14 +15,27 @@ export const PAIMIND_PRODUCT_SURFACE_IDS = ['agent-center', 'skill-center', 'mcp
 
 export type PaimindProductSurfaceId = typeof PAIMIND_PRODUCT_SURFACE_IDS[number]
 
-const agentAvatarOverrides = new Map<string, ReadonlyMap<string, string>>()
-const agentAvatarOverrideListeners = new Set<() => void>()
+interface AgentAvatarPresentation {
+  readonly overrides: Map<string, ReadonlyMap<string, string>>
+  readonly listeners: Set<() => void>
+}
+const AVATAR_PRESENTATION = Symbol.for('@paimind/agent-avatar-presentation/v1')
+const createAvatarPresentation = (): AgentAvatarPresentation => ({ overrides: new Map(), listeners: new Set() })
+const serverAvatarPresentation = /* @__PURE__ */ createAvatarPresentation()
+function avatarPresentation(): AgentAvatarPresentation {
+  if (typeof document === 'undefined') return serverAvatarPresentation
+  // Each feature bundles Compat independently. Share this existing, ephemeral
+  // presentation map in the current document, never in persistent storage.
+  const host = document as Document & { [AVATAR_PRESENTATION]?: AgentAvatarPresentation }
+  return host[AVATAR_PRESENTATION] ??= createAvatarPresentation()
+}
 
 /** Shared presentation-only avatar overrides; canonical Harness Preset ids remain unchanged. */
 export function replacePaimindAgentAvatarOverrides(
   owner: string,
   entries: Readonly<Record<string, string>>,
 ): () => void {
+  const { overrides: agentAvatarOverrides, listeners: agentAvatarOverrideListeners } = avatarPresentation()
   const normalized = new Map(Object.entries(entries).filter(([id, avatarId]) => id.trim() !== '' && avatarId.trim() !== ''))
   agentAvatarOverrides.set(owner, normalized)
   for (const listener of agentAvatarOverrideListeners) listener()
@@ -35,6 +50,7 @@ export function replacePaimindAgentAvatarOverrides(
 }
 
 export function resolvePaimindAgentAvatarOverride(canonicalId: string): string {
+  const { overrides: agentAvatarOverrides } = avatarPresentation()
   for (const entries of [...agentAvatarOverrides.values()].reverse()) {
     const avatarId = entries.get(canonicalId)
     if (avatarId !== undefined) return avatarId
@@ -43,6 +59,7 @@ export function resolvePaimindAgentAvatarOverride(canonicalId: string): string {
 }
 
 export function subscribePaimindAgentAvatarOverrides(listener: () => void): () => void {
+  const { listeners: agentAvatarOverrideListeners } = avatarPresentation()
   agentAvatarOverrideListeners.add(listener)
   return () => { agentAvatarOverrideListeners.delete(listener) }
 }

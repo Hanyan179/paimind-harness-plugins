@@ -16,9 +16,9 @@
       "path": "packages/agent-market",
       "contractSha256": "06a138cf8ebb5b1095f2c33e5f41654abcb77c0c613f3722e989daee911b1bea",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "fba337200d0058a2a2920dc11811b360c7fa7749c874de73c93166e4f1f2b7d7",
+      "runtimeExportSha256": "f57f26c1fb6ac9801741b09b08c8453028db8f7912366196885d99fd8b6f642e",
       "declarationCount": 8,
-      "declarationSha256": "f639c615d7df228d14285d12459c4848c16cb830d039339a8428127773eca15e",
+      "declarationSha256": "c8d0a1bb4d2386cbcfdc4075ff2ad2b1edb974539c29f3a96f57d05571d0fb90",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@paimind/artifact-runtime": {
@@ -160,7 +160,7 @@
       "path": "packages/harness-compat",
       "contractSha256": "5cacb9eb34ea9b08c6ca1012854c087af54b2bea7c478ffb92b59d7719dcaaad",
       "runtimeExportCount": 6,
-      "runtimeExportSha256": "02cd1faaffd0a7c0a6ee01d2a2f3aae75158cd5abfd856113101256695f8c70d",
+      "runtimeExportSha256": "e957d2d62b7293ab2c2ca67f90d94536df776d5f8a83e2ac09933027eb8b9c6a",
       "declarationCount": 7,
       "declarationSha256": "7bf0ed4d55a586dcdd5e91a9028f7973128be0e6df60e3d04a0aa384e68db969",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -295,9 +295,9 @@
       "path": "packages/task-monitor",
       "contractSha256": "46caf0f9166250a1dcad208ee900138ef2526d048a061cc257f8be80faaa66bc",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "010638045ad463a15e048580843ad741688bec51e01c288d019a83648e25f844",
+      "runtimeExportSha256": "9faf2fcee10d5a5bf0a51159cb37d70d02350f23ea2e99f2709611c9cc02b672",
       "declarationCount": 4,
-      "declarationSha256": "b3ca7b6a12f2b61c26535b3ecaecfe9d1729f4fdea1203324bb645ebc92a22aa",
+      "declarationSha256": "1f238c8184edd074b6a1c4dbd2042dfec414c9623b42520018edf34c68fe4a24",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@paimind/testkit": {
@@ -331,9 +331,9 @@
       "path": "packages/visual-experience",
       "contractSha256": "8165bad6d7b11315c5b4ec5e09b96d71428127168aa69b16e4f7cd0acd3a0b26",
       "runtimeExportCount": 4,
-      "runtimeExportSha256": "d9c3022fa37f35f7f5b4fd91b79960fb0dd0b760a2b3073fb307031ec8309f61",
+      "runtimeExportSha256": "d95d43915a01061f1b4bb1ddbb07d76c442c488be0b1c4c52a6f07bd8160d176",
       "declarationCount": 7,
-      "declarationSha256": "96eb3413eef2f8f9984b4806221945e87e53634cd81b21931009f630d3cba180",
+      "declarationSha256": "2774fbf72ef915d804fd2016d059a5fe4a93997011ce0d58b1165d4d547d1741",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@paimind/walmart-proposal-adapter": {

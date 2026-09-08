@@ -88,6 +88,13 @@ const STYLE_ID = '@paimind/task-monitor'
 const HEADER_SHADOW_PRIORITY = -10
 const STYLE = `
 [data-paimind-task-action] { position:relative; display:inline-flex; align-items:center; color:inherit; font:inherit; }
+[data-paimind-task-identity] { display:inline-flex; align-items:center; gap:7px; max-width:240px; margin-right:8px; padding:4px 8px 4px 4px; border:1px solid var(--dsw-alias-border-main,#dce2ea); border-radius:20px; background:transparent; color:inherit; font:inherit; font-size:12px; cursor:pointer; }
+[data-paimind-task-identity] > span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+[data-paimind-task-avatar] { flex:none; position:relative; display:grid; place-items:center; width:28px; height:28px; border-radius:50%; overflow:hidden; background:color-mix(in srgb,currentColor 7%,transparent); }
+[data-paimind-task-avatar] > img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+[data-paimind-task-avatar][data-paimind-agent-avatar-ready='true'] > [data-paimind-agent-avatar-fallback] { visibility:hidden; }
+@media (max-width:720px) { [data-paimind-task-identity] { max-width:150px; } }
+@media (max-width:460px) { [data-paimind-task-identity] { max-width:110px; font-size:11px; gap:4px; margin-right:3px; } }
 /* Better Sidebar pins its collapsed 28px rail controls at top:3px, while the
    Harness Session header starts at top:12px and gives this 32px utility its
    own center line. Lift only the collapsed-state utility by the exact 11px
@@ -97,7 +104,7 @@ body[data-dsh-sidebar-collapsed] [data-paimind-task-action] { transform:translat
 [data-paimind-task-trigger]:hover,[data-paimind-task-trigger]:focus-visible,[data-paimind-task-trigger][aria-pressed='true'] { color:var(--dsw-alias-label-primary,#202124); background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.11)); }
 [data-paimind-task-trigger]:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:2px; }
 [data-paimind-task-tooltip] { position:absolute; z-index:2147482999; top:calc(100% + 7px); left:50%; min-width:max-content; padding:5px 8px; border-radius:6px; color:#fff; background:#1f2329; box-shadow:0 8px 24px #0004; font-size:12px; line-height:16px; opacity:0; pointer-events:none; transform:translate(-50%,-3px); transition:opacity var(--paimind-motion-fast) ease,transform var(--paimind-motion-fast) ease; }
-[data-paimind-task-action]:hover [data-paimind-task-tooltip],[data-paimind-task-trigger]:focus-visible + [data-paimind-task-tooltip] { opacity:1; transform:translate(-50%,0); }
+[data-paimind-task-trigger]:hover + [data-paimind-task-tooltip],[data-paimind-task-trigger]:focus-visible + [data-paimind-task-tooltip] { opacity:1; transform:translate(-50%,0); }
 [data-paimind-task-panel] { position:fixed; z-index:2147482998; width:420px; max-width:calc(100vw - 24px); box-sizing:border-box; overflow:auto; overscroll-behavior:contain; border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.18)); border-radius:14px; color:var(--dsw-alias-label-primary,#202124); background:var(--dsw-alias-bg-layer-1,#fff); box-shadow:0 12px 36px rgba(0,0,0,.16); font:inherit; }
 [data-paimind-task-panel-header] { position:sticky; z-index:2; top:0; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 18px 13px; border-bottom:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.13)); background:var(--dsw-alias-bg-layer-1,#fff); }
 [data-paimind-task-panel-header] h2 { margin:0; font-size:16px; line-height:22px; font-weight:650; letter-spacing:-.01em; }
@@ -208,7 +215,6 @@ body[data-dsh-sidebar-collapsed] [data-paimind-task-action] { transform:translat
 [data-paimind-task-resource-list] { gap:8px; }
 [data-paimind-task-agent-group],[data-paimind-task-capability-group] { display:block; margin:0; padding:0; border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.12)); border-radius:10px; overflow:hidden; background:transparent; list-style:none; }
 [data-paimind-task-main-agent] { min-width:0; min-height:47px; display:grid; grid-template-columns:28px minmax(0,1fr) auto; gap:9px; align-items:center; padding:7px 9px; border-radius:0; }
-[data-paimind-task-main-agent-icon] { width:27px; height:27px; display:grid; place-items:center; border-radius:8px; color:var(--dsw-alias-state-business-primary,#4f7ff8); background:color-mix(in srgb,currentColor 9%,transparent); }
 [data-paimind-task-main-agent-copy] { min-width:0; display:grid; gap:1px; }
 [data-paimind-task-main-agent-copy] small { color:var(--dsw-alias-label-tertiary,#7a808a); font-size:12px; line-height:13px; }
 [data-paimind-task-main-agent-copy] strong { overflow:hidden; font-size:12px; line-height:17px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
@@ -476,6 +482,10 @@ function ProgressSection(props: {
   </>
 }
 
+function AgentPortrait({ presetId, avatarId }: { readonly presetId: string | undefined; readonly avatarId: string | undefined }): React.JSX.Element {
+  return <span data-paimind-task-avatar data-paimind-agent-avatar-seat="" data-paimind-agent-id={presetId} data-paimind-agent-avatar-choice={avatarId} aria-hidden="true"><span data-paimind-agent-avatar-fallback=""><PaimindAgentIcon size={16} /></span></span>
+}
+
 function Resources(props: {
   readonly view: TaskMonitorViewModel
   readonly zh: boolean
@@ -502,7 +512,7 @@ function Resources(props: {
   return <div data-paimind-task-resource-list aria-busy={props.loading}>
     {(hasMainAgent || subagentRows.length > 0) && <div data-paimind-task-agent-group>
       {hasMainAgent && <div data-paimind-task-main-agent>
-        <span data-paimind-task-main-agent-icon aria-hidden="true"><PaimindAgentIcon size={15} /></span>
+        <AgentPortrait presetId={view.session.agentPreset} avatarId={view.session.agentPreset === undefined ? undefined : config?.avatars?.[view.session.agentPreset]} />
         <span data-paimind-task-main-agent-copy><small>{zh ? '当前智能体' : 'Current Agent'}</small><strong>{mainAgentLabel}</strong></span>
       </div>}
       {subagentRows.length > 0 && <div id={props.subagentAnchorId} data-paimind-task-anchor data-paimind-task-agent-children tabIndex={-1}><FoldedSubagents rows={subagentRows} zh={zh} onOpen={props.onSubagent} /></div>}
@@ -641,9 +651,8 @@ export function TaskMonitorAction(props: TaskMonitorActionProps): React.JSX.Elem
   const [configurationLoading, setConfigurationLoading] = useState(false)
   const currentConfiguration = configuration?.sessionId === props.sessionId && configuration.presetId === view.session.agentPreset ? configuration : undefined
   useEffect(() => {
-    if (!open || props.readResources === undefined) return
+    if (props.readResources === undefined) return
     let active = true, pending = false
-    setConfiguration(undefined)
     setConfigurationLoading(true)
     const refresh = async (): Promise<void> => {
       if (pending) return
@@ -656,8 +665,10 @@ export function TaskMonitorAction(props: TaskMonitorActionProps): React.JSX.Elem
       } finally { pending = false; if (active) setConfigurationLoading(false) }
     }
     void refresh()
-    const timer = setInterval(() => { void refresh() }, 5000)
-    return () => { active = false; clearInterval(timer) }
+    const onFocus = (): void => { void refresh() }
+    window.addEventListener('focus', onFocus)
+    const timer = open ? setInterval(onFocus, 5000) : undefined
+    return () => { active = false; if (timer !== undefined) clearInterval(timer); window.removeEventListener('focus', onFocus) }
   }, [open, props.readResources, props.sessionId, view.session.agentPreset])
   const [navigationError, setNavigationError] = useState<string | undefined>()
   const [now, setNow] = useState(() => Date.now())
@@ -798,6 +809,7 @@ export function TaskMonitorAction(props: TaskMonitorActionProps): React.JSX.Elem
     </div>
   </section> : null
   return <div ref={rootRef} data-paimind-task-action>
+    {view.session.agentPreset !== undefined && <button type="button" data-paimind-task-identity aria-label={`${zh ? '当前智能体' : 'Current Agent'}：${currentConfiguration?.names[view.session.agentPreset] ?? (zh ? '名称暂不可用' : 'Name unavailable')}`} title={currentConfiguration?.names[view.session.agentPreset]} aria-controls={panelId} aria-expanded={open} onClick={() => { setNow(Date.now()); setOpen(value => !value) }}><AgentPortrait presetId={view.session.agentPreset} avatarId={currentConfiguration?.avatars?.[view.session.agentPreset]} /><span>{currentConfiguration?.names[view.session.agentPreset] ?? (zh ? '当前智能体' : 'Current Agent')}</span></button>}
     <button ref={triggerRef} type="button" data-paimind-task-trigger aria-label={label} aria-describedby={tooltipId} aria-controls={panelId} aria-expanded={open} aria-pressed={open} onClick={() => { setNow(Date.now()); setOpen(value => !value) }}><TaskIcon /></button>
     <span id={tooltipId} role="tooltip" data-paimind-task-tooltip>{label}</span>
     {panel !== null && typeof document !== 'undefined' ? createPortal(panel, document.body) : null}

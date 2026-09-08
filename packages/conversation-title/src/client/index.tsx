@@ -122,10 +122,10 @@ export function ConversationTitleModelService(props: {
   }
 
   if (snapshot.status === 'loading') return <div data-paimind-model-services-state aria-busy="true">{props.zh ? '正在读取设置…' : 'Reading settings…'}</div>
-  if (snapshot.status === 'unavailable') return <div data-paimind-model-services-state role="status">{props.zh ? '对话命名设置暂不可用，请稍后重新打开此页' : 'Conversation naming settings are unavailable. Reopen this page to retry.'}</div>
+  if (snapshot.status === 'unavailable') return <div data-paimind-model-services-state role="status">{props.zh ? '模型服务设置暂不可用，请稍后重新打开此页' : 'Model services settings are unavailable. Reopen this page to retry.'}</div>
 
-  return <section data-paimind-ui-scope="conversation-title" data-paimind-model-services aria-label={props.zh ? '对话命名' : 'Conversation naming'}>
-    <h2>{props.zh ? '对话命名' : 'Conversation naming'}</h2>
+  return <section data-paimind-ui-scope="conversation-title" data-paimind-model-services aria-label={props.zh ? '模型服务' : 'Model services'}>
+    <h2>{props.zh ? '模型服务' : 'Model services'}</h2>
     <article data-paimind-model-service-card>
       <header data-paimind-model-service-head>
         <span><strong>{props.zh ? '对话自动命名' : 'Conversation auto-naming'}</strong><small>{props.zh ? '根据第一条消息自动生成标题，方便查找对话' : 'Generate a title from the first message to make conversations easier to find'}</small></span>
@@ -164,6 +164,6 @@ export function apply(ctx: ConversationTitleClientContext): void {
   })
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section', id: 'paimind-model-services', order: 12,
-    label: () => ctx.locale.getLocale().active.startsWith('zh') ? '对话命名' : 'Conversation naming',
+    label: () => ctx.locale.getLocale().active.startsWith('zh') ? '模型服务' : 'Model services',
   }, () => <ConversationTitleModelService scope={scope} api={api} zh={ctx.locale.getLocale().active.startsWith('zh')} />))
 }

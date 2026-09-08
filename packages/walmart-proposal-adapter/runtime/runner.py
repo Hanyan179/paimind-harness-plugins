@@ -412,6 +412,14 @@ def build_outline(args: argparse.Namespace) -> None:
         run([sys.executable, str(ROOT / "outline" / "scripts" / "build_outline.py"), "--fineline-json", str(fineline_payload), "--white-space-json", str(white_payload), "--top-n", "5", "--trend-mode", "pending", "--narrative-mode", "draft", "--path-mode", "relative", "--output-dir", str(legacy_dir)])
         legacy = json.loads((legacy_dir / "proposal_presentation_outline.json").read_text(encoding="utf-8"))
         outline = convert_outline(legacy, fineline, white, args.fineline_artifact_id, args.white_space_artifact_id)
+        templates = {
+            "wmt-retail": "wmt-kids-mod",
+            "strategy-consulting": "strategy-grid",
+            "paramont-signature": "paramont-mountain",
+            "playful-storybook": "storybook-cutpaper",
+        }
+        outline["design"]["stylePreset"] = args.style_preset
+        outline["design"]["templateId"] = templates[args.style_preset]
         if args.title:
             outline["title"] = args.title
             outline["slides"][0]["title"] = args.title
@@ -441,6 +449,7 @@ def parser() -> argparse.ArgumentParser:
     outline.add_argument("--white-space-artifact-id", required=True)
     outline.add_argument("--output", required=True)
     outline.add_argument("--title")
+    outline.add_argument("--style-preset", choices=("wmt-retail", "strategy-consulting", "paramont-signature", "playful-storybook"), default="wmt-retail")
     return root
 
 

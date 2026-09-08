@@ -17,6 +17,24 @@ afterEach(() => {
 })
 
 describe('PAIMind product surface controller', () => {
+  it('shares avatar presentation across separately loaded feature copies and removes only the current owner revision', async () => {
+    const producer = await import('../src/client-surface.js')
+    vi.resetModules()
+    const consumer = await import('../src/client-surface.js')
+    expect(producer.replacePaimindAgentAvatarOverrides).not.toBe(consumer.replacePaimindAgentAvatarOverrides)
+    const changed = vi.fn()
+    const stop = consumer.subscribePaimindAgentAvatarOverrides(changed)
+    const old = producer.replacePaimindAgentAvatarOverrides('avatar-test', { writer: 'research-partner' })
+    expect(consumer.resolvePaimindAgentAvatarOverride('writer')).toBe('research-partner')
+    const latest = producer.replacePaimindAgentAvatarOverrides('avatar-test', { writer: 'finance-planner' })
+    old()
+    expect(consumer.resolvePaimindAgentAvatarOverride('writer')).toBe('finance-planner')
+    latest()
+    expect(consumer.resolvePaimindAgentAvatarOverride('writer')).toBe('writer')
+    expect(changed).toHaveBeenCalledTimes(3)
+    stop()
+  })
+
   it('keeps independently installed Agent and Skill surfaces mutually exclusive', () => {
     const agents = new PaimindProductSurfaceController('agent-center', window, document)
     const skills = new PaimindProductSurfaceController('skill-center', window, document)

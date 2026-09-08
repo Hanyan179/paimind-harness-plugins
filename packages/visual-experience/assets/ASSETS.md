@@ -5,12 +5,12 @@ never define an Agent identity, runtime, history or selection route.
 
 ## Source and conversion
 
-All portrait sources come from the frozen product prototype at
+The original six portrait sources come from the frozen product prototype at
 `../../../../paimind-agent-skill-prototype/public/assets/agents/avatars/`.
 The unified fallback comes from the same prototype at
 `../../../../paimind-agent-skill-prototype/public/brand/paramont-group.svg`.
-No avatar was generated, redrawn or sourced from the Harness runtime home for
-this package.
+The twelve additions below are generated illustrations. No avatar is sourced
+from the Harness runtime home.
 
 The frozen prototype's `ASSET-LICENSES.md` marks the personal-role portraits as
 private, user-authorized project assets. This package remains `UNLICENSED`;
@@ -35,7 +35,7 @@ for the 28–32px circular UI slots without embedding the multi-megabyte PNGs.
 | `technical-expert-agent.webp` | `technical-expert-agent.png` | 2,028 | `standard`, `code` |
 | `paramont-brand-fallback.webp` | `brand/paramont-group.svg` | 1,260 | Official `paimind` brand avatar; also invalid-id fallback |
 
-Total published avatar payload: 12,908 bytes. Exact mappings use only built-in
+Original avatar payload: 12,908 bytes. Exact mappings use only built-in
 platform ids, plugin-owned ids and ids defined by the frozen prototype. Local
 Harness profile ids are deliberately excluded. An unknown but valid canonical
 id is passed through a pure FNV-1a hash with a final avalanche and projected onto the six published
@@ -54,3 +54,19 @@ invalid ids use the Paramont brand fallback. The native
 candidate order, keyboard model and canonical Preset selection remain owned by
 Harness. Native mode and plugin disposal remove injected images and restore the
 original native icon-token text.
+
+## Generated additions, 2026-09-07
+
+Twelve new fictional character illustrations were generated using the built-in
+image generation tool, one image per request, using `content-expression-agent.webp`
+as a style reference only. [The prompt set](generated-avatars-2026-09-07.json)
+records each exact prompt, retained source PNG path, and published WebP filename.
+The original PNGs stay outside the repository. Runtime assets are 128×128 WebP,
+encoded directly from the generated originals with cwebp quality 82, method 6.
+The twelve additions total 29,898 bytes before inline bundling.
+
+The expanded picker has eighteen portraits. New ids use explicit mappings; the
+original six-file hash pool is unchanged, preserving existing automatic portraits.
+An explicit `data-paimind-agent-avatar-choice` from the source-owned Agent Profile
+wins over the automatic projection. The preset id still identifies the Agent.
+Task Monitor's header and summary reuse these same reversible portrait seats.

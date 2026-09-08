@@ -9,7 +9,7 @@ const definitions = [
   ['agent-center', '智能体', '助手'], ['skill-center', '技能', '能力与工具'],
   ['mcp-center', '连接', '能力与工具'], ['workspace-blueprints', '模板', '工作区'],
 ]
-function setup() {
+function setup(wide = true) {
   document.body.innerHTML = '<footer><div><div data-slot="sidebar.footer.action"><div id="navigation"></div></div></div><div id="settings"><button><span data-slot="settings.trigger">设置</span></button></div></footer>'
   const slot = document.querySelector('[data-slot="sidebar.footer.action"]')!
   const actions = new Map<string, ReturnType<typeof vi.fn>>()
@@ -21,12 +21,33 @@ function setup() {
     button.textContent = `${label}中心`
     const action = vi.fn(); button.onclick = action; actions.set(id!, action); slot.append(button)
   }
-  const view = render(<ResourceNavigation wide locale={locale as never} />, { container: document.getElementById('navigation')! })
+  const view = render(<ResourceNavigation wide={wide} locale={locale as never} />, { container: document.getElementById('navigation')! })
   return { ...view, slot, actions }
 }
 afterEach(() => { cleanup(); document.body.innerHTML = ''; localStorage.clear(); vi.useRealTimers() })
 
 describe('compact resource navigation', () => {
+  it('shows collapsed menu labels on hover and focus, and hides them when expanded', () => {
+    vi.useFakeTimers()
+    localStorage.setItem('paimind.visual-experience.navigation.pinned.v1', 'mcp-center')
+    const view = setup(false)
+    for (const name of ['智能体', '连接', '资源库']) {
+      const button = screen.getByRole('button', { name, exact: true })
+      fireEvent.mouseEnter(button)
+      act(() => { vi.advanceTimersByTime(300) })
+      expect(screen.getByRole('tooltip')).toHaveTextContent(name)
+      fireEvent.mouseLeave(button)
+      expect(screen.queryByRole('tooltip')).toBeNull()
+      fireEvent.focus(button)
+      expect(screen.getByRole('tooltip')).toHaveTextContent(name)
+      fireEvent.blur(button)
+    }
+    view.rerender(<ResourceNavigation wide locale={locale as never} />)
+    fireEvent.mouseEnter(screen.getByRole('button', { name: '智能体', exact: true }))
+    act(() => { vi.advanceTimersByTime(300) })
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
+
   it('compacts only the Settings trigger and preserves buttons in its nested native dialog', () => {
     const { unmount } = setup()
     const settings = document.getElementById('settings')!

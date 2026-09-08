@@ -291,7 +291,15 @@ const DECK_PREVIEWS: Readonly<Record<string, DeckPreviewSpec>> = Object.freeze({
 
 function deckPreviewFor(option: HarnessQuestionOption | undefined): DeckPreviewSpec {
   const label = option === undefined ? 'Paramont Signature' : optionPresentation(option.label).label
-  return DECK_PREVIEWS[label] ?? DECK_PREVIEWS['Paramont Signature']!
+  // Model-authored choices may append localized descriptions to the maintained name.
+  // Match the style identity without changing the original answer submitted to Harness.
+  const normalized = label.trim().toLowerCase()
+  const key = Object.keys(DECK_PREVIEWS).find(name => {
+    const canonical = name.toLowerCase()
+    return normalized === canonical || (normalized.startsWith(canonical)
+      && /^[\s（(:：—-]/u.test(normalized.slice(canonical.length)))
+  })
+  return DECK_PREVIEWS[key ?? label] ?? DECK_PREVIEWS['Paramont Signature']!
 }
 
 function DeckPreview({ option, zh }: { readonly option: HarnessQuestionOption | undefined; readonly zh: boolean }): React.JSX.Element {
