@@ -1,6 +1,6 @@
 # Platform Scheduler Architecture
 
-> Active local-main architecture. `@paimind/platform-scheduler` is the only Scheduler product and runtime selected by the PAIMind Bundle. The old native Session-reminder packages are not loaded in `3080`.
+> Active local-main architecture. `@hansen/platform-scheduler` is the only Scheduler product and runtime selected by the PAIMind Bundle. The old native Session-reminder packages are not loaded in `3080`.
 
 ## Boundary
 
@@ -9,8 +9,8 @@ Scheduler Core owns calendar calculation, definitions, runs, idempotency, retrie
 ```mermaid
 flowchart LR
   UI["Business User Layer<br/>统一对话入口 + 任务管理"] --> AO["AI Orchestration Layer<br/>schedule_manage + Action Registry"]
-  AO --> Core["Scheduler Runtime Layer<br/>@paimind/platform-scheduler"]
-  API["@paimind/platform-api"] --> HTTP["HTTP Adapter"]
+  AO --> Core["Scheduler Runtime Layer<br/>@hansen/platform-scheduler"]
+  API["@hansen/platform-api"] --> HTTP["HTTP Adapter"]
   Core --> HA["Harness Adapter"]
   Core --> HTTP
   Core --> CA["Custom Adapter"]
@@ -21,19 +21,19 @@ flowchart LR
   API --> N["Notifications"]
 ```
 
-Dependencies point inward to the public contracts. Version-sensitive Harness constructors, messages and Session-result parsing remain in `@paimind/harness-compat`.
+Dependencies point inward to the public contracts. Version-sensitive Harness constructors, messages and Session-result parsing remain in `@hansen/harness-compat`.
 
 ## Packages
 
 | Package | Responsibility |
 |---|---|
-| `@paimind/contracts` | Stable task, action, Run, trigger, callback and notification types |
-| `@paimind/platform-scheduler` | Active Core, Storage Domain Schema v2, Remote and business task UI |
-| `@paimind/scheduler-adapter-harness` | New Session, Native Job, Agent execution and Session result action; `./agent-action` registers actions and `./agent-tool` provides `schedule_manage` |
-| `@paimind/scheduler-adapter-http` | Signed HTTPS dispatch, `202` boundary and result-origin policy |
-| `@paimind/scheduler-adapter-feishu-bot` | Feishu/Lark custom-bot translation, secret resolution and keyword enforcement |
-| `@paimind/platform-api` | Authenticated ingress for action registration, callback and notification |
-| `@paimind/platform-sdk` | Validation, signing, verification and server-side client |
+| `@hansen/contracts` | Stable task, action, Run, trigger, callback and notification types |
+| `@hansen/platform-scheduler` | Active Core, Storage Domain Schema v2, Remote and business task UI |
+| `@hansen/scheduler-adapter-harness` | New Session, Native Job, Agent execution and Session result action; `./agent-action` registers actions and `./agent-tool` provides `schedule_manage` |
+| `@hansen/scheduler-adapter-http` | Signed HTTPS dispatch, `202` boundary and result-origin policy |
+| `@hansen/scheduler-adapter-feishu-bot` | Feishu/Lark custom-bot translation, secret resolution and keyword enforcement |
+| `@hansen/platform-api` | Authenticated ingress for action registration, callback and notification |
+| `@hansen/platform-sdk` | Validation, signing, verification and server-side client |
 | `examples/platform-integration/` | Non-published executable Harness, HTTP, custom and notification examples |
 
 ## Durable data
@@ -65,7 +65,7 @@ For the generic `paimind:agent-prompt` action, a Schedule captures the current `
 
 The Action Registry defaults to conversation-disabled. Only descriptors with `conversationEnabled=true` enter `schedule_manage capabilities`; `usageHint` guides business-language matching. Categories and ids remain internal routing/audit metadata. When no specific capability fits, orchestration uses the validated `paimind:agent-prompt` fallback. Ambiguous matches require a business-name choice; unavailable actions never produce an inert definition.
 
-Every Harness Run creates one independent Session, renames it to the Schedule name, reports a Session action, and publishes one idempotent final notification keyed by `runId`. `@paimind/harness-compat` owns the version-scoped native tree marker: it replaces relative time with a clock only when the visible row maps unambiguously to scheduled canonical Session ids and restores the native DOM on unload.
+Every Harness Run creates one independent Session, renames it to the Schedule name, reports a Session action, and publishes one idempotent final notification keyed by `runId`. `@hansen/harness-compat` owns the version-scoped native tree marker: it replaces relative time with a clock only when the visible row maps unambiguously to scheduled canonical Session ids and restores the native DOM on unload.
 
 ## Single active scheduler
 

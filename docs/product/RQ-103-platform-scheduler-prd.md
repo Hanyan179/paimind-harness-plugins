@@ -1,6 +1,6 @@
 # RQ-103 平台级定时任务 PRD
 
-> 状态：Activated in Local Main Profile / Pre-acceptance Passed（已进入本地主配置／预验收通过）。`@paimind/platform-scheduler` 是 PAIMind 唯一启用的定时任务产品与运行时；旧的 Harness Session Reminder（会话提醒）插件不再进入 PAIMind `3080` 组合。
+> 状态：Activated in Local Main Profile / Pre-acceptance Passed（已进入本地主配置／预验收通过）。`@hansen/platform-scheduler` 是 PAIMind 唯一启用的定时任务产品与运行时；旧的 Harness Session Reminder（会话提醒）插件不再进入 PAIMind `3080` 组合。
 
 ## 一句话定义
 

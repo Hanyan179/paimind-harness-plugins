@@ -1,4 +1,4 @@
-# `@paimind/task-monitor`
+# `@hansen/task-monitor`
 
 Read-only Session and Project monitor derived from native Harness facts.
 
@@ -19,9 +19,9 @@ Role: **Client plugin**. It consolidates the native `agent-preset`, `subagent-ca
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/artifacts` (`workspace:^`), `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`), `@paimind/workspace-project` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/artifacts` (`workspace:^`), `@hansen/contracts` (`workspace:^`), `@hansen/harness-compat` (`workspace:^`), `@hansen/workspace-project` (`workspace:^`).
 - External runtime or peer dependencies: `lucide-react` (`0.562.0`, exact), plus `react` and `react-dom` (`>=18.0.0 <20.0.0`).
-- Client service injection: `@deepseek-ai/dsh-client-locale`, `@deepseek-ai/dsh-client-ui-slots`, `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-ui-conversation`, `@paimind/artifacts`, `@paimind/workspace-project`.
+- Client service injection: `@deepseek-ai/dsh-client-locale`, `@deepseek-ai/dsh-client-ui-slots`, `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-ui-conversation`, `@hansen/artifacts`, `@hansen/workspace-project`.
 
 The manifest is authoritative for dependency direction and version selection.
 
@@ -56,7 +56,7 @@ The manifest allowlist is `lib/**/*.js`, `lib/**/*.js.map`, `lib/**/*.d.ts`, `li
   overflow. The focused Task Monitor suite passed 3 files / 13 tests and the
   standalone browser bundle built successfully.
 - Full repository Type Check remains blocked by the separately modified,
-  untracked `@paimind/harness-compat/client-surface` implementation; that failure
+  untracked `@hansen/harness-compat/client-surface` implementation; that failure
   is not masked or accepted as part of this package read-back.
 
 ## 2026-08-17 Agent-resource grouping read-back

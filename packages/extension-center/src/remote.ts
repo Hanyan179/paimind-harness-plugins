@@ -39,27 +39,27 @@ const mutation = z.object({
 
 export const PAIMIND_FEATURE_PACK_REMOTE_DESCRIPTORS = Object.freeze([
   {
-    id: '@paimind/extension-center#paimindFeaturePacks/describe',
+    id: '@hansen/extension-center#paimindFeaturePacks/describe',
     service: 'paimindFeaturePacks', namespace: 'paimindFeaturePacks', method: 'describe',
     invocation: { kind: 'direct' as const }, parameters: [],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/extension-center#PaimindFeaturePackView', schema: view },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/extension-center#PaimindFeaturePackView', schema: view },
     sourceLocation: { file: 'packages/extension-center/src/index.ts', line: 100, column: 3 },
   },
   {
-    id: '@paimind/extension-center#paimindFeaturePacks/mutate',
+    id: '@hansen/extension-center#paimindFeaturePacks/mutate',
     service: 'paimindFeaturePacks', namespace: 'paimindFeaturePacks', method: 'mutate',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'request', wire: 'request', source: 'json' as const,
-      codec: { mode: 'strict' as const, typeSymbol: '@paimind/extension-center#PaimindFeatureToggleMutationRequest', schema: mutation },
+      codec: { mode: 'strict' as const, typeSymbol: '@hansen/extension-center#PaimindFeatureToggleMutationRequest', schema: mutation },
     }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/extension-center#PaimindFeaturePackView', schema: view },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/extension-center#PaimindFeaturePackView', schema: view },
     sourceLocation: { file: 'packages/extension-center/src/index.ts', line: 120, column: 3 },
   },
 ])
 
 export const TYPERT_REMOTE = Object.freeze({
-  package: '@paimind/extension-center', descriptors: PAIMIND_FEATURE_PACK_REMOTE_DESCRIPTORS,
+  package: '@hansen/extension-center', descriptors: PAIMIND_FEATURE_PACK_REMOTE_DESCRIPTORS,
 })
 
 export default TYPERT_REMOTE

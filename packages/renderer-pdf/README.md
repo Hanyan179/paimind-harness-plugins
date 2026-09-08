@@ -1,4 +1,4 @@
-# `@paimind/renderer-pdf`
+# `@hansen/renderer-pdf`
 
 Local PDF.js preview channel for PAIMind artifacts.
 
@@ -19,9 +19,9 @@ Role: **Client plugin**. It owns the product projection described above; Harness
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/better-sidebar-adapter` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/better-sidebar-adapter` (`workspace:^`), `@hansen/harness-compat` (`workspace:^`).
 - External runtime or peer dependencies: `pdfjs-dist` (`6.2.108`), `react` (`>=18.0.0 <20.0.0`).
-- Client service injection: `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-locale`, `@deepseek-ai/dsh-client-ui-slots`, `@paimind/better-sidebar-adapter`.
+- Client service injection: `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-locale`, `@deepseek-ai/dsh-client-ui-slots`, `@hansen/better-sidebar-adapter`.
 
 The manifest is authoritative for dependency direction and version selection.
 

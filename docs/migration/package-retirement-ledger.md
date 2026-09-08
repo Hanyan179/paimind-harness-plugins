@@ -6,11 +6,11 @@ audit found zero `package.json` consumers.
 
 | Package identity | Former directory | Durable disposition | Consumer result |
 |---|---|---|---|
-| `@paimind/launcher` | `packages/launcher` | Product navigation remains with the native shell and Extension Center | None |
-| `@paimind/conversation-extensions` | `packages/conversation-extensions` | Conversation capability remains native Harness behavior | None |
-| `@paimind/scheduler` | `packages/scheduler-native` | The retained platform Scheduler is the sole PAIMind scheduler | None |
-| `@paimind/permissions-core` | `packages/permissions-core` | Harness permission presets remain canonical; no synthetic product RBAC is retained | None |
-| `@paimind/platform-integration-examples` | `packages/platform-integration-examples` | Effective code and tests moved to `examples/platform-integration/` | None |
+| `@hansen/launcher` | `packages/launcher` | Product navigation remains with the native shell and Extension Center | None |
+| `@hansen/conversation-extensions` | `packages/conversation-extensions` | Conversation capability remains native Harness behavior | None |
+| `@hansen/scheduler` | `packages/scheduler-native` | The retained platform Scheduler is the sole PAIMind scheduler | None |
+| `@hansen/permissions-core` | `packages/permissions-core` | Harness permission presets remain canonical; no synthetic product RBAC is retained | None |
+| `@hansen/platform-integration-examples` | `packages/platform-integration-examples` | Effective code and tests moved to `examples/platform-integration/` | None |
 
 Retirement removes workspace manifests, sources, tests, project references,
 aliases, lockfile importers, build/framework assumptions and active-document

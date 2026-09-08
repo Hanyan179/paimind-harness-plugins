@@ -6,7 +6,7 @@ describe('Paramont branding invariant', () => {
     const dispose = vi.fn()
     const register = vi.fn(() => dispose)
     const result = await apply({ invariants: { register } })
-    expect(register).toHaveBeenCalledWith('@paimind/branding', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('@hansen/branding', expect.any(Function))
     result()
     expect(dispose).toHaveBeenCalledOnce()
   })

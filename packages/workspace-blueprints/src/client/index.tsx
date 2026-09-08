@@ -21,7 +21,7 @@ import {
   type HarnessWorkspaceView,
   type PaimindClientContext,
   type PaimindLocaleSource,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import {
   PaimindAgentIcon,
   PaimindCheckIcon,
@@ -34,14 +34,14 @@ import {
   PaimindTrashIcon,
   PaimindUploadIcon,
   PaimindWarningIcon,
-} from '@paimind/harness-compat/client-icons'
+} from '@hansen/harness-compat/client-icons'
 import {
   installPaimindProductCenterHost,
   installPaimindProductSurfaceInteraction,
   PaimindProductSurfaceController,
   resolvePaimindProductCenterHost,
   type PaimindProductCenterHost,
-} from '@paimind/harness-compat/client-surface'
+} from '@hansen/harness-compat/client-surface'
 import {
   WORKSPACE_BLUEPRINT_CATEGORIES,
   type WorkspaceBlueprintAgentChoice,
@@ -73,7 +73,7 @@ import { WORKSPACE_BLUEPRINT_CENTER_STYLE } from './styles.js'
 
 const BASE_INJECT = ['slots', 'locale', 'remote', 'workspaces', 'sessions'] as const
 export const inject = [...BASE_INJECT]
-const STYLE_ID = '@paimind/workspace-blueprints'
+const STYLE_ID = '@hansen/workspace-blueprints'
 const PAGE_SIZE = 50
 const CHOICES_RETRY_DELAY_MS = 150
 const EMPTY_COMPOSITION_CHOICES = Object.freeze({
@@ -900,13 +900,13 @@ export async function apply(ctx: WorkspaceBlueprintClientContext): Promise<() =>
   const disposeRemote = await ctx.remote.$mount(TYPERT_REMOTE)
   const mounted = ctx.inject([...BASE_INJECT, 'remote.paimindWorkspaceBlueprints'], scope => {
     const blueprints = scope.remote.paimindWorkspaceBlueprints
-    if (blueprints === undefined) throw new Error('PAIMind Workspace Blueprint Remote did not mount')
+    if (blueprints === undefined) throw new Error('Workspace Blueprint Remote did not mount')
     const controller = new PaimindProductSurfaceController('workspace-blueprints')
     const sessionApi = scope.get('connection').api.sessions
     scope.effect(installWorkspaceBlueprintCenterStyle, 'paimind-workspace-blueprints: style')
     scope.effect(() => () => { controller.dispose() }, 'paimind-workspace-blueprints: surface controller')
     contributePaimindExtension(scope.slots, {
-      id: 'paimind:workspace-blueprints', packageName: '@paimind/workspace-blueprints', category: 'content-rendering',
+      id: 'paimind:workspace-blueprints', packageName: '@hansen/workspace-blueprints', category: 'content-rendering',
       nameZh: '工作区模板中心', nameEn: 'Workspace Template Center',
       descriptionZh: '从可复用文件夹模板创建原生 Harness 工作区。',
       descriptionEn: 'Create native Harness Workspaces from reusable folder templates.',

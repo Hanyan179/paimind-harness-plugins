@@ -7,7 +7,7 @@ import { TYPERT } from '../src/typert.ts'
 
 describe('Product Feature Pack Remote contract', () => {
   it('publishes one strict descriptor set to the Host and Client faces', () => {
-    expect(TYPERT.package).toBe('@paimind/extension-center')
+    expect(TYPERT.package).toBe('@hansen/extension-center')
     expect(TYPERT.face).toBe('host')
     expect(TYPERT.invocations).toBe(PAIMIND_FEATURE_PACK_REMOTE_DESCRIPTORS)
     expect(TYPERT_REMOTE.descriptors).toBe(PAIMIND_FEATURE_PACK_REMOTE_DESCRIPTORS)

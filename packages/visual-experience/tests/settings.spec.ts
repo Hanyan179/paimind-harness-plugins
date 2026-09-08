@@ -4,7 +4,7 @@ import {
   PAIMIND_VISUAL_EXPERIENCE_NAMESPACE,
   decodePaimindVisualExperienceSettings,
 } from '../src/settings.js'
-import { resolveHarnessSettingsNamespace } from '@paimind/harness-compat'
+import { resolveHarnessSettingsNamespace } from '@hansen/harness-compat'
 
 describe('visual experience settings contract', () => {
   it('uses the namespaced reversible PAIMind default', () => {

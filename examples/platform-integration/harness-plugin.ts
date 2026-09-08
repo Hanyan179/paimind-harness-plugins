@@ -1,7 +1,7 @@
-import { PaimindHostService } from '@paimind/harness-compat/host'
-import type { PaimindScheduleCreateInput, PaimindScheduleDefinition } from '@paimind/contracts'
-import type { PaimindSchedulerServiceApi, PaimindSchedulerSnapshot } from '@paimind/platform-scheduler'
-import type { PaimindHarnessScheduleAdapter } from '@paimind/scheduler-adapter-harness'
+import { PaimindHostService } from '@hansen/harness-compat/host'
+import type { PaimindScheduleCreateInput, PaimindScheduleDefinition } from '@hansen/contracts'
+import type { PaimindSchedulerServiceApi, PaimindSchedulerSnapshot } from '@hansen/platform-scheduler'
+import type { PaimindHarnessScheduleAdapter } from '@hansen/scheduler-adapter-harness'
 import { registerExampleHarnessAction } from './index.js'
 
 export const name = 'paimind-platform-integration-example'

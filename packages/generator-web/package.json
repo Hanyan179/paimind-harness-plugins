@@ -1,9 +1,9 @@
 {
-  "name": "@paimind/generator-web",
+  "name": "@hansen/generator-web",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "Native Harness Tool provider for explicit PAIMind HTML artifact generation",
+  "description": "Native Harness Tool provider for explicit Hansen HTML artifact generation",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -21,16 +21,16 @@
     }
   },
   "dependencies": {
-    "@paimind/artifact-runtime": "workspace:^",
-    "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^"
+    "@hansen/artifact-runtime": "workspace:^",
+    "@hansen/contracts": "workspace:^",
+    "@hansen/harness-compat": "workspace:^"
   },
   "peerDependencies": { "react": ">=18.0.0 <20.0.0" },
   "devDependencies": {
-    "@paimind/testkit": "workspace:^",
+    "@hansen/testkit": "workspace:^",
     "react": "^18.3.1"
   },
-  "paimindBuild": {
+  "hansenBuild": {
     "node": ["src/index.ts", "src/invariant.ts"],
     "client": "src/client/index.tsx"
   },

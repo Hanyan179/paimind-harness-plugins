@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { HarnessSkillEntry } from '@paimind/harness-compat'
+import type { HarnessSkillEntry } from '@hansen/harness-compat'
 import { metadataForSkill, projectSkillCatalog } from '../src/index.js'
 
 describe('FP11 native Skill catalog projection', () => {

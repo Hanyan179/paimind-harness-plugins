@@ -7,7 +7,7 @@ import type {
   PaimindNotificationSource,
   PaimindScheduleRunReport,
   PaimindScheduleTriggerRequest,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import {
   PaimindHostService,
   createPaimindScheduledHarnessAgent,
@@ -19,12 +19,12 @@ import {
   type PaimindScheduledHarnessAgentRegistry,
   type PaimindScheduledHarnessPresetRegistry,
   type PaimindScheduledHarnessTitleService,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 import type {
   PaimindScheduleExecutionReceipt,
   PaimindScheduleExecutor,
   PaimindSchedulerServiceApi,
-} from '@paimind/platform-scheduler'
+} from '@hansen/platform-scheduler'
 
 export const name = 'paimind-scheduler-adapter-harness'
 export const PAIMIND_HARNESS_SCHEDULER_ADAPTER_ID = 'adapter:paimind-harness'

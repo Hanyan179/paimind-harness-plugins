@@ -1,20 +1,20 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { PaimindExtensionDescriptor } from '@paimind/contracts'
-import type { PaimindDeveloperResourcesClientContext } from '@paimind/harness-compat'
-import { createClientContextFixture } from '@paimind/testkit'
+import type { PaimindExtensionDescriptor } from '@hansen/contracts'
+import type { PaimindDeveloperResourcesClientContext } from '@hansen/harness-compat'
+import { createClientContextFixture } from '@hansen/testkit'
 import { apply, DeveloperResourcesSection } from '../src/client/index.js'
 
 const runtimeOrb: PaimindExtensionDescriptor = {
-  id: 'paimind:runtime-orbs', packageName: '@paimind/runtime-orbs', category: 'experience',
+  id: 'paimind:runtime-orbs', packageName: '@hansen/runtime-orbs', category: 'experience',
   nameZh: '运行状态球', nameEn: 'Runtime Orb', descriptionZh: '真实状态。', descriptionEn: 'Real state.',
   surface: 'conversation', maturity: 'available',
 }
 const extensions = Object.freeze([runtimeOrb])
 
 const snapshot = { entries: [
-  { entryId: 'orb-root', moduleName: '@paimind/runtime-orbs', enabled: true, fiberPhase: 'active' as const },
-  { entryId: 'orb-invariant', moduleName: '@paimind/runtime-orbs/invariant', enabled: true, fiberPhase: 'active' as const },
+  { entryId: 'orb-root', moduleName: '@hansen/runtime-orbs', enabled: true, fiberPhase: 'active' as const },
+  { entryId: 'orb-invariant', moduleName: '@hansen/runtime-orbs/invariant', enabled: true, fiberPhase: 'active' as const },
   { entryId: 'native', moduleName: '@deepseek-ai/dsh-native', enabled: true, fiberPhase: 'active' as const },
 ] }
 
@@ -35,7 +35,7 @@ describe('Developer Resources client', () => {
     expect(fixture.slots.find(entry => entry.injectedName === 'paimind.extension')).toMatchObject({
       options: { id: 'paimind:developer-resources' },
     })
-    const style = document.getElementById('@paimind/developer-resources')?.textContent ?? ''
+    const style = document.getElementById('@hansen/developer-resources')?.textContent ?? ''
     expect(style).toContain('@media(max-width:600px){[data-paimind-developer-tabs]')
     expect(style).not.toContain(":has([data-paimind-developer-resources])>nav")
     fixture.disposeEffects()
@@ -52,20 +52,20 @@ describe('Developer Resources client', () => {
     fixture.disposeEffects()
   })
 
-  it('renders exact native diagnostics without non-PAIMind rows or guessed fields', async () => {
+  it('renders exact native diagnostics without non-rows or guessed fields', async () => {
     render(<DeveloperResourcesSection close={() => {}} locale={locale()} getExtensions={() => extensions} subscribeExtensions={() => () => {}} listInventory={async () => snapshot} />)
-    await waitFor(() => expect(screen.getByText('@paimind/runtime-orbs')).toBeInTheDocument())
-    expect(screen.getByText('@paimind/runtime-orbs/invariant')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('@hansen/runtime-orbs')).toBeInTheDocument())
+    expect(screen.getByText('@hansen/runtime-orbs/invariant')).toBeInTheDocument()
     expect(screen.getByText('orb-root')).toBeInTheDocument()
     expect(screen.queryByText('@deepseek-ai/dsh-native')).not.toBeInTheDocument()
     expect(screen.getByText(/no versions, dependency graph, or failure stack/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /enable|disable|install|uninstall/i })).not.toBeInTheDocument()
-    expect(screen.getByText('2 @paimind/* Loader entries', { exact: false })).toBeInTheDocument()
+    expect(screen.getByText('2 @hansen/* Loader entries', { exact: false })).toBeInTheDocument()
   })
 
   it('uses live extension contributions for surfaces and bundled labels for references', async () => {
     render(<DeveloperResourcesSection close={() => {}} locale={locale()} getExtensions={() => extensions} subscribeExtensions={() => () => {}} listInventory={async () => snapshot} />)
-    await waitFor(() => expect(screen.getByText('@paimind/runtime-orbs')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('@hansen/runtime-orbs')).toBeInTheDocument())
     fireEvent.click(screen.getByRole('tab', { name: 'Surface Catalog' }))
     const surface = screen.getByText('Runtime Orb').closest('li')
     expect(surface).not.toBeNull()
@@ -86,9 +86,9 @@ describe('Developer Resources client', () => {
       .mockResolvedValueOnce(snapshot)
     render(<DeveloperResourcesSection close={() => {}} locale={locale('zh-CN')} getExtensions={() => extensions} subscribeExtensions={() => () => {}} listInventory={listInventory} />)
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('没有展示缓存或猜测状态'))
-    expect(screen.queryByText('@paimind/runtime-orbs')).not.toBeInTheDocument()
+    expect(screen.queryByText('@hansen/runtime-orbs')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '重试' }))
-    await waitFor(() => expect(screen.getByText('@paimind/runtime-orbs')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('@hansen/runtime-orbs')).toBeInTheDocument())
     expect(listInventory).toHaveBeenCalledTimes(2)
   })
 })

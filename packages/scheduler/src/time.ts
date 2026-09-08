@@ -1,5 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill'
-import { definePaimindScheduleRule, type PaimindScheduleRule } from '@paimind/contracts'
+import { definePaimindScheduleRule, type PaimindScheduleRule } from '@hansen/contracts'
 
 function localTime(rule: Exclude<PaimindScheduleRule, { readonly kind: 'once' }>): Temporal.PlainTime {
   return Temporal.PlainTime.from(rule.time)

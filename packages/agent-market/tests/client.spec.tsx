@@ -1,11 +1,11 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { HarnessAgentPresetApi, PaimindLocaleSource } from '@paimind/harness-compat'
+import type { HarnessAgentPresetApi, PaimindLocaleSource } from '@hansen/harness-compat'
 import {
   PaimindAgentBuilderRequestController,
   PaimindProductSurfaceController,
   requestPaimindAgentBuilder,
-} from '@paimind/harness-compat/client-surface'
+} from '@hansen/harness-compat/client-surface'
 import {
   AgentCenterRuntime,
   AgentCenterSection,
@@ -190,7 +190,7 @@ afterEach(() => {
   cleanup()
   document.body.innerHTML = ''
   document.body.style.overflow = ''
-  document.head.querySelectorAll('style[data-paimind-plugin="@paimind/agent-market"]').forEach(node => { node.remove() })
+  document.head.querySelectorAll('style[data-paimind-plugin="@hansen/agent-market"]').forEach(node => { node.remove() })
 })
 
 describe('Agent Center business UI', () => {
@@ -1908,7 +1908,7 @@ describe('Agent Center business UI', () => {
     expect(starter).not.toBeInTheDocument()
   })
 
-  it('uses PAIMind tokens and includes responsive and reduced-motion treatments', () => {
+  it('uses tokens and includes responsive and reduced-motion treatments', () => {
     expect(AGENT_CENTER_STYLE).toContain('--paimind-ui-canvas')
     expect(AGENT_CENTER_STYLE).toContain('--paimind-ui-panel')
     expect(AGENT_CENTER_STYLE).toMatch(/\[data-paimind-product-surface='agent-center'\][\s\S]*z-index: 80;/)
@@ -1965,8 +1965,8 @@ describe('Agent Center business UI', () => {
     const dispose = await apply(context as never)
     expect(registered).toEqual(['paimind.extension', 'sidebar.footer.action', 'shell.overlay'])
     expect(registered).not.toContain('settings.section')
-    expect(document.getElementById('@paimind/agent-market')).not.toBeNull()
+    expect(document.getElementById('@hansen/agent-market')).not.toBeNull()
     await dispose()
-    expect(document.getElementById('@paimind/agent-market')).toBeNull()
+    expect(document.getElementById('@hansen/agent-market')).toBeNull()
   })
 })

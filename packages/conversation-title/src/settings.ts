@@ -1,4 +1,4 @@
-import type { PaimindSettingsFieldSpec } from '@paimind/harness-compat/host'
+import type { PaimindSettingsFieldSpec } from '@hansen/harness-compat/host'
 
 export const PAIMIND_CONVERSATION_TITLE_NAMESPACE = 'paimind.conversation-title'
 export const PAIMIND_CONVERSATION_TITLE_PROMPT_MAX_BYTES = 960

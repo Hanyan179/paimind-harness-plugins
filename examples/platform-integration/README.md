@@ -8,7 +8,7 @@ These non-published examples show four supported integration seams:
 - send a notification through the platform client.
 
 The Harness example uses `ctx.effect()` so unloading the example disposes its
-registered action. It is never selected by `@paimind/harness-bundle`.
+registered action. It is never selected by `@hansen/harness-bundle`.
 
 Run `pnpm exec vitest run examples/platform-integration/examples.spec.ts` and
 `pnpm run typecheck` to verify the examples. Production credentials, business

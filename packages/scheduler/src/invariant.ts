@@ -1,6 +1,6 @@
-import type { PaimindInvariantContext } from '@paimind/harness-compat'
+import type { PaimindInvariantContext } from '@hansen/harness-compat'
 
-const PACKAGE_NAME = '@paimind/platform-scheduler'
+const PACKAGE_NAME = '@hansen/platform-scheduler'
 export const name = 'paimind-platform-scheduler-invariant'
 export const inject = ['invariants']
 

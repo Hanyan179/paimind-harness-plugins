@@ -1,7 +1,7 @@
 {
-  "name": "@paimind/ui-foundation",
+  "name": "@hansen/ui-foundation",
   "version": "0.1.0-alpha.0",
-  "description": "Shared PAIMind client tokens and lightweight UI primitives over Harness theme variables",
+  "description": "Shared Hansen client tokens and lightweight UI primitives over Harness theme variables",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
   "type": "module",
@@ -11,6 +11,6 @@
     ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" }
   },
   "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
-  "paimindBuild": { "node": ["src/index.ts"] },
+  "hansenBuild": { "node": ["src/index.ts"] },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }

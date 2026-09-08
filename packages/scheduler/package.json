@@ -1,9 +1,9 @@
 {
-  "name": "@paimind/platform-scheduler",
+  "name": "@hansen/platform-scheduler",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "PAIMind platform scheduler with durable task definitions, action adapters and run records",
+  "description": "Hansen platform scheduler with durable task definitions, action adapters and run records",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -32,26 +32,26 @@
   },
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1",
-    "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^",
+    "@hansen/contracts": "workspace:^",
+    "@hansen/harness-compat": "workspace:^",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@paimind/notifications": "workspace:^",
+    "@hansen/notifications": "workspace:^",
     "react": ">=18.0.0 <20.0.0",
     "react-dom": ">=18.0.0 <20.0.0"
   },
   "peerDependenciesMeta": {
-    "@paimind/notifications": { "optional": true }
+    "@hansen/notifications": { "optional": true }
   },
   "devDependencies": {
-    "@paimind/notifications": "workspace:^",
-    "@paimind/testkit": "workspace:^",
+    "@hansen/notifications": "workspace:^",
+    "@hansen/testkit": "workspace:^",
     "@testing-library/react": "^16.3.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
-  "paimindBuild": {
+  "hansenBuild": {
     "node": ["src/index.ts", "src/core.ts", "src/time.ts", "src/invariant.ts", "src/remote.ts", "src/typert.ts"],
     "client": "src/client/index.tsx"
   },

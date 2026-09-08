@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { definePaimindExtension } from '@paimind/contracts'
+import { definePaimindExtension } from '@hansen/contracts'
 import {
   PAIMIND_INTEGRATION_REFERENCES,
   paimindInventoryEntries,
@@ -8,13 +8,13 @@ import {
 } from '../src/index.js'
 
 const snapshot = { entries: [
-  { entryId: 'active', moduleName: '@paimind/active', enabled: true, fiberPhase: 'active' as const },
-  { entryId: 'loading', moduleName: '@paimind/loading', enabled: true, fiberPhase: 'loading' as const },
-  { entryId: 'pending', moduleName: '@paimind/pending', enabled: true, fiberPhase: 'pending' as const },
-  { entryId: 'unloading', moduleName: '@paimind/unloading', enabled: true, fiberPhase: 'unloading' as const },
-  { entryId: 'failed', moduleName: '@paimind/failed', enabled: true, fiberPhase: 'failed' as const },
-  { entryId: 'disabled', moduleName: '@paimind/disabled', enabled: false, fiberPhase: null },
-  { entryId: 'unobserved', moduleName: '@paimind/unobserved', enabled: true, fiberPhase: null },
+  { entryId: 'active', moduleName: '@hansen/active', enabled: true, fiberPhase: 'active' as const },
+  { entryId: 'loading', moduleName: '@hansen/loading', enabled: true, fiberPhase: 'loading' as const },
+  { entryId: 'pending', moduleName: '@hansen/pending', enabled: true, fiberPhase: 'pending' as const },
+  { entryId: 'unloading', moduleName: '@hansen/unloading', enabled: true, fiberPhase: 'unloading' as const },
+  { entryId: 'failed', moduleName: '@hansen/failed', enabled: true, fiberPhase: 'failed' as const },
+  { entryId: 'disabled', moduleName: '@hansen/disabled', enabled: false, fiberPhase: null },
+  { entryId: 'unobserved', moduleName: '@hansen/unobserved', enabled: true, fiberPhase: null },
   { entryId: 'native', moduleName: '@deepseek-ai/dsh-native', enabled: true, fiberPhase: 'active' as const },
 ] }
 
@@ -28,14 +28,14 @@ describe('Developer Resources truth boundary', () => {
 
   it('joins a surface by exact package id and preserves technical dimensions', () => {
     const descriptor = definePaimindExtension({
-      id: 'paimind:active', packageName: '@paimind/active', category: 'developer',
+      id: 'paimind:active', packageName: '@hansen/active', category: 'developer',
       nameZh: '活动', nameEn: 'Active', descriptionZh: '活动。', descriptionEn: 'Active.',
       surface: 'settings', maturity: 'available',
     })
     expect(projectDeveloperSurface(descriptor, snapshot)).toMatchObject({
       technicalState: 'active', entries: [{ entryId: 'active' }],
     })
-    expect(projectDeveloperSurface({ ...descriptor, packageName: '@paimind/missing' }, snapshot).technicalState).toBe('unavailable')
+    expect(projectDeveloperSurface({ ...descriptor, packageName: '@hansen/missing' }, snapshot).technicalState).toBe('unavailable')
   })
 
   it('ships only real, uniquely identified bundled integration references', () => {

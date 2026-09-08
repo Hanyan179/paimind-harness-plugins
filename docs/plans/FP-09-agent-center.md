@@ -6,7 +6,7 @@
 
 FP09 adds a PAIMind Agent Center as the catalog, market, classification and governance product layer over the one native Harness Agent Preset roster. It does not create an Agent runtime, duplicate Preset document or alternate execution id.
 
-The surface is an independent Harness Settings section, not a Launcher destination and not an Extension Center navigation action. Extension Center only describes and technically manages the `@paimind/agent-market` capability under `Agents`.
+The surface is an independent Harness Settings section, not a Launcher destination and not an Extension Center navigation action. Extension Center only describes and technically manages the `@hansen/agent-market` capability under `Agents`.
 
 ## Native mapping
 
@@ -15,18 +15,18 @@ The surface is an independent Harness Settings section, not a Launcher destinati
 | Preset id, name, description, trust, default and broken state | Reuse exactly | Harness `agentPreset.list` |
 | Blank-Session Preset selection | Reuse exactly | Harness native Agent Preset Seat plus Session binding |
 | Preset execution, Tool/Skill composition and persistence | Reuse exactly | Harness Agent Preset runtime |
-| Catalog search, product categories, featured rows and favorites | PAIMind product metadata keyed by Preset id | `@paimind/agent-market` |
+| Catalog search, product categories, featured rows and favorites | PAIMind product metadata keyed by Preset id | `@hansen/agent-market` |
 | Copy, delete, default setting and file authoring | Native reuse / later Builder | Harness Agent Presets UI and FP10 |
 | Second Agent object, second Preset document or mock market roster | Forbidden | None |
 
 ## Package and contract boundaries
 
-### `@paimind/harness-compat`
+### `@hansen/harness-compat`
 
 - Exposes the version-isolated `agentPreset.list` wire shape, native Agent Preset Seat control and the minimal Session binding facts FP09 needs.
 - Feature code imports no `@deepseek-ai/*` package.
 
-### `@paimind/agent-market`
+### `@hansen/agent-market`
 
 - Registers one `settings.section` named `Agent Center` and one Extension Center descriptor in `Agents`.
 - Reads the native roster on mount and every explicit refresh; no cached roster is presented as current truth after an API failure.

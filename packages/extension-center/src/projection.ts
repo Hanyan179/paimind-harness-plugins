@@ -1,10 +1,10 @@
-import type { PaimindExtensionDescriptor } from '@paimind/contracts'
+import type { PaimindExtensionDescriptor } from '@hansen/contracts'
 import type {
   HarnessPluginInventoryEntry,
   HarnessPluginInventorySnapshot,
   HarnessPluginTechnicalState,
-} from '@paimind/harness-compat'
-import { projectHarnessPluginTechnicalState } from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
+import { projectHarnessPluginTechnicalState } from '@hansen/harness-compat'
 
 /** Product state and Loader state are intentionally separate dimensions. */
 export type ExtensionTechnicalState = HarnessPluginTechnicalState

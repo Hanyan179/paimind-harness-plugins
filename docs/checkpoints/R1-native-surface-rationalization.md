@@ -11,12 +11,12 @@ Next stage: `R2 Product Truth Plane`
 - The fixed product taxonomy is Experience, Content & Rendering, Agents, Skills & Tools, Automation, Governance and Developer.
 - Former PAIMind Launcher and the FP03 empty marker are absent from Bundle, client discovery and the live browser surface.
 - FP04 is a headless `Project = Workspace` adapter: it publishes `paimindWorkspaceProject`, registers zero visible slots and creates no second Project store.
-- Bento remains an independent PAIMind Renderer Plugin. Its core has no direct Better Sidebar dependency; the external provider is reachable only through `@paimind/better-sidebar-adapter`.
+- Bento remains an independent PAIMind Renderer Plugin. Its core has no direct Better Sidebar dependency; the external provider is reachable only through `@hansen/better-sidebar-adapter`.
 - Task Monitor is honestly shown as `Reopened` on its current Side Card surface. R2 owns the independent button and Native Job migration.
 
 ## Runtime architecture
 
-`@paimind/extension-center` declares a `paimind.extension` child Slot. User-visible packages contribute immutable product descriptors through the native Harness Slot ledger. Extension Center joins the exact package module id to the read-only Harness Plugin Inventory at render time and stores no technical-state mirror. An inventory failure shows an unavailable state and never replays cached success.
+`@hansen/extension-center` declares a `paimind.extension` child Slot. User-visible packages contribute immutable product descriptors through the native Harness Slot ledger. Extension Center joins the exact package module id to the read-only Harness Plugin Inventory at render time and stores no technical-state mirror. An inventory failure shows an unavailable state and never replays cached success.
 
 Harness rc.6 currently exposes module id, effective enablement and Fiber phase. Version and dependency remain Harness-owned, but Extension Center does not invent fields absent from the public Remote.
 
@@ -24,14 +24,14 @@ Harness rc.6 currently exposes module id, effective enablement and Fiber phase. 
 
 | Package | Category | Product maturity | Current surface |
 |---|---|---|---|
-| `@paimind/runtime-orbs` | Experience | Available | Native conversation |
-| `@paimind/artifacts` | Content & Rendering | Technical preview | Side card |
-| `@paimind/renderer-bento` | Content & Rendering | Technical preview | Preview channel |
-| `@paimind/presentation-trace` | Content & Rendering | Technical preview | Side card |
-| `@paimind/task-monitor` | Automation | Reopened | Side card; R2 target is independent button |
-| `@paimind/extension-center` | Developer | Available | Settings |
+| `@hansen/runtime-orbs` | Experience | Available | Native conversation |
+| `@hansen/artifacts` | Content & Rendering | Technical preview | Side card |
+| `@hansen/renderer-bento` | Content & Rendering | Technical preview | Preview channel |
+| `@hansen/presentation-trace` | Content & Rendering | Technical preview | Side card |
+| `@hansen/task-monitor` | Automation | Reopened | Side card; R2 target is independent button |
+| `@hansen/extension-center` | Developer | Available | Settings |
 
-Headless packages do not create cards: `@paimind/workspace-project` and `@paimind/better-sidebar-adapter`.
+Headless packages do not create cards: `@hansen/workspace-project` and `@hansen/better-sidebar-adapter`.
 
 ## Verification evidence
 

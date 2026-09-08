@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { HarnessSessionService } from '@paimind/harness-compat'
-import type { PaimindWorkspaceProjectService } from '@paimind/workspace-project'
+import type { HarnessSessionService } from '@hansen/harness-compat'
+import type { PaimindWorkspaceProjectService } from '@hansen/workspace-project'
 import { HarnessProjectedArtifactSource } from '../src/index.js'
 
 function observable<T>(initial: T): {

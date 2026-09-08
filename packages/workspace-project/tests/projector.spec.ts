@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type {
   HarnessSessionListSnapshot, HarnessWorkspaceListSnapshot,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import { projectWorkspaceSnapshot } from '../src/index.js'
 
 const workspaces = (overrides: Partial<HarnessWorkspaceListSnapshot> = {}): HarnessWorkspaceListSnapshot => ({

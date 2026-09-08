@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type {
   HarnessObservableSnapshot, HarnessSessionListSnapshot, HarnessWorkspaceListSnapshot,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import { WorkspaceProjectBridge } from '../src/index.js'
 
 function observable<T>(initial: T): HarnessObservableSnapshot<T> & { set(value: T): void; listeners(): number } {

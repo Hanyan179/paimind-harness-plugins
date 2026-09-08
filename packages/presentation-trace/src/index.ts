@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { readFile, realpath, stat } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { isAbsolute, relative, resolve } from 'node:path'
-import type { PaimindHostSessionService, PaimindHostWebServer } from '@paimind/harness-compat'
+import type { PaimindHostSessionService, PaimindHostWebServer } from '@hansen/harness-compat'
 import { TRACE_DOCUMENT_PATH, TRACE_SCHEMA_V3 } from './shared.js'
 
 export * from './shared.js'

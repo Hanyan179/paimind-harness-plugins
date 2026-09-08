@@ -2,7 +2,7 @@ import { PAIMIND_NOTIFICATION_REMOTE_DESCRIPTORS } from './remote.js'
 
 /** Hand-authored from the same schema constants as the Client contribution. */
 export const TYPERT = Object.freeze({
-  package: '@paimind/notifications',
+  package: '@hansen/notifications',
   face: 'host',
   schemas: Object.freeze([]),
   invocations: PAIMIND_NOTIFICATION_REMOTE_DESCRIPTORS,

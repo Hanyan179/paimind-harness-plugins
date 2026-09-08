@@ -1,4 +1,4 @@
-# `@paimind/notifications`
+# `@hansen/notifications`
 
 Durable PAIMind notification message/read-state sidecar over canonical Harness objects.
 
@@ -21,9 +21,9 @@ Role: **Client plugin**. It owns the product projection described above; Harness
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/artifacts` (`workspace:^`), `@paimind/better-sidebar-adapter` (`workspace:^`), `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`), `@paimind/ui-foundation` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/artifacts` (`workspace:^`), `@hansen/better-sidebar-adapter` (`workspace:^`), `@hansen/contracts` (`workspace:^`), `@hansen/harness-compat` (`workspace:^`), `@hansen/ui-foundation` (`workspace:^`).
 - External runtime or peer dependencies: `zod` (`^4.4.3`), `react` (`>=18.0.0 <20.0.0`), `react-dom` (`>=18.0.0 <20.0.0`).
-- Client service injection: `@deepseek-ai/dsh-api-remotes`, `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-locale`, `@paimind/better-sidebar-adapter`, `@paimind/artifacts`.
+- Client service injection: `@deepseek-ai/dsh-api-remotes`, `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-locale`, `@hansen/better-sidebar-adapter`, `@hansen/artifacts`.
 
 The manifest is authoritative for dependency direction and version selection.
 

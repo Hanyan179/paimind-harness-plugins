@@ -3,13 +3,13 @@
 Install the server-side package with the same release version as the Platform API:
 
 ```bash
-pnpm add @paimind/platform-sdk
+pnpm add @hansen/platform-sdk
 ```
 
 Create a client. Load the secret from a Secret Manager（密钥管理服务）; never place it in browser code.
 
 ```ts
-import { createPaimindPlatformClient } from '@paimind/platform-sdk'
+import { createPaimindPlatformClient } from '@hansen/platform-sdk'
 
 const client = createPaimindPlatformClient({
   baseUrl: 'https://platform.example.com',

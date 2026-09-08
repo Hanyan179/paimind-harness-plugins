@@ -1,12 +1,12 @@
-import type { PaimindScheduleTriggerRequest } from '@paimind/contracts'
+import type { PaimindScheduleTriggerRequest } from '@hansen/contracts'
 import {
   PaimindReplayGuard,
   verifyPaimindRequestSignature,
   type PaimindPlatformClient,
   type PaimindSignatureInput,
-} from '@paimind/platform-sdk'
-import type { PaimindScheduleExecutor } from '@paimind/platform-scheduler'
-import type { PaimindHarnessScheduleAdapter } from '@paimind/scheduler-adapter-harness'
+} from '@hansen/platform-sdk'
+import type { PaimindScheduleExecutor } from '@hansen/platform-scheduler'
+import type { PaimindHarnessScheduleAdapter } from '@hansen/scheduler-adapter-harness'
 
 /** Business plugin code: register one Harness action, with no business field added to Scheduler. */
 export async function registerExampleHarnessAction(

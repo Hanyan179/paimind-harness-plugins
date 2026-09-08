@@ -12,26 +12,26 @@ Harness `0.1.0-rc.6` has no Notification domain or public notification API. A mi
 |---|---|---|
 | Workspace, Session and Artifact identity | Reuse exactly | Harness ids and native Session projection |
 | Task, generation and schedule lifecycle | Reuse exactly | Harness Job / Schedule / Tool Result metadata |
-| Notification title, body, level and read state | PAIMind-owned sidecar | `@paimind/notifications` storage domain |
+| Notification title, body, level and read state | PAIMind-owned sidecar | `@hansen/notifications` storage domain |
 | Producer trust | Host registration closure | PAIMind Host producer id; never client/model payload |
 | Notification deep link | Safe canonical reference | Artifact, Session, registered PAIMind surface or credential-free HTTPS URL |
 | Approval, retry, complete, blocked, archive and business workflow | Explicitly excluded | Canonical source domain |
 
 ## Package and seams
 
-### `@paimind/contracts`
+### `@hansen/contracts`
 
 - Defines closed notification levels, trusted source snapshots and target union.
 - Rejects unknown target kinds, non-HTTPS external links, embedded URL credentials and invalid ids.
 - Keeps exactly one optional action target per message.
 
-### `@paimind/harness-compat`
+### `@hansen/harness-compat`
 
 - Owns the version-sensitive Typert Remote and Storage Domain seams.
 - Feature code sees structural `PaimindHostRemoteService`, Remote mount and storage-table contracts only.
 - No notification feature imports Cordis, `dsh-storage-domain` or `dsh-typert-protocol` directly.
 
-### `@paimind/notifications`
+### `@hansen/notifications`
 
 - Host service opens the versioned `paimind_notifications` Storage Domain under the active Harness profile.
 - A registered producer captures its trusted source in Host code and publishes idempotently.
@@ -74,7 +74,7 @@ The notification does not persist Job status, Artifact availability, revision tr
 6. Follow the explicit target and verify the exact registered destination opens.
 7. Refresh the browser and restart Harness; notification and read state must recover from Harness profile storage.
 8. Verify Chinese/Dark, English/Light and 560 px narrow Drawer behavior.
-9. Remove only `@paimind/notifications`; native conversation, Task Monitor, Artifact entry and viewer must remain usable.
+9. Remove only `@hansen/notifications`; native conversation, Task Monitor, Artifact entry and viewer must remain usable.
 
 ## Automated and composition verification
 

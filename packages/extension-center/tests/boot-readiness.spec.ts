@@ -48,13 +48,13 @@ describe('base Browser boot readiness injection', () => {
     diagnosticGlobal.__DSH_BOOT__ = {
       rev: 'graph-r13',
       entries: [
-        { id: '@paimind/registered', url: '/plugins/registered/client.js?rev=1', rev: '1', inject: [] },
-        { id: '@paimind/missing', url: '/plugins/missing/client.js?rev=2', rev: '2', inject: [] },
+        { id: '@hansen/registered', url: '/plugins/registered/client.js?rev=1', rev: '1', inject: [] },
+        { id: '@hansen/missing', url: '/plugins/missing/client.js?rev=2', rev: '2', inject: [] },
       ],
     }
     const facade = {
       mode: 'queue',
-      pendingQueue: [{ id: '@paimind/registered', factory: () => ({}) }],
+      pendingQueue: [{ id: '@hansen/registered', factory: () => ({}) }],
       load() {},
       create() {
         this.mode = 'live'
@@ -72,7 +72,7 @@ describe('base Browser boot readiness injection', () => {
     expect(injection.text.toLowerCase()).not.toContain('</script')
     new Function(injection.text)()
     const system = facade.create() as unknown as { import(id: string): Promise<unknown> }
-    void system.import('@paimind/registered')
+    void system.import('@hansen/registered')
     await vi.advanceTimersByTimeAsync(25)
 
     expect(document.documentElement).toHaveAttribute('data-paimind-boot-readiness', 'failed')
@@ -81,9 +81,9 @@ describe('base Browser boot readiness injection', () => {
     expect(diagnosticGlobal.__PAIMIND_BOOT_READINESS__).toMatchObject({
       state: 'failed',
       graphRev: 'graph-r13',
-      hostInventory: [{ id: '@paimind/registered' }, { id: '@paimind/missing' }],
-      registrationGaps: ['@paimind/missing'],
-      pendingImports: [{ id: '@paimind/registered' }],
+      hostInventory: [{ id: '@hansen/registered' }, { id: '@hansen/missing' }],
+      registrationGaps: ['@hansen/missing'],
+      pendingImports: [{ id: '@hansen/registered' }],
     })
     expect(consoleError).toHaveBeenCalledWith(
       '[paimind-extension-center] Browser boot readiness deadline exceeded',
@@ -91,7 +91,7 @@ describe('base Browser boot readiness injection', () => {
     )
     expect(JSON.parse(window.sessionStorage.getItem('paimind:boot-readiness-last-failure-v1') ?? '{}')).toMatchObject({
       graphRev: 'graph-r13',
-      registrationGaps: ['@paimind/missing'],
+      registrationGaps: ['@hansen/missing'],
     })
   })
 

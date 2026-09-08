@@ -5,7 +5,7 @@ import {
   type PresentationElement,
   type PresentationOutlineV1,
   type PresentationTableSpec,
-} from '@paimind/presentation-contracts'
+} from '@hansen/presentation-contracts'
 
 interface Palette {
   readonly background: string

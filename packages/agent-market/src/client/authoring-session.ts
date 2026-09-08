@@ -1,4 +1,4 @@
-import { PAIMIND_AGENT_PREPARE_CREATE_TOOL } from '@paimind/contracts'
+import { PAIMIND_AGENT_PREPARE_CREATE_TOOL } from '@hansen/contracts'
 
 export interface AgentAuthoringDraftContext {
   readonly productKind: 'personal' | 'business'

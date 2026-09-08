@@ -6,11 +6,11 @@ import {
   type ErrorInfo,
   type ReactNode,
 } from 'react'
-import { contributePaimindExtension, type HarnessSessionService, type PaimindClientContext } from '@paimind/harness-compat'
-import { resolveArtifactPath, type PaimindArtifactService } from '@paimind/artifacts'
-import type { PaimindSidebarService, PaimindSidebarTabScope } from '@paimind/better-sidebar-adapter'
-import type { PaimindBentoPreviewService } from '@paimind/renderer-bento'
-import type { PaimindWorkspaceProjectService } from '@paimind/workspace-project'
+import { contributePaimindExtension, type HarnessSessionService, type PaimindClientContext } from '@hansen/harness-compat'
+import { resolveArtifactPath, type PaimindArtifactService } from '@hansen/artifacts'
+import type { PaimindSidebarService, PaimindSidebarTabScope } from '@hansen/better-sidebar-adapter'
+import type { PaimindBentoPreviewService } from '@hansen/renderer-bento'
+import type { PaimindWorkspaceProjectService } from '@hansen/workspace-project'
 import {
   PresentationTraceRegistry,
   HarnessProjectedPresentationTraceSource,
@@ -109,7 +109,7 @@ function qaSource(): PaimindPresentationTraceSource {
   }
 }
 
-const STYLE_ID = '@paimind/presentation-trace'
+const STYLE_ID = '@hansen/presentation-trace'
 const STYLE = `
 [data-paimind-trace] { --paimind-trace-accent:var(--dsw-alias-state-business-primary,#2f6df6); --paimind-trace-surface:var(--dsw-alias-bg-layer-1,#fff); --paimind-trace-surface-subtle:var(--dsw-alias-bg-layer-2,#f5f7fa); --paimind-trace-surface-raised:var(--dsw-alias-bg-layer-3,#eef2f7); --paimind-trace-border:var(--dsw-alias-border-l1,#dce3ec); --paimind-trace-ink:var(--dsw-alias-label-primary,#142944); --paimind-trace-muted:var(--dsw-alias-label-secondary,#61738a); --paimind-trace-faint:var(--dsw-alias-label-tertiary,#7a8ca4); width:100%; height:100%; min-height:0; min-width:0; display:flex; flex-direction:column; overflow:hidden; isolation:isolate; container-name:paimind-trace-panel; container-type:inline-size; color:var(--paimind-trace-ink); background:var(--paimind-trace-surface-subtle); color-scheme:light dark; font:inherit; }
 [data-paimind-trace] h2,[data-paimind-trace] h3,[data-paimind-trace] h4,[data-paimind-trace] p { margin:0; }
@@ -172,7 +172,7 @@ button[data-paimind-trace-row] { width:100%; }
 
 function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
-  const style = document.createElement('style'); style.id = STYLE_ID; style.dataset.paimindPlugin = '@paimind/presentation-trace'; style.textContent = STYLE; document.head.append(style)
+  const style = document.createElement('style'); style.id = STYLE_ID; style.dataset.paimindPlugin = '@hansen/presentation-trace'; style.textContent = STYLE; document.head.append(style)
   return () => { style.remove() }
 }
 
@@ -282,7 +282,7 @@ export function PresentationTracePanel(props: { readonly service: PaimindPresent
       }
     }
   }, [bento.runtimeEvent, slideIndex, snapshot.selection, trace])
-  if (snapshot.selection === null) return <section data-paimind-trace aria-label={zh ? '演示追溯' : 'Presentation Trace'}><div data-paimind-trace-empty>{zh ? '请从 PAIMind 产物中选择“追溯”。' : 'Choose Trace from a PAIMind artifact.'}</div></section>
+  if (snapshot.selection === null) return <section data-paimind-trace aria-label={zh ? '演示追溯' : 'Presentation Trace'}><div data-paimind-trace-empty>{zh ? '请从 产物中选择“追溯”。' : 'Choose Trace from a artifact.'}</div></section>
   if (trace === null) return <section data-paimind-trace aria-label={zh ? '演示追溯' : 'Presentation Trace'}><div role="alert" data-paimind-trace-error>{zh ? '关联的追溯记录不可用；原生预览与会话不受影响。' : 'The associated trace is unavailable; native preview and conversation remain available.'}</div></section>
   const slide = trace.document.slides[Math.min(slideIndex, trace.document.slides.length - 1)] as PaimindTraceSlide
   const hasCategoryDirectory = slide.businessBlocks.length > 1
@@ -336,7 +336,7 @@ class TraceErrorBoundary extends Component<{ readonly children: ReactNode }, { r
 export function apply(ctx: PresentationTraceClientContext): void {
   contributePaimindExtension(ctx.slots, {
     id: 'paimind:presentation-trace',
-    packageName: '@paimind/presentation-trace',
+    packageName: '@hansen/presentation-trace',
     category: 'content-rendering',
     nameZh: '演示追溯',
     nameEn: 'Presentation Trace',

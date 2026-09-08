@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { HarnessConversationSnapshot, HarnessSessionListSnapshot } from '@paimind/harness-compat'
-import { createClientContextFixture } from '@paimind/testkit'
+import type { HarnessConversationSnapshot, HarnessSessionListSnapshot } from '@hansen/harness-compat'
+import { createClientContextFixture } from '@hansen/testkit'
 import {
   apply, RuntimeOrbBoundary, RuntimeOrbDock, RuntimeOrbPreview,
 } from '../src/client/index.tsx'
@@ -55,7 +55,7 @@ describe('FP01 runtime orbs', () => {
 
   it('renders every locked FP01 animation in the explicit QA preview', () => {
     render(<RuntimeOrbPreview />)
-    expect(screen.getByRole('complementary', { name: 'PAIMind Runtime Orb Preview' }))
+    expect(screen.getByRole('complementary', { name: 'Runtime Orb Preview' }))
       .toBeInTheDocument()
     expect(screen.getAllByTestId('runtime-orb-preview-state')).toHaveLength(9)
     expect(document.querySelectorAll('[data-paimind-runtime-orb-preview] canvas')).toHaveLength(1)
@@ -294,10 +294,10 @@ describe('FP01 runtime orbs', () => {
     })
     expect(descriptor?.options).toMatchObject({ id: 'paimind:runtime-orbs' })
     expect(descriptor?.inject?.()).toMatchObject({ descriptor: { category: 'experience' } })
-    expect(document.head.querySelector('style[data-paimind-plugin="@paimind/runtime-orbs"]')).not.toBeNull()
+    expect(document.head.querySelector('style[data-paimind-plugin="@hansen/runtime-orbs"]')).not.toBeNull()
     fixture.disposeEffects()
     expect(fixture.slots.every(slot => slot.disposed())).toBe(true)
-    expect(document.head.querySelector('style[data-paimind-plugin="@paimind/runtime-orbs"]')).toBeNull()
+    expect(document.head.querySelector('style[data-paimind-plugin="@hansen/runtime-orbs"]')).toBeNull()
   })
 
   it('registers the QA overlay only when the explicit preview query is present', () => {

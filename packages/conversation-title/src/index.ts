@@ -3,7 +3,7 @@ import {
   registerPaimindHostSettings,
   type PaimindConversationTitleAutomationContext,
   type PaimindHostSettingsFacility,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 import {
   buildPaimindConversationTitlePrompt,
   decodePaimindConversationTitleModelRoute,

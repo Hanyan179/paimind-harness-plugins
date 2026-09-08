@@ -1,11 +1,11 @@
-import type { PaimindExtensionDescriptor } from '@paimind/contracts'
+import type { PaimindExtensionDescriptor } from '@hansen/contracts'
 import type {
   HarnessPluginFiberPhase,
   HarnessPluginInventoryEntry,
   HarnessPluginInventorySnapshot,
   HarnessPluginTechnicalState,
-} from '@paimind/harness-compat'
-import { projectHarnessPluginTechnicalState } from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
+import { projectHarnessPluginTechnicalState } from '@hansen/harness-compat'
 
 /** Host half is intentionally empty: every source on this page is read-only. */
 export const name = 'paimind-developer-resources'
@@ -34,7 +34,7 @@ const LOADING_PHASES = new Set<HarnessPluginFiberPhase>(['pending', 'loading', '
 export function paimindInventoryEntries(
   snapshot: HarnessPluginInventorySnapshot,
 ): readonly HarnessPluginInventoryEntry[] {
-  return Object.freeze(snapshot.entries.filter(entry => entry.moduleName.startsWith('@paimind/')))
+  return Object.freeze(snapshot.entries.filter(entry => entry.moduleName.startsWith('@hansen/')))
 }
 
 /** Summarize one native snapshot without inventing health or collapsing Loader phases. */

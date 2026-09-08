@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { PaimindSidebarTabScope } from '@paimind/better-sidebar-adapter'
+import type { PaimindSidebarTabScope } from '@hansen/better-sidebar-adapter'
 
 export const BENTO_INFO_PATH = '/paimind/bento-sandbox/info'
 

@@ -4,7 +4,7 @@ import {
   canonicalJson,
   definePresentationFactSet,
   definePresentationOutline,
-} from '@paimind/presentation-contracts'
+} from '@hansen/presentation-contracts'
 
 const ROOT = process.cwd()
 const BLUEPRINT_SCHEMA = 'paimind.presentation-outline-blueprint/v1'

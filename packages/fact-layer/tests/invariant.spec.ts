@@ -7,6 +7,6 @@ describe('fact-layer invariant', () => {
     apply({ invariants: { register } })
     expect(name).toBe('paimind-fact-layer-invariant')
     expect(inject).toEqual(['invariants'])
-    expect(register).toHaveBeenCalledWith('@paimind/fact-layer', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('@hansen/fact-layer', expect.any(Function))
   })
 })

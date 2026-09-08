@@ -1,4 +1,4 @@
-# `@paimind/fact-layer`
+# `@hansen/fact-layer`
 
 Immutable source-linked Fact Set publication for PAIMind generators.
 
@@ -18,8 +18,8 @@ Role: **Headless plugin**. It resolves current-Session `paimind.data-result/v2` 
 
 ## Dependencies
 
-- `@paimind/artifact-runtime` owns native Job and Artifact publication.
-- `@paimind/presentation-contracts` validates data-result and Fact Set documents.
+- `@hansen/artifact-runtime` owns native Job and Artifact publication.
+- `@hansen/presentation-contracts` validates data-result and Fact Set documents.
 
 ## Lifecycle and failure
 

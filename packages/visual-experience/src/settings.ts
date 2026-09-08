@@ -1,4 +1,4 @@
-import type { PaimindSettingsFieldSpec } from '@paimind/harness-compat/host'
+import type { PaimindSettingsFieldSpec } from '@hansen/harness-compat/host'
 
 export const PAIMIND_VISUAL_EXPERIENCE_NAMESPACE = 'paimind.visual-experience'
 export const PAIMIND_EXPERIENCE_MODES = ['paimind', 'native'] as const

@@ -9,12 +9,12 @@ One Harness Host process, one Harness Storage Domain and one TLS Reverse Proxy. 
 The formal Bundle loads the platform Scheduler Core and standard Adapter
 services in this dependency order:
 
-1. `@paimind/platform-scheduler` and its invariant.
-2. `@paimind/notifications`.
-3. `@paimind/scheduler-adapter-harness`, `./agent-action`, `./agent-tool` and the Adapter invariant.
-4. `@paimind/scheduler-adapter-http` and its invariant.
-5. Optional provider-specific Adapters, such as `@paimind/scheduler-adapter-feishu-bot`, and their invariants.
-6. `@paimind/platform-api` and its invariant as a server-only service; it does not register a browser-facing product entry.
+1. `@hansen/platform-scheduler` and its invariant.
+2. `@hansen/notifications`.
+3. `@hansen/scheduler-adapter-harness`, `./agent-action`, `./agent-tool` and the Adapter invariant.
+4. `@hansen/scheduler-adapter-http` and its invariant.
+5. Optional provider-specific Adapters, such as `@hansen/scheduler-adapter-feishu-bot`, and their invariants.
+6. `@hansen/platform-api` and its invariant as a server-only service; it does not register a browser-facing product entry.
 7. Business-owned action plugins.
 
 Unload action plugins and Adapters in reverse order before the Core. The active

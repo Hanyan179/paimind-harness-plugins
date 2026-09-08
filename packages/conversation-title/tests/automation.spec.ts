@@ -6,7 +6,7 @@ import {
   type PaimindConversationTitleSession,
   type PaimindConversationTitleSessionEvent,
   type PaimindConversationTitleSnapshot,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 import {
   buildPaimindConversationTitlePrompt,
   finalizePaimindConversationTitle,

@@ -3,7 +3,7 @@ export interface PaimindFeatureCapabilityDefinition {
   readonly id: `paimind:capability:${string}`
   readonly loaderEntryId: `paimind-capability-${string}`
   /** Runtime packages whose expected state is controlled by this capability switch. */
-  readonly packageNames: readonly `@paimind/${string}`[]
+  readonly packageNames: readonly `@hansen/${string}`[]
   readonly nameZh: string
   readonly nameEn: string
   readonly descriptionZh: string
@@ -21,7 +21,7 @@ export interface PaimindFeaturePackDefinition {
   readonly order: number
   readonly defaultEnabled: boolean
   readonly requiredPackIds: readonly `paimind:pack:${string}`[]
-  readonly packageNames: readonly `@paimind/${string}`[]
+  readonly packageNames: readonly `@hansen/${string}`[]
   readonly capabilities: readonly PaimindFeatureCapabilityDefinition[]
 }
 
@@ -40,13 +40,13 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
   pack({
     id: 'paimind:pack:experience', loaderEntryId: 'paimind-pack-experience', order: 10,
     nameZh: '产品体验', nameEn: 'Product Experience', defaultEnabled: true,
-    descriptionZh: 'Paramont 品牌界面、视觉体验、对话命名、运行状态提示和个性化。',
-    descriptionEn: 'Paramont branding, visual experience, conversation naming, runtime presence, and personalization.',
+    descriptionZh: '自定义品牌界面、视觉体验、对话命名、运行状态提示和个性化。',
+    descriptionEn: 'Custom branding, visual experience, conversation naming, runtime presence, and personalization.',
     requiredPackIds: [],
-    packageNames: ['@paimind/branding', '@paimind/visual-experience', '@paimind/conversation-title', '@paimind/runtime-orbs', '@paimind/user-settings'],
+    packageNames: ['@hansen/branding', '@hansen/visual-experience', '@hansen/conversation-title', '@hansen/runtime-orbs', '@hansen/user-settings'],
     capabilities: [{
       id: 'paimind:capability:runtime-orbs', loaderEntryId: 'paimind-capability-runtime-orbs',
-      packageNames: ['@paimind/runtime-orbs'],
+      packageNames: ['@hansen/runtime-orbs'],
       nameZh: '动态状态球', nameEn: 'Runtime Orbs', defaultEnabled: true,
       descriptionZh: '在对话与输入区域显示真实运行状态；可独立关闭，不影响其他产品体验。',
       descriptionEn: 'Shows real runtime state in conversation surfaces and can be disabled independently.',
@@ -58,7 +58,7 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
     descriptionZh: '业务智能体目录、创建与技能能力管理。',
     descriptionEn: 'Business Agent catalog, authoring, and Skill capability management.',
     requiredPackIds: [],
-    packageNames: ['@paimind/skill-market', '@paimind/agent-builder', '@paimind/agent-market'],
+    packageNames: ['@hansen/skill-market', '@hansen/agent-builder', '@hansen/agent-market'],
     capabilities: [],
   }),
   pack({
@@ -68,9 +68,9 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
     descriptionEn: 'Workspace blueprints, workspace artifacts, web and Office generation, file preview, and conversation deliverables.',
     requiredPackIds: [],
     packageNames: [
-      '@paimind/workspace-project', '@paimind/workspace-blueprints', '@paimind/better-sidebar-adapter', '@paimind/artifact-runtime',
-      '@paimind/generator-web', '@paimind/generator-office', '@paimind/renderer-bento',
-      '@paimind/renderer-pdf', '@paimind/artifacts', '@paimind/conversation-artifact-renderer',
+      '@hansen/workspace-project', '@hansen/workspace-blueprints', '@hansen/better-sidebar-adapter', '@hansen/artifact-runtime',
+      '@hansen/generator-web', '@hansen/generator-office', '@hansen/renderer-bento',
+      '@hansen/renderer-pdf', '@hansen/artifacts', '@hansen/conversation-artifact-renderer',
     ],
     capabilities: [],
   }),
@@ -81,8 +81,8 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
     descriptionEn: 'Category analysis, fact grounding, Bento generation, provenance, and retailer proposal experience.',
     requiredPackIds: ['paimind:pack:content'],
     packageNames: [
-      '@paimind/category-analysis-adapter', '@paimind/fact-layer', '@paimind/generator-bento',
-      '@paimind/presentation-trace', '@paimind/proposal-experience', '@paimind/walmart-proposal-adapter',
+      '@hansen/category-analysis-adapter', '@hansen/fact-layer', '@hansen/generator-bento',
+      '@hansen/presentation-trace', '@hansen/proposal-experience', '@hansen/walmart-proposal-adapter',
     ],
     capabilities: [],
   }),
@@ -93,8 +93,8 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
     descriptionEn: 'Notifications, scheduled work, Harness execution, HTTP APIs, and Feishu bot delivery.',
     requiredPackIds: ['paimind:pack:content'],
     packageNames: [
-      '@paimind/notifications', '@paimind/platform-scheduler', '@paimind/scheduler-adapter-harness',
-      '@paimind/scheduler-adapter-http', '@paimind/platform-api', '@paimind/scheduler-adapter-feishu-bot',
+      '@hansen/notifications', '@hansen/platform-scheduler', '@hansen/scheduler-adapter-harness',
+      '@hansen/scheduler-adapter-http', '@hansen/platform-api', '@hansen/scheduler-adapter-feishu-bot',
     ],
     capabilities: [],
   }),
@@ -104,7 +104,7 @@ export const PAIMIND_FEATURE_PACKS = Object.freeze([
     descriptionZh: '任务摘要、运行诊断和面向开发者的资源入口。',
     descriptionEn: 'Task summaries, runtime diagnostics, and developer-facing resources.',
     requiredPackIds: ['paimind:pack:content'],
-    packageNames: ['@paimind/task-monitor', '@paimind/developer-resources'],
+    packageNames: ['@hansen/task-monitor', '@hansen/developer-resources'],
     capabilities: [],
   }),
 ] as const)

@@ -14,7 +14,7 @@ mutation.
 | Harness | `@deepseek-ai/dsh@0.1.0-rc.6` | Latest/next published npm artifact available during R7; selected and verified |
 | Side Card provider | `dsh-better-sidebar@0.12.1` | Upgraded from `0.11.0`; adapter contract v3, browser and isolation gates passed |
 | Office viewer | `@huanlin/dsh-plugin-better-sidebar-plugin-office@0.1.0` | Loaded through its own technical Bundle after Better Sidebar; real PPTX/XLSX viewing passed; stale `^0.6.0` provider peer metadata is a recorded risk |
-| PAIMind | `@paimind/harness-bundle@0.1.0-alpha.0` workspace composition | Full install/boot/remove/restore and individual failure-isolation gates passed |
+| PAIMind | `@hansen/harness-bundle@0.1.0-alpha.0` workspace composition | Full install/boot/remove/restore and individual failure-isolation gates passed |
 
 ## Real product loop
 

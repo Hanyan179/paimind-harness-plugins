@@ -8,7 +8,7 @@ const packages = await loadWorkspacePackages()
 const consumerRoot = mkdtempSync(join(tmpdir(), 'paimind-nodenext-consumer-'))
 
 try {
-  const scopeRoot = join(consumerRoot, 'node_modules/@paimind')
+  const scopeRoot = join(consumerRoot, 'node_modules/@hansen')
   mkdirSync(scopeRoot, { recursive: true })
   for (const pkg of packages) {
     symlinkSync(pkg.root, join(scopeRoot, basename(pkg.manifest.name)), 'dir')

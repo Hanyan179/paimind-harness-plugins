@@ -6,7 +6,7 @@ describe('FP04 invariant companion', () => {
     const dispose = vi.fn()
     const register = vi.fn(() => dispose)
     expect(apply({ invariants: { register } })).toBe(dispose)
-    expect(register).toHaveBeenCalledWith('@paimind/workspace-project', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('@hansen/workspace-project', expect.any(Function))
     expect({ name, inject }).toEqual({
       name: 'paimind-workspace-project-invariant', inject: ['invariants'],
     })

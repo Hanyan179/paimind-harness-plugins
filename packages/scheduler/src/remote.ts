@@ -41,11 +41,11 @@ const runNowResult = z.union([
 
 export const PAIMIND_SCHEDULER_REMOTE_DESCRIPTORS = Object.freeze([
   {
-    id: '@paimind/platform-scheduler#paimindScheduler/list',
+    id: '@hansen/platform-scheduler#paimindScheduler/list',
     service: 'paimindScheduler', namespace: 'paimindScheduler', method: 'list',
     invocation: { kind: 'direct' as const }, parameters: [],
     result: {
-      mode: 'strict' as const, typeSymbol: '@paimind/platform-scheduler#PaimindSchedulerSnapshot',
+      mode: 'strict' as const, typeSymbol: '@hansen/platform-scheduler#PaimindSchedulerSnapshot',
       schema: z.object({
         actions: z.array(schedulerActionSchema).readonly(),
         definitions: z.array(schedulerDefinitionSchema).readonly(),
@@ -55,73 +55,73 @@ export const PAIMIND_SCHEDULER_REMOTE_DESCRIPTORS = Object.freeze([
     sourceLocation: { file: 'packages/scheduler/src/index.ts', line: 194, column: 3 },
   },
   {
-    id: '@paimind/platform-scheduler#paimindScheduler/create',
+    id: '@hansen/platform-scheduler#paimindScheduler/create',
     service: 'paimindScheduler', namespace: 'paimindScheduler', method: 'create',
     invocation: { kind: 'direct' as const },
     parameters: [{ name: 'input', wire: 'input', source: 'json' as const, codec: {
-      mode: 'strict' as const, typeSymbol: '@paimind/contracts#PaimindScheduleCreateInput', schema: createInput,
+      mode: 'strict' as const, typeSymbol: '@hansen/contracts#PaimindScheduleCreateInput', schema: createInput,
     } }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/contracts#PaimindScheduleDefinition', schema: schedulerDefinitionSchema },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/contracts#PaimindScheduleDefinition', schema: schedulerDefinitionSchema },
     sourceLocation: { file: 'packages/scheduler/src/index.ts', line: 199, column: 3 },
   },
   {
-    id: '@paimind/platform-scheduler#paimindScheduler/update',
+    id: '@hansen/platform-scheduler#paimindScheduler/update',
     service: 'paimindScheduler', namespace: 'paimindScheduler', method: 'update',
     invocation: { kind: 'direct' as const },
     parameters: [{ name: 'input', wire: 'input', source: 'json' as const, codec: {
-      mode: 'strict' as const, typeSymbol: '@paimind/contracts#PaimindScheduleUpdateInput', schema: updateInput,
+      mode: 'strict' as const, typeSymbol: '@hansen/contracts#PaimindScheduleUpdateInput', schema: updateInput,
     } }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/platform-scheduler#PaimindScheduleMutationResult', schema: mutation },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/platform-scheduler#PaimindScheduleMutationResult', schema: mutation },
     sourceLocation: { file: 'packages/scheduler/src/index.ts', line: 203, column: 3 },
   },
   {
-    id: '@paimind/platform-scheduler#paimindScheduler/setEnabled',
+    id: '@hansen/platform-scheduler#paimindScheduler/setEnabled',
     service: 'paimindScheduler', namespace: 'paimindScheduler', method: 'setEnabled',
     invocation: { kind: 'direct' as const },
     parameters: [{ name: 'input', wire: 'input', source: 'json' as const, codec: {
-      mode: 'strict' as const, typeSymbol: '@paimind/platform-scheduler#PaimindScheduleSetEnabledRequest',
+      mode: 'strict' as const, typeSymbol: '@hansen/platform-scheduler#PaimindScheduleSetEnabledRequest',
       schema: z.object({ scheduleId: id, enabled: z.boolean(), ifVersion: id }).readonly(),
     } }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/platform-scheduler#PaimindScheduleMutationResult', schema: mutation },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/platform-scheduler#PaimindScheduleMutationResult', schema: mutation },
     sourceLocation: { file: 'packages/scheduler/src/index.ts', line: 207, column: 3 },
   },
   {
-    id: '@paimind/platform-scheduler#paimindScheduler/archive',
+    id: '@hansen/platform-scheduler#paimindScheduler/archive',
     service: 'paimindScheduler', namespace: 'paimindScheduler', method: 'archive',
     invocation: { kind: 'direct' as const },
     parameters: [{ name: 'input', wire: 'input', source: 'json' as const, codec: {
-      mode: 'strict' as const, typeSymbol: '@paimind/platform-scheduler#PaimindScheduleArchiveRequest',
+      mode: 'strict' as const, typeSymbol: '@hansen/platform-scheduler#PaimindScheduleArchiveRequest',
       schema: z.object({ scheduleId: id, ifVersion: id }).readonly(),
     } }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/platform-scheduler#PaimindScheduleMutationResult', schema: mutation },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/platform-scheduler#PaimindScheduleMutationResult', schema: mutation },
     sourceLocation: { file: 'packages/scheduler/src/index.ts', line: 213, column: 3 },
   },
   {
-    id: '@paimind/platform-scheduler#paimindScheduler/runNow',
+    id: '@hansen/platform-scheduler#paimindScheduler/runNow',
     service: 'paimindScheduler', namespace: 'paimindScheduler', method: 'runNow',
     invocation: { kind: 'direct' as const },
     parameters: [{ name: 'input', wire: 'input', source: 'json' as const, codec: {
-      mode: 'strict' as const, typeSymbol: '@paimind/platform-scheduler#PaimindScheduleRunNowRequest',
+      mode: 'strict' as const, typeSymbol: '@hansen/platform-scheduler#PaimindScheduleRunNowRequest',
       schema: z.object({ scheduleId: id }).readonly(),
     } }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/platform-scheduler#PaimindScheduleRunNowResult', schema: runNowResult },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/platform-scheduler#PaimindScheduleRunNowResult', schema: runNowResult },
     sourceLocation: { file: 'packages/scheduler/src/index.ts', line: 217, column: 3 },
   },
   {
-    id: '@paimind/platform-scheduler#paimindScheduler/restore',
+    id: '@hansen/platform-scheduler#paimindScheduler/restore',
     service: 'paimindScheduler', namespace: 'paimindScheduler', method: 'restore',
     invocation: { kind: 'direct' as const },
     parameters: [{ name: 'input', wire: 'input', source: 'json' as const, codec: {
-      mode: 'strict' as const, typeSymbol: '@paimind/platform-scheduler#PaimindScheduleRestoreRequest',
+      mode: 'strict' as const, typeSymbol: '@hansen/platform-scheduler#PaimindScheduleRestoreRequest',
       schema: z.object({ scheduleId: id, ifVersion: id }).readonly(),
     } }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/platform-scheduler#PaimindScheduleMutationResult', schema: mutation },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/platform-scheduler#PaimindScheduleMutationResult', schema: mutation },
     sourceLocation: { file: 'packages/scheduler/src/index.ts', line: 222, column: 3 },
   },
 ])
 
 export const TYPERT_REMOTE = Object.freeze({
-  package: '@paimind/platform-scheduler',
+  package: '@hansen/platform-scheduler',
   descriptors: PAIMIND_SCHEDULER_REMOTE_DESCRIPTORS,
 })
 

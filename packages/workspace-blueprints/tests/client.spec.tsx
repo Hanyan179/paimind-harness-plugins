@@ -6,7 +6,7 @@ import type {
   HarnessWorkspaceService,
   HarnessWorkspaceView,
   PaimindLocaleSource,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import type {
   WorkspaceBlueprintAgentChoice,
   WorkspaceBlueprintBusinessSkillChoice,
@@ -146,7 +146,7 @@ function sessions() {
 afterEach(() => {
   cleanup()
   document.body.innerHTML = ''
-  document.head.querySelectorAll('style[data-paimind-plugin="@paimind/workspace-blueprints"]').forEach(node => { node.remove() })
+  document.head.querySelectorAll('style[data-paimind-plugin="@hansen/workspace-blueprints"]').forEach(node => { node.remove() })
 })
 
 describe('Workspace Blueprint Center client', () => {
@@ -159,9 +159,9 @@ describe('Workspace Blueprint Center client', () => {
     expect(WORKSPACE_BLUEPRINT_CENTER_STYLE).not.toContain("head-actions]>[data-paimind-workspace-blueprints-button]{display:none}")
     const first = installWorkspaceBlueprintCenterStyle()
     const second = installWorkspaceBlueprintCenterStyle()
-    expect(document.getElementById('@paimind/workspace-blueprints')).toHaveAttribute('data-paimind-style-refs', '2')
+    expect(document.getElementById('@hansen/workspace-blueprints')).toHaveAttribute('data-paimind-style-refs', '2')
     first(); second()
-    expect(document.getElementById('@paimind/workspace-blueprints')).toBeNull()
+    expect(document.getElementById('@hansen/workspace-blueprints')).toBeNull()
   })
 
   it('separates built-in templates from personal templates and treats a folder-only package as valid', async () => {

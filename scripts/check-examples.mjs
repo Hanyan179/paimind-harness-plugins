@@ -18,11 +18,11 @@ const source = (await Promise.all(
   required.filter(file => file.endsWith('.ts')).map(file => readFile(join(root, file), 'utf8')),
 )).join('\n')
 for (const dependency of [
-  '@paimind/contracts',
-  '@paimind/harness-compat/host',
-  '@paimind/platform-sdk',
-  '@paimind/platform-scheduler',
-  '@paimind/scheduler-adapter-harness',
+  '@hansen/contracts',
+  '@hansen/harness-compat/host',
+  '@hansen/platform-sdk',
+  '@hansen/platform-scheduler',
+  '@hansen/scheduler-adapter-harness',
 ]) {
   if (!source.includes(dependency)) failures.push(`example does not exercise ${dependency}`)
 }

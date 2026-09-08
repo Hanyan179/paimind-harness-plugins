@@ -33,7 +33,7 @@ async function makeBundle(name, rows) {
   const root = resolve(dshHome, name)
   await mkdir(root, { recursive: true })
   await writeFile(resolve(root, 'package.json'), JSON.stringify({
-    name: `@paimind/test-${name}`,
+    name: `@hansen/test-${name}`,
     version: '0.0.0',
     private: true,
     type: 'module',
@@ -140,16 +140,16 @@ async function bootAndProbe(expectedPackages, absentPackages, label) {
 const beforeStatus = gitStatus()
 try {
   const bothBundleRoot = await makeBundle('agent-skill-centers', [
-    { id: 'paimind-skill-market', name: '@paimind/skill-market' },
-    { id: 'paimind-agent-builder', name: '@paimind/agent-builder' },
-    { id: 'paimind-agent-market', name: '@paimind/agent-market' },
+    { id: 'paimind-skill-market', name: '@hansen/skill-market' },
+    { id: 'paimind-agent-builder', name: '@hansen/agent-builder' },
+    { id: 'paimind-agent-market', name: '@hansen/agent-market' },
   ])
   const skillBundleRoot = await makeBundle('skill-center-only', [
-    { id: 'paimind-skill-market', name: '@paimind/skill-market' },
+    { id: 'paimind-skill-market', name: '@hansen/skill-market' },
   ])
   const agentBundleRoot = await makeBundle('agent-center-only', [
-    { id: 'paimind-agent-builder', name: '@paimind/agent-builder' },
-    { id: 'paimind-agent-market', name: '@paimind/agent-market' },
+    { id: 'paimind-agent-builder', name: '@hansen/agent-builder' },
+    { id: 'paimind-agent-market', name: '@hansen/agent-market' },
   ])
   const version = dsh(['--version'], 'read Harness runtime version').trim()
   if (expectedDshVersion !== undefined && version !== expectedDshVersion) {
@@ -164,29 +164,29 @@ try {
     agentMarketRoot,
   ], 'install Agent Center and Skill Center')
   await bootAndProbe(
-    ['@paimind/agent-market', '@paimind/skill-market'],
+    ['@hansen/agent-market', '@hansen/skill-market'],
     [],
     'boot with both product centers',
   )
 
   dsh([
     'plugin', '--profile', 'web', 'remove',
-    '@paimind/test-agent-skill-centers',
-    '@paimind/agent-market',
-    '@paimind/agent-builder',
-    '@paimind/skill-market',
+    '@hansen/test-agent-skill-centers',
+    '@hansen/agent-market',
+    '@hansen/agent-builder',
+    '@hansen/skill-market',
   ], 'remove both product centers')
   dsh(['plugin', '--profile', 'web', 'add', skillBundleRoot, skillMarketRoot], 'install only Skill Center')
   await bootAndProbe(
-    ['@paimind/skill-market'],
-    ['@paimind/agent-market'],
+    ['@hansen/skill-market'],
+    ['@hansen/agent-market'],
     'boot with only Skill Center',
   )
 
   dsh([
     'plugin', '--profile', 'web', 'remove',
-    '@paimind/test-skill-center-only',
-    '@paimind/skill-market',
+    '@hansen/test-skill-center-only',
+    '@hansen/skill-market',
   ], 'remove Skill Center')
   dsh([
     'plugin', '--profile', 'web', 'add',
@@ -195,26 +195,26 @@ try {
     agentMarketRoot,
   ], 'install only Agent Center')
   await bootAndProbe(
-    ['@paimind/agent-market'],
-    ['@paimind/skill-market'],
+    ['@hansen/agent-market'],
+    ['@hansen/skill-market'],
     'boot with only Agent Center',
   )
 
   dsh([
     'plugin', '--profile', 'web', 'remove',
-    '@paimind/test-agent-center-only',
-    '@paimind/agent-market',
-    '@paimind/agent-builder',
+    '@hansen/test-agent-center-only',
+    '@hansen/agent-market',
+    '@hansen/agent-builder',
   ], 'remove remaining product-center packages')
   const restored = dsh(['--profile', 'web', '--dump-config'], 'confirm native profile restoration')
-  if (restored.includes('@paimind/agent-market')
-    || restored.includes('@paimind/agent-builder')
-    || restored.includes('@paimind/skill-market')) {
+  if (restored.includes('@hansen/agent-market')
+    || restored.includes('@hansen/agent-builder')
+    || restored.includes('@hansen/skill-market')) {
     throw new Error(`a product-center package remained after removal\n${restored}`)
   }
   await bootAndProbe(
     [],
-    ['@paimind/agent-market', '@paimind/skill-market'],
+    ['@hansen/agent-market', '@hansen/skill-market'],
     'boot native Harness after both centers are removed',
   )
   if (gitStatus() !== beforeStatus) throw new Error('DeepSeek Harness worktree changed during product-center composition')

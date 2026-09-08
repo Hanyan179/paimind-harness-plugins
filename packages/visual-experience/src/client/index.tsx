@@ -22,12 +22,12 @@ import {
   type PaimindSettingsScope,
   type PaimindSettingsScopeBinder,
   type PaimindThemeService,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import {
   NativeHarnessInputTriggerBridge,
   type HarnessComposerInputSnapshot,
   type HarnessInputTriggerSource,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import {
   HarnessExperienceMarkers,
   NativeHarnessAgentChoiceBridge,
@@ -36,7 +36,7 @@ import {
   isPaimindProductSurfaceAvailable,
   requestPaimindAgentBuilder,
   requestPaimindProductSurface,
-} from '@paimind/harness-compat/client-surface'
+} from '@hansen/harness-compat/client-surface'
 import {
   PaimindAgentIcon,
   PaimindCheckIcon,
@@ -48,7 +48,7 @@ import {
   PaimindPersonalizationIcon,
   PaimindPlusIcon,
   PaimindSchedulerIcon,
-} from '@paimind/harness-compat/client-icons'
+} from '@hansen/harness-compat/client-icons'
 import HERO_LIGHT from '../../assets/hero-ridge-light.webp'
 import HERO_DARK from '../../assets/hero-ridge-dark.webp'
 import {
@@ -64,7 +64,7 @@ import {
   type PaimindVisualExperienceSettings,
 } from '../settings.js'
 
-const PACKAGE_NAME = '@paimind/visual-experience'
+const PACKAGE_NAME = '@hansen/visual-experience'
 const STYLE_ID = PACKAGE_NAME
 
 const BASE_INJECT = [
@@ -452,7 +452,7 @@ interface ComposerDisclosureContent {
 /**
  * Restyles the native Harness input overlay without owning its candidate
  * data, selection state, or keyboard behavior. All annotations and inline
- * measurements are removed when PAIMind mode is disabled or the plugin exits.
+ * measurements are removed when mode is disabled or the plugin exits.
  */
 export class PaimindComposerOverlayPresenter {
   private mode: PaimindExperienceMode = 'native'
@@ -885,7 +885,7 @@ export function ExperienceHeroPortal({ mode, locale }: {
   const target = usePortalTarget('[data-paimind-hero-brand-seat]')
   if (state.mode !== 'paimind' || target === null) return null
   return createPortal(<>
-    <span data-paimind-experience-eyebrow>PARAMONT · PAIMIND</span>
+    <span data-paimind-experience-eyebrow>{zh ? '你的工作空间' : 'Your workspace'}</span>
     <span data-paimind-experience-title role="heading" aria-level={1}>{zh ? '今天想完成什么？' : 'What would you like to accomplish?'}</span>
   </>, target)
 }
@@ -957,12 +957,12 @@ export function PaimindAgentAvatar({ choice, className }: {
 
 /**
  * RC8's native MenuView renders candidate.icon as text only. This presenter
- * replaces only PAIMind Agent icon tokens with an image; it never reorders,
+ * replaces only Agent icon tokens with an image; it never reorders,
  * focuses, selects, or owns candidates, and restores the original text token
  * byte-for-byte on Native mode or plugin disposal.
  */
 export class PaimindAgentAvatarPresenter {
-  private static readonly PROJECTION_OWNER = '@paimind/visual-experience'
+  private static readonly PROJECTION_OWNER = '@hansen/visual-experience'
   private readonly observer: MutationObserver
   private disposed = false
   private readonly stopAvatarOverrides: () => void
@@ -1258,8 +1258,8 @@ export function ExperienceSettingsRow({ mode, locale }: {
   const zh = useChinese(locale)
   return <section data-paimind-experience-setting>
     <div data-paimind-experience-setting-copy>
-      <strong>{zh ? 'PAIMind 视觉体验' : 'PAIMind visual experience'}</strong>
-      <span>{zh ? 'PAIMind 模式启用完整视觉与交互；原生模式立即撤销并恢复 Harness。' : 'PAIMind enables the full visual layer; Native immediately restores Harness.'}</span>
+      <strong>{zh ? '视觉体验' : 'Visual experience'}</strong>
+      <span>{zh ? '增强模式启用完整视觉与交互；原生模式立即撤销并恢复 Harness。' : 'Enhanced mode enables the full visual layer; Native immediately restores Harness.'}</span>
     </div>
     <div data-paimind-experience-mode role="radiogroup" aria-label={zh ? '视觉体验模式' : 'Visual experience mode'}>
       {(['paimind', 'native'] as const).map(value => <label key={value}>
@@ -1271,7 +1271,7 @@ export function ExperienceSettingsRow({ mode, locale }: {
           disabled={!snapshot.writable || snapshot.busy}
           onChange={() => { void mode.set(value) }}
         />
-        <span>{value === 'paimind' ? 'PAIMind' : (zh ? '原生' : 'Native')}</span>
+        <span>{value === 'paimind' ? (zh ? '增强' : 'Enhanced') : (zh ? '原生' : 'Native')}</span>
       </label>)}
     </div>
   </section>
@@ -1341,7 +1341,7 @@ function installAgentExperience(
     if (bridge !== null) return
     const nativeSeat = resolveHarnessAgentPresetSeatControl(ctx.slots)
     if (nativeSeat === null) return
-    // One bridge owns every Agent selection entry point in PAIMind mode. The
+    // One bridge owns every Agent selection entry point in mode. The
     // hero picker, Quick Agents and the @ source are different renderers over
     // the same native Harness Preset seat, never parallel Agent state.
     const candidate = new NativeHarnessAgentChoiceBridge(ctx.get('connection').api.agentPresets, nativeSeat)
@@ -1475,10 +1475,10 @@ export function apply(ctx: VisualExperienceClientContext): void {
     id: 'paimind:visual-experience',
     packageName: PACKAGE_NAME,
     category: 'experience',
-    nameZh: 'PAIMind 视觉体验',
-    nameEn: 'PAIMind Visual Experience',
-    descriptionZh: '为 Harness 提供可逆的 PAIMind 主题、密度、欢迎页与 Agent 选择体验。',
-    descriptionEn: 'Adds a reversible PAIMind theme, density, welcome and Agent choice experience to Harness.',
+    nameZh: '视觉体验',
+    nameEn: 'Visual Experience',
+    descriptionZh: '为 Harness 提供可逆的主题、密度、欢迎页与 Agent 选择体验。',
+    descriptionEn: 'Adds a reversible theme, density, welcome and Agent choice experience to Harness.',
     surface: 'shell',
     maturity: 'available',
     order: -80,

@@ -29,43 +29,43 @@ const mutationResult = z.union([
 
 export const PAIMIND_NOTIFICATION_REMOTE_DESCRIPTORS = Object.freeze([
   {
-    id: '@paimind/notifications#paimindNotifications/list',
+    id: '@hansen/notifications#paimindNotifications/list',
     service: 'paimindNotifications', namespace: 'paimindNotifications', method: 'list',
     invocation: { kind: 'direct' as const }, parameters: [],
     result: {
-      mode: 'strict' as const, typeSymbol: '@paimind/notifications#PaimindNotificationListValue', schema: listValue,
+      mode: 'strict' as const, typeSymbol: '@hansen/notifications#PaimindNotificationListValue', schema: listValue,
     },
     sourceLocation: { file: 'packages/notifications/src/index.ts', line: 162, column: 3 },
   },
   {
-    id: '@paimind/notifications#paimindNotifications/markRead',
+    id: '@hansen/notifications#paimindNotifications/markRead',
     service: 'paimindNotifications', namespace: 'paimindNotifications', method: 'markRead',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'request', wire: 'request', source: 'json' as const,
       codec: {
-        mode: 'strict' as const, typeSymbol: '@paimind/notifications#PaimindNotificationMarkReadRequest',
+        mode: 'strict' as const, typeSymbol: '@hansen/notifications#PaimindNotificationMarkReadRequest',
         schema: z.object({ id, ifVersion: id }).readonly(),
       },
     }],
     result: {
-      mode: 'strict' as const, typeSymbol: '@paimind/notifications#PaimindNotificationMutationResult', schema: mutationResult,
+      mode: 'strict' as const, typeSymbol: '@hansen/notifications#PaimindNotificationMutationResult', schema: mutationResult,
     },
     sourceLocation: { file: 'packages/notifications/src/index.ts', line: 167, column: 3 },
   },
   {
-    id: '@paimind/notifications#paimindNotifications/markAllRead',
+    id: '@hansen/notifications#paimindNotifications/markAllRead',
     service: 'paimindNotifications', namespace: 'paimindNotifications', method: 'markAllRead',
     invocation: { kind: 'direct' as const }, parameters: [],
     result: {
-      mode: 'strict' as const, typeSymbol: '@paimind/notifications#PaimindNotificationListValue', schema: listValue,
+      mode: 'strict' as const, typeSymbol: '@hansen/notifications#PaimindNotificationListValue', schema: listValue,
     },
     sourceLocation: { file: 'packages/notifications/src/index.ts', line: 187, column: 3 },
   },
 ])
 
 export const TYPERT_REMOTE = Object.freeze({
-  package: '@paimind/notifications',
+  package: '@hansen/notifications',
   descriptors: PAIMIND_NOTIFICATION_REMOTE_DESCRIPTORS,
 })
 

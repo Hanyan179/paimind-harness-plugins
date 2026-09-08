@@ -2,8 +2,8 @@
 
 ## Package boundary
 
-- Core code may depend on `@paimind/contracts` and a standard time library only.
-- Harness API imports and rc-specific parsing stay in `@paimind/harness-compat`.
+- Core code may depend on `@hansen/contracts` and a standard time library only.
+- Harness API imports and rc-specific parsing stay in `@hansen/harness-compat`.
 - Adapter packages may register an executor but may not mutate Core tables directly.
 - Business packages register actions through Harness Adapter code or the Platform API; they do not add fields or branches to Scheduler.
 

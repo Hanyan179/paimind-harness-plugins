@@ -1,6 +1,6 @@
-import type { PaimindArtifactView } from '@paimind/artifacts'
-import { defineArtifactProjection, type ArtifactTraceEnvelopeV2, type PaimindArtifactProjectionV1 } from '@paimind/contracts'
-import type { HarnessSessionService } from '@paimind/harness-compat'
+import type { PaimindArtifactView } from '@hansen/artifacts'
+import { defineArtifactProjection, type ArtifactTraceEnvelopeV2, type PaimindArtifactProjectionV1 } from '@hansen/contracts'
+import type { HarnessSessionService } from '@hansen/harness-compat'
 
 export const TRACE_DOCUMENT_PATH = '/paimind/presentation-trace/document'
 

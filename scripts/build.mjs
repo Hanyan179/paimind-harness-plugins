@@ -38,7 +38,7 @@ for (const entry of await readdir(packagesRoot, { withFileTypes: true })) {
   if (!entry.isDirectory()) continue
   const packageRoot = resolve(packagesRoot, entry.name)
   const manifest = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'))
-  const spec = manifest.paimindBuild
+  const spec = manifest.hansenBuild
   if (spec === undefined) continue
   await rm(resolve(packageRoot, 'lib'), { recursive: true, force: true })
   buildPackages.push({ packageRoot, manifest, spec })

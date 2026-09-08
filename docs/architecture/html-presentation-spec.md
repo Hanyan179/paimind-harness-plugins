@@ -3,9 +3,9 @@
 ## Contract ownership
 
 `paimind.presentation-outline/v1` remains the content, fact, object, and
-binding authority in `@paimind/presentation-contracts`.
+binding authority in `@hansen/presentation-contracts`.
 
-`paimind.html-presentation/v1` is owned by `@paimind/generator-bento` and
+`paimind.html-presentation/v1` is owned by `@hansen/generator-bento` and
 defines how that Outline becomes a deterministic offline HTML presentation.
 The Agent chooses only registered design intent; it never writes arbitrary
 HTML or CSS.

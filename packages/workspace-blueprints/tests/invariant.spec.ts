@@ -8,6 +8,6 @@ describe('Workspace Blueprint invariant companion', () => {
 
     expect(apply({ invariants: { register } })).toBe(dispose)
     expect(name).toBe('paimind-workspace-blueprints-invariant')
-    expect(register).toHaveBeenCalledWith('@paimind/workspace-blueprints', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('@hansen/workspace-blueprints', expect.any(Function))
   })
 })

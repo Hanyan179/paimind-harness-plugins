@@ -39,7 +39,7 @@ Runtime: `http://127.0.0.1:3080/`
 | Request | Native result | Real interaction |
 |---|---|---|
 | 3-page editable PPTX | `r3-validation-deck.pptx`, revision 3 | PPTX viewer shows 3 slides; revision 3 adds real structured provenance and Trace action |
-| English PDF report | `r3-verification-report.pdf`, revision 2 | Local `@paimind/renderer-pdf` renders the actual A4 page with PDF.js and keeps Download |
+| English PDF report | `r3-verification-report.pdf`, revision 2 | Local `@hansen/renderer-pdf` renders the actual A4 page with PDF.js and keeps Download |
 | Formula XLSX | `r3-formula-workbook.xlsx`, revision 2 | Grid shows Alpha/Beta/Gamma; file contains `SUM(B2:C2)`, `SUM(B3:C3)`, `SUM(B4:C4)` |
 | Self-contained HTML | `r3-verification-page.html`, revision 2 | Sandboxed HTML viewer shows Revision 2 and Refresh Recovery content; no external resources |
 | 3-page Bento | `r3-bento-verification.html`, revision 2 | Independent isolated-origin Bento renderer shows 3 pages and updated content; no external resources |
@@ -58,7 +58,7 @@ The revision-3 PPTX producer emits a generated trace document from the validated
 
 ## PDF renderer correction
 
-Better Sidebar `0.11.0`'s browser-native Blob iframe displayed only a Download control and a blank page in the in-app Chromium surface. The PDF file itself was valid. PAIMind therefore adds an independent `@paimind/renderer-pdf` package through a new stable `registerFileViewer` method on `@paimind/better-sidebar-adapter`:
+Better Sidebar `0.11.0`'s browser-native Blob iframe displayed only a Download control and a blank page in the in-app Chromium surface. The PDF file itself was valid. PAIMind therefore adds an independent `@hansen/renderer-pdf` package through a new stable `registerFileViewer` method on `@hansen/better-sidebar-adapter`:
 
 - priority `paimind:pdf` overrides only the `.pdf` preview channel;
 - PDF.js and its worker are bundled locally; there is no CDN or external network dependency;

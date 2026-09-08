@@ -1,6 +1,6 @@
-import type { PaimindInvariantContext } from '@paimind/harness-compat'
+import type { PaimindInvariantContext } from '@hansen/harness-compat'
 
-const PACKAGE_NAME = '@paimind/task-monitor'
+const PACKAGE_NAME = '@hansen/task-monitor'
 
 export const name = 'paimind-task-monitor-invariant'
 export const inject = ['invariants']

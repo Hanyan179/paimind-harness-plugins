@@ -31,7 +31,7 @@ Before coding, the feature owner records the following six decisions in its Feat
 | Domain entity | Which business object the feature reads or writes | One canonical owner; projections and adapters do not create shadow records |
 | Writable state | Which Settings namespace or persistence service stores changes | One writer per field; other plugins call the owner’s contract |
 | Runtime service | Which plugin provides the service and lifecycle | Service identity is unique; hard dependencies use injection, optional integrations use discovery |
-| Harness compatibility | Which upstream behavior is version-sensitive | All version-sensitive logic lives in `@paimind/harness-compat` |
+| Harness compatibility | Which upstream behavior is version-sensitive | All version-sensitive logic lives in `@hansen/harness-compat` |
 | Failure and unload | What remains available if the plugin fails or is removed | A failing feature must not break native Harness or unrelated PAIMind plugins |
 
 The review fails if two packages claim the same primary surface, write the same state independently, duplicate one Harness adapter, or keep separate copies of the same canonical entity.

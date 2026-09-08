@@ -4,21 +4,21 @@ import { resolve } from 'node:path'
 import {
   artifactToolMeta, artifactWorkspaceRelativePath, presentArtifactToolResult, requireCurrentSessionArtifact,
   type PaimindArtifactGeneratorService, type PaimindGeneratorProvider,
-} from '@paimind/artifact-runtime'
+} from '@hansen/artifact-runtime'
 import {
   defineArtifactProducedEnvelope, defineArtifactTraceEnvelope,
   type ArtifactProducedEnvelopeV1, type ArtifactTraceEnvelope,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import {
   canonicalJson, definePresentationOutline, MAX_PRESENTATION_SLIDES, PRESENTATION_OUTLINE_TOOL_SCHEMA, traceFromPresentationOutline, validatePresentationTraceability,
   type PresentationChartPoint, type PresentationElement, type PresentationOutlineV1,
   type PresentationSelector,
-} from '@paimind/presentation-contracts'
+} from '@hansen/presentation-contracts'
 import {
   definePaimindHarnessTool,
   type PaimindHostSessionProjectionRegistry, type PaimindHostSystemPrompt,
   type PaimindHostToolRegistry, type PaimindToolRunContext,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 import { htmlPresentationMetadata, presentationThemeCss } from './presentation-spec.js'
 
 export const name = 'paimind-generator-bento'

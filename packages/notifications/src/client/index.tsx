@@ -17,11 +17,11 @@ import {
   type HarnessWorkspaceService,
   type PaimindClientContext,
   type PaimindLocaleSource,
-} from '@paimind/harness-compat'
-import type { NotificationRecord } from '@paimind/contracts'
-import type { PaimindArtifactService } from '@paimind/artifacts'
-import type { PaimindSidebarService } from '@paimind/better-sidebar-adapter'
-import { PAIMIND_UI_FOUNDATION_CSS } from '@paimind/ui-foundation'
+} from '@hansen/harness-compat'
+import type { NotificationRecord } from '@hansen/contracts'
+import type { PaimindArtifactService } from '@hansen/artifacts'
+import type { PaimindSidebarService } from '@hansen/better-sidebar-adapter'
+import { PAIMIND_UI_FOUNDATION_CSS } from '@hansen/ui-foundation'
 import type {
   PaimindNotificationListValue,
   PaimindNotificationMarkReadRequest,
@@ -237,7 +237,7 @@ export class NotificationCenterController {
   }
 }
 
-const STYLE_ID = '@paimind/notifications'
+const STYLE_ID = '@hansen/notifications'
 const STYLE = `${PAIMIND_UI_FOUNDATION_CSS}
 [data-paimind-notification-trigger] {
   position: relative; box-sizing: border-box; width: calc(100% + 8px); min-height: 34px; margin: 4px -4px;
@@ -300,7 +300,7 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = '@paimind/notifications'
+  style.dataset.paimindPlugin = '@hansen/notifications'
   style.textContent = STYLE
   document.head.append(style)
   return () => { style.remove() }
@@ -466,12 +466,12 @@ export async function apply(ctx: NotificationsClientContext): Promise<() => Prom
   const disposeRemote = await ctx.remote.$mount(TYPERT_REMOTE)
   const mounted = ctx.inject([...BASE_INJECT, 'remote.paimindNotifications'], (remoteCtx) => {
     const remote = remoteCtx.remote.paimindNotifications
-    if (remote === undefined) throw new Error('PAIMind Notification Remote did not mount')
+    if (remote === undefined) throw new Error('Notification Remote did not mount')
     const controller = new NotificationCenterController(
       remote, remoteCtx.sessions, remoteCtx.workspaces, remoteCtx.paimindArtifacts, remoteCtx.paimindSidebar,
     )
     contributePaimindExtension(remoteCtx.slots, {
-      id: 'paimind:notifications', packageName: '@paimind/notifications', category: 'automation',
+      id: 'paimind:notifications', packageName: '@hansen/notifications', category: 'automation',
       nameZh: '通知中心', nameEn: 'Notification Center',
       descriptionZh: '统一接收各业务应用消息，并提供安全的相关操作入口。',
       descriptionEn: 'Receives messages from business applications with safe related-action links.',

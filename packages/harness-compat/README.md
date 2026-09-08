@@ -1,4 +1,4 @@
-# `@paimind/harness-compat`
+# `@hansen/harness-compat`
 
 Version-scoped compatibility boundary for DeepSeek Harness and Cordis APIs.
 
@@ -19,7 +19,7 @@ Role: **Shared support package**. It has no independent Harness lifecycle or pro
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/contracts` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/contracts` (`workspace:^`).
 - External runtime or peer dependencies: `@deepseek-ai/cordis` (`^4.0.1`), `@deepseek-ai/dsh-client-ui-primitives` (`0.1.0-rc.8`), `@deepseek-ai/dsh-agent` (`^0.1.0-rc.8`), `@deepseek-ai/dsh-llm` (`^0.1.0-rc.8`), `@deepseek-ai/dsh-schedule` (`^0.1.0-rc.8`), `@deepseek-ai/dsh-storage-domain` (`^0.1.0-rc.8`), `@deepseek-ai/dsh-settings` (`^0.1.0-rc.8`), `@deepseek-ai/dsh-tools` (`^0.1.0-rc.8`), `@deepseek-ai/dsh-typert-protocol` (`^0.1.0-rc.8`), `@deepseek-ai/schemastery` (`^3.18.1`).
 - Client service injection: None.
 

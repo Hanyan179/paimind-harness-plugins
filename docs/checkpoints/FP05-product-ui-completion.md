@@ -29,9 +29,9 @@ Evidence:
 
 The exact Harness composition gate now adds a third isolated Profile:
 
-1. Install Extension Center, generators, Artifact Runtime, viewers and trace without `@paimind/task-monitor`.
+1. Install Extension Center, generators, Artifact Runtime, viewers and trace without `@hansen/task-monitor`.
 2. Verify the dump contains neither the Task Monitor row nor package id.
-3. Boot Harness and prove all remaining client manifests load while `@paimind/task-monitor` is absent.
+3. Boot Harness and prove all remaining client manifests load while `@hansen/task-monitor` is absent.
 4. Remove that composition and prove clean restoration.
 5. Compare the Harness upstream worktree before and after.
 

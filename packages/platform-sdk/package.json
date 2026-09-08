@@ -1,9 +1,9 @@
 {
-  "name": "@paimind/platform-sdk",
+  "name": "@hansen/platform-sdk",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "Server-side SDK and signed public contracts for PAIMind platform capabilities",
+  "description": "Server-side SDK and signed public contracts for Hansen platform capabilities",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -13,10 +13,10 @@
   },
   "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "dependencies": {
-    "@paimind/contracts": "workspace:^",
+    "@hansen/contracts": "workspace:^",
     "zod": "^4.4.3"
   },
-  "devDependencies": { "@paimind/testkit": "workspace:^" },
-  "paimindBuild": { "node": ["src/index.ts"] },
+  "devDependencies": { "@hansen/testkit": "workspace:^" },
+  "hansenBuild": { "node": ["src/index.ts"] },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }

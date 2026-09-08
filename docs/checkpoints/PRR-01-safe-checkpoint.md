@@ -5,7 +5,7 @@ Trigger（触发原因）: FP08 完成前执行 AI-native Product Reality Review
 
 ## Preserved implementation（保留成果）
 
-- F0 Framework、`@paimind/harness-compat`、`@paimind/better-sidebar-adapter`、error containment、install/remove/restore 与 upstream-delta gates。
+- F0 Framework、`@hansen/harness-compat`、`@hansen/better-sidebar-adapter`、error containment、install/remove/restore 与 upstream-delta gates。
 - FP01 Runtime Orb 的真实事件映射、并行 batch 收敛、完成后原生图标恢复。
 - FP06 PDF/PPTX Viewer reuse、Artifact 路径约束与失败态。
 - FP07 HTML/XLSX Viewer reuse 与 Bento 隔离 renderer。

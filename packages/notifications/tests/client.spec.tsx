@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { NotificationRecord } from '@paimind/contracts'
-import type { PaimindLocaleSource } from '@paimind/harness-compat'
+import type { NotificationRecord } from '@hansen/contracts'
+import type { PaimindLocaleSource } from '@hansen/harness-compat'
 import {
   NotificationCenterController,
   NotificationOverlay,

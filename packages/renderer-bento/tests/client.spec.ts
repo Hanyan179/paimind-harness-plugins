@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { createClientContextFixture } from '@paimind/testkit'
-import type { PaimindSidebarService } from '@paimind/better-sidebar-adapter'
-import type { PaimindSidebarTabScope } from '@paimind/better-sidebar-adapter'
+import { createClientContextFixture } from '@hansen/testkit'
+import type { PaimindSidebarService } from '@hansen/better-sidebar-adapter'
+import type { PaimindSidebarTabScope } from '@hansen/better-sidebar-adapter'
 import { apply, BentoPreviewPanel, BentoPreviewStore, normalizeBentoRuntimeMessage } from '../src/client/index.tsx'
 
 const sidebar = (): PaimindSidebarService => ({
@@ -21,7 +21,7 @@ describe('FP07 Bento preview client store', () => {
     expect(registerTab).toHaveBeenCalledWith(expect.objectContaining({
       id: 'paimind:bento-preview', hidden: true, single: true,
     }))
-    expect(document.getElementById('@paimind/renderer-bento')?.textContent).toContain("@container paimind-bento (max-width:900px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(280px,58%) minmax(0,42%)")
+    expect(document.getElementById('@hansen/renderer-bento')?.textContent).toContain("@container paimind-bento (max-width:900px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(280px,58%) minmax(0,42%)")
     expect(fixture.services.has('paimindBentoPreview')).toBe(true)
     fixture.disposeEffects()
     expect(fixture.services.has('paimindBentoPreview')).toBe(false)
@@ -45,6 +45,21 @@ describe('FP07 Bento preview client store', () => {
     fireEvent.click(edit)
     expect(edit).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('status')).toHaveTextContent('facts and derived metrics are locked')
+  })
+
+  it('expands the workbench without fullscreen support and Escape restores its panel', () => {
+    const store = new BentoPreviewStore(sidebar())
+    store.open({ sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', path: '/workspace/deck.html', title: 'Deck' })
+    const scope: PaimindSidebarTabScope = { sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', visible: true, locale: { getLocale: () => ({ active: 'en' }), subscribe: () => () => {} } }
+    render(createElement(BentoPreviewPanel, { store, scope }))
+    const panel = screen.getByRole('region', { name: 'Isolated Bento preview' })
+    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen workbench' }))
+    expect(panel).toHaveAttribute('data-expanded', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(panel).toHaveAttribute('data-expanded', 'true')
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(panel).toHaveAttribute('data-expanded', 'false')
+    expect(store.getSnapshot().mode).toBe('edit')
   })
 
   it('renders Preview as a clean slide player and reserves thumbnails for workbench modes', async () => {

@@ -1,7 +1,7 @@
 import { PAIMIND_SCHEDULER_REMOTE_DESCRIPTORS } from './remote.js'
 
 export const TYPERT = Object.freeze({
-  package: '@paimind/platform-scheduler',
+  package: '@hansen/platform-scheduler',
   face: 'host',
   schemas: Object.freeze([]),
   invocations: PAIMIND_SCHEDULER_REMOTE_DESCRIPTORS,

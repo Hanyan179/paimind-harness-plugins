@@ -91,89 +91,89 @@ const systemSkillReference = z.discriminatedUnion('availability', [
 
 export const PAIMIND_SKILL_INSTALLER_REMOTE_DESCRIPTORS = Object.freeze([
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/listCatalog',
+    id: '@hansen/skill-market#paimindSkillInstaller/listCatalog',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'listCatalog',
     invocation: { kind: 'direct' as const }, parameters: [],
     result: {
-      mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillCatalogSnapshot',
+      mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillCatalogSnapshot',
       schema: z.object({ items: z.array(catalogItem).readonly() }).readonly(),
     },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 430, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/inspectCatalog',
+    id: '@hansen/skill-market#paimindSkillInstaller/inspectCatalog',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'inspectCatalog',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
       codec: {
-        mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillCatalogInspectInput',
+        mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillCatalogInspectInput',
         schema: z.object({ catalogId: skillName, version: z.string() }).readonly(),
       },
     }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillUploadPreview', schema: preview },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillUploadPreview', schema: preview },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 434, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/inspectUpload',
+    id: '@hansen/skill-market#paimindSkillInstaller/inspectUpload',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'inspectUpload',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
-      codec: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillUploadInspectInput', schema: z.object({ uploadId: z.uuid() }).readonly() },
+      codec: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillUploadInspectInput', schema: z.object({ uploadId: z.uuid() }).readonly() },
     }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillUploadPreview', schema: preview },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillUploadPreview', schema: preview },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 420, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/installUpload',
+    id: '@hansen/skill-market#paimindSkillInstaller/installUpload',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'installUpload',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
-      codec: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillUploadInstallInput', schema: z.object({ uploadId: z.uuid(), digest }).readonly() },
+      codec: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillUploadInstallInput', schema: z.object({ uploadId: z.uuid(), digest }).readonly() },
     }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillInstallResult', schema: installResult },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillInstallResult', schema: installResult },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 452, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/listSystemSkills',
+    id: '@hansen/skill-market#paimindSkillInstaller/listSystemSkills',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'listSystemSkills',
     invocation: { kind: 'direct' as const }, parameters: [],
     result: {
-      mode: 'strict' as const, typeSymbol: '@paimind/contracts#PaimindSystemSkillCatalogSnapshot',
+      mode: 'strict' as const, typeSymbol: '@hansen/contracts#PaimindSystemSkillCatalogSnapshot',
       schema: z.object({ items: z.array(systemSkillReference).readonly() }).readonly(),
     },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 1060, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/listInstalled',
+    id: '@hansen/skill-market#paimindSkillInstaller/listInstalled',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'listInstalled',
     invocation: { kind: 'direct' as const }, parameters: [],
     result: {
-      mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillInstallerSnapshot',
+      mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillInstallerSnapshot',
       schema: z.object({ items: z.array(record).readonly() }).readonly(),
     },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 496, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/getUserSkillPolicy',
+    id: '@hansen/skill-market#paimindSkillInstaller/getUserSkillPolicy',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'getUserSkillPolicy',
     invocation: { kind: 'direct' as const }, parameters: [],
     result: {
-      mode: 'strict' as const, typeSymbol: '@paimind/contracts#PaimindUserSkillPolicyV1',
+      mode: 'strict' as const, typeSymbol: '@hansen/contracts#PaimindUserSkillPolicyV1',
       schema: userSkillPolicy,
     },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 1100, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/replaceUserSkillPolicy',
+    id: '@hansen/skill-market#paimindSkillInstaller/replaceUserSkillPolicy',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'replaceUserSkillPolicy',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
       codec: {
-        mode: 'strict' as const, typeSymbol: '@paimind/contracts#PaimindUserSkillPolicyReplaceInput',
+        mode: 'strict' as const, typeSymbol: '@hansen/contracts#PaimindUserSkillPolicyReplaceInput',
         schema: z.object({
           expectedRevision: z.number().int().nonnegative(),
           enabledOptionalSystemSkillNames: skillNameList,
@@ -183,50 +183,50 @@ export const PAIMIND_SKILL_INSTALLER_REMOTE_DESCRIPTORS = Object.freeze([
       },
     }],
     result: {
-      mode: 'strict' as const, typeSymbol: '@paimind/contracts#PaimindUserSkillPolicyV1',
+      mode: 'strict' as const, typeSymbol: '@hansen/contracts#PaimindUserSkillPolicyV1',
       schema: userSkillPolicy,
     },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 1106, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/getSkillSource',
+    id: '@hansen/skill-market#paimindSkillInstaller/getSkillSource',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'getSkillSource',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
-      codec: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillSourceInput', schema: z.object({ skillId: skillName }).readonly() },
+      codec: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillSourceInput', schema: z.object({ skillId: skillName }).readonly() },
     }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillSourceDocument', schema: sourceDocument },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillSourceDocument', schema: sourceDocument },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 875, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/getSessionBusinessSkillSelection',
+    id: '@hansen/skill-market#paimindSkillInstaller/getSessionBusinessSkillSelection',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'getSessionBusinessSkillSelection',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
       codec: {
         mode: 'strict' as const,
-        typeSymbol: '@paimind/skill-market#PaimindSessionBusinessSkillSelectionInput',
+        typeSymbol: '@hansen/skill-market#PaimindSessionBusinessSkillSelectionInput',
         schema: z.object({ sessionId: z.string().min(1).max(200) }).readonly(),
       },
     }],
     result: {
       mode: 'strict' as const,
-      typeSymbol: '@paimind/contracts#PaimindSessionBusinessSkillSelectionV1',
+      typeSymbol: '@hansen/contracts#PaimindSessionBusinessSkillSelectionV1',
       schema: sessionBusinessSkillSelection,
     },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 960, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/replaceSessionBusinessSkillSelection',
+    id: '@hansen/skill-market#paimindSkillInstaller/replaceSessionBusinessSkillSelection',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'replaceSessionBusinessSkillSelection',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
       codec: {
         mode: 'strict' as const,
-        typeSymbol: '@paimind/contracts#PaimindSessionBusinessSkillSelectionReplaceInput',
+        typeSymbol: '@hansen/contracts#PaimindSessionBusinessSkillSelectionReplaceInput',
         schema: z.object({
           sessionId: z.string().min(1).max(200),
           expectedRevision: z.number().int().nonnegative(),
@@ -236,124 +236,124 @@ export const PAIMIND_SKILL_INSTALLER_REMOTE_DESCRIPTORS = Object.freeze([
     }],
     result: {
       mode: 'strict' as const,
-      typeSymbol: '@paimind/contracts#PaimindSessionBusinessSkillSelectionV1',
+      typeSymbol: '@hansen/contracts#PaimindSessionBusinessSkillSelectionV1',
       schema: sessionBusinessSkillSelection,
     },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 966, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/saveSkillSource',
+    id: '@hansen/skill-market#paimindSkillInstaller/saveSkillSource',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'saveSkillSource',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
       codec: {
-        mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillSourceSaveInput',
+        mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillSourceSaveInput',
         schema: z.object({ name: skillName, description: z.string(), instructions: z.string(), expectedDigest: digest.optional() }).readonly(),
       },
     }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillInstallResult', schema: installResult },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillInstallResult', schema: installResult },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 895, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/getSkillPackage',
+    id: '@hansen/skill-market#paimindSkillInstaller/getSkillPackage',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'getSkillPackage',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
       codec: {
-        mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillPackageInput',
+        mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillPackageInput',
         schema: z.object({ skillId: skillName }).readonly(),
       },
     }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillPackageDocument', schema: packageDocument },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillPackageDocument', schema: packageDocument },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 1745, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/listSkillPackageDirectory',
+    id: '@hansen/skill-market#paimindSkillInstaller/listSkillPackageDirectory',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'listSkillPackageDirectory',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
       codec: {
-        mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillPackageDirectoryInput',
+        mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillPackageDirectoryInput',
         schema: z.object({
           skillId: skillName, path: z.string().max(500).optional(),
           cursor: z.string().regex(/^\d+$/).optional(), limit: z.number().int().min(1).max(500).optional(),
         }).readonly(),
       },
     }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillPackageDirectoryPage', schema: packageDirectoryPage },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillPackageDirectoryPage', schema: packageDirectoryPage },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 1957, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/readSkillPackageFile',
+    id: '@hansen/skill-market#paimindSkillInstaller/readSkillPackageFile',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'readSkillPackageFile',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
       codec: {
-        mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillPackageFileInput',
+        mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillPackageFileInput',
         schema: z.object({ skillId: skillName, path: z.string().min(1).max(500) }).readonly(),
       },
     }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillPackageFile', schema: packageFile },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillPackageFile', schema: packageFile },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 1970, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/saveSkillPackage',
+    id: '@hansen/skill-market#paimindSkillInstaller/saveSkillPackage',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'saveSkillPackage',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
       codec: {
-        mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillPackageSaveInput',
+        mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillPackageSaveInput',
         schema: z.object({
           skillId: skillName.optional(), expectedDigest: digest.optional(),
           changes: z.array(packageChange).min(1).max(1_000).readonly(),
         }).readonly(),
       },
     }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillInstallResult', schema: installResult },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillInstallResult', schema: installResult },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 1765, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/getAuthoringDraft',
+    id: '@hansen/skill-market#paimindSkillInstaller/getAuthoringDraft',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'getAuthoringDraft',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
-      codec: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillAuthoringDraftInput', schema: z.object({ sessionId: z.string() }).readonly() },
+      codec: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillAuthoringDraftInput', schema: z.object({ sessionId: z.string() }).readonly() },
     }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillAuthoringDraft', schema: authoringDraft.nullable() },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillAuthoringDraft', schema: authoringDraft.nullable() },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 950, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/dismissAuthoringDraft',
+    id: '@hansen/skill-market#paimindSkillInstaller/dismissAuthoringDraft',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'dismissAuthoringDraft',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
-      codec: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillAuthoringDraftDismissInput', schema: z.object({ sessionId: z.string(), draftId: z.uuid() }).readonly() },
+      codec: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillAuthoringDraftDismissInput', schema: z.object({ sessionId: z.string(), draftId: z.uuid() }).readonly() },
     }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillAuthoringDraftDismissed', schema: z.object({ dismissed: z.boolean() }).readonly() },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillAuthoringDraftDismissed', schema: z.object({ dismissed: z.boolean() }).readonly() },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 955, column: 3 },
   },
   {
-    id: '@paimind/skill-market#paimindSkillInstaller/uninstall',
+    id: '@hansen/skill-market#paimindSkillInstaller/uninstall',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'uninstall',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'input', wire: 'input', source: 'json' as const,
-      codec: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillUninstallInput', schema: z.object({ skillId: skillName, version: digest.optional() }).readonly() },
+      codec: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillUninstallInput', schema: z.object({ skillId: skillName, version: digest.optional() }).readonly() },
     }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillRemovalRecord', schema: removal },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/skill-market#SkillRemovalRecord', schema: removal },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 525, column: 3 },
   },
 ])
 
 export const TYPERT_REMOTE = Object.freeze({
-  package: '@paimind/skill-market', descriptors: PAIMIND_SKILL_INSTALLER_REMOTE_DESCRIPTORS,
+  package: '@hansen/skill-market', descriptors: PAIMIND_SKILL_INSTALLER_REMOTE_DESCRIPTORS,
 })
 
 export default TYPERT_REMOTE

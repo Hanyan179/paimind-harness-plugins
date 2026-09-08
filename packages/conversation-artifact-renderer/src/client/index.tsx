@@ -6,13 +6,13 @@ import {
   type PaimindClientContext,
   type PaimindConversationTurnTailOwner,
   type PaimindLocaleSource,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import {
   resolveArtifactPath,
   type PaimindArtifactService,
   type PaimindArtifactState,
   type PaimindArtifactView,
-} from '@paimind/artifacts'
+} from '@hansen/artifacts'
 
 export const inject = ['slots', 'sessions', 'paimindArtifacts', 'locale']
 
@@ -98,7 +98,7 @@ const STATE_COPY: Readonly<Record<PaimindArtifactState, readonly [string, string
   failed: ['生成失败', 'Failed'],
 })
 
-const STYLE_ID = '@paimind/conversation-artifact-renderer'
+const STYLE_ID = '@hansen/conversation-artifact-renderer'
 const STYLE = `
 [data-paimind-conversation-artifacts]{margin:14px 0 6px;min-width:0}
 [data-paimind-conversation-artifacts] *{box-sizing:border-box}
@@ -132,7 +132,7 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = '@paimind/conversation-artifact-renderer'
+  style.dataset.paimindPlugin = '@hansen/conversation-artifact-renderer'
   style.textContent = STYLE
   document.head.append(style)
   return () => { style.remove() }
@@ -226,7 +226,7 @@ export function ConversationArtifactCards(props: ConversationArtifactCardsProps)
 export function apply(ctx: ConversationArtifactRendererContext): void {
   contributePaimindExtension(ctx.slots, {
     id: 'paimind:conversation-artifact-renderer',
-    packageName: '@paimind/conversation-artifact-renderer',
+    packageName: '@hansen/conversation-artifact-renderer',
     category: 'content-rendering',
     nameZh: '对话产物渲染器',
     nameEn: 'Conversation Artifact Renderer',

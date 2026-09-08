@@ -1,4 +1,4 @@
-# `@paimind/presentation-trace`
+# `@hansen/presentation-trace`
 
 Structured presentation provenance projection for PAIMind artifacts.
 
@@ -19,9 +19,9 @@ Role: **Client plugin**. It owns the product projection described above; Harness
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/artifacts` (`workspace:^`), `@paimind/better-sidebar-adapter` (`workspace:^`), `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`), `@paimind/renderer-bento` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/artifacts` (`workspace:^`), `@hansen/better-sidebar-adapter` (`workspace:^`), `@hansen/contracts` (`workspace:^`), `@hansen/harness-compat` (`workspace:^`), `@hansen/renderer-bento` (`workspace:^`).
 - External runtime or peer dependencies: `react` (`>=18.0.0 <20.0.0`).
-- Client service injection: `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-locale`, `@deepseek-ai/dsh-client-ui-slots`, `@paimind/artifacts`, `@paimind/better-sidebar-adapter`, `@paimind/renderer-bento`.
+- Client service injection: `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-locale`, `@deepseek-ai/dsh-client-ui-slots`, `@hansen/artifacts`, `@hansen/better-sidebar-adapter`, `@hansen/renderer-bento`.
 
 The manifest is authoritative for dependency direction and version selection.
 

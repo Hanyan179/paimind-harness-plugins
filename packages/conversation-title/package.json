@@ -1,9 +1,9 @@
 {
-  "name": "@paimind/conversation-title",
+  "name": "@hansen/conversation-title",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "Non-blocking PAIMind conversation title generation for DeepSeek Harness",
+  "description": "Non-blocking Hansen conversation title generation for DeepSeek Harness",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -30,17 +30,17 @@
     }
   },
   "dependencies": {
-    "@paimind/harness-compat": "workspace:^"
+    "@hansen/harness-compat": "workspace:^"
   },
   "peerDependencies": {
     "react": ">=18.0.0 <20.0.0"
   },
   "devDependencies": {
-    "@paimind/testkit": "workspace:^",
+    "@hansen/testkit": "workspace:^",
     "@testing-library/react": "^16.3.2",
     "react": "^18.3.1"
   },
-  "paimindBuild": {
+  "hansenBuild": {
     "node": ["src/index.ts", "src/settings.ts", "src/invariant.ts"],
     "client": "src/client/index.tsx"
   },

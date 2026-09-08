@@ -1,11 +1,11 @@
-import { contributePaimindExtension, type PaimindClientContext } from '@paimind/harness-compat'
+import { contributePaimindExtension, type PaimindClientContext } from '@hansen/harness-compat'
 
 export const inject = ['slots']
 
 export function apply(ctx: PaimindClientContext): void {
   contributePaimindExtension(ctx.slots, {
     id: 'paimind:generator-office',
-    packageName: '@paimind/generator-office',
+    packageName: '@hansen/generator-office',
     category: 'content-rendering',
     nameZh: 'Office 产物生成器',
     nameEn: 'Office Artifact Generator',

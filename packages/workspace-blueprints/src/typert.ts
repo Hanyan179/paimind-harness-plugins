@@ -1,7 +1,7 @@
 import { PAIMIND_WORKSPACE_BLUEPRINT_REMOTE_DESCRIPTORS } from './remote.js'
 
 export const TYPERT = Object.freeze({
-  package: '@paimind/workspace-blueprints',
+  package: '@hansen/workspace-blueprints',
   face: 'host',
   schemas: Object.freeze([]),
   invocations: PAIMIND_WORKSPACE_BLUEPRINT_REMOTE_DESCRIPTORS,

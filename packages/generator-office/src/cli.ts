@@ -11,7 +11,7 @@ import {
   definePresentationOutline,
   traceFromPresentationOutline,
   validatePresentationTraceability,
-} from '@paimind/presentation-contracts'
+} from '@hansen/presentation-contracts'
 import { renderPresentationOutlinePptx } from './outline-pptx.js'
 
 type JsonRecord = Record<string, unknown>

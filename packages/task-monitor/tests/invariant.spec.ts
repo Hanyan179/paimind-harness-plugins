@@ -8,6 +8,6 @@ describe('FP05 task-monitor invariant companion', () => {
     expect(name).toBe('paimind-task-monitor-invariant')
     expect(inject).toEqual(['invariants'])
     expect(apply({ invariants: { register } })).toBe(dispose)
-    expect(register).toHaveBeenCalledWith('@paimind/task-monitor', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('@hansen/task-monitor', expect.any(Function))
   })
 })

@@ -1,4 +1,4 @@
-# `@paimind/contracts`
+# `@hansen/contracts`
 
 Stable public type contracts shared by PAIMind plugins and external consumers.
 

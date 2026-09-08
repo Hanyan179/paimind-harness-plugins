@@ -3,8 +3,8 @@ import type {
   HarnessSessionListSnapshot,
   HarnessWorkspaceListSnapshot,
   PaimindWorkspaceClientContext,
-} from '@paimind/harness-compat'
-import { createClientContextFixture } from '@paimind/testkit'
+} from '@hansen/harness-compat'
+import { createClientContextFixture } from '@hansen/testkit'
 import { apply, inject } from '../src/client/index.js'
 
 const workspaceState: HarnessWorkspaceListSnapshot = {
@@ -36,7 +36,7 @@ describe('FP04 headless Workspace adapter', () => {
     expect(inject).toEqual(['sessions', 'workspaces'])
     expect(fixture.services.has('paimindWorkspaceProject')).toBe(true)
     expect(fixture.slots).toHaveLength(0)
-    expect(document.querySelector('style[data-paimind-plugin="@paimind/workspace-project"]')).toBeNull()
+    expect(document.querySelector('style[data-paimind-plugin="@hansen/workspace-project"]')).toBeNull()
     fixture.disposeEffects()
     expect(fixture.services.has('paimindWorkspaceProject')).toBe(false)
   })

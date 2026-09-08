@@ -5,7 +5,7 @@ import {
   type PaimindClientContext,
   type PaimindSettingsScope,
   type PaimindSettingsScopeBinder,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import {
   decodePaimindConversationTitleModelRoute,
   decodePaimindConversationTitleSettings,
@@ -15,7 +15,7 @@ import {
   type PaimindConversationTitleSettings,
 } from '../settings.js'
 
-const PACKAGE_NAME = '@paimind/conversation-title'
+const PACKAGE_NAME = '@hansen/conversation-title'
 const STYLE_ID = PACKAGE_NAME
 const BASE_INJECT = ['slots', 'locale', 'connection', 'settingsScope'] as const
 export const inject = [...BASE_INJECT]

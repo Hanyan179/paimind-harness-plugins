@@ -13,7 +13,7 @@ FP11 adds a PAIMind Skill Market over the one Harness Session-scoped Skill catal
 | Session/project-aware catalog | Reuse exactly | Harness `skill.list({ sessionId })` backed by `ctx.skills` |
 | Skill invocation/mount | Reuse exactly | Plain Session prompt beginning with `/name`; Harness injects the resolved body at the pre-step boundary |
 | Name, description, `whenToUse`, user/model invocation policy | Reuse exactly | Harness `SkillEntry` |
-| Search, category/filter, favorite and detail presentation | PAIMind product metadata/view | `@paimind/skill-market`, keyed only by Skill name |
+| Search, category/filter, favorite and detail presentation | PAIMind product metadata/view | `@hansen/skill-market`, keyed only by Skill name |
 | Skill version, provider source, filesystem path and raw body | Not exposed by Harness `rc.6` browser API | No guessed value and no Host path crawl |
 | Install/update/delete Skill | Out of FP11 `rc.6` scope | Harness providers and deployment/Profile |
 
@@ -21,13 +21,13 @@ The runtime source remains Harness `ctx.skills`. The public `skill.list` Remote 
 
 ## Package and compatibility seams
 
-### `@paimind/harness-compat`
+### `@hansen/harness-compat`
 
 - Adds the structural `HarnessSkillEntry` and `HarnessSkillsApi.list` client contract.
 - Exposes the current Session binding and native conversation draft setter already used by Creator handoff.
 - No feature package imports Harness modules or provider filesystem types.
 
-### `@paimind/skill-market`
+### `@hansen/skill-market`
 
 - Registers one independent Harness Settings section and one `Skills & Tools` Extension Center descriptor.
 - Lists only the catalog returned for the current native Session.

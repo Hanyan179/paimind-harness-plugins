@@ -1,9 +1,9 @@
 {
-  "name": "@paimind/developer-resources",
+  "name": "@hansen/developer-resources",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "Read-only PAIMind runtime diagnostics, live surface catalog, and bundled integration reference",
+  "description": "Read-only Hansen runtime diagnostics, live surface catalog, and bundled integration reference",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -32,18 +32,18 @@
     }
   },
   "dependencies": {
-    "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^"
+    "@hansen/contracts": "workspace:^",
+    "@hansen/harness-compat": "workspace:^"
   },
   "peerDependencies": {
     "react": ">=18.0.0 <20.0.0"
   },
   "devDependencies": {
-    "@paimind/testkit": "workspace:^",
+    "@hansen/testkit": "workspace:^",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
-  "paimindBuild": {
+  "hansenBuild": {
     "node": ["src/index.ts"],
     "client": "src/client/index.tsx"
   },

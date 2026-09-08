@@ -1,4 +1,4 @@
-import type { HarnessSkillEntry } from '@paimind/harness-compat'
+import type { HarnessSkillEntry } from '@hansen/harness-compat'
 
 export const PAIMIND_SKILL_UPLOAD_PATH = '/paimind/skills/uploads'
 export const SKILL_PRODUCT_CATEGORIES = ['all', 'general', 'research', 'data', 'content', 'product', 'engineering', 'agent-tools'] as const

@@ -10,7 +10,7 @@ Add the PAIMind runtime-state orb family to the native Harness conversation and 
 - Replace the two native live-status visuals: the current Session sidebar indicator and the `Deep diving...` turn status.
 - Replace the active collapsed leaf Context/Think/Tool/Bash leading icon with a type-mapped animated orb. A contiguous parallel tool-call batch animates as one unit until its final call settles, so faster siblings never mix static and animated icons inside the same batch. Running parent rows yield to precise children. Sequential completed rows, failed/stopped rows, hovered rows, and expanded rows keep native Harness semantics.
 - Reuse `thinking-orbs` for the nine visual primitives.
-- Keep visual phase derivation in `@paimind/harness-compat`; the component receives only a resolved presentation.
+- Keep visual phase derivation in `@hansen/harness-compat`; the component receives only a resolved presentation.
 
 ## Runtime mapping
 

@@ -1,5 +1,5 @@
 {
-  "name": "@paimind/walmart-proposal-adapter",
+  "name": "@hansen/walmart-proposal-adapter",
   "version": "0.1.0-alpha.0",
   "description": "Native Harness Tools for synthetic-demo preparation, deterministic Walmart analysis and proposal outlines",
   "license": "UNLICENSED",
@@ -14,12 +14,12 @@
   },
   "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map","runtime/**/*.py","runtime/**/*.mjs","runtime/**/*.json","runtime/**/*.toml","runtime/**/*.lock","runtime/**/*.yaml","runtime/**/*.sql","runtime/UPSTREAM_COMMIT"],
   "dependencies": {
-    "@paimind/artifact-runtime": "workspace:^",
-    "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^",
-    "@paimind/presentation-contracts": "workspace:^"
+    "@hansen/artifact-runtime": "workspace:^",
+    "@hansen/contracts": "workspace:^",
+    "@hansen/harness-compat": "workspace:^",
+    "@hansen/presentation-contracts": "workspace:^"
   },
-  "devDependencies": { "@paimind/testkit": "workspace:^" },
-  "paimindBuild": { "node": ["src/index.ts", "src/invariant.ts"] },
+  "devDependencies": { "@hansen/testkit": "workspace:^" },
+  "hansenBuild": { "node": ["src/index.ts", "src/invariant.ts"] },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }

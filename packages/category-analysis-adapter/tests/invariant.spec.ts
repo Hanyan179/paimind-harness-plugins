@@ -7,6 +7,6 @@ describe('category analysis adapter invariant', () => {
     apply({ invariants: { register } })
     expect(name).toBe('paimind-category-analysis-adapter-invariant')
     expect(inject).toEqual(['invariants'])
-    expect(register).toHaveBeenCalledWith('@paimind/category-analysis-adapter', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('@hansen/category-analysis-adapter', expect.any(Function))
   })
 })

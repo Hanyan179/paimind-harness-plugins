@@ -1,4 +1,4 @@
-# `@paimind/workspace-blueprints`
+# `@hansen/workspace-blueprints`
 
 PAIMind Workspace Blueprint Center for creating native Harness Workspaces from curated, versioned starting structures.
 
@@ -23,7 +23,7 @@ Role: **Client + host product plugin**. It owns versioned folder snapshots, opti
 
 ## Dependencies
 
-- Internal runtime dependency: `@paimind/harness-compat` (`workspace:^`).
+- Internal runtime dependency: `@hansen/harness-compat` (`workspace:^`).
 - External runtime dependency: `zod` (`^4.4.3`).
 - Client peers: `react` and `react-dom` (`>=18.0.0 <20.0.0`).
 

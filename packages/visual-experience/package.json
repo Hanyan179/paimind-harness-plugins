@@ -1,9 +1,9 @@
 {
-  "name": "@paimind/visual-experience",
+  "name": "@hansen/visual-experience",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "Reversible PAIMind visual and interaction experience layer for DeepSeek Harness",
+  "description": "Reversible Hansen visual and interaction experience layer for DeepSeek Harness",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -46,20 +46,20 @@
     }
   },
   "dependencies": {
-    "@paimind/branding": "workspace:^",
-    "@paimind/harness-compat": "workspace:^"
+    "@hansen/branding": "workspace:^",
+    "@hansen/harness-compat": "workspace:^"
   },
   "peerDependencies": {
     "react": ">=18.0.0 <20.0.0",
     "react-dom": ">=18.0.0 <20.0.0"
   },
   "devDependencies": {
-    "@paimind/testkit": "workspace:^",
+    "@hansen/testkit": "workspace:^",
     "@testing-library/react": "^16.3.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
-  "paimindBuild": {
+  "hansenBuild": {
     "node": ["src/index.ts", "src/settings.ts", "src/invariant.ts"],
     "client": "src/client/index.tsx"
   },

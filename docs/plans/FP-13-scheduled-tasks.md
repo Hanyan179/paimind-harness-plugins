@@ -34,7 +34,7 @@ The legacy prototype's platform/personal schedule stores, synthetic run ids, arc
 - Keep both packages behind the exact Harness `rc.6` compatibility gate.
 - Schedule remains a native Harness object even when its PAIMind management UI is removed.
 
-### `@paimind/harness-compat`
+### `@hansen/harness-compat`
 
 - Own the only direct import of public `@deepseek-ai/dsh-schedule` fold/view helpers.
 - Expose a structural Session-event reader and a safe active-view adapter.

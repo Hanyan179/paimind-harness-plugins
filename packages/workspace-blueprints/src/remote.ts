@@ -170,7 +170,7 @@ function noInputDescriptor(
   line: number,
 ) {
   return Object.freeze({
-    id: `@paimind/workspace-blueprints#paimindWorkspaceBlueprints/${method}`,
+    id: `@hansen/workspace-blueprints#paimindWorkspaceBlueprints/${method}`,
     service: 'paimindWorkspaceBlueprints',
     namespace: 'paimindWorkspaceBlueprints',
     method,
@@ -178,7 +178,7 @@ function noInputDescriptor(
     parameters: Object.freeze([]),
     result: Object.freeze({
       mode: 'strict' as const,
-      typeSymbol: `@paimind/workspace-blueprints#${resultType}`,
+      typeSymbol: `@hansen/workspace-blueprints#${resultType}`,
       schema: resultSchema,
     }),
     sourceLocation: Object.freeze({ file: 'packages/workspace-blueprints/src/index.ts', line, column: 3 }),
@@ -194,7 +194,7 @@ function descriptor(
   line: number,
 ) {
   return Object.freeze({
-    id: `@paimind/workspace-blueprints#paimindWorkspaceBlueprints/${method}`,
+    id: `@hansen/workspace-blueprints#paimindWorkspaceBlueprints/${method}`,
     service: 'paimindWorkspaceBlueprints',
     namespace: 'paimindWorkspaceBlueprints',
     method,
@@ -205,13 +205,13 @@ function descriptor(
       source: 'json' as const,
       codec: Object.freeze({
         mode: 'strict' as const,
-        typeSymbol: `@paimind/workspace-blueprints#${inputType}`,
+        typeSymbol: `@hansen/workspace-blueprints#${inputType}`,
         schema: inputSchema,
       }),
     })]),
     result: Object.freeze({
       mode: 'strict' as const,
-      typeSymbol: `@paimind/workspace-blueprints#${resultType}`,
+      typeSymbol: `@hansen/workspace-blueprints#${resultType}`,
       schema: resultSchema,
     }),
     sourceLocation: Object.freeze({ file: 'packages/workspace-blueprints/src/index.ts', line, column: 3 }),
@@ -219,7 +219,7 @@ function descriptor(
 }
 
 export const TYPERT_REMOTE = Object.freeze({
-  package: '@paimind/workspace-blueprints',
+  package: '@hansen/workspace-blueprints',
   descriptors: PAIMIND_WORKSPACE_BLUEPRINT_REMOTE_DESCRIPTORS,
 })
 

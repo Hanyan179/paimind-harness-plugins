@@ -172,7 +172,7 @@ flowchart TB
 | 企业接口层 | PAIMind Gateway（网关） | TLS（传输层加密）、OIDC（开放身份连接）、令牌校验、租户绑定、限流、幂等、版本协商、事件续传 |
 | 企业控制面 | PAIMind | 身份投影、策略、资源发布、外部会话句柄、运行映射、审批、配额、审计和运维控制 |
 | 原生执行运行时 | Harness（智能体骨架） | 原生 Session、Workspace、Agent Loop、Tool、Skill Registry、Job 和 Tool Execution（会话、工作区、智能体循环、工具、技能注册、任务与工具执行） |
-| 运行适配层 | `@paimind/harness-compat` | 选定 Harness（智能体骨架）版本的接口、事件、恢复和兼容投影 |
+| 运行适配层 | `@hansen/harness-compat` | 选定 Harness（智能体骨架）版本的接口、事件、恢复和兼容投影 |
 | 能力供应面 | PAIMind 发布治理＋Harness Loader（宿主加载器） | 已批准插件组合的不可变发布、安装、启停、镜像和摘要校验 |
 | 权威数据层 | 对应领域服务 | PostgreSQL（关系数据库）保存控制事实；对象存储保存文件与产物；Redis（内存数据存储）只保存可重建状态 |
 

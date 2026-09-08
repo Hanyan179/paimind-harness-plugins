@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import type { PaimindLocaleSource } from '@paimind/harness-compat'
-import type { PaimindWorkspaceProjectService } from '@paimind/workspace-project'
+import type { PaimindLocaleSource } from '@hansen/harness-compat'
+import type { PaimindWorkspaceProjectService } from '@hansen/workspace-project'
 
 /** Host half of the FP05 adapter plugin. */
 export const name = 'paimind-better-sidebar-adapter'

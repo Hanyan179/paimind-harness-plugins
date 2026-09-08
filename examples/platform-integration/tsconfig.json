@@ -6,11 +6,11 @@
     "emitDeclarationOnly": true,
     "composite": true,
     "paths": {
-      "@paimind/contracts": ["../../packages/contracts/src/index.ts"],
-      "@paimind/harness-compat/host": ["../../packages/harness-compat/src/host.ts"],
-      "@paimind/platform-sdk": ["../../packages/platform-sdk/src/index.ts"],
-      "@paimind/platform-scheduler": ["../../packages/scheduler/src/index.ts"],
-      "@paimind/scheduler-adapter-harness": ["../../packages/scheduler-adapter-harness/src/index.ts"]
+      "@hansen/contracts": ["../../packages/contracts/src/index.ts"],
+      "@hansen/harness-compat/host": ["../../packages/harness-compat/src/host.ts"],
+      "@hansen/platform-sdk": ["../../packages/platform-sdk/src/index.ts"],
+      "@hansen/platform-scheduler": ["../../packages/scheduler/src/index.ts"],
+      "@hansen/scheduler-adapter-harness": ["../../packages/scheduler-adapter-harness/src/index.ts"]
     }
   },
   "include": ["index.ts", "harness-plugin.ts"],

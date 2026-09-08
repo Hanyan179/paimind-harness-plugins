@@ -2,7 +2,7 @@
 
 ## 目标
 
-在不修改 DeepSeek Harness、Better Sidebar 或业务插件源码的前提下，以可安装、可卸载、可升级和可回退的 `@paimind/visual-experience`，把 PAIMind 原型的干净留白、Paramont 海军蓝、低饱和蓝灰和轻玻璃质感带入真实 Harness，同时保留完整开发工作台能力。
+在不修改 DeepSeek Harness、Better Sidebar 或业务插件源码的前提下，以可安装、可卸载、可升级和可回退的 `@hansen/visual-experience`，把 PAIMind 原型的干净留白、Paramont 海军蓝、低饱和蓝灰和轻玻璃质感带入真实 Harness，同时保留完整开发工作台能力。
 
 完成标准分两层：本地真实组合与浏览器矩阵通过代表 Development Complete（开发完成）；共享测试环境完成安装、回退和领导视觉评审后，才代表 Product Accepted（产品验收完成）。
 
@@ -18,18 +18,18 @@
 
 | 能力 | Owner（所有者） | FP-17 做法 |
 |---|---|---|
-| Paramont 名称、标志、文档标题 | `@paimind/branding` | 继续独立负责；FP-17 只消费品牌语义座位。 |
+| Paramont 名称、标志、文档标题 | `@hansen/branding` | 继续独立负责；FP-17 只消费品牌语义座位。 |
 | Light / Dark / System | Harness `theme` | 通过 `PaimindThemeService.overrideTokens` 叠加并可撤销。 |
 | Agent Preset roster 与选择 | Harness | `HarnessAgentChoiceBridge` 读取并调用原生选择器，不创建影子 Agent。 |
 | 页面根、侧栏、对话、输入区 | Harness | `HarnessExperienceMarkers` 只增加语义标记，不替换根节点。 |
 | 视觉模式偏好 | Harness Settings | 命名空间 `paimind.visual-experience`，默认 `paimind`。 |
 | 欢迎环境资产 | FP-17 | 两张优化 WebP；来源与用途见包内根级 `ASSETS.md`。 |
 | Agent 头像投影 | FP-17 | 96×96 WebP；exact mapping 与纯函数 deterministic projection 共用一个 canonical-Preset resolver，来源见 `assets/ASSETS.md`。 |
-| Composer `@` / `+` / `/` | Harness + `@paimind/harness-compat` | 原生 controller、codec、CAS、pick 与 execution 仍由 Harness 拥有；兼容层只做 rc.8 可逆语义桥接。 |
+| Composer `@` / `+` / `/` | Harness + `@hansen/harness-compat` | 原生 controller、codec、CAS、pick 与 execution 仍由 Harness 拥有；兼容层只做 rc.8 可逆语义桥接。 |
 
-`paimind.visual-experience` 是产品与插件对外的 Logical Namespace（逻辑命名空间）。Harness `0.1.0-rc.8` 的原生 Settings 仅接受 lowercase kebab-case（小写短横线格式），因此 `@paimind/harness-compat` 在存储边界稳定映射为 `paimind-visual-experience`；插件代码、类型和验收仍以逻辑命名空间为准。
+`paimind.visual-experience` 是产品与插件对外的 Logical Namespace（逻辑命名空间）。Harness `0.1.0-rc.8` 的原生 Settings 仅接受 lowercase kebab-case（小写短横线格式），因此 `@hansen/harness-compat` 在存储边界稳定映射为 `paimind-visual-experience`；插件代码、类型和验收仍以逻辑命名空间为准。
 
-插件在 Bundle 中位于 `@paimind/branding` 之后、其他 PAIMind 产品页面之前。Harness 版本适配集中在 `@paimind/harness-compat`。
+插件在 Bundle 中位于 `@hansen/branding` 之后、其他 PAIMind 产品页面之前。Harness 版本适配集中在 `@hansen/harness-compat`。
 
 ## 状态清单
 

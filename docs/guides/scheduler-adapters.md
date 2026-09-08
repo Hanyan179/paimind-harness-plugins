@@ -23,7 +23,7 @@ await ctx.paimindHarnessScheduleAdapter.registerAction({
 
 At runtime the Adapter creates a Session id derived from `runId`, mounts the registered Agent Preset during native Agent setup, starts a `paimind-schedule` Native Job and submits a user-owned scheduled turn whose first line identifies the registered Action. Harness therefore gives the new Session a recognizable scheduled-task title and includes it in the normal conversation list. Once the Session and Job are accepted, the Adapter returns `accepted` immediately. The Agent continues asynchronously; its final response includes `PAIMIND_STATUS: SUCCEEDED` or `PAIMIND_STATUS: NEEDS_ATTENTION`, and the Adapter reports the final status/message back to Scheduler. The Session remains available through “打开对话”. Background execution never replaces the user's current conversation automatically.
 
-The active Bundle also loads `@paimind/scheduler-adapter-harness/agent-action`. It registers the business-visible **Agent · 新建会话并生成工作区简报** item with a fixed developer-owned Prompt and model route. It proves the standard user flow: select the Agent item, configure time, then inspect the created Session from Run records. Additional Agent workflows should register separate outcome-oriented actions rather than adding Prompt or model fields to the Scheduler form.
+The active Bundle also loads `@hansen/scheduler-adapter-harness/agent-action`. It registers the business-visible **Agent · 新建会话并生成工作区简报** item with a fixed developer-owned Prompt and model route. It proves the standard user flow: select the Agent item, configure time, then inspect the created Session from Run records. Additional Agent workflows should register separate outcome-oriented actions rather than adding Prompt or model fields to the Scheduler form.
 
 ## Standard HTTP Adapter
 
@@ -32,7 +32,7 @@ Use the Platform SDK to register a provider implementing the v1 contract. Schedu
 ## Custom Adapter
 
 Create a package that depends on the standalone research package
-`@paimind/platform-scheduler` and registers a `PaimindScheduleExecutor`.
+`@hansen/platform-scheduler` and registers a `PaimindScheduleExecutor`.
 Translate the standard trigger into the target API and return a standard final
 report or `accepted`. Keep provider authentication and fields inside the
 Adapter. Do not depend on the retired Session-local scheduler facade; it was only the
@@ -56,7 +56,7 @@ Do not modify Scheduler Core for Feishu, invoice, project or future provider nam
 
 ## Feishu custom-bot Adapter
 
-`@paimind/scheduler-adapter-feishu-bot` is a provider-specific Custom Adapter
+`@hansen/scheduler-adapter-feishu-bot` is a provider-specific Custom Adapter
 for Feishu/Lark group-bot Webhooks. Business code registers an action with a
 credential reference, keyword and message template. The Adapter resolves the
 Webhook from trusted runtime configuration, guarantees the required keyword,

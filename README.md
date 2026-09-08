@@ -1,6 +1,8 @@
-# PAIMind Harness Plugins
+# Hansen Harness Plugins
 
-Out-of-tree PAIMind product plugins for DeepSeek Harness. DeepSeek Harness remains the only runtime; this repository supplies an installable bundle, version-isolated compatibility interfaces, domain contracts, product plugins, and acceptance evidence.
+Out-of-tree, configurable product plugins for DeepSeek Harness, published under `@hansen/*`. DeepSeek Harness remains the only runtime; this repository supplies an installable bundle, version-isolated compatibility interfaces, domain contracts, product plugins, and acceptance evidence.
+
+Configure the product name, logos, browser icon and welcome messages in **Settings → Branding** (设置 → 品牌设置). Defaults use Hansen and name initials; no company logo is required. See [brand configuration](packages/branding/README.md) and the [namespace migration boundary](docs/plans/hansen-branding-migration.md).
 
 The durable program scope and autonomous gate policy are defined in [`docs/plans/GOAL-A-plugin-migration.md`](docs/plans/GOAL-A-plugin-migration.md). Goal A covers F0, FP01-FP16, final cross-plugin E2E, and prototype runtime retirement; it does not stop after the current feature package or wait for per-package human approval.
 

@@ -1,4 +1,4 @@
-# `@paimind/testkit`
+# `@hansen/testkit`
 
 Shared PAIMind test helpers for lifecycle and Harness compatibility verification.
 
@@ -16,7 +16,7 @@ Role: **Shared support package**. It has no independent Harness lifecycle or pro
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/harness-compat` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/harness-compat` (`workspace:^`).
 - External runtime or peer dependencies: None.
 - Client service injection: None.
 

@@ -4,7 +4,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 产品能力 | `@paimind/task-monitor` 任务摘要 |
+| 产品能力 | `@hansen/task-monitor` 任务摘要 |
 | 文档状态 | `Draft（草案）v0.1`，待产品评审 |
 | 目标读者 | 产品、设计、前端、Harness（运行时）兼容层、测试 |
 | 需求来源 | 现有任务摘要插件、冻结原型、真实 Harness（运行时）投影、2026-08-21 Full-State Baseline（全量状态基线）评审 |
@@ -487,7 +487,7 @@ P2（后续评估）不进入本次插件优化范围，除非另行立项。
 
 - Task Monitor（任务监控）继续只读取 Harness（运行时）原生事实和 PAIMind（产品层）现有 Artifact Projection（产物投影）。
 - 不新增任务存储、清单 ID（标识）、Job（任务记录）恢复、权限或日志副本。
-- 移除 `@paimind/task-monitor` 后，原生 Session（会话）、Job（任务记录）、文件、产物和对话仍可使用。
+- 移除 `@hansen/task-monitor` 后，原生 Session（会话）、Job（任务记录）、文件、产物和对话仍可使用。
 - 定向测试、类型检查、生产构建、兼容性门禁和真实 Harness（运行时）组合通过。
 - 浏览器必须完成 Empty（空）、Sparse（稀疏）、Full（全量）、Error（异常）、Light（浅色）、Dark（深色）和 Narrow（窄屏）七类证据；组件 Fixture（夹具）只能作为设计验证，不能替代真实 Harness（运行时）产品验收。
 

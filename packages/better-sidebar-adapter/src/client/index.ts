@@ -1,7 +1,7 @@
 import { Component, createElement, createRef, type ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import type { PaimindClientContext } from '@paimind/harness-compat'
-import type { PaimindWorkspaceProjectService } from '@paimind/workspace-project'
+import type { PaimindClientContext } from '@hansen/harness-compat'
+import type { PaimindWorkspaceProjectService } from '@hansen/workspace-project'
 import {
   BetterSidebarAdapter,
   type ExternalBetterSidebarService,

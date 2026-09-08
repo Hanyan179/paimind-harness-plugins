@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ComponentType } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import type { PaimindExtensionCenterClientContext } from '@paimind/harness-compat'
-import { createClientContextFixture } from '@paimind/testkit'
+import type { PaimindExtensionCenterClientContext } from '@hansen/harness-compat'
+import { createClientContextFixture } from '@hansen/testkit'
 import {
   apply,
   ExtensionCenterSection,
@@ -11,7 +11,7 @@ import {
 
 const extension = {
   id: 'paimind:runtime-orbs' as const,
-  packageName: '@paimind/runtime-orbs' as const,
+  packageName: '@hansen/runtime-orbs' as const,
   category: 'experience' as const,
   nameZh: '运行状态球', nameEn: 'Runtime Orb',
   descriptionZh: '显示真实运行状态。', descriptionEn: 'Displays real runtime state.',
@@ -22,7 +22,7 @@ const emptyExtensions = Object.freeze([])
 
 const developerResourcesExtension = {
   id: 'paimind:developer-resources' as const,
-  packageName: '@paimind/developer-resources' as const,
+  packageName: '@hansen/developer-resources' as const,
   category: 'developer' as const,
   nameZh: '开发者资源', nameEn: 'Developer Resources',
   descriptionZh: '显示运行诊断。', descriptionEn: 'Shows runtime diagnostics.',
@@ -68,12 +68,12 @@ describe('Extension Center client contribution', () => {
         nameZh: '智能体中心', nameEn: 'Agent Center',
         descriptionZh: '智能体能力。', descriptionEn: 'Agent capabilities.',
         order: 20, defaultEnabled: true, requiredPackIds: [],
-        packageNames: ['@paimind/agent-market' as const],
+        packageNames: ['@hansen/agent-market' as const],
         installed: true, desiredEnabled: true, enabled: true, capabilities: [],
       }],
     }
     const inventory = { entries: [{
-      entryId: 'agent-market', moduleName: '@paimind/agent-market',
+      entryId: 'agent-market', moduleName: '@hansen/agent-market',
       enabled: true, fiberPhase: 'active',
     }] }
     expect(findPaimindFeaturePackClientGaps(view, inventory, emptyExtensions)).toEqual([
@@ -82,16 +82,16 @@ describe('Extension Center client contribution', () => {
     expect(findPaimindFeaturePackClientGaps(view, inventory, [{
       ...extension,
       id: 'paimind:agent-market',
-      packageName: '@paimind/agent-market',
+      packageName: '@hansen/agent-market',
     }])).toEqual([])
     expect(findPaimindFeaturePackClientGaps({
       ...view,
-      packs: [{ ...view.packs[0], enabled: false, failure: 'Cannot find package @paimind/agent-market' }],
+      packs: [{ ...view.packs[0], enabled: false, failure: 'Cannot find package @hansen/agent-market' }],
     }, inventory, emptyExtensions)).toEqual([])
   })
 
   it('registers an independent Settings section and its own product descriptor', async () => {
-    document.getElementById('@paimind/extension-center')?.remove()
+    document.getElementById('@hansen/extension-center')?.remove()
     const fixture = createClientContextFixture()
     const context = createExtensionContext(fixture) as PaimindExtensionCenterClientContext
     const dispose = await apply(context as never)
@@ -101,10 +101,10 @@ describe('Extension Center client contribution', () => {
     expect(fixture.slots.find(entry => entry.injectedName === 'paimind.extension')).toMatchObject({
       options: { id: 'paimind:extension-center' },
     })
-    expect(document.getElementById('@paimind/extension-center')).not.toBeNull()
+    expect(document.getElementById('@hansen/extension-center')).not.toBeNull()
     await dispose()
     fixture.disposeEffects()
-    expect(document.getElementById('@paimind/extension-center')).toBeNull()
+    expect(document.getElementById('@hansen/extension-center')).toBeNull()
     expect(fixture.slots.every(entry => entry.disposed())).toBe(true)
   })
 
@@ -116,11 +116,11 @@ describe('Extension Center client contribution', () => {
         nameZh: '产品体验', nameEn: 'Product Experience',
         descriptionZh: '产品体验能力。', descriptionEn: 'Product experience capabilities.',
         order: 10, defaultEnabled: true, requiredPackIds: [],
-        packageNames: ['@paimind/runtime-orbs' as const], installed: true, enabled: true,
+        packageNames: ['@hansen/runtime-orbs' as const], installed: true, enabled: true,
         capabilities: [{
           id: 'paimind:capability:runtime-orbs' as const,
           loaderEntryId: 'paimind-capability-runtime-orbs' as const,
-          packageNames: ['@paimind/runtime-orbs' as const],
+          packageNames: ['@hansen/runtime-orbs' as const],
           nameZh: '动态状态球', nameEn: 'Runtime Orbs',
           descriptionZh: '显示真实运行状态。', descriptionEn: 'Shows real runtime state.',
           defaultEnabled: true, installed: true, enabled: true,
@@ -163,11 +163,11 @@ describe('Extension Center client contribution', () => {
         nameZh: '产品体验', nameEn: 'Product Experience',
         descriptionZh: '产品体验能力。', descriptionEn: 'Product experience capabilities.',
         order: 10, defaultEnabled: true, requiredPackIds: [],
-        packageNames: ['@paimind/runtime-orbs' as const], installed: true, enabled: true,
+        packageNames: ['@hansen/runtime-orbs' as const], installed: true, enabled: true,
         capabilities: [{
           id: 'paimind:capability:runtime-orbs' as const,
           loaderEntryId: 'paimind-capability-runtime-orbs' as const,
-          packageNames: ['@paimind/runtime-orbs' as const],
+          packageNames: ['@hansen/runtime-orbs' as const],
           nameZh: '动态状态球', nameEn: 'Runtime Orbs',
           descriptionZh: '显示真实运行状态。', descriptionEn: 'Shows real runtime state.',
           defaultEnabled: true, installed: true, enabled: false,
@@ -197,7 +197,7 @@ describe('Extension Center client contribution', () => {
         nameZh: '工作运营', nameEn: 'Work Operations',
         descriptionZh: '工作运营能力。', descriptionEn: 'Work operations capabilities.',
         order: 60, defaultEnabled: true, requiredPackIds: ['paimind:pack:content' as const],
-        packageNames: ['@paimind/task-monitor' as const, '@paimind/developer-resources' as const],
+        packageNames: ['@hansen/task-monitor' as const, '@hansen/developer-resources' as const],
         installed: true, enabled: true, capabilities: [],
       }],
     }
@@ -207,7 +207,7 @@ describe('Extension Center client contribution', () => {
       getExtensions={() => partialExtensions}
       subscribeExtensions={() => () => {}}
       listInventory={async () => ({ entries: [{
-        entryId: 'developer-resources', moduleName: '@paimind/developer-resources',
+        entryId: 'developer-resources', moduleName: '@hansen/developer-resources',
         enabled: true, fiberPhase: 'active',
       }] })}
       describeFeaturePacks={async () => ready}
@@ -225,9 +225,9 @@ describe('Extension Center client contribution', () => {
         nameZh: '提案与演示', nameEn: 'Proposal & Presentation',
         descriptionZh: '提案能力。', descriptionEn: 'Proposal capabilities.',
         order: 40, defaultEnabled: true, requiredPackIds: ['paimind:pack:content' as const],
-        packageNames: ['@paimind/proposal-experience' as const], installed: true,
+        packageNames: ['@hansen/proposal-experience' as const], installed: true,
         desiredEnabled: true, enabled: false,
-        failure: 'Cannot find package @paimind/proposal-experience',
+        failure: 'Cannot find package @hansen/proposal-experience',
         capabilities: [],
       }],
     }
@@ -243,7 +243,7 @@ describe('Extension Center client contribution', () => {
     const failedSwitch = await screen.findByRole('switch', { name: '提案与演示 · 启用失败' })
     expect(failedSwitch).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByText('启动失败')).toBeInTheDocument()
-    expect(screen.getByRole('alert')).toHaveTextContent('Cannot find package @paimind/proposal-experience')
+    expect(screen.getByRole('alert')).toHaveTextContent('Cannot find package @hansen/proposal-experience')
     expect(screen.queryByText('运行中')).not.toBeInTheDocument()
   })
 
@@ -256,7 +256,7 @@ describe('Extension Center client contribution', () => {
         nameZh: '产品体验', nameEn: 'Product Experience',
         descriptionZh: '产品体验能力。', descriptionEn: 'Product experience capabilities.',
         order: 10, defaultEnabled: true, requiredPackIds: [],
-        packageNames: ['@paimind/runtime-orbs' as const], installed: true, enabled: true, capabilities: [],
+        packageNames: ['@hansen/runtime-orbs' as const], installed: true, enabled: true, capabilities: [],
       }],
     }
     render(<ExtensionCenterSection
@@ -264,14 +264,14 @@ describe('Extension Center client contribution', () => {
       locale={locale}
       getExtensions={() => extensions}
       subscribeExtensions={() => () => {}}
-      listInventory={async () => ({ entries: [{ entryId: 'orb', moduleName: '@paimind/runtime-orbs', enabled: true, fiberPhase: 'active' }] })}
+      listInventory={async () => ({ entries: [{ entryId: 'orb', moduleName: '@hansen/runtime-orbs', enabled: true, fiberPhase: 'active' }] })}
       describeFeaturePacks={async () => ready}
       mutateFeaturePack={async () => ready}
     />)
     fireEvent.click(await screen.findByRole('button', { name: '打开 产品体验' }))
     expect(await screen.findByText('已加载')).toBeInTheDocument()
     expect(screen.getByText('运行状态球')).toBeInTheDocument()
-    expect(screen.getByText('@paimind/runtime-orbs')).toBeInTheDocument()
+    expect(screen.getByText('@hansen/runtime-orbs')).toBeInTheDocument()
     expect(screen.queryByText('使用与配置')).not.toBeInTheDocument()
     expect(screen.queryByText('入口类型')).not.toBeInTheDocument()
   })
@@ -282,7 +282,7 @@ describe('Extension Center client contribution', () => {
       packs: [{
         id: 'paimind:pack:experience' as const, loaderEntryId: 'paimind-pack-experience' as const,
         nameZh: '产品体验', nameEn: 'Product Experience', descriptionZh: '产品体验能力。', descriptionEn: 'Product experience capabilities.',
-        order: 10, defaultEnabled: true, requiredPackIds: [], packageNames: ['@paimind/runtime-orbs' as const], installed: true, enabled: true, capabilities: [],
+        order: 10, defaultEnabled: true, requiredPackIds: [], packageNames: ['@hansen/runtime-orbs' as const], installed: true, enabled: true, capabilities: [],
       }],
     }
     render(<ExtensionCenterSection
@@ -294,7 +294,7 @@ describe('Extension Center client contribution', () => {
       describeFeaturePacks={async () => ready}
     />)
     const search = await screen.findByRole('searchbox', { name: 'Search packs or extensions' })
-    fireEvent.change(search, { target: { value: '@paimind/runtime-orbs' } })
+    fireEvent.change(search, { target: { value: '@hansen/runtime-orbs' } })
     expect(screen.getByText('Product Experience')).toBeInTheDocument()
     fireEvent.change(search, { target: { value: 'no-such-marketplace-rating' } })
     expect(screen.getByText('No matching Feature Packs.')).toBeInTheDocument()
@@ -307,12 +307,12 @@ describe('Extension Center client contribution', () => {
       packs: [{
         id: 'paimind:pack:experience' as const, loaderEntryId: 'paimind-pack-experience' as const,
         nameZh: '产品体验', nameEn: 'Product Experience', descriptionZh: '产品体验能力。', descriptionEn: 'Product experience capabilities.',
-        order: 10, defaultEnabled: true, requiredPackIds: [], packageNames: ['@paimind/runtime-orbs' as const], installed: true, enabled: true, capabilities: [],
+        order: 10, defaultEnabled: true, requiredPackIds: [], packageNames: ['@hansen/runtime-orbs' as const], installed: true, enabled: true, capabilities: [],
       }],
     }
     const listInventory = vi.fn()
       .mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValueOnce({ entries: [{ entryId: 'orb', moduleName: '@paimind/runtime-orbs', enabled: true, fiberPhase: 'active' }] })
+      .mockResolvedValueOnce({ entries: [{ entryId: 'orb', moduleName: '@hansen/runtime-orbs', enabled: true, fiberPhase: 'active' }] })
     render(<ExtensionCenterSection
       close={() => {}}
       locale={{ getLocale: () => ({ active: 'en-US' }), subscribe: () => () => {} }}
@@ -335,7 +335,7 @@ describe('Extension Center client contribution', () => {
       packs: [{
         id: 'paimind:pack:experience' as const, loaderEntryId: 'paimind-pack-experience' as const,
         nameZh: '产品体验', nameEn: 'Product Experience', descriptionZh: '产品体验能力。', descriptionEn: 'Product experience capabilities.',
-        order: 10, defaultEnabled: true, requiredPackIds: [], packageNames: ['@paimind/runtime-orbs' as const], installed: true, enabled: true, capabilities: [],
+        order: 10, defaultEnabled: true, requiredPackIds: [], packageNames: ['@hansen/runtime-orbs' as const], installed: true, enabled: true, capabilities: [],
       }],
     }
     render(<ExtensionCenterSection
@@ -354,7 +354,7 @@ describe('Extension Center client contribution', () => {
     const fixture = createClientContextFixture()
     const context = createExtensionContext(fixture) as PaimindExtensionCenterClientContext
     const dispose = await apply(context as never)
-    const malformed = { id: 'paimind:malformed', packageName: '@paimind/malformed', category: 'unknown' }
+    const malformed = { id: 'paimind:malformed', packageName: '@hansen/malformed', category: 'unknown' }
     fixture.context.slots.register({
       name: 'paimind.extension',
       id: 'malformed-extension',

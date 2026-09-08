@@ -1,9 +1,9 @@
 {
-  "name": "@paimind/scheduler-adapter-harness",
+  "name": "@hansen/scheduler-adapter-harness",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "Harness Session and Native Job adapter for the PAIMind platform scheduler",
+  "description": "Harness Session and Native Job adapter for the Hansen platform scheduler",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -16,11 +16,11 @@
   },
   "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "dependencies": {
-    "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^",
-    "@paimind/platform-scheduler": "workspace:^"
+    "@hansen/contracts": "workspace:^",
+    "@hansen/harness-compat": "workspace:^",
+    "@hansen/platform-scheduler": "workspace:^"
   },
-  "devDependencies": { "@paimind/testkit": "workspace:^" },
-  "paimindBuild": { "node": ["src/index.ts", "src/agent-action.ts", "src/agent-tool.ts", "src/invariant.ts"] },
+  "devDependencies": { "@hansen/testkit": "workspace:^" },
+  "hansenBuild": { "node": ["src/index.ts", "src/agent-action.ts", "src/agent-tool.ts", "src/invariant.ts"] },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }

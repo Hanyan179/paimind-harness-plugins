@@ -19,7 +19,7 @@ evidence, not in a second active matrix.
     { "package": "cordis", "version": "4.0.0-rc.8", "purpose": "External provider compatibility" }
   ],
   "providers": [
-    { "package": "dsh-better-sidebar", "version": "0.17.1", "owner": "@paimind/better-sidebar-adapter", "adapterContract": 4 },
+    { "package": "dsh-better-sidebar", "version": "0.17.1", "owner": "@hansen/better-sidebar-adapter", "adapterContract": 4 },
     { "package": "@huanlin/dsh-plugin-better-sidebar-plugin-office", "version": "0.1.2", "owner": "external", "knownPeerRisk": "declares stale optional peers for dsh-client-runtime and dsh-better-sidebar" }
   ],
   "toolchain": {

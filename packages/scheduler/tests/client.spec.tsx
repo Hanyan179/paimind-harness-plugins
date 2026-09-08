@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { PaimindLocaleSource } from '@paimind/harness-compat'
+import type { PaimindLocaleSource } from '@hansen/harness-compat'
 import {
   SCHEDULE_STARTER_PROMPT,
   SchedulerController,
@@ -48,17 +48,17 @@ function fixture(options: { readonly includeWorkflow?: boolean } = {}) {
     value: {
       actions: [
         {
-          actionId: 'paimind:agent-prompt', source: { id: 'paimind.ai', nameZh: 'PAIMind AI', nameEn: 'PAIMind AI' },
+          actionId: 'paimind:agent-prompt', source: { id: 'paimind.ai', nameZh: 'AI', nameEn: 'AI' },
           nameZh: '智能任务', nameEn: 'AI task', category: 'ai' as const, adapterId: 'adapter:harness',
           conversationEnabled: true, enabled: true, version: 'version:action',
         },
         ...(options.includeWorkflow === false ? [] : [{
-          actionId: 'paimind:workflow-project-review', source: { id: 'paimind.workflow', nameZh: 'PAIMind 工作流', nameEn: 'PAIMind Workflow' },
+          actionId: 'paimind:workflow-project-review', source: { id: 'paimind.workflow', nameZh: '工作流', nameEn: 'Workflow' },
           nameZh: '项目复盘流程', nameEn: 'Project review workflow', category: 'workflow' as const, adapterId: 'adapter:workflow',
           enabled: true, version: 'version:workflow',
         }]),
         {
-          actionId: 'paimind:message-digest', source: { id: 'paimind.message', nameZh: 'PAIMind 消息', nameEn: 'PAIMind Message' },
+          actionId: 'paimind:message-digest', source: { id: 'paimind.message', nameZh: '消息', nameEn: 'Message' },
           nameZh: '消息摘要', nameEn: 'Message digest', category: 'message' as const, adapterId: 'adapter:message',
           enabled: true, version: 'version:message',
         },

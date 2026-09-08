@@ -1,4 +1,4 @@
-# `@paimind/scheduler-adapter-http`
+# `@hansen/scheduler-adapter-http`
 
 Signed HTTPS 202 and asynchronous callback adapter for PAIMind Scheduler.
 
@@ -18,7 +18,7 @@ Role: **Headless plugin**. It owns its service or adapter boundary and exposes n
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`), `@paimind/platform-sdk` (`workspace:^`), `@paimind/platform-scheduler` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/contracts` (`workspace:^`), `@hansen/harness-compat` (`workspace:^`), `@hansen/platform-sdk` (`workspace:^`), `@hansen/platform-scheduler` (`workspace:^`).
 - External runtime or peer dependencies: None.
 - Client service injection: None.
 

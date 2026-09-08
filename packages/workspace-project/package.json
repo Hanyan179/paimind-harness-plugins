@@ -1,9 +1,9 @@
 {
-  "name": "@paimind/workspace-project",
+  "name": "@hansen/workspace-project",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "Headless PAIMind Project context adapter over native DeepSeek Harness Workspaces",
+  "description": "Headless Hansen Project context adapter over native DeepSeek Harness Workspaces",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -33,13 +33,13 @@
     }
   },
   "dependencies": {
-    "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^"
+    "@hansen/contracts": "workspace:^",
+    "@hansen/harness-compat": "workspace:^"
   },
   "devDependencies": {
-    "@paimind/testkit": "workspace:^"
+    "@hansen/testkit": "workspace:^"
   },
-  "paimindBuild": {
+  "hansenBuild": {
     "node": ["src/index.ts", "src/invariant.ts"],
     "client": "src/client/index.tsx"
   },

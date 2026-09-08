@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { PaimindReplayGuard, signPaimindRequest } from '@paimind/platform-sdk'
+import { PaimindReplayGuard, signPaimindRequest } from '@hansen/platform-sdk'
 import {
   acceptExampleHttpAction,
   createExampleCustomAdapter,

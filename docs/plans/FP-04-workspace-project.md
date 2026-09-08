@@ -4,7 +4,7 @@
 
 ## Outcome
 
-FP04 defines `Project = Harness Workspace` as an executable contract. DeepSeek Harness remains the only owner of Workspace identity, directory registration, Session accounting, ordering, navigation, persistence, and deletion. `@paimind/workspace-project` adds a read-only PAIMind bridge for later packages and one additive Workspace-context action in the native Session header; it creates no Project list, tree, route, or storage table.
+FP04 defines `Project = Harness Workspace` as an executable contract. DeepSeek Harness remains the only owner of Workspace identity, directory registration, Session accounting, ordering, navigation, persistence, and deletion. `@hansen/workspace-project` adds a read-only PAIMind bridge for later packages and one additive Workspace-context action in the native Session header; it creates no Project list, tree, route, or storage table.
 
 ## Capability mapping
 
@@ -22,7 +22,7 @@ FP04 defines `Project = Harness Workspace` as an executable contract. DeepSeek H
 
 ## Contract and package boundary
 
-`@paimind/workspace-project` contains:
+`@hansen/workspace-project` contains:
 
 - a pure native-to-PAIMind projector;
 - `WorkspaceProjectBridge`, published as `ctx.paimindWorkspaceProject` through Cordis reflection;
@@ -31,7 +31,7 @@ FP04 defines `Project = Harness Workspace` as an executable contract. DeepSeek H
 - one `conversation.session.header.actions` contribution named `paimind-workspace-context`;
 - an invariant companion and no Host persistence.
 
-Only `@paimind/harness-compat` describes the selected Harness structures. The feature package imports no `@deepseek-ai/*` module. Its public Project identity remains the existing `ProjectRef { workspaceId }` contract.
+Only `@hansen/harness-compat` describes the selected Harness structures. The feature package imports no `@deepseek-ai/*` module. Its public Project identity remains the existing `ProjectRef { workspaceId }` contract.
 
 ## State and failure paths
 
@@ -58,4 +58,4 @@ FP04 performs no authorization decision and no direct filesystem read. The nativ
 
 ## Upgrade impact
 
-Version-sensitive Workspace/Session snapshot shapes and Cordis slot registration remain isolated in `@paimind/harness-compat`. A Harness upgrade must rerun projector contract tests, native Workspace provider tests, header browser scenarios, isolated composition, and zero-upstream-delta checks. Better Sidebar is not a dependency of FP04; its independent update cadence cannot change Project identity.
+Version-sensitive Workspace/Session snapshot shapes and Cordis slot registration remain isolated in `@hansen/harness-compat`. A Harness upgrade must rerun projector contract tests, native Workspace provider tests, header browser scenarios, isolated composition, and zero-upstream-delta checks. Better Sidebar is not a dependency of FP04; its independent update cadence cannot change Project identity.

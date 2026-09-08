@@ -54,7 +54,7 @@ export async function loadRetiredPackages() {
   const path = join(repositoryRoot, 'docs/migration/package-retirement-ledger.md')
   const source = await readFile(path, 'utf8')
   const rows = source.split('\n')
-    .filter(line => /^\| `@paimind\//.test(line))
+    .filter(line => /^\| `@hansen\//.test(line))
     .map(line => {
       const cells = line.split('|').slice(1, -1).map(cell => cell.trim())
       return {
@@ -121,7 +121,7 @@ export async function createPackageApiSnapshot(packages) {
       types: manifest.types ?? null,
       exports: manifest.exports ?? null,
       dsh: manifest.dsh ?? null,
-      paimindBuild: manifest.paimindBuild ?? null,
+      hansenBuild: manifest.hansenBuild ?? null,
     }
 
     snapshot[manifest.name] = {

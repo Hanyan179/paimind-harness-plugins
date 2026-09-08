@@ -1,9 +1,11 @@
 {
-  "name": "@paimind/branding",
+  "name": "@hansen/branding",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
-  "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "Reversible Paramont Harness identity for the native Harness shell",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
+  "description": "Configurable brand name, logos and welcome messages for the native Harness shell",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -20,9 +22,18 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./settings": {
+      "types": "./lib/types/settings.d.ts",
+      "default": "./lib/settings.js"
+    }
   },
-  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts",
+    "lib/**/*.d.ts.map"
+  ],
   "dsh": {
     "client": {
       "inject": [
@@ -30,26 +41,34 @@
         "@deepseek-ai/dsh-client-ui-conversation",
         "@deepseek-ai/dsh-client-ui-slots",
         "@deepseek-ai/dsh-client-ui-layout",
-        "@deepseek-ai/dsh-client-ui-sidebar"
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-settings"
       ],
       "platform": "web"
     }
   },
   "dependencies": {
-    "@paimind/harness-compat": "workspace:^"
+    "@hansen/harness-compat": "workspace:^"
   },
   "peerDependencies": {
     "react": ">=18.0.0 <20.0.0",
     "react-dom": ">=18.0.0 <20.0.0"
   },
   "devDependencies": {
-    "@paimind/testkit": "workspace:^",
+    "@hansen/testkit": "workspace:^",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
-  "paimindBuild": {
-    "node": ["src/index.ts", "src/invariant.ts"],
+  "hansenBuild": {
+    "node": [
+      "src/index.ts",
+      "src/invariant.ts",
+      "src/settings.ts"
+    ],
     "client": "src/client/index.tsx"
   },
-  "scripts": { "typecheck": "tsc -b --pretty false" }
+  "scripts": {
+    "typecheck": "tsc -b --pretty false"
+  }
 }

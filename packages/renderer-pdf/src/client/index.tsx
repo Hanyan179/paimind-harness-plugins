@@ -1,8 +1,8 @@
 import { Component, useEffect, useRef, useState, type ErrorInfo, type ReactNode } from 'react'
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
 import workerSource from 'pdfjs-dist/build/pdf.worker.min.mjs?raw'
-import { contributePaimindExtension, type PaimindClientContext } from '@paimind/harness-compat'
-import type { PaimindSidebarService } from '@paimind/better-sidebar-adapter'
+import { contributePaimindExtension, type PaimindClientContext } from '@hansen/harness-compat'
+import type { PaimindSidebarService } from '@hansen/better-sidebar-adapter'
 
 export const inject = ['slots', 'paimindSidebar', 'locale']
 
@@ -102,7 +102,7 @@ export function PdfPreview(props: { readonly title: string; readonly mediaUrl: s
     }
   }, [props.mediaUrl])
 
-  return <section data-paimind-pdf aria-label="PAIMind PDF Preview">
+  return <section data-paimind-pdf aria-label="PDF Preview">
     <header data-paimind-pdf-toolbar>
       <strong>{props.title}</strong>
       {state.status === 'ready' && <div data-paimind-pdf-controls>
@@ -151,7 +151,7 @@ class PdfErrorBoundary extends Component<{ readonly children: ReactNode }, { rea
   render(): ReactNode { return this.state.failed ? null : this.props.children }
 }
 
-const STYLE_ID = '@paimind/renderer-pdf'
+const STYLE_ID = '@hansen/renderer-pdf'
 const STYLE = `
 [data-paimind-pdf]{height:100%;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);color:var(--dsw-alias-label-primary,#202124);background:var(--dsw-alias-bg-layer-1,#fff)}
 [data-paimind-pdf-toolbar]{min-width:0;min-height:40px;display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16));font-size:11px}
@@ -174,7 +174,7 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = '@paimind/renderer-pdf'
+  style.dataset.paimindPlugin = '@hansen/renderer-pdf'
   style.textContent = STYLE
   document.head.append(style)
   return () => { style.remove() }
@@ -182,7 +182,7 @@ function installStyle(): () => void {
 
 export function apply(ctx: PdfRendererClientContext): void {
   contributePaimindExtension(ctx.slots, {
-    id: 'paimind:renderer-pdf', packageName: '@paimind/renderer-pdf', category: 'content-rendering',
+    id: 'paimind:renderer-pdf', packageName: '@hansen/renderer-pdf', category: 'content-rendering',
     nameZh: 'PDF 预览', nameEn: 'PDF Preview',
     descriptionZh: '使用本地 PDF.js 渲染真实产物，不依赖浏览器内置 PDF 插件。',
     descriptionEn: 'Renders real artifacts locally with PDF.js without relying on the browser PDF plugin.',
@@ -190,7 +190,7 @@ export function apply(ctx: PdfRendererClientContext): void {
   })
   ctx.effect(() => installStyle(), 'paimind-renderer-pdf: style')
   ctx.effect(() => ctx.paimindSidebar.registerFileViewer({
-    id: 'paimind:pdf', titleZh: 'PAIMind PDF 预览', titleEn: 'PAIMind PDF Preview',
+    id: 'paimind:pdf', titleZh: 'PDF 预览', titleEn: 'PDF Preview',
     extensions: ['pdf'], priority: 120,
     render: ({ title, mediaUrl }) => <PdfErrorBoundary><PdfPreview title={title} mediaUrl={mediaUrl} /></PdfErrorBoundary>,
   }), 'paimind-renderer-pdf: viewer')

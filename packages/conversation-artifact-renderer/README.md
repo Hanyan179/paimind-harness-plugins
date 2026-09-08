@@ -1,4 +1,4 @@
-# `@paimind/conversation-artifact-renderer`
+# `@hansen/conversation-artifact-renderer`
 
 Format-aware cards for files produced in Harness conversations.
 
@@ -19,9 +19,9 @@ Role: **Client plugin**. It projects native Turn Deliverables into file-format c
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/artifacts` (`workspace:^`) and `@paimind/harness-compat` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/artifacts` (`workspace:^`) and `@hansen/harness-compat` (`workspace:^`).
 - External peer dependency: `react` (`>=18.0.0 <20.0.0`).
-- Client service injection: Harness runtime, locale, slots, conversation, deliverables and `@paimind/artifacts`.
+- Client service injection: Harness runtime, locale, slots, conversation, deliverables and `@hansen/artifacts`.
 
 The manifest is authoritative for dependency direction and version selection.
 

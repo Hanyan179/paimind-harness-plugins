@@ -248,7 +248,7 @@ describe('headless Agent profile workflow', () => {
     expect(descriptor).toEqual({
       name: 'paimind-agent-authoring',
       description: expect.stringContaining('Create or configure a PAIMind Agent'),
-      sourcePluginId: '@paimind/agent-builder',
+      sourcePluginId: '@hansen/agent-builder',
     })
     expect(Object.isFrozen(descriptor)).toBe(true)
     expect(activeSkills).toEqual(new Set(['paimind-agent-authoring']))
@@ -1051,8 +1051,8 @@ describe('headless Agent profile workflow', () => {
   })
 
   it('is a headless package with no independent client page', async () => {
-    const manifest = JSON.parse(await readFile(resolve(process.cwd(), 'packages/agent-builder/package.json'), 'utf8')) as { dsh?: unknown; paimindBuild?: { client?: unknown } }
+    const manifest = JSON.parse(await readFile(resolve(process.cwd(), 'packages/agent-builder/package.json'), 'utf8')) as { dsh?: unknown; hansenBuild?: { client?: unknown } }
     expect(manifest.dsh).toBeUndefined()
-    expect(manifest.paimindBuild?.client).toBeUndefined()
+    expect(manifest.hansenBuild?.client).toBeUndefined()
   })
 })

@@ -5,14 +5,14 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react'
-import { contributePaimindExtension, type PaimindWorkspaceClientContext } from '@paimind/harness-compat'
+import { contributePaimindExtension, type PaimindWorkspaceClientContext } from '@hansen/harness-compat'
 import type {
   PaimindSidebarFileOpenResult,
   PaimindSidebarService,
   PaimindSidebarTabScope,
-} from '@paimind/better-sidebar-adapter'
-import type { PaimindWorkspaceProjectService, WorkspaceProjectRecord } from '@paimind/workspace-project'
-import type { PaimindBentoPreviewService } from '@paimind/renderer-bento'
+} from '@hansen/better-sidebar-adapter'
+import type { PaimindWorkspaceProjectService, WorkspaceProjectRecord } from '@hansen/workspace-project'
+import type { PaimindBentoPreviewService } from '@hansen/renderer-bento'
 import {
   ArtifactRegistry,
   HarnessDeliverableArtifactSource,
@@ -36,7 +36,7 @@ export interface ArtifactsClientContext extends PaimindWorkspaceClientContext {
   readonly paimindWorkspaceProject: PaimindWorkspaceProjectService
 }
 
-const STYLE_ID = '@paimind/artifacts'
+const STYLE_ID = '@hansen/artifacts'
 const STYLE = `
 [data-paimind-artifacts] {
   box-sizing: border-box;
@@ -202,7 +202,7 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = '@paimind/artifacts'
+  style.dataset.paimindPlugin = '@hansen/artifacts'
   style.textContent = STYLE
   document.head.append(style)
   return () => { style.remove() }
@@ -579,10 +579,10 @@ export function ArtifactPanel({ service, sidebar, bentoPreview, scope }: Artifac
   }
 
   return (
-    <section ref={root} data-paimind-artifacts aria-label={zh ? 'PAIMind 产物' : 'PAIMind Artifacts'}>
+    <section ref={root} data-paimind-artifacts aria-label={zh ? '产物' : 'Artifacts'}>
       <header data-paimind-artifact-header>
         <div>
-          <h2>{zh ? 'PAIMind 产物' : 'PAIMind Artifacts'}</h2>
+          <h2>{zh ? '产物' : 'Artifacts'}</h2>
           <p>{zh ? '关联 Harness 会话与工作区，预览由侧边栏提供' : 'Session/Workspace associations; previews stay provider-owned'}</p>
         </div>
         <span data-paimind-artifact-count>{artifacts.length}</span>
@@ -630,7 +630,7 @@ export function ArtifactPanel({ service, sidebar, bentoPreview, scope }: Artifac
 export function apply(ctx: ArtifactsClientContext): void {
   contributePaimindExtension(ctx.slots, {
     id: 'paimind:artifacts',
-    packageName: '@paimind/artifacts',
+    packageName: '@hansen/artifacts',
     category: 'content-rendering',
     nameZh: '产物与预览',
     nameEn: 'Artifacts & Preview',

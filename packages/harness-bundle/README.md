@@ -1,12 +1,12 @@
-# `@paimind/harness-bundle`
+# `@hansen/harness-bundle`
 
 Package rules: [Plugin Authoring Standard](../../docs/standards/plugin-authoring.md).
 
 The ordered PAIMind configuration layer installed after the Harness Web bundle. Feature plugins remain separate packages; the profile installs them beside this bundle so the patch can resolve each row from the profile root.
 
-The bundle pins `dsh-better-sidebar@0.14.0` exactly. Only `@paimind/better-sidebar-adapter` crosses its client service boundary; feature packages consume the PAIMind adapter contract. The external technical provider `@huanlin/dsh-plugin-better-sidebar-plugin-office@0.1.0` owns its own Harness Bundle row and must activate after `dsh-better-sidebar`; PAIMind does not copy its loader patch. It supplies PPTX/XLSX viewing only and does not become a PAIMind product category or domain owner.
+The bundle pins `dsh-better-sidebar@0.14.0` exactly. Only `@hansen/better-sidebar-adapter` crosses its client service boundary; feature packages consume the PAIMind adapter contract. The external technical provider `@huanlin/dsh-plugin-better-sidebar-plugin-office@0.1.0` owns its own Harness Bundle row and must activate after `dsh-better-sidebar`; PAIMind does not copy its loader patch. It supplies PPTX/XLSX viewing only and does not become a PAIMind product category or domain owner.
 
-The PAIMind product shell loads `@paimind/platform-scheduler` as its only
+The PAIMind product shell loads `@hansen/platform-scheduler` as its only
 Scheduled Tasks product and runtime, together with the Harness, HTTP and
 Feishu-bot Adapter services. The old opt-in Harness Session-reminder packages
 `@deepseek-ai/dsh-schedule` and `@deepseek-ai/dsh-time-context` are not selected

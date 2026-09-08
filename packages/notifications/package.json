@@ -1,9 +1,9 @@
 {
-  "name": "@paimind/notifications",
+  "name": "@hansen/notifications",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "Durable PAIMind notification message/read-state sidecar over canonical Harness objects",
+  "description": "Durable Hansen notification message/read-state sidecar over canonical Harness objects",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -22,18 +22,18 @@
         "@deepseek-ai/dsh-api-remotes",
         "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-locale",
-        "@paimind/better-sidebar-adapter",
-        "@paimind/artifacts"
+        "@hansen/better-sidebar-adapter",
+        "@hansen/artifacts"
       ],
       "platform": "web"
     }
   },
   "dependencies": {
-    "@paimind/artifacts": "workspace:^",
-    "@paimind/better-sidebar-adapter": "workspace:^",
-    "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^",
-    "@paimind/ui-foundation": "workspace:^",
+    "@hansen/artifacts": "workspace:^",
+    "@hansen/better-sidebar-adapter": "workspace:^",
+    "@hansen/contracts": "workspace:^",
+    "@hansen/harness-compat": "workspace:^",
+    "@hansen/ui-foundation": "workspace:^",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
@@ -41,12 +41,12 @@
     "react-dom": ">=18.0.0 <20.0.0"
   },
   "devDependencies": {
-    "@paimind/testkit": "workspace:^",
+    "@hansen/testkit": "workspace:^",
     "@testing-library/react": "^16.3.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
-  "paimindBuild": {
+  "hansenBuild": {
     "node": ["src/index.ts", "src/invariant.ts", "src/remote.ts", "src/typert.ts"],
     "client": "src/client/index.tsx"
   },

@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { readFile, realpath, stat } from 'node:fs/promises'
 import { extname, isAbsolute, relative, resolve } from 'node:path'
-import type { PaimindBentoHostContext } from '@paimind/harness-compat'
+import type { PaimindBentoHostContext } from '@hansen/harness-compat'
 import { BENTO_INFO_PATH, type BentoSandboxInfo } from './shared.js'
 import { applyLegacyBentoModeCompatibility } from './legacy-mode-compat.js'
 

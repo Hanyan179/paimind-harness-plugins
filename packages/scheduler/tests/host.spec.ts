@@ -5,7 +5,7 @@ import type {
   PaimindScheduleAuditRecord,
   PaimindScheduleDefinition,
   PaimindScheduleRun,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import {
   PaimindScheduleDispatchError,
   PaimindSchedulerCore,

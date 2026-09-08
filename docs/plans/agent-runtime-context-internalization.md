@@ -156,8 +156,8 @@ flowchart LR
 - Type Check（类型检查）与 Production Build（生产构建）：passed（通过）。
 - Package、Pack、Publint、NodeNext、Example、Framework 与 Documentation Gate（文档门禁）：passed（通过）。
 - Agent/Skill Center Composition（智能体/技能中心组合）：两者共同安装、分别缺席、原生恢复和上游零改动全部通过。
-- Real Harness Composition（真实宿主组合）：Harness `0.1.1-rc.2` 全量安装、启动、卸载、恢复及所有缺席隔离场景通过；同时补齐发布脚本遗漏的 `@paimind/conversation-title` 安装依赖。
+- Real Harness Composition（真实宿主组合）：Harness `0.1.1-rc.2` 全量安装、启动、卸载、恢复及所有缺席隔离场景通过；同时补齐发布脚本遗漏的 `@hansen/conversation-title` 安装依赖。
 - Browser E2E（浏览器端到端测试）：真实 `3080` 页面不再显示 Mode（模式）入口或底座字段；Creator Agent（创建智能体）实际调用 `paimind_agent_prepare_create` 并回填 6 个草稿字段，未越过 Save（保存）；浏览器错误和警告日志为 0。
 - Live Skill Migration（真实技能迁移）：8 个 PAIMind Managed Business Skill（受管业务技能）已进入 `.paimind-skill-market/skills`，Harness 全局 `skills` 中受管业务技能为 0。历史 `.paimind-skills` 链接投影已被后续统一 Resolver（解析器）设计取代；Agent Profile 只保留引用，运行目录由 Skill Market 的原生 Scoped Provider（作用域提供方）生成。
 - Token Observation（令牌观测）：本次 Creator Agent（创建智能体）真实首轮为约 5.3K Input Token（输入令牌）和 1.2K Output Token（输出令牌）。这是包含 Harness Context（宿主上下文）的整轮数值，不等于 PAIMind 创建流程的纯增量。
-- Known Unrelated Gate（已知无关门禁）：本任务涉及的 5 个 Package（包）接口快照已更新；仓库 `check:api` 仍只报告原有未提交 `@paimind/visual-experience` 修改的 2 个哈希差异，本轮没有替它接受或覆盖快照。
+- Known Unrelated Gate（已知无关门禁）：本任务涉及的 5 个 Package（包）接口快照已更新；仓库 `check:api` 仍只报告原有未提交 `@hansen/visual-experience` 修改的 2 个哈希差异，本轮没有替它接受或覆盖快照。

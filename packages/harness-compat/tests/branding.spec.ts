@@ -33,6 +33,14 @@ describe('Harness branding compatibility boundary', () => {
       .toBe('Quarterly report — DeepSeek Harness')
   })
 
+  it('locates the hero when the native mark slot contains a custom image or initials', () => {
+    document.body.innerHTML = '<div id="hero"><span id="mark"><div data-slot="conversation.hero.brand.mark"><span>HA</span></div></span><span>Into the Unknown</span><span>Preview</span></div>'
+    const seats = locateHarnessBrandSeats(document)
+    expect(seats.hero?.host.id).toBe('hero')
+    expect(seats.hero?.nativeIcon.id).toBe('mark')
+    expect(seats.hero?.locale).toBe('en')
+  })
+
   it('applies favicon, manifest and live title reversibly', async () => {
     document.head.innerHTML = `
       <title>DeepSeek Harness</title>

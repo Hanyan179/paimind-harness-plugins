@@ -13,7 +13,7 @@ import {
   type PaimindScheduleRunReport,
   type PaimindScheduleTriggerRequest,
   type PaimindScheduleUpdateInput,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import { latestDueScheduleOccurrence, nextScheduleOccurrence } from './time.js'
 
 export interface PaimindSchedulerTable<Value> {

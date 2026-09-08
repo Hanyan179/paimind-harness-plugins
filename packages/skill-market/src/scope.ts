@@ -7,7 +7,7 @@ import {
   type PaimindSkillReference,
   type PaimindSkillScopeInputV1,
   type PaimindSystemSkillReference,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 
 function selectedNames(values: readonly string[], field: string): readonly string[] {
   if (!Array.isArray(values) || values.length > 10_000) throw new Error(`invalid ${field}`)

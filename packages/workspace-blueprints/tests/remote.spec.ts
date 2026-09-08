@@ -4,7 +4,7 @@ import { TYPERT } from '../src/typert.ts'
 
 describe('Workspace Blueprint strict Remote contract', () => {
   it('publishes one shared eleven-method descriptor set to Host and Client', () => {
-    expect(TYPERT.package).toBe('@paimind/workspace-blueprints')
+    expect(TYPERT.package).toBe('@hansen/workspace-blueprints')
     expect(TYPERT.invocations).toBe(PAIMIND_WORKSPACE_BLUEPRINT_REMOTE_DESCRIPTORS)
     expect(TYPERT_REMOTE.descriptors).toBe(PAIMIND_WORKSPACE_BLUEPRINT_REMOTE_DESCRIPTORS)
     expect(PAIMIND_WORKSPACE_BLUEPRINT_REMOTE_DESCRIPTORS.map(item => item.method)).toEqual([

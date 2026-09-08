@@ -34,12 +34,12 @@ flowchart LR
 
 ## Contracts and packages
 
-- `@paimind/contracts` owns `ArtifactProducedEnvelopeV1`, explicit format/preview enums and validators.
-- `@paimind/harness-compat/host` is the only direct bridge to version-sensitive Harness Tool definitions and structural Host services.
-- `@paimind/artifact-runtime` owns the capability registry, Native Job wrapper, bounded Workspace verification and pure Session Projection definition. It owns no artifact database.
-- `@paimind/generator-web` registers `generate_html_artifact`. Format semantics are static provider facts; the model supplies only validated arguments.
-- `@paimind/task-monitor` reads all native `jobsBySession` rows, orders active work first, and enriches only exact Artifact `taskId` matches. It also derives current Goal, Todo, Plan, Workflow/Subagent, Tool Call, Deliverable, invoked Skill and evidenced MCP summaries without a shadow store.
-- `@paimind/artifacts` consumes both native Deliverables and the same Session Projection, deduplicating by Session/path in favor of the explicit product envelope.
+- `@hansen/contracts` owns `ArtifactProducedEnvelopeV1`, explicit format/preview enums and validators.
+- `@hansen/harness-compat/host` is the only direct bridge to version-sensitive Harness Tool definitions and structural Host services.
+- `@hansen/artifact-runtime` owns the capability registry, Native Job wrapper, bounded Workspace verification and pure Session Projection definition. It owns no artifact database.
+- `@hansen/generator-web` registers `generate_html_artifact`. Format semantics are static provider facts; the model supplies only validated arguments.
+- `@hansen/task-monitor` reads all native `jobsBySession` rows, orders active work first, and enriches only exact Artifact `taskId` matches. It also derives current Goal, Todo, Plan, Workflow/Subagent, Tool Call, Deliverable, invoked Skill and evidenced MCP summaries without a shadow store.
+- `@hansen/artifacts` consumes both native Deliverables and the same Session Projection, deduplicating by Session/path in favor of the explicit product envelope.
 
 ## Durable carrier decision
 

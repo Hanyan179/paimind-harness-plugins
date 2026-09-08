@@ -1,6 +1,6 @@
-import { PaimindHostService } from '@paimind/harness-compat/host'
-import type { PaimindScheduleCreateInput, PaimindScheduleDefinition } from '@paimind/contracts'
-import type { PaimindSchedulerServiceApi, PaimindSchedulerSnapshot } from '@paimind/platform-scheduler'
+import { PaimindHostService } from '@hansen/harness-compat/host'
+import type { PaimindScheduleCreateInput, PaimindScheduleDefinition } from '@hansen/contracts'
+import type { PaimindSchedulerServiceApi, PaimindSchedulerSnapshot } from '@hansen/platform-scheduler'
 import type { PaimindFeishuBotScheduleAdapter } from './index.js'
 
 export const name = 'paimind-scheduler-adapter-feishu-bot-example'

@@ -1,17 +1,17 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ComponentType } from 'react'
-import { createClientContextFixture } from '@paimind/testkit'
+import { createClientContextFixture } from '@hansen/testkit'
 import type {
   HarnessSessionListSnapshot,
   HarnessSessionService,
   PaimindLocaleSource,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import type {
   PaimindArtifactService,
   PaimindArtifactSnapshot,
   PaimindArtifactView,
-} from '@paimind/artifacts'
+} from '@hansen/artifacts'
 import {
   ConversationArtifactCards,
   apply,
@@ -171,10 +171,10 @@ describe('conversation Artifact cards', () => {
     }>
     render(<Card matched={['notes/readme.md']} turn={turn} seq={3} openFile={() => {}} />)
     expect(screen.getByText('readme.md')).toBeInTheDocument()
-    expect(document.querySelector('style[data-paimind-plugin="@paimind/conversation-artifact-renderer"]')).not.toBeNull()
+    expect(document.querySelector('style[data-paimind-plugin="@hansen/conversation-artifact-renderer"]')).not.toBeNull()
 
     fixture.disposeEffects()
     expect(entry?.disposed()).toBe(true)
-    expect(document.querySelector('style[data-paimind-plugin="@paimind/conversation-artifact-renderer"]')).toBeNull()
+    expect(document.querySelector('style[data-paimind-plugin="@hansen/conversation-artifact-renderer"]')).toBeNull()
   })
 })

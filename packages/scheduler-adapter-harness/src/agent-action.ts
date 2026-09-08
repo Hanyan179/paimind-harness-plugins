@@ -1,4 +1,4 @@
-import { PaimindHostService } from '@paimind/harness-compat/host'
+import { PaimindHostService } from '@hansen/harness-compat/host'
 import type { PaimindHarnessScheduleAdapter } from './index.js'
 
 export const name = 'paimind-scheduler-agent-action'

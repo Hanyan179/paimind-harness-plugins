@@ -4,7 +4,7 @@ import { TYPERT } from '../src/typert.ts'
 
 describe('FP12 strict Remote contract', () => {
   it('publishes one shared strict descriptor set to Host and Client', () => {
-    expect(TYPERT.package).toBe('@paimind/notifications')
+    expect(TYPERT.package).toBe('@hansen/notifications')
     expect(TYPERT.face).toBe('host')
     expect(TYPERT.invocations).toBe(PAIMIND_NOTIFICATION_REMOTE_DESCRIPTORS)
     expect(TYPERT_REMOTE.descriptors).toBe(PAIMIND_NOTIFICATION_REMOTE_DESCRIPTORS)

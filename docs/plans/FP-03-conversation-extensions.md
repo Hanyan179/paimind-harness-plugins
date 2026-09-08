@@ -27,7 +27,7 @@ The retired compatibility marker historically documented these native seams:
 - declares the native client modules it relies on through `dsh.client.inject`;
 - contributes no conversation slot and stores no Session data;
 - registers only its standard invariant ownership companion;
-- is installed and removed through `@paimind/harness-bundle` like other PAIMind packages.
+- is installed and removed through `@hansen/harness-bundle` like other PAIMind packages.
 
 No new Service, Slot, Event, persistence store, or permission decision is introduced in FP03. Native owners retain their existing authorization and failure paths.
 
@@ -52,4 +52,4 @@ The package manifest is descriptive and immutable; it never becomes a parallel r
 
 ## Upgrade impact
 
-Harness package names in `dsh.client.inject` and DOM/browser verification live at the composition boundary. Source code outside `@paimind/harness-compat` must not import version-sensitive Harness APIs. A Harness upgrade must re-run the native capability matrix; a missing provider blocks FP03 verification instead of silently switching to a PAIMind clone.
+Harness package names in `dsh.client.inject` and DOM/browser verification live at the composition boundary. Source code outside `@hansen/harness-compat` must not import version-sensitive Harness APIs. A Harness upgrade must re-run the native capability matrix; a missing provider blocks FP03 verification instead of silently switching to a PAIMind clone.

@@ -1,13 +1,13 @@
 import type {
   HarnessConversationSnapshot,
   HarnessSessionService,
-} from '@paimind/harness-compat'
-import type { PaimindWorkspaceProjectService } from '@paimind/workspace-project'
+} from '@hansen/harness-compat'
+import type { PaimindWorkspaceProjectService } from '@hansen/workspace-project'
 import {
   defineArtifactProjection,
   type ArtifactProducedEnvelopeV1,
   type PaimindArtifactProjectionV1,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 
 /** Host half of the FP06-FP07 client projection. */
 export const name = 'paimind-artifacts'

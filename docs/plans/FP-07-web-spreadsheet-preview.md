@@ -4,7 +4,7 @@
 
 ## Outcome
 
-FP07 extends the existing `PAIMind Artifacts` plugin with HTML and XLSX artifact kinds. Normal HTML documents and HTML Decks open through Better Sidebar's existing sandboxed `html` viewer; spreadsheets open through its existing `xlsx` viewer. Self-contained Bento runtimes use a separate `@paimind/renderer-bento` plugin because the provider's CSP-sandboxed route intentionally lacks the storage-capable origin required by the existing Bento runtime. The exception remains an independent Side Card tab and does not patch Harness or Better Sidebar.
+FP07 extends the existing `PAIMind Artifacts` plugin with HTML and XLSX artifact kinds. Normal HTML documents and HTML Decks open through Better Sidebar's existing sandboxed `html` viewer; spreadsheets open through its existing `xlsx` viewer. Self-contained Bento runtimes use a separate `@hansen/renderer-bento` plugin because the provider's CSP-sandboxed route intentionally lacks the storage-capable origin required by the existing Bento runtime. The exception remains an independent Side Card tab and does not patch Harness or Better Sidebar.
 
 ## Capability mapping
 
@@ -13,16 +13,16 @@ FP07 extends the existing `PAIMind Artifacts` plugin with HTML and XLSX artifact
 | HTML file read, preview/edit toggle and download path | Reuse | Better Sidebar `html` viewer |
 | HTML sandbox and viewer enable/disable | Reuse | Better Sidebar Side Card settings |
 | XLSX workbook parsing, sheet navigation and grid | Reuse | Better Sidebar `xlsx` viewer |
-| Session/Workspace association and safe file delegation | Extend | `@paimind/artifacts` |
-| HTML document / HTML Deck / Bento product label | Migrate as explicit metadata | `@paimind/artifacts` source contract |
-| Independent HTML or spreadsheet renderer packages | Delete from scope | No `@paimind/renderer-html` or `@paimind/renderer-spreadsheet` copy |
-| Storage-capable Bento runtime | Add only the missing capability | `@paimind/renderer-bento` isolated-origin plugin |
+| Session/Workspace association and safe file delegation | Extend | `@hansen/artifacts` |
+| HTML document / HTML Deck / Bento product label | Migrate as explicit metadata | `@hansen/artifacts` source contract |
+| Independent HTML or spreadsheet renderer packages | Delete from scope | No `@hansen/renderer-html` or `@hansen/renderer-spreadsheet` copy |
+| Storage-capable Bento runtime | Add only the missing capability | `@hansen/renderer-bento` isolated-origin plugin |
 | Bento source trace | Later | FP08 |
 | Bento editing, import and export workflow | Later | Dedicated product package after preview migration |
 
 ## Package and contract changes
 
-### `@paimind/artifacts`
+### `@hansen/artifacts`
 
 - Adds `html` and `xlsx` to the bounded artifact-kind union.
 - Adds optional `previewKind: html-document | html-deck | bento-deck | spreadsheet` metadata.
@@ -31,17 +31,17 @@ FP07 extends the existing `PAIMind Artifacts` plugin with HTML and XLSX artifact
 - PAIMind product sources may explicitly declare `html-deck` or `bento-deck`.
 - The existing Artifact tab displays the explicit product label. `html-document` and `html-deck` delegate to the provider with `html -> html`; `spreadsheet` delegates with `xlsx -> xlsx`; only explicit `bento-deck` metadata calls the Bento service.
 
-### `@paimind/renderer-bento`
+### `@hansen/renderer-bento`
 
 - Declares the exact host services it consumes: `webServer` and `sessions`.
 - Starts a random loopback-only origin and exposes only a token-bound, read-only HTML route for the current Session `cwd`.
 - Realpath-confines the requested file to the Session root, rejects symlink escapes, non-HTML files and files above the bounded size.
-- Registers one independently enabled `paimind:bento-preview` Side Card tab and exposes `paimindBentoPreview` to `@paimind/artifacts`.
+- Registers one independently enabled `paimind:bento-preview` Side Card tab and exposes `paimindBentoPreview` to `@hansen/artifacts`.
 - Uses a cross-origin iframe with `allow-scripts allow-same-origin`; this enables the Bento runtime's local storage without sharing the Harness GUI origin.
 - Applies CSP `connect-src 'none'`, `form-action 'none'`, `object-src 'none'`, `base-uri 'none'`, `referrer-policy: no-referrer` and `nosniff`.
 - Closes the loopback server and removes its routes/tab/service on plugin disposal.
 
-### `@paimind/better-sidebar-adapter`
+### `@hansen/better-sidebar-adapter`
 
 No contract expansion is required. FP07 uses the version-neutral `openFile` capability introduced by FP06. Provider viewer descriptors and rendering components remain private to the adapter boundary.
 

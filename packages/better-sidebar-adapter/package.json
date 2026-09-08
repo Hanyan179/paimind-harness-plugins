@@ -1,9 +1,9 @@
 {
-  "name": "@paimind/better-sidebar-adapter",
+  "name": "@hansen/better-sidebar-adapter",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "Version-pinned PAIMind boundary for the external Better Sidebar provider",
+  "description": "Version-pinned Hansen boundary for the external Better Sidebar provider",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -28,15 +28,15 @@
       "inject": [
         "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-locale",
-        "@paimind/workspace-project",
+        "@hansen/workspace-project",
         "dsh-better-sidebar"
       ],
       "platform": "web"
     }
   },
   "dependencies": {
-    "@paimind/harness-compat": "workspace:^",
-    "@paimind/workspace-project": "workspace:^"
+    "@hansen/harness-compat": "workspace:^",
+    "@hansen/workspace-project": "workspace:^"
   },
   "peerDependencies": {
     "dsh-better-sidebar": "0.17.1",
@@ -47,12 +47,12 @@
     "dsh-better-sidebar": { "optional": true }
   },
   "devDependencies": {
-    "@paimind/testkit": "workspace:^",
+    "@hansen/testkit": "workspace:^",
     "dsh-better-sidebar": "0.17.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
-  "paimindBuild": {
+  "hansenBuild": {
     "node": ["src/index.ts", "src/invariant.ts"],
     "client": "src/client/index.ts"
   },

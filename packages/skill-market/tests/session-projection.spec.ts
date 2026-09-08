@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { PaimindWorkspaceCompositionSnapshotV1 } from '@paimind/contracts'
+import type { PaimindWorkspaceCompositionSnapshotV1 } from '@hansen/contracts'
 import {
   PaimindSkillInstallerService,
   type SkillInstallerHostAgent,

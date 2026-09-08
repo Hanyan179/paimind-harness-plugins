@@ -1,6 +1,6 @@
-import type { PaimindInvariantContext } from '@paimind/harness-compat'
+import type { PaimindInvariantContext } from '@hansen/harness-compat'
 
-const PACKAGE_NAME = '@paimind/runtime-orbs'
+const PACKAGE_NAME = '@hansen/runtime-orbs'
 
 /** Cordis invariant companion name. */
 export const name = 'paimind-runtime-orbs-invariant'

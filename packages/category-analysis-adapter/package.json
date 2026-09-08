@@ -1,5 +1,5 @@
 {
-  "name": "@paimind/category-analysis-adapter",
+  "name": "@hansen/category-analysis-adapter",
   "version": "0.1.0-alpha.0",
   "description": "Native Harness Tools for deterministic synthetic Dollar General category analysis",
   "license": "UNLICENSED",
@@ -14,12 +14,12 @@
   },
   "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map","runtime/**/*.mjs","runtime/demo-data/**/*.csv"],
   "dependencies": {
-    "@paimind/artifact-runtime": "workspace:^",
-    "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^",
-    "@paimind/presentation-contracts": "workspace:^"
+    "@hansen/artifact-runtime": "workspace:^",
+    "@hansen/contracts": "workspace:^",
+    "@hansen/harness-compat": "workspace:^",
+    "@hansen/presentation-contracts": "workspace:^"
   },
-  "devDependencies": { "@paimind/testkit": "workspace:^" },
-  "paimindBuild": { "node": ["src/index.ts", "src/invariant.ts"] },
+  "devDependencies": { "@hansen/testkit": "workspace:^" },
+  "hansenBuild": { "node": ["src/index.ts", "src/invariant.ts"] },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }

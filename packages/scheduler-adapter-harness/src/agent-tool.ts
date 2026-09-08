@@ -5,15 +5,15 @@ import {
   type PaimindScheduleCreateInput,
   type PaimindScheduleDefinition,
   type PaimindScheduleRule,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import {
   definePaimindHarnessTool,
   type PaimindHostSystemPrompt,
   type PaimindHostToolRegistry,
   type PaimindToolRunContext,
   type PaimindScheduledHarnessTitleService,
-} from '@paimind/harness-compat/host'
-import type { PaimindSchedulerServiceApi } from '@paimind/platform-scheduler'
+} from '@hansen/harness-compat/host'
+import type { PaimindSchedulerServiceApi } from '@hansen/platform-scheduler'
 import { PAIMIND_AGENT_PROMPT_ACTION_ID } from './agent-action.js'
 
 export const name = 'paimind-scheduler-agent-tool'

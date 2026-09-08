@@ -4,13 +4,13 @@ import {
   type PaimindNotificationSource,
   type PaimindScheduleRunReport,
   type PaimindScheduleTriggerRequest,
-} from '@paimind/contracts'
-import { PaimindHostService } from '@paimind/harness-compat/host'
+} from '@hansen/contracts'
+import { PaimindHostService } from '@hansen/harness-compat/host'
 import {
   PaimindScheduleDispatchError,
   type PaimindScheduleExecutor,
   type PaimindSchedulerServiceApi,
-} from '@paimind/platform-scheduler'
+} from '@hansen/platform-scheduler'
 
 export const name = 'paimind-scheduler-adapter-feishu-bot'
 export const PAIMIND_FEISHU_BOT_SCHEDULER_ADAPTER_ID = 'adapter:paimind-feishu-bot'

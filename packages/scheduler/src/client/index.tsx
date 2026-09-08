@@ -16,7 +16,7 @@ import {
   type PaimindScheduleRun,
   type PaimindScheduleRunAction,
   type PaimindScheduleUpdateInput,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import {
   contributePaimindExtension,
   type HarnessRemoteMountService,
@@ -26,15 +26,15 @@ import {
   type HarnessWorkspaceService,
   type PaimindClientContext,
   type PaimindLocaleSource,
-} from '@paimind/harness-compat'
-import { installHarnessScheduledSessionMarkers } from '@paimind/harness-compat/client-surface'
+} from '@hansen/harness-compat'
+import { installHarnessScheduledSessionMarkers } from '@hansen/harness-compat/client-surface'
 import {
   PaimindEditIcon,
   PaimindPlayIcon,
   PaimindPlusIcon,
   PaimindSchedulerIcon,
   PaimindSearchIcon,
-} from '@paimind/harness-compat/client-icons'
+} from '@hansen/harness-compat/client-icons'
 import type {
   PaimindScheduleArchiveRequest,
   PaimindSchedulerSnapshot,
@@ -326,9 +326,9 @@ export class SchedulerController {
   }
 }
 
-export const SCHEDULE_STARTER_PROMPT = '我们一起来设置一个已安排任务吧。首先，说明已安排任务在 PAIMind 中的工作方式。然后询问我需要安排什么，以及应该在什么时候运行。'
+export const SCHEDULE_STARTER_PROMPT = '我们一起来设置一个已安排任务吧。首先，说明已安排任务在 中的工作方式。然后询问我需要安排什么，以及应该在什么时候运行。'
 
-const STYLE_ID = '@paimind/platform-scheduler'
+const STYLE_ID = '@hansen/platform-scheduler'
 const STYLE = `
 [data-paimind-scheduler-trigger]{width:calc(100% + 8px);min-height:36px;margin:4px -4px;padding:7px 10px;display:flex;align-items:center;gap:9px;border:0;border-radius:14px;color:var(--dsw-alias-label-primary,#172033);background:transparent;font:inherit;font-size:14px;cursor:pointer}
 [data-paimind-scheduler-trigger]:hover,[data-paimind-scheduler-trigger]:focus-visible{background:var(--dsw-alias-interactive-bg-hover,rgba(80,100,140,.1))}
@@ -477,7 +477,7 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = '@paimind/platform-scheduler'
+  style.dataset.paimindPlugin = '@hansen/platform-scheduler'
   style.textContent = STYLE
   document.head.append(style)
   return () => { style.remove() }
@@ -872,11 +872,11 @@ export async function apply(ctx: SchedulerClientContext): Promise<() => Promise<
   const disposeRemote = await ctx.remote.$mount(TYPERT_REMOTE)
   const mounted = ctx.inject([...BASE_INJECT, 'remote.paimindScheduler'], remoteCtx => {
     const remote = remoteCtx.remote.paimindScheduler
-    if (remote === undefined) throw new Error('PAIMind Scheduler Remote did not mount')
+    if (remote === undefined) throw new Error('Scheduler Remote did not mount')
     const controller = new SchedulerController(remote, remoteCtx.sessions, remoteCtx.workspaces, remoteCtx.conversation)
     controller.activate()
     contributePaimindExtension(remoteCtx.slots, {
-      id: 'paimind:platform-scheduler', packageName: '@paimind/platform-scheduler', category: 'automation',
+      id: 'paimind:platform-scheduler', packageName: '@hansen/platform-scheduler', category: 'automation',
       nameZh: '平台定时任务', nameEn: 'Platform Scheduler',
       descriptionZh: '直接配置或通过 AI 辅助创建多类型任务，并管理计划和运行结果。',
       descriptionEn: 'Configure multiple task types directly or with AI assistance, then manage schedules and results.',

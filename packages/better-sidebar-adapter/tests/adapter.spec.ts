@@ -1,9 +1,9 @@
 import { createElement } from 'react'
 import { cleanup, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { PaimindLocaleSource } from '@paimind/harness-compat'
-import type { PaimindWorkspaceProjectService, WorkspaceProjectSnapshot } from '@paimind/workspace-project'
-import { createClientContextFixture } from '@paimind/testkit'
+import type { PaimindLocaleSource } from '@hansen/harness-compat'
+import type { PaimindWorkspaceProjectService, WorkspaceProjectSnapshot } from '@hansen/workspace-project'
+import { createClientContextFixture } from '@hansen/testkit'
 import {
   BetterSidebarAdapter,
   PAIMIND_SIDEBAR_CONTRACT_VERSION,

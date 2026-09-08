@@ -20,7 +20,7 @@ import {
   type PaimindClientContext,
   type PaimindLocaleSource,
   type PaimindSessionHeaderActionProps,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import {
   ArrowUpRight as PaimindUploadIcon,
   Bot as PaimindAgentIcon,
@@ -43,8 +43,8 @@ import {
   WandSparkles as PaimindSkillIcon,
   type LucideIcon,
 } from 'lucide-react'
-import type { PaimindArtifactService } from '@paimind/artifacts'
-import type { PaimindWorkspaceProjectService } from '@paimind/workspace-project'
+import type { PaimindArtifactService } from '@hansen/artifacts'
+import type { PaimindWorkspaceProjectService } from '@hansen/workspace-project'
 import {
   collectTaskMonitorResourceHistory,
   isLivePaimindJob,
@@ -81,7 +81,7 @@ export interface TaskMonitorSessionLogService {
   dismiss(sessionId: string): void
 }
 
-const STYLE_ID = '@paimind/task-monitor'
+const STYLE_ID = '@hansen/task-monitor'
 const HEADER_SHADOW_PRIORITY = -10
 const STYLE = `
 [data-paimind-task-action] { position:relative; display:inline-flex; align-items:center; color:inherit; font:inherit; }
@@ -239,7 +239,7 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = '@paimind/task-monitor'
+  style.dataset.paimindPlugin = '@hansen/task-monitor'
   style.textContent = STYLE
   document.head.append(style)
   return () => { style.remove() }
@@ -793,7 +793,7 @@ export function apply(ctx: TaskMonitorClientContext): void {
   const sessionLog = sessionLogServiceOf(ctx)
   const sessionHistory = sessionHistoryApiOf(ctx)
   contributePaimindExtension(ctx.slots, {
-    id: 'paimind:task-monitor', packageName: '@paimind/task-monitor', category: 'automation',
+    id: 'paimind:task-monitor', packageName: '@hansen/task-monitor', category: 'automation',
     nameZh: '任务监控', nameEn: 'Task Monitor',
     descriptionZh: '以浮动摘要投影当前 Session、Project、Goal、Todo、Subagent、Tool、Job、Artifact、Skill 与 MCP 的原生事实。',
     descriptionEn: 'Floating read-only summary of native Session, Project, Goal, Todo, Subagent, Tool, Job, Artifact, Skill, and MCP facts.',

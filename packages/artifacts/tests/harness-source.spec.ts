@@ -3,8 +3,8 @@ import type {
   HarnessConversationSnapshot,
   HarnessSessionListSnapshot,
   HarnessSessionService,
-} from '@paimind/harness-compat'
-import type { PaimindWorkspaceProjectService, WorkspaceProjectSnapshot } from '@paimind/workspace-project'
+} from '@hansen/harness-compat'
+import type { PaimindWorkspaceProjectService, WorkspaceProjectSnapshot } from '@hansen/workspace-project'
 import { HarnessDeliverableArtifactSource } from '../src/index.ts'
 
 function observable<T>(initial: T) {

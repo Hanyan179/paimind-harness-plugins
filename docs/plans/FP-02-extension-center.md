@@ -23,11 +23,11 @@ Status: R1 was verified on 2026-08-14. The 2026-08-20 capability-management upgr
 
 ## Package and service boundaries
 
-- `@paimind/extension-center` is an independent host/client package.
+- `@hansen/extension-center` is an independent host/client package.
 - Harness owns technical loading through its Loader and Plugin Inventory. PAIMind does not add a second runtime Registry service.
 - Extension Center declares the `paimind.extension` child Slot; each user-visible PAIMind client contributes an immutable descriptor through the native Slot ledger. If Extension Center is absent, the pending contribution stays inert and the feature remains operational.
 - `PaimindExtensionDescriptor` contains stable product metadata plus the owning npm package name; it contains no live enablement or version field.
-- `@paimind/harness-compat` isolates the current Harness Plugin Inventory shape and descriptor contribution helper.
+- `@hansen/harness-compat` isolates the current Harness Plugin Inventory shape and descriptor contribution helper.
 - The client joins descriptor and technical snapshot at render time. Technical source failure yields `Status unavailable`, not stale cached success.
 - Each feature package registers its descriptor from its own client lifecycle and unregisters only itself.
 - Harness rc.8 currently exposes exact module id, effective enablement and Fiber phase through the public Inventory Remote. Version and dependency ownership remains with Harness, but those fields are not invented or displayed until its public API exposes them.
@@ -48,7 +48,7 @@ Status: R1 was verified on 2026-08-14. The 2026-08-20 capability-management upgr
 
 ## Upgrade boundary
 
-- Harness-specific inventory transport stays in `@paimind/harness-compat`.
+- Harness-specific inventory transport stays in `@hansen/harness-compat`.
 - Extension Center and feature packages never import Host inventory implementation or Loader internals.
 - A Harness upgrade must pass inventory-shape contract, missing-provider containment, category join and uninstall disposal tests.
 
@@ -95,4 +95,4 @@ Reason: Harness Plugin Registry remains the only lifecycle owner. Extension Cent
 - Product descriptors: Runtime Orb, Artifacts & Preview, Bento Renderer, Presentation Trace, Task Monitor and Extension Center.
 - Headless exemptions: Workspace Project adapter and Better Sidebar adapter.
 - Task Monitor is explicitly `Reopened` and reports its current Side Card surface; R2 changes it to an independent button and Native Job source.
-- Bento core imports no Better Sidebar package; only `@paimind/better-sidebar-adapter` owns that external dependency.
+- Bento core imports no Better Sidebar package; only `@hansen/better-sidebar-adapter` owns that external dependency.

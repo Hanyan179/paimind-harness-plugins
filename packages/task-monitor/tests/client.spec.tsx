@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { PaimindLocaleSource } from '@paimind/harness-compat'
-import { createClientContextFixture } from '@paimind/testkit'
+import type { PaimindLocaleSource } from '@hansen/harness-compat'
+import { createClientContextFixture } from '@hansen/testkit'
 import { apply, inject, TaskMonitorAction, type TaskMonitorActionProps } from '../src/client/index.js'
 
 function locale(initial = 'en'): PaimindLocaleSource & { set(value: string): void } {
@@ -80,7 +80,7 @@ function props(language: PaimindLocaleSource): TaskMonitorActionProps {
 
 afterEach(() => {
   vi.unstubAllGlobals()
-  document.head.querySelectorAll('style[data-paimind-plugin="@paimind/task-monitor"]').forEach(node => { node.remove() })
+  document.head.querySelectorAll('style[data-paimind-plugin="@hansen/task-monitor"]').forEach(node => { node.remove() })
 })
 
 describe('Task Monitor client', () => {
@@ -304,13 +304,13 @@ describe('Task Monitor client', () => {
     fixture.disposeEffects()
     expect(header.every(entry => entry.disposed())).toBe(true)
     expect(utilities.every(entry => entry.disposed())).toBe(true)
-    expect(document.head.querySelector('style[data-paimind-plugin="@paimind/task-monitor"]')).toBeNull()
+    expect(document.head.querySelector('style[data-paimind-plugin="@hansen/task-monitor"]')).toBeNull()
   })
 
   it('aligns the collapsed-sidebar summary trigger with the fixed rail controls', () => {
     const fixture = createClientContextFixture()
     apply(fixture.context)
-    const style = document.head.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@paimind/task-monitor"]')
+    const style = document.head.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@hansen/task-monitor"]')
     expect(style?.textContent).toContain(
       'body[data-dsh-sidebar-collapsed] [data-paimind-task-action] { transform:translateY(-11px); }',
     )

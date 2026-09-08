@@ -6,6 +6,6 @@ describe('FP10 invariant registration', () => {
     const register = vi.fn(() => () => {})
     apply({ invariants: { register } })
     expect(name).toBe('paimind-agent-builder-invariant')
-    expect(register).toHaveBeenCalledWith('@paimind/agent-builder', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('@hansen/agent-builder', expect.any(Function))
   })
 })

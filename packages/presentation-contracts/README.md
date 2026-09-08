@@ -1,4 +1,4 @@
-# `@paimind/presentation-contracts`
+# `@hansen/presentation-contracts`
 
 Validated outline, fact, binding and trace contracts shared by presentation generators and provenance consumers.
 

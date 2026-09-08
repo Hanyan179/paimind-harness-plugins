@@ -1,4 +1,4 @@
-# `@paimind/proposal-experience`
+# `@hansen/proposal-experience`
 
 Guided proposal-question experience over native Harness pending interactions.
 
@@ -21,7 +21,7 @@ The selected Agent is the sole workflow owner: it reads current context, decides
 
 ## Dependencies
 
-- `@paimind/harness-compat` isolates the native pending-question and composer-chain shape.
+- `@hansen/harness-compat` isolates the native pending-question and composer-chain shape.
 - React is a peer dependency supplied by the Harness Web client.
 - The selected Agent still calls native `ask_user_question`; this package registers no model Tool.
 

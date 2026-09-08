@@ -1,4 +1,4 @@
-# `@paimind/runtime-orbs`
+# `@hansen/runtime-orbs`
 
 PAIMind runtime-state orb animations for the native DeepSeek Harness conversation.
 
@@ -19,7 +19,7 @@ Role: **Client plugin**. It owns the product projection described above; Harness
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/harness-compat` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/harness-compat` (`workspace:^`).
 - External runtime or peer dependencies: `thinking-orbs` (`^0.2.0`), `react` (`>=18.0.0 <20.0.0`), `react-dom` (`>=18.0.0 <20.0.0`).
 - Client service injection: `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-locale`, `@deepseek-ai/dsh-client-ui-slots`, `@deepseek-ai/dsh-client-ui-conversation`, `@deepseek-ai/dsh-client-ui-layout`.
 

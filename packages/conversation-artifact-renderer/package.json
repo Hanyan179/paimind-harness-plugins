@@ -1,5 +1,5 @@
 {
-  "name": "@paimind/conversation-artifact-renderer",
+  "name": "@hansen/conversation-artifact-renderer",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
@@ -22,24 +22,24 @@
         "@deepseek-ai/dsh-client-ui-slots",
         "@deepseek-ai/dsh-client-ui-conversation",
         "@deepseek-ai/dsh-client-ui-deliverables",
-        "@paimind/artifacts"
+        "@hansen/artifacts"
       ],
       "platform": "web"
     }
   },
   "dependencies": {
-    "@paimind/artifacts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^"
+    "@hansen/artifacts": "workspace:^",
+    "@hansen/harness-compat": "workspace:^"
   },
   "peerDependencies": {
     "react": ">=18.0.0 <20.0.0"
   },
   "devDependencies": {
-    "@paimind/testkit": "workspace:^",
+    "@hansen/testkit": "workspace:^",
     "@testing-library/react": "^16.3.2",
     "react": "^18.3.1"
   },
-  "paimindBuild": {
+  "hansenBuild": {
     "node": ["src/index.ts", "src/invariant.ts"],
     "client": "src/client/index.tsx"
   },

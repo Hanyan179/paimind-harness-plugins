@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { PaimindArtifactView } from '@paimind/artifacts'
+import type { PaimindArtifactView } from '@hansen/artifacts'
 import { PresentationTraceRegistry, type PaimindPresentationTraceSource } from '../src/index.ts'
 
 const document = {

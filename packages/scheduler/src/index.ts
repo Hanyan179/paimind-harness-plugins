@@ -6,7 +6,7 @@ import {
   type PaimindScheduleRun,
   type PaimindScheduleRunReport,
   type PaimindScheduleUpdateInput,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import {
   PaimindHostRemoteService,
   definePaimindStorageDomain,
@@ -15,7 +15,7 @@ import {
   type PaimindStorageDomainFacility,
   type PaimindStorageDomainHandle,
   type PaimindStorageTable,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 import {
   PaimindSchedulerCore,
   type PaimindScheduleExecutor,

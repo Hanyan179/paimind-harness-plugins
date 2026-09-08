@@ -1,4 +1,4 @@
-# @paimind/conversation-title
+# @hansen/conversation-title
 
 ## Responsibility
 
@@ -6,14 +6,14 @@ Owns PAIMind conversation auto-naming, its model-service setting, and the exact 
 
 ## Public entry points
 
-- `@paimind/conversation-title`: Host plugin and product policy.
-- `@paimind/conversation-title/settings`: durable setting contract.
-- `@paimind/conversation-title/client`: Models Service settings page.
-- `@paimind/conversation-title/invariant`: runtime invariant registration.
+- `@hansen/conversation-title`: Host plugin and product policy.
+- `@hansen/conversation-title/settings`: durable setting contract.
+- `@hansen/conversation-title/client`: Models Service settings page.
+- `@hansen/conversation-title/invariant`: runtime invariant registration.
 
 ## Dependencies
 
-Uses `@paimind/harness-compat` for every Harness-version-sensitive Session, title, LLM, Settings, and client surface.
+Uses `@hansen/harness-compat` for every Harness-version-sensitive Session, title, LLM, Settings, and client surface.
 
 ## Lifecycle and failure
 

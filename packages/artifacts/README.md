@@ -1,4 +1,4 @@
-# `@paimind/artifacts`
+# `@hansen/artifacts`
 
 Session/Workspace artifact projection with direct file and Bento workbench routing.
 
@@ -19,9 +19,9 @@ Role: **Client plugin**. It owns the Artifact registry, projection and path/deep
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/better-sidebar-adapter` (`workspace:^`), `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`), `@paimind/renderer-bento` (`workspace:^`), `@paimind/workspace-project` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/better-sidebar-adapter` (`workspace:^`), `@hansen/contracts` (`workspace:^`), `@hansen/harness-compat` (`workspace:^`), `@hansen/renderer-bento` (`workspace:^`), `@hansen/workspace-project` (`workspace:^`).
 - External runtime or peer dependencies: `react` (`>=18.0.0 <20.0.0`).
-- Client service injection: `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-locale`, `@deepseek-ai/dsh-client-ui-slots`, `@paimind/better-sidebar-adapter`, `@paimind/renderer-bento`, `@paimind/workspace-project`.
+- Client service injection: `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-locale`, `@deepseek-ai/dsh-client-ui-slots`, `@hansen/better-sidebar-adapter`, `@hansen/renderer-bento`, `@hansen/workspace-project`.
 
 The manifest is authoritative for dependency direction and version selection.
 

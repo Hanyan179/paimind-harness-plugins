@@ -1,6 +1,6 @@
 import type {
   HarnessInspectableSlotRegistry, PaimindClientContext,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 
 /** Captured slot entry used by external plugin tests. */
 export interface CapturedSlot {

@@ -23,27 +23,27 @@ const mutation = z.object({
 
 export const PAIMIND_USER_SETTINGS_REMOTE_DESCRIPTORS = Object.freeze([
   {
-    id: '@paimind/user-settings#paimindUserSettings/describe',
+    id: '@hansen/user-settings#paimindUserSettings/describe',
     service: 'paimindUserSettings', namespace: 'paimindUserSettings', method: 'describe',
     invocation: { kind: 'direct' as const }, parameters: [],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/user-settings#PaimindPersonalizationView', schema: view },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/user-settings#PaimindPersonalizationView', schema: view },
     sourceLocation: { file: 'packages/user-settings/src/index.ts', line: 65, column: 3 },
   },
   {
-    id: '@paimind/user-settings#paimindUserSettings/mutate',
+    id: '@hansen/user-settings#paimindUserSettings/mutate',
     service: 'paimindUserSettings', namespace: 'paimindUserSettings', method: 'mutate',
     invocation: { kind: 'direct' as const },
     parameters: [{
       name: 'request', wire: 'request', source: 'json' as const,
-      codec: { mode: 'strict' as const, typeSymbol: '@paimind/user-settings#PaimindPersonalizationMutationRequest', schema: mutation },
+      codec: { mode: 'strict' as const, typeSymbol: '@hansen/user-settings#PaimindPersonalizationMutationRequest', schema: mutation },
     }],
-    result: { mode: 'strict' as const, typeSymbol: '@paimind/user-settings#PaimindPersonalizationView', schema: view },
+    result: { mode: 'strict' as const, typeSymbol: '@hansen/user-settings#PaimindPersonalizationView', schema: view },
     sourceLocation: { file: 'packages/user-settings/src/index.ts', line: 79, column: 3 },
   },
 ])
 
 export const TYPERT_REMOTE = Object.freeze({
-  package: '@paimind/user-settings', descriptors: PAIMIND_USER_SETTINGS_REMOTE_DESCRIPTORS,
+  package: '@hansen/user-settings', descriptors: PAIMIND_USER_SETTINGS_REMOTE_DESCRIPTORS,
 })
 
 export default TYPERT_REMOTE

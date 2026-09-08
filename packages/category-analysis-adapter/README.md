@@ -1,4 +1,4 @@
-# `@paimind/category-analysis-adapter`
+# `@hansen/category-analysis-adapter`
 
 Deterministic synthetic category-analysis Tools for the Proposal Assistant demo.
 
@@ -18,8 +18,8 @@ Role: **Headless plugin**. It provisions one clearly labeled synthetic Dollar Ge
 
 ## Dependencies
 
-- `@paimind/artifact-runtime` owns native Job and Artifact publication.
-- `@paimind/presentation-contracts` owns source, Fact and data-result validation.
+- `@hansen/artifact-runtime` owns native Job and Artifact publication.
+- `@hansen/presentation-contracts` owns source, Fact and data-result validation.
 - The packaged runtime uses only Node.js standard-library modules.
 
 ## Lifecycle and failure

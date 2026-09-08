@@ -1,7 +1,7 @@
 {
-  "name": "@paimind/contracts",
+  "name": "@hansen/contracts",
   "version": "0.1.0-alpha.0",
-  "description": "Stable public type contracts shared by PAIMind plugins and external consumers",
+  "description": "Stable public type contracts shared by Hansen plugins and external consumers",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
   "type": "module",
@@ -14,6 +14,6 @@
     }
   },
   "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
-  "paimindBuild": { "node": ["src/index.ts"] },
+  "hansenBuild": { "node": ["src/index.ts"] },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }

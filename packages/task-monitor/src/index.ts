@@ -3,7 +3,7 @@ import {
   PAIMIND_ARTIFACT_JOB_KIND,
   type ArtifactProducedEnvelopeV1,
   type PaimindArtifactProjectionV1,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import type {
   HarnessConversationSnapshot,
   HarnessNativeJobView,
@@ -11,7 +11,7 @@ import type {
   HarnessSessionListSnapshot,
   HarnessToolCallBlock,
   HarnessToolCallView,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 
 export const name = 'paimind-task-monitor'
 export const TASK_MONITOR_RESOURCES_SCHEMA = 'paimind.task-monitor-resources/v1'

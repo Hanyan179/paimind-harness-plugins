@@ -55,29 +55,29 @@ const authoringPrepared = z.object({ sessionId, agentPreset: id, prepared: z.lit
 const removedProfile = z.object({ presetId: id, removed: z.literal(true) }).strict().readonly()
 
 const direct = (method: string, parameters: readonly unknown[], result: unknown, line: number) => ({
-  id: `@paimind/agent-builder#paimindAgentProfiles/${method}`,
+  id: `@hansen/agent-builder#paimindAgentProfiles/${method}`,
   service: 'paimindAgentProfiles', namespace: 'paimindAgentProfiles', method,
   invocation: { kind: 'direct' as const }, parameters,
-  result: { mode: 'strict' as const, typeSymbol: `@paimind/agent-builder#${method}Result`, schema: result },
+  result: { mode: 'strict' as const, typeSymbol: `@hansen/agent-builder#${method}Result`, schema: result },
   sourceLocation: { file: 'packages/agent-builder/src/index.ts', line, column: 3 },
 })
 const input = (schema: unknown, symbol: string) => [{ name: 'input', wire: 'input', source: 'json' as const, codec: { mode: 'strict' as const, typeSymbol: symbol, schema } }]
 
 export const PAIMIND_AGENT_PROFILE_REMOTE_DESCRIPTORS = Object.freeze([
   direct('listProfiles', [], z.object({ profiles: z.array(profile).readonly() }).readonly(), 246),
-  direct('saveProfile', input(profileInput, '@paimind/agent-builder#AgentBusinessProfileInput'), profile, 260),
-  direct('setDefault', input(z.object({ presetId: id }).readonly(), '@paimind/agent-builder#AgentDefaultInput'), z.object({ presetId: id }).readonly(), 300),
-  direct('removeProfile', input(z.object({ presetId: id }).readonly(), '@paimind/agent-builder#AgentRemoveInput'), removedProfile, 301),
-  direct('sealAuthoringSession', input(z.object({ sessionId }).readonly(), '@paimind/agent-builder#AgentAuthoringSealInput'), authoringSeal, 340),
-  direct('prepareAuthoringTurn', input(authoringTurnInput, '@paimind/agent-builder#AgentAuthoringTurnInput'), authoringPrepared, 535),
-  direct('bindSession', input(bindingInput, '@paimind/agent-builder#AgentSessionBindingInput'), binding, 311),
+  direct('saveProfile', input(profileInput, '@hansen/agent-builder#AgentBusinessProfileInput'), profile, 260),
+  direct('setDefault', input(z.object({ presetId: id }).readonly(), '@hansen/agent-builder#AgentDefaultInput'), z.object({ presetId: id }).readonly(), 300),
+  direct('removeProfile', input(z.object({ presetId: id }).readonly(), '@hansen/agent-builder#AgentRemoveInput'), removedProfile, 301),
+  direct('sealAuthoringSession', input(z.object({ sessionId }).readonly(), '@hansen/agent-builder#AgentAuthoringSealInput'), authoringSeal, 340),
+  direct('prepareAuthoringTurn', input(authoringTurnInput, '@hansen/agent-builder#AgentAuthoringTurnInput'), authoringPrepared, 535),
+  direct('bindSession', input(bindingInput, '@hansen/agent-builder#AgentSessionBindingInput'), binding, 311),
   direct('listSessionBindings', [], z.object({ bindings: z.array(binding).readonly() }).readonly(), 330),
-  direct('migrationPlan', input(z.object({ sourceSessionId: sessionId }).readonly(), '@paimind/agent-builder#AgentMigrationPlanInput'), plan.nullable(), 321),
-  direct('recordMigration', input(migrationInput, '@paimind/agent-builder#AgentMigrationInput'), migration, 336),
-  direct('recordVerification', input(verificationInput, '@paimind/agent-builder#AgentVerificationInput'), verification, 353),
-  direct('verifySession', input(z.object({ sessionId }).readonly(), '@paimind/agent-builder#AgentVerifySessionInput'), verification, 360),
+  direct('migrationPlan', input(z.object({ sourceSessionId: sessionId }).readonly(), '@hansen/agent-builder#AgentMigrationPlanInput'), plan.nullable(), 321),
+  direct('recordMigration', input(migrationInput, '@hansen/agent-builder#AgentMigrationInput'), migration, 336),
+  direct('recordVerification', input(verificationInput, '@hansen/agent-builder#AgentVerificationInput'), verification, 353),
+  direct('verifySession', input(z.object({ sessionId }).readonly(), '@hansen/agent-builder#AgentVerifySessionInput'), verification, 360),
   direct('listAudit', [], z.object({ migrations: z.array(migration).readonly(), verifications: z.array(verification).readonly() }).readonly(), 360),
 ])
 
-export const TYPERT_REMOTE = Object.freeze({ package: '@paimind/agent-builder', descriptors: PAIMIND_AGENT_PROFILE_REMOTE_DESCRIPTORS })
+export const TYPERT_REMOTE = Object.freeze({ package: '@hansen/agent-builder', descriptors: PAIMIND_AGENT_PROFILE_REMOTE_DESCRIPTORS })
 export default TYPERT_REMOTE

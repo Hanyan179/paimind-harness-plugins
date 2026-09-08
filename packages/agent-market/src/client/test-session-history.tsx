@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { HarnessSessionHistoryApi, HarnessSessionHistoryEvent } from '@paimind/harness-compat'
+import type { HarnessSessionHistoryApi, HarnessSessionHistoryEvent } from '@hansen/harness-compat'
 import { assistantTextFromHistoryEvent, turnEndFailure, turnEndReason } from './authoring-session.js'
 
 type HistoryPage = Awaited<ReturnType<HarnessSessionHistoryApi['history']>>['result']

@@ -1,7 +1,7 @@
 {
-  "name": "@paimind/presentation-contracts",
+  "name": "@hansen/presentation-contracts",
   "version": "0.1.0-alpha.0",
-  "description": "Validated outline, fact, binding and trace contracts for PAIMind presentations",
+  "description": "Validated outline, fact, binding and trace contracts for Hansen presentations",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
   "type": "module",
@@ -11,6 +11,6 @@
     ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" }
   },
   "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
-  "paimindBuild": { "node": ["src/index.ts"] },
+  "hansenBuild": { "node": ["src/index.ts"] },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }

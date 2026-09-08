@@ -1160,7 +1160,7 @@ export type PaimindExtensionSurface =
  */
 export interface PaimindExtensionDescriptor {
   readonly id: `paimind:${string}`
-  readonly packageName: `@paimind/${string}`
+  readonly packageName: `@hansen/${string}`
   readonly category: PaimindExtensionCategory
   readonly nameZh: string
   readonly nameEn: string
@@ -1193,7 +1193,7 @@ export function definePaimindExtension(
   if (!/^paimind:[a-z0-9][a-z0-9-]*$/.test(descriptor.id)) {
     throw new Error(`invalid PAIMind extension id "${descriptor.id}"`)
   }
-  if (!/^@paimind\/[a-z0-9][a-z0-9-]*$/.test(descriptor.packageName)) {
+  if (!/^@hansen\/[a-z0-9][a-z0-9-]*$/.test(descriptor.packageName)) {
     throw new Error(`invalid PAIMind extension package "${descriptor.packageName}"`)
   }
   if (!EXTENSION_CATEGORY_SET.has(descriptor.category)) {

@@ -2,16 +2,16 @@
   "$schema": "paimind.bundle-budget/v1",
   "defaultClientLimitBytes": 950000,
   "overrides": {
-    "@paimind/renderer-pdf": 2300000
+    "@hansen/renderer-pdf": 2300000
   },
   "acceptedPayloads": [
     {
-      "package": "@paimind/renderer-pdf",
+      "package": "@hansen/renderer-pdf",
       "payload": "pdfjs-dist worker and viewer runtime",
       "reason": "The PDF plugin must remain independently installable and render without a shared hidden worker runtime."
     },
     {
-      "package": "@paimind/proposal-experience",
+      "package": "@hansen/proposal-experience",
       "payload": "packaged storyboard reference asset",
       "reason": "The product reference remains available offline inside the independently installable proposal plugin."
     },

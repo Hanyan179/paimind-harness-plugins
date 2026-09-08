@@ -3,13 +3,13 @@ import {
   presentArtifactToolResult,
   type PaimindArtifactGeneratorService,
   type PaimindGeneratorProvider,
-} from '@paimind/artifact-runtime'
-import { defineArtifactProducedEnvelope, type ArtifactProducedEnvelopeV1 } from '@paimind/contracts'
+} from '@hansen/artifact-runtime'
+import { defineArtifactProducedEnvelope, type ArtifactProducedEnvelopeV1 } from '@hansen/contracts'
 import {
   definePaimindHarnessTool,
   type PaimindHostSystemPrompt,
   type PaimindHostToolRegistry,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 
 export const name = 'paimind-generator-web'
 export const inject = ['paimindArtifactGenerators', 'tools', 'systemPrompt']

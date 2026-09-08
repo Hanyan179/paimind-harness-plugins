@@ -32,8 +32,8 @@
 
 | 对象 | 唯一所有者 | 说明 |
 | --- | --- | --- |
-| 工作区模板 | `@paimind/workspace-blueprints` | 内置或个人的版本化文件夹快照与可选组合引用 |
-| 个人模板仓库 | `@paimind/workspace-blueprints` | 用户模板的受管副本、文件编辑、版本和摘要冲突检查 |
+| 工作区模板 | `@hansen/workspace-blueprints` | 内置或个人的版本化文件夹快照与可选组合引用 |
+| 个人模板仓库 | `@hansen/workspace-blueprints` | 用户模板的受管副本、文件编辑、版本和摘要冲突检查 |
 | 工作区实例 | Harness | 用户选定的真实目录和原生工作区身份 |
 | 会话 | Harness | 工作区创建成功后启动的原生会话 |
 | 智能体绑定 | Agent Center | 模板仅保存精确 `agentId`、`presetId` 与 `configVersion` 引用；采用流程创建入口会话时调用公开契约绑定 |

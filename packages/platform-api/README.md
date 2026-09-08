@@ -1,4 +1,4 @@
-# `@paimind/platform-api`
+# `@hansen/platform-api`
 
 Authenticated server-to-server API for PAIMind notifications and scheduled actions.
 
@@ -18,7 +18,7 @@ Role: **Headless plugin**. It owns its service or adapter boundary and exposes n
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`), `@paimind/notifications` (`workspace:^`), `@paimind/platform-sdk` (`workspace:^`), `@paimind/platform-scheduler` (`workspace:^`), `@paimind/scheduler-adapter-http` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/contracts` (`workspace:^`), `@hansen/harness-compat` (`workspace:^`), `@hansen/notifications` (`workspace:^`), `@hansen/platform-sdk` (`workspace:^`), `@hansen/platform-scheduler` (`workspace:^`), `@hansen/scheduler-adapter-http` (`workspace:^`).
 - External runtime or peer dependencies: `zod` (`^4.4.3`).
 - Client service injection: None.
 

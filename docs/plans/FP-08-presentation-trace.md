@@ -4,37 +4,37 @@
 
 ## Outcome
 
-FP08 migrates PAIMind presentation provenance into an independent `@paimind/presentation-trace` Cordis package. A trace producer registers structured `paimind.presentation-trace/v1` or `/v2` records against an explicit Artifact `traceId`; the plugin projects Business Evidence and Technical Trace in one Better Sidebar tab. It never parses slide pixels, Bento HTML, model prose, filenames or renderer state to invent lineage.
+FP08 migrates PAIMind presentation provenance into an independent `@hansen/presentation-trace` Cordis package. A trace producer registers structured `paimind.presentation-trace/v1` or `/v2` records against an explicit Artifact `traceId`; the plugin projects Business Evidence and Technical Trace in one Better Sidebar tab. It never parses slide pixels, Bento HTML, model prose, filenames or renderer state to invent lineage.
 
 ## Capability mapping
 
 | Capability | Decision | Owner |
 |---|---|---|
-| Artifact/Session/Workspace identity | Reuse read-only | `@paimind/artifacts` |
-| Right rail, responsive drawer, tab enable/disable | Reuse | Better Sidebar through `@paimind/better-sidebar-adapter` |
-| Bento preview and verified slide events | Extend through public event contract | `@paimind/renderer-bento` |
-| `paimind.presentation-trace/v1` compatibility | Migrate and normalize | `@paimind/presentation-trace` |
-| `paimind.presentation-trace/v2` sources, blocks, metrics, facts, dimensions/measures, visual bindings and technical fields | Migrate | `@paimind/presentation-trace` |
-| Business Evidence → Technical Trace progressive disclosure | Migrate | `@paimind/presentation-trace/client` |
-| Trace action beside a traceable artifact | Add through generic Artifact Action Slot | `@paimind/artifacts` public service |
+| Artifact/Session/Workspace identity | Reuse read-only | `@hansen/artifacts` |
+| Right rail, responsive drawer, tab enable/disable | Reuse | Better Sidebar through `@hansen/better-sidebar-adapter` |
+| Bento preview and verified slide events | Extend through public event contract | `@hansen/renderer-bento` |
+| `paimind.presentation-trace/v1` compatibility | Migrate and normalize | `@hansen/presentation-trace` |
+| `paimind.presentation-trace/v2` sources, blocks, metrics, facts, dimensions/measures, visual bindings and technical fields | Migrate | `@hansen/presentation-trace` |
+| Business Evidence → Technical Trace progressive disclosure | Migrate | `@hansen/presentation-trace/client` |
+| Trace action beside a traceable artifact | Add through generic Artifact Action Slot | `@hansen/artifacts` public service |
 | Renderer-owned trace store or conversation reducer | Delete from scope | No second state store and no upstream mutation |
 | PPTX parsing/import and Bento authoring | Preserve as separate concern | Not part of the Trace viewer plugin |
 
 ## Package and public contracts
 
-### `@paimind/artifacts`
+### `@hansen/artifacts`
 
 - Adds optional, explicit `traceId` metadata to an Artifact; native deliverables do not receive one automatically.
 - Adds a provider-neutral `registerAction()` extension point. An action supplies stable id, localized label, applicability predicate and callback; the Artifact UI renders it without importing the contributing package.
 - Actions are stack-safe and disposable. A failed action produces only an Artifact-tab notice.
 
-### `@paimind/renderer-bento`
+### `@hansen/renderer-bento`
 
 - Extends `PaimindBentoPreviewService` with a read-only snapshot/subscription containing the current request and last verified runtime event.
 - Accepts only allowlisted `paimind:bento-ready`, `paimind:bento-slide` and `paimind:bento-exit` messages whose `event.source` is the active iframe and whose `event.origin` equals the random sandbox origin.
 - Events carry only explicit mode and positive slide number; arbitrary iframe payload never crosses the service.
 
-### `@paimind/presentation-trace`
+### `@hansen/presentation-trace`
 
 - Owns `PaimindPresentationTraceSource`, registry, normalized snapshots, diagnostics, artifact selection and drill-down state.
 - Validates source ids, slide/block/metric/fact ids, dimensions, measures, visual encodings, source references, immutable `factValuesChanged:false`, visual bindings and optional technical fields.

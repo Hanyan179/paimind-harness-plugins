@@ -1,4 +1,4 @@
-# `@paimind/platform-sdk`
+# `@hansen/platform-sdk`
 
 Server-side SDK and signed public contracts for PAIMind platform capabilities.
 
@@ -17,7 +17,7 @@ Role: **Shared support package**. It has no independent Harness lifecycle or pro
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/contracts` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/contracts` (`workspace:^`).
 - External runtime or peer dependencies: `zod` (`^4.4.3`).
 - Client service injection: None.
 

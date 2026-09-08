@@ -1,9 +1,9 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { PaimindLocaleSource } from '@paimind/harness-compat'
-import type { PaimindSidebarService, PaimindSidebarTabScope } from '@paimind/better-sidebar-adapter'
-import type { PaimindBentoPreviewService } from '@paimind/renderer-bento'
-import { createClientContextFixture } from '@paimind/testkit'
+import type { PaimindLocaleSource } from '@hansen/harness-compat'
+import type { PaimindSidebarService, PaimindSidebarTabScope } from '@hansen/better-sidebar-adapter'
+import type { PaimindBentoPreviewService } from '@hansen/renderer-bento'
+import { createClientContextFixture } from '@hansen/testkit'
 import { ArtifactRegistry, type PaimindArtifact } from '../src/index.ts'
 import {
   ArtifactPanel,
@@ -186,7 +186,7 @@ describe('FP06-FP07 artifact client surface', () => {
     ])
     const provider = sidebar()
     render(<ArtifactPanel service={registry} sidebar={provider} bentoPreview={bento()} scope={scope(locale())} />)
-    expect(screen.getByText('PAIMind Artifacts')).toBeInTheDocument()
+    expect(screen.getByText('Artifacts')).toBeInTheDocument()
     expect(screen.getByTitle('Updating')).toBeInTheDocument()
     expect(screen.getByText('Missing file')).toBeInTheDocument()
     expect(screen.getByText('Producer failed')).toBeInTheDocument()
@@ -213,7 +213,7 @@ describe('FP06-FP07 artifact client surface', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('directory traversal')
     expect(provider.openFile).not.toHaveBeenCalled()
     act(() => { language.set('zh-CN') })
-    expect(screen.getByText('PAIMind 产物')).toBeInTheDocument()
+    expect(screen.getByText('产物')).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('目录穿越')
     fireEvent.click(screen.getByRole('button', { name: '当前工作区' }))
     expect(screen.getByText('Other Session')).toBeInTheDocument()

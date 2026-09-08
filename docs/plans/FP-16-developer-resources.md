@@ -17,14 +17,14 @@ It does not create a second Plugin Registry, enable/disable control, version dat
 | Component runtime-state simulator | No production authority | Retire; use real browser/Product E2E evidence instead |
 | Real-AI prompt recipes | Existing Feature Package acceptance documents and final E2E own executable scenarios | Retire duplicated copy-prompt lab |
 | Plugin manifest | Harness Plugin Inventory provides exact Loader entries; Extension descriptors provide product metadata | Reuse both without joining guessed fields |
-| Runtime diagnostics | Exact `entryId`, `moduleName`, `enabled`, `fiberPhase` for `@paimind/*` entries | Migrate as read-only live diagnostics |
+| Runtime diagnostics | Exact `entryId`, `moduleName`, `enabled`, `fiberPhase` for `@hansen/*` entries | Migrate as read-only live diagnostics |
 | Versions, dependencies and failure stack | Not exposed by the current native inventory contract | Do not fabricate or scrape Loader internals |
 | Integration reference | Static catalog of real PAIMind Slot, Service, Adapter, Event and Projection contracts | Migrate and label `Bundled reference` |
 | Plugin enable/disable/install/uninstall | Harness Plugin Registry / native plugin tooling | Native Reuse; no PAIMind control |
 
 ## Package and surfaces
 
-- New independent package: `@paimind/developer-resources`.
+- New independent package: `@hansen/developer-resources`.
 - Native shell entry: one `settings.section` named `Developer Resources`.
 - Extension Center descriptor: category `Developer`, surface `settings`.
 - Live sources:
@@ -83,12 +83,12 @@ flowchart LR
 2. Client tests cover the three tabs, exact native ids, immutable descriptor catalog, bundled-reference labels, unavailable/retry and locale.
 3. Framework scan forbids Plugin Registry mutations, browser storage, direct Harness imports, guessed version/dependency/error fields and Better Sidebar imports.
 4. Production build and Type Check pass.
-5. Exact Harness install/boot/remove/restore passes with an isolated composition that omits only `@paimind/developer-resources` while retaining Extension Center, native Plugin Inventory and all other products.
+5. Exact Harness install/boot/remove/restore passes with an isolated composition that omits only `@hansen/developer-resources` while retaining Extension Center, native Plugin Inventory and all other products.
 
 ## Browser Product E2E
 
 1. Open native Settings → Developer Resources in the formal Bundle.
-2. Confirm Live Diagnostics lists the currently installed `@paimind/*` Loader entries with exact module ids and real active phases.
+2. Confirm Live Diagnostics lists the currently installed `@hansen/*` Loader entries with exact module ids and real active phases.
 3. Compare at least one row with native Settings → Plugins; the module and lifecycle fact must match.
 4. Open Surface Catalog and confirm the current Runtime Orb, Task Monitor, Artifact, Agent, Skill, Automation and Developer descriptors are visible; no retired Launcher, empty Conversation marker or synthetic Admin surface appears.
 5. Open Integration Reference and confirm all rows say `Bundled reference` and identify their owner/boundary.

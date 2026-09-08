@@ -4,12 +4,12 @@ import type {
   PaimindWorkspaceCompositionLookup,
   PaimindWorkspaceCompositionSnapshotV1,
   PaimindWorkspaceCompositionSource,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import {
   PaimindHostRemoteService,
   markPaimindHostRemoteMethods,
   type PaimindHostWorkspaceRegistry,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 import {
   WorkspaceBlueprintCatalog,
   type WorkspaceBlueprintComposition,

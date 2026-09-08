@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import {
   definePaimindExtension,
   type PaimindExtensionDescriptor,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 
 /** Visual primitives provided by `thinking-orbs`. */
 export const RUNTIME_ORB_STATES = [
@@ -70,7 +70,11 @@ const heroBrandSeat = (root: ParentNode): HarnessHeroBrandSeat | null => {
     const host = nativeHeadline.parentElement
     if (host === null) continue
     const siblings = Array.from(host.children).filter((element): element is HTMLElement => element instanceof HTMLElement)
-    const nativeIcon = siblings.find(element => element !== nativeHeadline && element.querySelector('svg') !== null)
+    // The selected native mark slot can contain an image or text initials.
+    // Prefer its semantic seat; the SVG branch supports older native shells.
+    const nativeIcon = siblings.find(element => element !== nativeHeadline
+      && element.querySelector('[data-slot="conversation.hero.brand.mark"]') !== null)
+      ?? siblings.find(element => element !== nativeHeadline && element.querySelector('svg') !== null)
     const preview = siblings.find(element => element.textContent?.trim() === copy.preview)
     if (nativeIcon === undefined || preview === undefined) continue
     return { host, nativeIcon, nativeHeadline, nativePreview: preview, locale: copy.locale }
@@ -128,7 +132,8 @@ export function installHarnessDocumentBranding(
     manifest.rel = 'manifest'
     doc.head.append(manifest)
   }
-  icon.type = 'image/svg+xml'
+  // A configured icon may be PNG, WebP, ICO or SVG. Let the browser infer it.
+  icon.removeAttribute('type')
   icon.href = identity.faviconHref
   manifest.href = identity.manifestHref
 

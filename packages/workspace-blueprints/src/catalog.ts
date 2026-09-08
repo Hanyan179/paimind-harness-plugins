@@ -20,8 +20,8 @@ import {
   definePaimindWorkspaceCompositionSnapshot,
   type PaimindWorkspaceCompositionLookup,
   type PaimindWorkspaceCompositionSnapshotV1,
-} from '@paimind/contracts'
-import type { PaimindHostWorkspaceRegistry } from '@paimind/harness-compat/host'
+} from '@hansen/contracts'
+import type { PaimindHostWorkspaceRegistry } from '@hansen/harness-compat/host'
 import {
   WORKSPACE_BLUEPRINT_CATEGORIES,
   WORKSPACE_BLUEPRINT_DIGEST_PATTERN,

@@ -7,7 +7,7 @@ import {
   requireCurrentSessionArtifact,
   type PaimindArtifactGeneratorService,
   type PaimindGeneratorProvider,
-} from '@paimind/artifact-runtime'
+} from '@hansen/artifact-runtime'
 import {
   defineArtifactProducedEnvelope,
   defineArtifactTraceEnvelope,
@@ -15,14 +15,14 @@ import {
   type ArtifactTraceEnvelopeV1,
   type PaimindArtifactEventKind,
   type PaimindArtifactPreviewChannel,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import {
   definePaimindHarnessTool,
   type PaimindHostSessionProjectionRegistry,
   type PaimindHostSystemPrompt,
   type PaimindHostToolRegistry,
   type PaimindToolRunContext,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 
 export const name = 'paimind-generator-office'
 export const inject = ['paimindArtifactGenerators', 'tools', 'systemPrompt', 'sessionProjections']

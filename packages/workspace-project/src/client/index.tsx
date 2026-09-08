@@ -1,11 +1,11 @@
-import type { PaimindWorkspaceClientContext } from '@paimind/harness-compat'
+import type { PaimindWorkspaceClientContext } from '@hansen/harness-compat'
 import { WorkspaceProjectBridge } from '../index.js'
 
 /** Native services projected by the headless FP04 adapter. */
 export const inject = ['sessions', 'workspaces']
 
 /**
- * Publish one read-only Project = Workspace bridge for downstream PAIMind plugins.
+ * Publish one read-only Project = Workspace bridge for downstream plugins.
  * FP04 intentionally registers no button, menu, slot, style, overlay, or storage.
  */
 export function apply(ctx: PaimindWorkspaceClientContext): void {

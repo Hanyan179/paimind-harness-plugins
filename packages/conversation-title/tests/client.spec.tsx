@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { PaimindSettingsScope, PaimindSettingsScopeSnapshot } from '@paimind/harness-compat'
+import type { PaimindSettingsScope, PaimindSettingsScopeSnapshot } from '@hansen/harness-compat'
 import { ConversationTitleModelService } from '../src/client/index.js'
 import type { PaimindConversationTitleSettings } from '../src/settings.js'
 

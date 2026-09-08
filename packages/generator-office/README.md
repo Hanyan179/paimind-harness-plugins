@@ -1,4 +1,4 @@
-# `@paimind/generator-office`
+# `@hansen/generator-office`
 
 Native Harness Tool providers for PPTX, PDF and formula-bearing XLSX artifacts.
 
@@ -20,7 +20,7 @@ Role: **Client plugin**. It owns the product projection described above; Harness
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/artifact-runtime` (`workspace:^`), `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/artifact-runtime` (`workspace:^`), `@hansen/contracts` (`workspace:^`), `@hansen/harness-compat` (`workspace:^`).
 - External runtime or peer dependencies: `exceljs` (`4.4.0`), `pdf-lib` (`1.17.1`), `pptxgenjs` (`4.0.1`), `react` (`>=18.0.0 <20.0.0`).
 - Client service injection: `@deepseek-ai/dsh-client-ui-slots`.
 

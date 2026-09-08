@@ -1,13 +1,13 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ComponentType } from 'react'
-import { createClientContextFixture } from '@paimind/testkit'
+import { createClientContextFixture } from '@hansen/testkit'
 import type {
   HarnessAgentPresetApi,
   HarnessInputTriggerSource,
   PaimindSettingsScope,
   PaimindSettingsScopeSnapshot,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import {
   apply,
   PaimindComposerOverlayPresenter,
@@ -141,7 +141,7 @@ afterEach(() => {
   document.documentElement.removeAttribute('lang')
 })
 
-describe('PAIMind visual experience client', () => {
+describe('visual experience client', () => {
   it('coalesces resize delivery without reconnecting the same composer or rewriting its room', () => {
     document.body.innerHTML = '<div data-composer-card><div id="anchor"><div data-slot="conversation.input.overlay"></div></div></div>'
     let resizeCallback: ResizeObserverCallback | undefined
@@ -318,13 +318,13 @@ describe('PAIMind visual experience client', () => {
     expect(document.body).not.toHaveAttribute('data-paimind-composer-overlay')
     expect(document.querySelector('#composer-overlay-anchor')).toHaveAttribute('data-paimind-composer-overlay-anchor')
     expect((document.querySelector('#composer-overlay-anchor') as HTMLElement).style.getPropertyValue('--paimind-composer-overlay-room')).toMatch(/px$/)
-    expect(theme.overrideTokens).toHaveBeenCalledWith('@paimind/visual-experience', expect.objectContaining({
+    expect(theme.overrideTokens).toHaveBeenCalledWith('@hansen/visual-experience', expect.objectContaining({
       '--dsw-alias-bg-base': expect.any(Object),
       '--dsw-alias-bg-layer-1': { light: '#ffffff', dark: '#141d2d' },
       '--dsw-alias-bg-layer-2': { light: '#eff3f9', dark: '#1d283b' },
       '--dsw-alias-bg-overlay': { light: '#fcfcfb', dark: '#111927' },
     }))
-    expect(document.querySelector('style[data-paimind-plugin="@paimind/visual-experience"]')).not.toBeNull()
+    expect(document.querySelector('style[data-paimind-plugin="@hansen/visual-experience"]')).not.toBeNull()
 
     const shell = fixture.slots.find(entry => entry.injectedName === 'shell.overlay' && entry.options.id === 'paimind-visual-experience-hero')!
     const Shell = shell.component as ComponentType<{ mode: PaimindExperienceModeController; locale: unknown }>
@@ -337,7 +337,7 @@ describe('PAIMind visual experience client', () => {
     const dockView = render(<Dock {...dock.inject?.() as never} />)
     expect(await screen.findByRole('button', { name: /Paramont 助手/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '全部智能体' })).toBeInTheDocument()
-    const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@paimind/visual-experience"]')?.textContent ?? ''
+    const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@hansen/visual-experience"]')?.textContent ?? ''
     expect(style).toContain('[data-paimind-quick-agents]{display:grid;gap:8px;width:calc(100% - 32px);margin-inline:16px')
     expect(style).toContain("[role='dialog'][aria-modal='true']:has(>nav button[data-paimind-settings-navigation-icon]){width:min(1480px,calc(100vw - 48px))!important")
     expect(style).toContain("@media(max-width:600px){body[data-paimind-experience='paimind'] [role='dialog'][aria-modal='true']:has(>nav button[data-paimind-settings-navigation-icon]){width:calc(100vw - 16px)!important")
@@ -378,7 +378,7 @@ describe('PAIMind visual experience client', () => {
     fixture.disposeEffects()
     expect(document.body).not.toHaveAttribute('data-paimind-experience')
     expect(document.body).not.toHaveAttribute('data-paimind-composer-overlay')
-    expect(document.querySelector('style[data-paimind-plugin="@paimind/visual-experience"]')).toBeNull()
+    expect(document.querySelector('style[data-paimind-plugin="@hansen/visual-experience"]')).toBeNull()
     for (const id of [
       'paimind-visual-experience-hero',
       'paimind-visual-experience',
@@ -402,12 +402,12 @@ describe('PAIMind visual experience client', () => {
     first.fixture.disposeEffects()
     expect(first.removeTheme).toHaveBeenCalledOnce()
     expect(document.body).not.toHaveAttribute('data-paimind-experience')
-    expect(document.querySelector('style[data-paimind-plugin="@paimind/visual-experience"]')).toBeNull()
+    expect(document.querySelector('style[data-paimind-plugin="@hansen/visual-experience"]')).toBeNull()
 
     const second = setup(successfulApi(), 'paimind')
     await waitFor(() => expect(second.theme.overrideTokens).toHaveBeenCalledOnce())
     expect(document.body).toHaveAttribute('data-paimind-experience', 'paimind')
-    expect(document.querySelector('style[data-paimind-plugin="@paimind/visual-experience"]')).not.toBeNull()
+    expect(document.querySelector('style[data-paimind-plugin="@hansen/visual-experience"]')).not.toBeNull()
     second.fixture.disposeEffects()
   })
 
@@ -437,7 +437,7 @@ describe('PAIMind visual experience client', () => {
     expect(listWheel.defaultPrevented).toBe(false)
     expect(list.scrollTop).toBe(96)
 
-    const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@paimind/visual-experience"]')?.textContent ?? ''
+    const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@hansen/visual-experience"]')?.textContent ?? ''
     expect(style).toContain('grid-template-rows:minmax(0,1fr) auto;height:min(360px,calc(100vh - 24px))')
     expect(style).toContain('min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable')
 
@@ -457,7 +457,7 @@ describe('PAIMind visual experience client', () => {
     expect(overlay.querySelector('[data-paimind-composer-disclosure]')).toHaveTextContent('将这个文件夹“artifacts/”添加到当前对话上下文。')
     expect(overlay.querySelector('[data-paimind-composer-disclosure]')).toHaveTextContent('方向键浏览 · Enter 选择 · Esc 返回')
 
-    const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@paimind/visual-experience"]')?.textContent ?? ''
+    const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@hansen/visual-experience"]')?.textContent ?? ''
     expect(style).toContain('width:min(820px,100%)!important')
     expect(style).toContain('height:min(400px,var(--paimind-composer-overlay-room,400px))!important')
     expect(style).toContain('grid-template-columns:minmax(250px,36%) minmax(360px,1fr)')
@@ -470,7 +470,7 @@ describe('PAIMind visual experience client', () => {
     fixture.disposeEffects()
   })
 
-  it('commits direct Settings radio clicks and reverses PAIMind semantics in both directions', async () => {
+  it('commits direct Settings radio clicks and reverses semantics in both directions', async () => {
     const current = setup(successfulApi(), 'paimind')
     await waitFor(() => expect(current.triggerSources.some(source => source.name === 'paimind-agent')).toBe(true))
     const setting = current.fixture.slots.find(entry => entry.options.id === 'paimind-visual-experience')!
@@ -501,7 +501,7 @@ describe('PAIMind visual experience client', () => {
     current.fixture.disposeEffects()
   })
 
-  it('routes the hero picker and PAIMind @ through one canonical Agent Preset seat', async () => {
+  it('routes the hero picker and @ through one canonical Agent Preset seat', async () => {
     const {
       fixture, scope, nativeSelect, reference, referenceCandidates, nativeSkill,
       nativeSkillCandidates, nativeSkillPick, skillsList, triggerController, triggerSources,
@@ -628,7 +628,7 @@ describe('PAIMind visual experience client', () => {
     expect(projectedA).toEqual(projectedAAgain)
     expect(projected.every(item => !item.fallback && item.projected)).toBe(true)
     expect(new Set(projected.map(item => item.assetKey)).size).toBeGreaterThan(1)
-    expect(fallback).toMatchObject({ assetKey: 'paramont-brand-fallback', fallback: true, projected: false })
+    expect(fallback).toMatchObject({ assetKey: 'default-agent', fallback: true, projected: false })
 
     const { fixture, scope, triggerSources } = setup()
     await waitFor(() => expect(triggerSources.some(source => source.name === 'paimind-agent')).toBe(true))
@@ -648,7 +648,7 @@ describe('PAIMind visual experience client', () => {
     agentCenter.append(nativeAvatarSeat)
     document.body.append(agentCenter)
     await waitFor(() => expect(agentCenter.querySelectorAll(
-      'img[data-paimind-agent-avatar-owner="@paimind/visual-experience"]',
+      'img[data-paimind-agent-avatar-owner="@hansen/visual-experience"]',
     )).toHaveLength(3))
     const centerKeys = [...agentCenter.querySelectorAll<HTMLElement>('[data-paimind-agent-avatar-owner]')]
       .map(element => element.dataset.paimindAgentAvatarKey)
@@ -661,7 +661,7 @@ describe('PAIMind visual experience client', () => {
     const quickParamont = document.querySelector<HTMLImageElement>(
       '[data-paimind-quick-agent] [data-paimind-agent-avatar-id="paimind"]',
     )
-    expect(quickParamont).toHaveAttribute('data-paimind-agent-avatar-key', 'paramont-brand-fallback')
+    expect(quickParamont).toHaveAttribute('data-paimind-agent-avatar-key', 'default-agent')
     expect(quickParamont).not.toHaveAttribute('data-paimind-agent-avatar-fallback')
     const quickKeys = [...document.querySelectorAll<HTMLElement>('[data-paimind-quick-agent] [data-paimind-agent-avatar-key]')]
       .map(element => element.dataset.paimindAgentAvatarKey)
@@ -687,7 +687,7 @@ describe('PAIMind visual experience client', () => {
     const overlay = document.querySelector<HTMLElement>("[data-slot='conversation.input.overlay']")!
     overlay.innerHTML = `<div role="listbox"><button id="dsh-slash-option-paimind-agent-0" role="option"><span aria-hidden="true">${token}</span><span>Paramont 助手</span></button></div>`
     await waitFor(() => expect(overlay.querySelector(
-      '[data-paimind-agent-avatar-id="paimind"][data-paimind-agent-avatar-key="paramont-brand-fallback"]',
+      '[data-paimind-agent-avatar-id="paimind"][data-paimind-agent-avatar-key="default-agent"]',
     )).not.toBeNull())
     const menuAvatar = overlay.querySelector<HTMLImageElement>('img[data-paimind-agent-avatar-id="paimind"]')
     await waitFor(() => expect(menuAvatar?.src).toBe(quickParamont?.src))
@@ -705,7 +705,7 @@ describe('PAIMind visual experience client', () => {
 
   it('limits Focus Density to collapsed semantic rows and honors reduced motion', () => {
     const { fixture } = setup(successfulApi(), 'paimind')
-    const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@paimind/visual-experience"]')?.textContent ?? ''
+    const style = document.querySelector<HTMLStyleElement>('style[data-paimind-plugin="@hansen/visual-experience"]')?.textContent ?? ''
     expect(style).toContain("[data-variant][aria-expanded='false']")
     expect(style).toContain("[data-disclosure-row][aria-expanded='false']")
     expect(style).toContain('min-height:24px!important')

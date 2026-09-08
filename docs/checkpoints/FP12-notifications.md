@@ -33,7 +33,7 @@ flowchart LR
 5. A real Read Only generation returned `generation_failed`; no target file, available Artifact or success notification appeared, and native conversation continued.
 6. Chinese/Dark, English/Light and 560×800 full-width Drawer behavior passed. Escape dismissed the narrow Drawer.
 7. Browser hit testing exposed a real stacking defect: notification buttons were visually present but events reached the underlying Better Sidebar Task Manager. The Overlay now renders through a `document.body` portal at an independent shell layer; all filters/actions hit their own buttons.
-8. A live profile without `@paimind/notifications` preserved Task Monitor, conversation, Composer, both Deliverables, Artifact Viewer and Extension Center. The formal Bundle was restored afterward and the durable messages returned.
+8. A live profile without `@hansen/notifications` preserved Task Monitor, conversation, Composer, both Deliverables, Artifact Viewer and Extension Center. The formal Bundle was restored afterward and the durable messages returned.
 
 ## Verification matrix
 

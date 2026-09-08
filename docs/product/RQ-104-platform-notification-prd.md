@@ -38,7 +38,7 @@ PAIMind 通知是平台级 Message Delivery（消息投递）能力：业务系�
 
 ## 外部调用契约
 
-业务系统通过独立的 `@paimind/platform-sdk` 调用：
+业务系统通过独立的 `@hansen/platform-sdk` 调用：
 
 ```ts
 await client.notifications.send({

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { PaimindToolRunContext } from '@paimind/harness-compat/host'
+import type { PaimindToolRunContext } from '@hansen/harness-compat/host'
 import { PAIMIND_AGENT_PROMPT_ACTION_ID } from '../src/agent-action.ts'
 import {
   installPaimindScheduleAgentTool,

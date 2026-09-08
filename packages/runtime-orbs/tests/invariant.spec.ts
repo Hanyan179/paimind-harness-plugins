@@ -9,7 +9,7 @@ describe('runtime-orbs invariant companion', () => {
     const dispose = vi.fn()
     const register = vi.fn(() => dispose)
     expect(apply({ invariants: { register } })).toBe(dispose)
-    expect(register).toHaveBeenCalledWith('@paimind/runtime-orbs', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('@hansen/runtime-orbs', expect.any(Function))
   })
 
   it('releases the real Harness invariant registration before a second activation', async () => {

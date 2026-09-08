@@ -6,7 +6,7 @@ import {
   type PaimindClientContext,
   type PaimindSettingsScope,
   type PaimindSettingsScopeSnapshot,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import {
   DEFAULT_PAIMIND_PERSONALIZATION,
   PAIMIND_PERSONALITIES,
@@ -37,7 +37,7 @@ export interface UserSettingsClientContext extends PaimindClientContext {
   ): PromiseLike<unknown> & { dispose(): Promise<void> }
 }
 
-const STYLE_ID = '@paimind/user-settings'
+const STYLE_ID = '@hansen/user-settings'
 const STYLE = `
 [data-paimind-user-settings]{box-sizing:border-box;min-height:100%;padding:24px;color:var(--dsw-alias-label-primary,#202124);font:inherit}
 [data-paimind-user-settings] *{box-sizing:border-box}
@@ -85,7 +85,7 @@ function installStyle(): () => void {
   return () => { style.remove() }
 }
 
-/** Browser projection over the PAIMind-owned Host Remote; persistence stays native Settings. */
+/** Browser projection over the Host Remote; persistence stays native Settings. */
 export class RemotePaimindSettingsScope implements PaimindSettingsScope<PaimindPersonalization> {
   private snapshot: PaimindSettingsScopeSnapshot<PaimindPersonalization> = Object.freeze({
     status: 'loading', value: undefined, base: undefined, user: undefined,
@@ -180,7 +180,7 @@ export function UserSettingsSection({ scope, zh }: { readonly scope: PaimindSett
   if (snapshot.status === 'loading') return <div data-paimind-user-settings-state aria-busy="true">{zh ? '正在读取 Harness 设置…' : 'Reading Harness settings…'}</div>
   if (snapshot.status === 'unavailable') return <div data-paimind-user-settings-state data-settings-mode={snapshot.mode} role="status">{snapshot.mode === 'memory'
     ? (zh ? '当前远程连接按 Harness 规则仅允许进程内设置；不会伪造持久化。' : 'Harness keeps settings process-local for this remote connection. No persistence is simulated.')
-    : (zh ? 'PAIMind 个性化命名空间当前未由主机提供；不会回退到浏览器临时存储。' : 'The PAIMind Personalization namespace is not exposed by this Host. No browser-storage fallback is used.')}</div>
+    : (zh ? '个性化命名空间当前未由主机提供；不会回退到浏览器临时存储。' : 'The Personalization namespace is not exposed by this Host. No browser-storage fallback is used.')}</div>
 
   const setField = async <Key extends keyof PaimindPersonalization>(field: Key, value: PaimindPersonalization[Key]): Promise<void> => {
     setFeedback(zh ? '正在保存…' : 'Saving…')
@@ -206,7 +206,7 @@ export function UserSettingsSection({ scope, zh }: { readonly scope: PaimindSett
     <header data-paimind-user-settings-header>
       <div data-paimind-user-settings-header-copy>
         <h2>{zh ? '个性化' : 'Personalization'}</h2>
-        <p>{zh ? '设置 PAIMind 了解你的方式和默认沟通风格。个性化只改变协作方式，不改变智能体能力。' : 'Set what PAIMind knows about you and its default communication style. Personalization changes collaboration style, not Agent capabilities.'}</p>
+        <p>{zh ? '设置助手了解你的方式和默认沟通风格。个性化只改变协作方式，不改变智能体能力。' : 'Set what the assistant knows about you and its default communication style. Personalization changes collaboration style, not Agent capabilities.'}</p>
       </div>
       <button
         type="button"
@@ -218,7 +218,7 @@ export function UserSettingsSection({ scope, zh }: { readonly scope: PaimindSett
         onClick={() => { void setField('enabled', !personalization.enabled) }}
       />
     </header>
-    <div data-paimind-personalization-scope>{zh ? '所有 PAIMind 智能体 · 从保存后的下一次回复起' : 'All PAIMind Agents · From the next response after saving'}</div>
+    <div data-paimind-personalization-scope>{zh ? '所有智能体 · 从保存后的下一次回复起' : 'All Agents · From the next response after saving'}</div>
     <div data-paimind-user-settings-grid>
       <article data-paimind-user-setting-card>
         <h3>{zh ? '个性' : 'Personality'}</h3>
@@ -233,11 +233,11 @@ export function UserSettingsSection({ scope, zh }: { readonly scope: PaimindSett
       <article data-paimind-user-setting-card>
         <h3>{zh ? '关于你' : 'About you'}</h3>
         <p>{zh ? '填写长期稳定、确实会帮助协作的信息。不要填写密码或敏感凭证。' : 'Add stable details that genuinely improve collaboration. Do not enter passwords or sensitive credentials.'}</p>
-        <label>{zh ? 'PAIMind 应该了解什么？' : 'What should PAIMind know?'}<textarea maxLength={2_000} disabled={!snapshot.writable} value={aboutMe} placeholder={zh ? '例如：我是企业 AI 产品经理，偏好先看结论和可执行的下一步。' : 'For example: I am an enterprise AI product manager and prefer conclusions and actionable next steps first.'} onChange={event => { setAboutMe(event.currentTarget.value) }} /></label>
+        <label>{zh ? '助手应该了解什么？' : 'What should the assistant know?'}<textarea maxLength={2_000} disabled={!snapshot.writable} value={aboutMe} placeholder={zh ? '例如：我是企业 AI 产品经理，偏好先看结论和可执行的下一步。' : 'For example: I am an enterprise AI product manager and prefer conclusions and actionable next steps first.'} onChange={event => { setAboutMe(event.currentTarget.value) }} /></label>
       </article>
       <article data-paimind-user-setting-card>
         <h3>{zh ? '自定义指令' : 'Custom instructions'}</h3>
-        <p>{zh ? '补充你希望 PAIMind 默认遵循的协作要求；当前对话中的明确要求始终优先。' : 'Add collaboration defaults for PAIMind. Explicit instructions in the current conversation always take precedence.'}</p>
+        <p>{zh ? '补充你希望助手默认遵循的协作要求；当前对话中的明确要求始终优先。' : 'Add collaboration defaults for the assistant. Explicit instructions in the current conversation always take precedence.'}</p>
         <label>{zh ? '特别要求' : 'Additional instructions'}<textarea maxLength={3_000} disabled={!snapshot.writable} value={customInstructions} placeholder={zh ? '例如：涉及产品方案时，明确区分已实现、设计中和待验证。' : 'For example: In product proposals, distinguish implemented, designed, and unverified work.'} onChange={event => { setCustomInstructions(event.currentTarget.value) }} /></label>
         <div data-paimind-user-settings-actions>
           <button type="button" data-primary="true" disabled={!snapshot.writable || !textChanged} onClick={() => { void saveText() }}>{zh ? '保存个性化' : 'Save personalization'}</button>
@@ -254,11 +254,11 @@ export async function apply(ctx: UserSettingsClientContext): Promise<() => Promi
   const disposeRemote = await ctx.remote.$mount(TYPERT_REMOTE)
   const mounted = ctx.inject([...BASE_INJECT, 'remote.paimindUserSettings'], scopeCtx => {
     const remote = scopeCtx.remote.paimindUserSettings
-    if (remote === undefined) throw new Error('PAIMind User Settings Remote did not mount')
+    if (remote === undefined) throw new Error('User Settings Remote did not mount')
     const scope = new RemotePaimindSettingsScope(remote)
     scopeCtx.effect(installStyle, 'paimind-user-settings: style')
     contributePaimindExtension(scopeCtx.slots, {
-      id: 'paimind:user-settings', packageName: '@paimind/user-settings', category: 'experience',
+      id: 'paimind:user-settings', packageName: '@hansen/user-settings', category: 'experience',
       nameZh: '个性化', nameEn: 'Personalization',
       descriptionZh: '参考 Codex 的个性、关于你和自定义指令，并注入可追踪的用户上下文。',
       descriptionEn: 'Codex-inspired personality, about-you details, and custom instructions as traceable user context.',

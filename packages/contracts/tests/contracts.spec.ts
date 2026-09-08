@@ -105,7 +105,7 @@ describe('migration contracts', () => {
     })).toMatchObject({ canonicalId: 'system:genui', userControl: 'locked' })
     expect(() => definePaimindSkillReference({
       kind: 'system', canonicalId: 'system:search', name: 'search', description: 'Search',
-      availability: 'optional', userControl: 'locked', sourcePluginId: '@paimind/search',
+      availability: 'optional', userControl: 'locked', sourcePluginId: '@hansen/search',
     } as never)).toThrow(/lifecycle/)
     expect(() => definePaimindSkillReference({
       kind: 'business', canonicalId: 'business:wrong', name: 'delivery-risk', description: 'Review risk',

@@ -33,11 +33,11 @@ Skill Center 与 Agent Center 不各自生成一份目录。两者只提供不�
 | Object（对象） | Canonical owner（权威所有者） | Persistence（持久化） | Product surface（产品界面） |
 | --- | --- | --- | --- |
 | System Skill Definition（系统技能定义） | Harness 或提供能力的 Source Plugin（来源插件） | 源码包、Bundled Root（内置目录）或 `ctx.skills.register()` | Skill Center 的 `内置` 定义只读视图 |
-| Business Skill Package（业务技能包） | `@paimind/skill-market` | `$DSH_HOME/.paimind-skill-market/skills/<name>/` | `市场 / 已安装 / 添加技能` |
-| User Skill Policy（用户技能策略） | `@paimind/skill-market` | 用户级可用状态、普通对话默认选择；只保存 Skill Reference（技能引用） | `内置 / 已安装` 的开关和使用范围 |
+| Business Skill Package（业务技能包） | `@hansen/skill-market` | `$DSH_HOME/.paimind-skill-market/skills/<name>/` | `市场 / 已安装 / 添加技能` |
+| User Skill Policy（用户技能策略） | `@hansen/skill-market` | 用户级可用状态、普通对话默认选择；只保存 Skill Reference（技能引用） | `内置 / 已安装` 的开关和使用范围 |
 | Session Skill Attachment（会话技能挂载） | 当前 Live Session（实时会话）；Skill Center 只做产品投影 | 当前进程内的 Agent-scoped Native Provider（智能体作用域原生提供方），不得写入 Persona 或自定义未知 Session Event（会话事件） | 已安装详情中的 `用于当前对话` |
 | Agent Skill Attachment（智能体技能挂载） | Harness Agent Preset（宿主智能体预设）；Agent Center 只做产品投影 | Agent Profile（智能体配置）中的 Business Skill Reference（业务技能引用）；不生成第二个可扫描技能目录 | Agent Builder（智能体构建器）及已安装详情中的确认入口 |
-| Skill Scope Resolver（技能作用域解析器） | `@paimind/skill-market` Runtime Service（运行时服务） | 不持久化结果；通过公开 Contract（契约）读取用户策略、Agent 绑定和 Session 选择 | 无独立页面 |
+| Skill Scope Resolver（技能作用域解析器） | `@hansen/skill-market` Runtime Service（运行时服务） | 不持久化结果；通过公开 Contract（契约）读取用户策略、Agent 绑定和 Session 选择 | 无独立页面 |
 | Connector/MCP（连接器/模型上下文协议） | MCP Client/Tool Registry（连接器客户端/工具注册表） | 独立连接配置、授权与 Tool 生命周期 | 后续 Connector Center（连接器中心） |
 
 Skill Center 不创建 Skill Runtime ID（技能运行标识）、Skill Body Store（技能正文存储）、Invocation RPC（调用接口）或重复注册表。业务目录中的稳定身份仍是符合 Agent Skills 规范的 `name` 与目录。
@@ -91,7 +91,7 @@ Agent Session（智能体会话）默认不继承 `UserDefaultBusiness`，以保
 - 同一个 Business Skill 同时被 Agent 和 Session 选择时，只出现一次目录摘要，并加载同一份受管目录正文。
 - User Policy（用户策略）是 Eligibility Gate（可用性门禁）：停用后保留 Agent 与 Session 的引用但不进入有效目录，重新启用后可恢复；界面必须提示受影响的引用数量。
 - System Skill 定义不可由用户编辑或卸载；只有 Source Plugin 能按用户作用域原子关闭摘要、正文、必需 Tool 和客户端能力时，才可标记为 Optional（可选）。其余能力保持 Mandatory（必需）和锁定状态，并说明原因。
-- 当前 Lifecycle Classification（生命周期分类）为：`paimind-skill-installation`、`paimind-skill-authoring`、`paimind-agent-authoring` 与 `genui` 均已接入同一 User Skill Policy（用户技能策略），默认开启并允许用户关闭。前两项由 `@paimind/skill-market` 管理 Skill（技能）与私有 Tool（工具）的原子生命周期；Agent Authoring（智能体创作）由 `@paimind/agent-builder` 的来源执行器控制并保留独立安全 Guard（守卫）；GenUI（生成式界面）通过独立 Harness Loader Entry（宿主加载器条目）整体启停。切换不重启 Host（宿主）；只有 GenUI 的浏览器 Client Module（客户端模块）变化需要重新加载应用壳。
+- 当前 Lifecycle Classification（生命周期分类）为：`paimind-skill-installation`、`paimind-skill-authoring`、`paimind-agent-authoring` 与 `genui` 均已接入同一 User Skill Policy（用户技能策略），默认开启并允许用户关闭。前两项由 `@hansen/skill-market` 管理 Skill（技能）与私有 Tool（工具）的原子生命周期；Agent Authoring（智能体创作）由 `@hansen/agent-builder` 的来源执行器控制并保留独立安全 Guard（守卫）；GenUI（生成式界面）通过独立 Harness Loader Entry（宿主加载器条目）整体启停。切换不重启 Host（宿主）；只有 GenUI 的浏览器 Client Module（客户端模块）变化需要重新加载应用壳。
 - Session 选择是临时作用域，不修改 Agent Profile；Agent 选择是持久作用域，新会话直接使用，已激活会话在下一轮前重新解析。
 - 当前 Harness 的持久化事件词表不接受下游 Plugin 自定义必需事件，公开 `Session.append()` 也不能为该事件安全写入 `ignorable` 标记；因此本版本的 Session 选择只在当前宿主进程和 Live Session 生命周期内有效。不得为了跨重启恢复而追加未知事件、借用无关事件或建立 PAIMind 影子会话存储。
 - Agent Center 只保存 Persona、目标、行为约束和 Business Skill Reference；它不得拼接第二份 Skill Catalog 或把 Skill 名称、摘要、正文复制进 Persona。

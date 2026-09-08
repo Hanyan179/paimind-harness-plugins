@@ -1,6 +1,6 @@
-import type { PaimindInvariantContext } from '@paimind/harness-compat'
+import type { PaimindInvariantContext } from '@hansen/harness-compat'
 
-const PACKAGE_NAME = '@paimind/artifact-runtime'
+const PACKAGE_NAME = '@hansen/artifact-runtime'
 
 export const inject = ['invariants']
 

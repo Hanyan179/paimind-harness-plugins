@@ -13,10 +13,10 @@
       name: '@deepseek-ai/dsh-invariants'
 
     - id: paimind-extension-center
-      name: '@paimind/extension-center'
+      name: '@hansen/extension-center'
 
     - id: paimind-extension-center-invariant
-      name: '@paimind/extension-center/invariant'
+      name: '@hansen/extension-center/invariant'
       inject: [invariants]
 
     # Each package invariant shares the lifecycle of its Product Feature Pack.
@@ -29,32 +29,32 @@
       disabled: true
       config:
         - id: paimind-branding-invariant
-          name: '@paimind/branding/invariant'
+          name: '@hansen/branding/invariant'
           inject: [invariants]
         - id: paimind-branding
-          name: '@paimind/branding'
+          name: '@hansen/branding'
         - id: paimind-visual-experience-invariant
-          name: '@paimind/visual-experience/invariant'
+          name: '@hansen/visual-experience/invariant'
           inject: [invariants]
         - id: paimind-visual-experience
-          name: '@paimind/visual-experience'
+          name: '@hansen/visual-experience'
         - id: paimind-conversation-title-invariant
-          name: '@paimind/conversation-title/invariant'
+          name: '@hansen/conversation-title/invariant'
           inject: [invariants]
         - id: paimind-conversation-title
-          name: '@paimind/conversation-title'
+          name: '@hansen/conversation-title'
         - id: paimind-capability-runtime-orbs
           name: cordis:group
           group: true
           disabled: true
           config:
             - id: paimind-runtime-orbs-invariant
-              name: '@paimind/runtime-orbs/invariant'
+              name: '@hansen/runtime-orbs/invariant'
               inject: [invariants]
             - id: paimind-runtime-orbs
-              name: '@paimind/runtime-orbs'
+              name: '@hansen/runtime-orbs'
         - id: paimind-user-settings
-          name: '@paimind/user-settings'
+          name: '@hansen/user-settings'
 
     - id: paimind-pack-agents
       name: cordis:group
@@ -62,20 +62,20 @@
       disabled: true
       config:
         - id: paimind-agent-builder-invariant
-          name: '@paimind/agent-builder/invariant'
+          name: '@hansen/agent-builder/invariant'
           inject: [invariants]
         - id: paimind-agent-builder
-          name: '@paimind/agent-builder'
+          name: '@hansen/agent-builder'
         - id: paimind-skill-market-invariant
-          name: '@paimind/skill-market/invariant'
+          name: '@hansen/skill-market/invariant'
           inject: [invariants]
         - id: paimind-skill-market
-          name: '@paimind/skill-market'
+          name: '@hansen/skill-market'
         - id: paimind-agent-market-invariant
-          name: '@paimind/agent-market/invariant'
+          name: '@hansen/agent-market/invariant'
           inject: [invariants]
         - id: paimind-agent-market
-          name: '@paimind/agent-market'
+          name: '@hansen/agent-market'
 
     - id: paimind-pack-content
       name: cordis:group
@@ -83,55 +83,55 @@
       disabled: true
       config:
         - id: paimind-workspace-project-invariant
-          name: '@paimind/workspace-project/invariant'
+          name: '@hansen/workspace-project/invariant'
           inject: [invariants]
         - id: paimind-workspace-project
-          name: '@paimind/workspace-project'
+          name: '@hansen/workspace-project'
         - id: paimind-workspace-blueprints-invariant
-          name: '@paimind/workspace-blueprints/invariant'
+          name: '@hansen/workspace-blueprints/invariant'
           inject: [invariants]
         - id: paimind-workspace-blueprints
-          name: '@paimind/workspace-blueprints'
+          name: '@hansen/workspace-blueprints'
         - id: paimind-better-sidebar-adapter-invariant
-          name: '@paimind/better-sidebar-adapter/invariant'
+          name: '@hansen/better-sidebar-adapter/invariant'
           inject: [invariants]
         - id: paimind-better-sidebar-adapter
-          name: '@paimind/better-sidebar-adapter'
+          name: '@hansen/better-sidebar-adapter'
         - id: paimind-artifact-runtime-invariant
-          name: '@paimind/artifact-runtime/invariant'
+          name: '@hansen/artifact-runtime/invariant'
           inject: [invariants]
         - id: paimind-artifact-runtime
-          name: '@paimind/artifact-runtime'
+          name: '@hansen/artifact-runtime'
         - id: paimind-generator-web-invariant
-          name: '@paimind/generator-web/invariant'
+          name: '@hansen/generator-web/invariant'
           inject: [invariants]
         - id: paimind-generator-web
-          name: '@paimind/generator-web'
+          name: '@hansen/generator-web'
         - id: paimind-generator-office-invariant
-          name: '@paimind/generator-office/invariant'
+          name: '@hansen/generator-office/invariant'
           inject: [invariants]
         - id: paimind-generator-office
-          name: '@paimind/generator-office'
+          name: '@hansen/generator-office'
         - id: paimind-renderer-bento-invariant
-          name: '@paimind/renderer-bento/invariant'
+          name: '@hansen/renderer-bento/invariant'
           inject: [invariants]
         - id: paimind-renderer-bento
-          name: '@paimind/renderer-bento'
+          name: '@hansen/renderer-bento'
         - id: paimind-renderer-pdf-invariant
-          name: '@paimind/renderer-pdf/invariant'
+          name: '@hansen/renderer-pdf/invariant'
           inject: [invariants]
         - id: paimind-renderer-pdf
-          name: '@paimind/renderer-pdf'
+          name: '@hansen/renderer-pdf'
         - id: paimind-artifacts-invariant
-          name: '@paimind/artifacts/invariant'
+          name: '@hansen/artifacts/invariant'
           inject: [invariants]
         - id: paimind-artifacts
-          name: '@paimind/artifacts'
+          name: '@hansen/artifacts'
         - id: paimind-conversation-artifact-renderer-invariant
-          name: '@paimind/conversation-artifact-renderer/invariant'
+          name: '@hansen/conversation-artifact-renderer/invariant'
           inject: [invariants]
         - id: paimind-conversation-artifact-renderer
-          name: '@paimind/conversation-artifact-renderer'
+          name: '@hansen/conversation-artifact-renderer'
 
     - id: paimind-pack-proposal
       name: cordis:group
@@ -139,35 +139,35 @@
       disabled: true
       config:
         - id: paimind-category-analysis-adapter-invariant
-          name: '@paimind/category-analysis-adapter/invariant'
+          name: '@hansen/category-analysis-adapter/invariant'
           inject: [invariants]
         - id: paimind-category-analysis-adapter
-          name: '@paimind/category-analysis-adapter'
+          name: '@hansen/category-analysis-adapter'
         - id: paimind-fact-layer-invariant
-          name: '@paimind/fact-layer/invariant'
+          name: '@hansen/fact-layer/invariant'
           inject: [invariants]
         - id: paimind-fact-layer
-          name: '@paimind/fact-layer'
+          name: '@hansen/fact-layer'
         - id: paimind-generator-bento-invariant
-          name: '@paimind/generator-bento/invariant'
+          name: '@hansen/generator-bento/invariant'
           inject: [invariants]
         - id: paimind-generator-bento
-          name: '@paimind/generator-bento'
+          name: '@hansen/generator-bento'
         - id: paimind-presentation-trace-invariant
-          name: '@paimind/presentation-trace/invariant'
+          name: '@hansen/presentation-trace/invariant'
           inject: [invariants]
         - id: paimind-presentation-trace
-          name: '@paimind/presentation-trace'
+          name: '@hansen/presentation-trace'
         - id: paimind-proposal-experience-invariant
-          name: '@paimind/proposal-experience/invariant'
+          name: '@hansen/proposal-experience/invariant'
           inject: [invariants]
         - id: paimind-proposal-experience
-          name: '@paimind/proposal-experience'
+          name: '@hansen/proposal-experience'
         - id: paimind-walmart-proposal-adapter-invariant
-          name: '@paimind/walmart-proposal-adapter/invariant'
+          name: '@hansen/walmart-proposal-adapter/invariant'
           inject: [invariants]
         - id: paimind-walmart-proposal-adapter
-          name: '@paimind/walmart-proposal-adapter'
+          name: '@hansen/walmart-proposal-adapter'
 
     - id: paimind-pack-automation
       name: cordis:group
@@ -175,40 +175,40 @@
       disabled: true
       config:
         - id: paimind-notifications-invariant
-          name: '@paimind/notifications/invariant'
+          name: '@hansen/notifications/invariant'
           inject: [invariants]
         - id: paimind-notifications
-          name: '@paimind/notifications'
+          name: '@hansen/notifications'
         - id: paimind-platform-scheduler-invariant
-          name: '@paimind/platform-scheduler/invariant'
+          name: '@hansen/platform-scheduler/invariant'
           inject: [invariants]
         - id: paimind-platform-scheduler
-          name: '@paimind/platform-scheduler'
+          name: '@hansen/platform-scheduler'
         - id: paimind-scheduler-adapter-harness-invariant
-          name: '@paimind/scheduler-adapter-harness/invariant'
+          name: '@hansen/scheduler-adapter-harness/invariant'
           inject: [invariants]
         - id: paimind-scheduler-adapter-harness
-          name: '@paimind/scheduler-adapter-harness'
+          name: '@hansen/scheduler-adapter-harness'
         - id: paimind-scheduler-agent-action
-          name: '@paimind/scheduler-adapter-harness/agent-action'
+          name: '@hansen/scheduler-adapter-harness/agent-action'
         - id: paimind-scheduler-agent-tool
-          name: '@paimind/scheduler-adapter-harness/agent-tool'
+          name: '@hansen/scheduler-adapter-harness/agent-tool'
           inject: [paimindScheduler, tools, systemPrompt, sessionTitle]
         - id: paimind-scheduler-adapter-http-invariant
-          name: '@paimind/scheduler-adapter-http/invariant'
+          name: '@hansen/scheduler-adapter-http/invariant'
           inject: [invariants]
         - id: paimind-scheduler-adapter-http
-          name: '@paimind/scheduler-adapter-http'
+          name: '@hansen/scheduler-adapter-http'
         - id: paimind-platform-api-invariant
-          name: '@paimind/platform-api/invariant'
+          name: '@hansen/platform-api/invariant'
           inject: [invariants]
         - id: paimind-platform-api
-          name: '@paimind/platform-api'
+          name: '@hansen/platform-api'
         - id: paimind-scheduler-adapter-feishu-bot-invariant
-          name: '@paimind/scheduler-adapter-feishu-bot/invariant'
+          name: '@hansen/scheduler-adapter-feishu-bot/invariant'
           inject: [invariants]
         - id: paimind-scheduler-adapter-feishu-bot
-          name: '@paimind/scheduler-adapter-feishu-bot'
+          name: '@hansen/scheduler-adapter-feishu-bot'
 
     - id: paimind-pack-operations
       name: cordis:group
@@ -216,9 +216,9 @@
       disabled: true
       config:
         - id: paimind-task-monitor-invariant
-          name: '@paimind/task-monitor/invariant'
+          name: '@hansen/task-monitor/invariant'
           inject: [invariants]
         - id: paimind-task-monitor
-          name: '@paimind/task-monitor'
+          name: '@hansen/task-monitor'
         - id: paimind-developer-resources
-          name: '@paimind/developer-resources'
+          name: '@hansen/developer-resources'

@@ -17,7 +17,7 @@ for (const entry of await readdir(packagesRoot, { withFileTypes: true })) {
   if (!entry.isDirectory()) continue
   const packageRoot = resolve(packagesRoot, entry.name)
   const manifest = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'))
-  if (manifest.paimindBuild?.client === undefined) continue
+  if (manifest.hansenBuild?.client === undefined) continue
   const clientPath = resolve(packageRoot, 'lib/client.js')
   const mapPath = `${clientPath}.map`
   const bytes = (await stat(clientPath)).size

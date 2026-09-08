@@ -6,6 +6,6 @@ describe('visual experience invariant companion', () => {
     const dispose = vi.fn()
     const register = vi.fn(() => dispose)
     expect(apply({ invariants: { register } })).toBe(dispose)
-    expect(register).toHaveBeenCalledWith('@paimind/visual-experience', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('@hansen/visual-experience', expect.any(Function))
   })
 })

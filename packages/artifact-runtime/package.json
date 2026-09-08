@@ -1,9 +1,9 @@
 {
-  "name": "@paimind/artifact-runtime",
+  "name": "@hansen/artifact-runtime",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "Native Harness Job and tool-result projection runtime for PAIMind artifacts",
+  "description": "Native Harness Job and tool-result projection runtime for Hansen artifacts",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -14,9 +14,9 @@
   },
   "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "dependencies": {
-    "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^"
+    "@hansen/contracts": "workspace:^",
+    "@hansen/harness-compat": "workspace:^"
   },
-  "paimindBuild": { "node": ["src/index.ts", "src/invariant.ts"] },
+  "hansenBuild": { "node": ["src/index.ts", "src/invariant.ts"] },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }

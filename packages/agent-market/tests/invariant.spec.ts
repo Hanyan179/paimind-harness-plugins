@@ -6,6 +6,6 @@ describe('FP09 agent-market invariant companion', () => {
     const register = vi.fn(() => () => {})
     apply({ invariants: { register } })
     expect(name).toBe('paimind-agent-market-invariant')
-    expect(register).toHaveBeenCalledWith('@paimind/agent-market', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('@hansen/agent-market', expect.any(Function))
   })
 })

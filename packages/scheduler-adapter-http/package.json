@@ -1,9 +1,9 @@
 {
-  "name": "@paimind/scheduler-adapter-http",
+  "name": "@hansen/scheduler-adapter-http",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "Signed HTTPS 202 and asynchronous callback adapter for PAIMind Scheduler",
+  "description": "Signed HTTPS 202 and asynchronous callback adapter for Hansen Scheduler",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -14,12 +14,12 @@
   },
   "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "dependencies": {
-    "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^",
-    "@paimind/platform-sdk": "workspace:^",
-    "@paimind/platform-scheduler": "workspace:^"
+    "@hansen/contracts": "workspace:^",
+    "@hansen/harness-compat": "workspace:^",
+    "@hansen/platform-sdk": "workspace:^",
+    "@hansen/platform-scheduler": "workspace:^"
   },
-  "devDependencies": { "@paimind/testkit": "workspace:^" },
-  "paimindBuild": { "node": ["src/index.ts", "src/invariant.ts"] },
+  "devDependencies": { "@hansen/testkit": "workspace:^" },
+  "hansenBuild": { "node": ["src/index.ts", "src/invariant.ts"] },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }

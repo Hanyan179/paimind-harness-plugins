@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { NotificationRecord } from '@paimind/contracts'
-import type { PaimindStorageTable } from '@paimind/harness-compat/host'
+import type { NotificationRecord } from '@hansen/contracts'
+import type { PaimindStorageTable } from '@hansen/harness-compat/host'
 import {
   PaimindNotificationsService,
   artifactNotificationFailureBody,

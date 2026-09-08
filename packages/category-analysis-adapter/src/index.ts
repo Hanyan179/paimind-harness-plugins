@@ -3,16 +3,16 @@ import { resolve } from 'node:path'
 import {
   artifactToolMeta, artifactWorkspaceRelativePath, presentArtifactToolResult, requireCurrentSessionArtifact,
   type PaimindArtifactGeneratorService, type PaimindGeneratorProvider,
-} from '@paimind/artifact-runtime'
+} from '@hansen/artifact-runtime'
 import {
   defineArtifactProducedEnvelope,
   type ArtifactProducedEnvelopeV1,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import {
   definePaimindHarnessTool,
   type PaimindHostSessionProjectionRegistry, type PaimindHostSystemPrompt,
   type PaimindHostToolRegistry, type PaimindToolRunContext,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 
 export const name = 'paimind-category-analysis-adapter'
 export const inject = ['paimindArtifactGenerators', 'tools', 'systemPrompt', 'sessionProjections']

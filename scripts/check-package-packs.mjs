@@ -32,10 +32,10 @@ for (const pkg of packages) {
       .filter(target => target.startsWith('./') && target.endsWith('.js'))
       .map(target => target.slice(2)),
   )
-  for (const source of pkg.manifest.paimindBuild?.node ?? []) {
+  for (const source of pkg.manifest.hansenBuild?.node ?? []) {
     declaredRuntime.add(`lib/${source.replace(/^src\//, '').replace(/\.tsx?$/, '.js')}`)
   }
-  if (pkg.manifest.paimindBuild?.client) declaredRuntime.add('lib/client.js')
+  if (pkg.manifest.hansenBuild?.client) declaredRuntime.add('lib/client.js')
   for (const path of packed) {
     if (forbidden.some(pattern => pattern.test(path))) {
       failures.push(`${pkg.manifest.name}: forbidden packed file ${path}`)

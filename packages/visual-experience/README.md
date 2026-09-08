@@ -1,12 +1,12 @@
-# `@paimind/visual-experience`
+# `@hansen/visual-experience`
 
-Reversible PAIMind visual and interaction experience layer for DeepSeek Harness.
+Reversible configurable visual and interaction experience layer for DeepSeek Harness.
 
 Package rules: [Plugin Authoring Standard](../../docs/standards/plugin-authoring.md).
 
 ## Responsibility
 
-Role: **Client plugin**. It owns theme overrides, PAIMind design tokens, semantic experience markers, welcome presentation, Quick Agents, compact Agent Preset presentation and focus/workbench density. `@paimind/branding` remains the owner of product identity; Harness remains the canonical owner of Agent Presets, Sessions, Settings and runtime state.
+Role: **Client plugin**. It owns theme overrides, shared design tokens, semantic experience markers, welcome presentation, Quick Agents, compact Agent Preset presentation and focus/workbench density. `@hansen/branding` remains the owner of product identity; Harness remains the canonical owner of Agent Presets, Sessions, Settings and runtime state.
 
 ## Public entry points
 
@@ -20,7 +20,7 @@ Role: **Client plugin**. It owns theme overrides, PAIMind design tokens, semanti
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/branding`, `@paimind/harness-compat` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/branding`, `@hansen/harness-compat` (`workspace:^`).
 - Host Settings dependencies: `@deepseek-ai/cordis`, `@deepseek-ai/dsh-settings`, `@deepseek-ai/schemastery`.
 - External peer dependencies: `react`, `react-dom` (`>=18.0.0 <20.0.0`).
 - Client injection: native connection, locale, runtime, Agent Preset, conversation, layout, primitives, Settings, slots, theme and workspace services.

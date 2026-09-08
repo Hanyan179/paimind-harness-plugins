@@ -7,13 +7,13 @@ import {
   type ErrorInfo,
   type ReactNode,
 } from 'react'
-import type { PaimindExtensionDescriptor } from '@paimind/contracts'
+import type { PaimindExtensionDescriptor } from '@hansen/contracts'
 import {
   contributePaimindExtension,
   type HarnessPluginInventorySnapshot,
   type HarnessSettingsSectionOwnerProps,
   type PaimindDeveloperResourcesClientContext,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import {
   PAIMIND_INTEGRATION_REFERENCES,
   paimindInventoryEntries,
@@ -25,9 +25,9 @@ import {
 export const inject = ['slots', 'locale', 'remote', 'remote.pluginInventory']
 
 const EXTENSION_SLOT = 'paimind.extension'
-const STYLE_ID = '@paimind/developer-resources'
+const STYLE_ID = '@hansen/developer-resources'
 const SELF: PaimindExtensionDescriptor = {
-  id: 'paimind:developer-resources', packageName: '@paimind/developer-resources', category: 'developer',
+  id: 'paimind:developer-resources', packageName: '@hansen/developer-resources', category: 'developer',
   nameZh: '开发者资源', nameEn: 'Developer Resources',
   descriptionZh: '原生 Plugin Inventory 实时诊断、当前扩展表面目录与随包发布的集成契约参考。',
   descriptionEn: 'Native Plugin Inventory diagnostics, current extension surfaces, and bundled integration contract reference.',
@@ -84,7 +84,7 @@ function isDescriptor(value: unknown): value is Readonly<PaimindExtensionDescrip
   if (typeof value !== 'object' || value === null) return false
   const candidate = value as Partial<PaimindExtensionDescriptor>
   return typeof candidate.id === 'string' && candidate.id.startsWith('paimind:')
-    && typeof candidate.packageName === 'string' && candidate.packageName.startsWith('@paimind/')
+    && typeof candidate.packageName === 'string' && candidate.packageName.startsWith('@hansen/')
     && typeof candidate.category === 'string' && typeof candidate.surface === 'string'
 }
 
@@ -166,7 +166,7 @@ export function DeveloperResourcesSection(props: DeveloperResourcesProps): React
     diagnostics: { zh: '实时诊断', en: 'Live Diagnostics' }, surfaces: { zh: '表面目录', en: 'Surface Catalog' }, reference: { zh: '集成参考', en: 'Integration Reference' },
   }
 
-  return <section data-paimind-developer-resources aria-label={zh ? 'PAIMind 开发者资源' : 'PAIMind Developer Resources'}>
+  return <section data-paimind-developer-resources aria-label={zh ? '开发者资源' : 'Developer Resources'}>
     <header data-paimind-developer-header><h2>{zh ? '开发者资源' : 'Developer Resources'}</h2><p>{zh ? '检查真实 Loader 状态、当前注册的产品表面和随当前包发布的稳定集成边界。' : 'Inspect real Loader state, currently registered product surfaces, and stable integration boundaries shipped with this package.'}</p></header>
     <p data-paimind-developer-boundary>{zh ? 'Harness Plugin Registry 仍独占技术加载、版本、依赖和启停。此页面只读；原生清单未提供版本、依赖图或失败堆栈，因此这里不会猜测。' : 'Harness Plugin Registry remains the sole owner of loading, versions, dependencies, and enablement. This page is read-only. The native inventory exposes no versions, dependency graph, or failure stack, so none are guessed here.'}</p>
     <div data-paimind-developer-tabs role="tablist" aria-label={zh ? '开发者资源类别' : 'Developer resource categories'}>{(Object.keys(tabCopy) as DeveloperTab[]).map(id => <button key={id} type="button" role="tab" data-paimind-developer-tab aria-selected={tab === id} onClick={() => { setTab(id) }}>{tabCopy[id][zh ? 'zh' : 'en']}</button>)}</div>
@@ -175,12 +175,12 @@ export function DeveloperResourcesSection(props: DeveloperResourcesProps): React
     {tab !== 'reference' && inventory.status === 'error' && <div data-paimind-developer-state><p role="alert">{zh ? 'Harness Plugin Inventory 暂时不可用；没有展示缓存或猜测状态。' : 'Harness Plugin Inventory is unavailable. No cached or inferred state is shown.'}</p><button type="button" data-paimind-developer-retry onClick={retry}>{zh ? '重试' : 'Retry'}</button></div>}
 
     {tab === 'diagnostics' && inventory.status === 'ready' && summary !== null && <div role="tabpanel">
-      <div data-paimind-developer-toolbar><div><h3>{zh ? 'PAIMind Loader 实时快照' : 'PAIMind Loader live snapshot'}</h3><p>{zh ? `从当前 Harness 原生清单读取 ${entries.length} 条 @paimind/* Loader 记录。` : `Read ${entries.length} @paimind/* Loader entries from the current native Harness inventory.`}</p></div><button type="button" onClick={retry}>{zh ? '刷新' : 'Refresh'}</button></div>
+      <div data-paimind-developer-toolbar><div><h3>{zh ? 'Loader 实时快照' : 'Loader live snapshot'}</h3><p>{zh ? `从当前 Harness 原生清单读取 ${entries.length} 条 @hansen/* Loader 记录。` : `Read ${entries.length} @hansen/* Loader entries from the current native Harness inventory.`}</p></div><button type="button" onClick={retry}>{zh ? '刷新' : 'Refresh'}</button></div>
       <div data-paimind-developer-summary>{([
         ['total', zh ? '全部记录' : 'Total'], ['active', zh ? '运行中' : 'Active'], ['loading', zh ? '加载流转' : 'Loading'],
         ['failed', zh ? '失败' : 'Failed'], ['disabled', zh ? '已停用' : 'Disabled'], ['unobserved', zh ? '未观测' : 'Unobserved'],
       ] as const).map(([key, label]) => <div key={key} data-paimind-developer-metric data-metric={key}><strong>{summary[key]}</strong><span>{label}</span></div>)}</div>
-      {entries.length === 0 ? <div data-paimind-developer-state>{zh ? '当前原生清单中没有 PAIMind Loader 记录。' : 'No PAIMind Loader entries are present in the native inventory.'}</div> : <ul data-paimind-developer-list>{entries.map(entry => <li key={entry.entryId} data-paimind-developer-row data-loader-entry={entry.entryId}><div data-paimind-developer-row-header><code>{entry.moduleName}</code><span data-paimind-developer-badge data-state={entry.enabled ? (entry.fiberPhase ?? 'unobserved') : 'disabled'}>{entry.enabled ? phaseText(entry.fiberPhase, zh) : (zh ? '已停用' : 'Disabled')}</span></div><code data-paimind-developer-entry-id>{entry.entryId}</code><div data-paimind-developer-badges><span data-paimind-developer-badge>{zh ? '有效启用' : 'Effective enablement'}: {entry.enabled ? 'true' : 'false'}</span><span data-paimind-developer-badge>fiberPhase: {entry.fiberPhase ?? 'null'}</span></div></li>)}</ul>}
+      {entries.length === 0 ? <div data-paimind-developer-state>{zh ? '当前原生清单中没有 Loader 记录。' : 'No Loader entries are present in the native inventory.'}</div> : <ul data-paimind-developer-list>{entries.map(entry => <li key={entry.entryId} data-paimind-developer-row data-loader-entry={entry.entryId}><div data-paimind-developer-row-header><code>{entry.moduleName}</code><span data-paimind-developer-badge data-state={entry.enabled ? (entry.fiberPhase ?? 'unobserved') : 'disabled'}>{entry.enabled ? phaseText(entry.fiberPhase, zh) : (zh ? '已停用' : 'Disabled')}</span></div><code data-paimind-developer-entry-id>{entry.entryId}</code><div data-paimind-developer-badges><span data-paimind-developer-badge>{zh ? '有效启用' : 'Effective enablement'}: {entry.enabled ? 'true' : 'false'}</span><span data-paimind-developer-badge>fiberPhase: {entry.fiberPhase ?? 'null'}</span></div></li>)}</ul>}
     </div>}
 
     {tab === 'surfaces' && inventory.status === 'ready' && <div role="tabpanel">
@@ -189,7 +189,7 @@ export function DeveloperResourcesSection(props: DeveloperResourcesProps): React
     </div>}
 
     {tab === 'reference' && <div role="tabpanel">
-      <div data-paimind-developer-toolbar><div><h3>{zh ? '稳定集成边界' : 'Stable integration boundaries'}</h3><p>{zh ? '这些条目随当前 PAIMind 包版本发布，不是运行时发现结果。升级时以新包中的契约与兼容层为准。' : 'These entries ship with the current PAIMind package version; they are not runtime discovery. On upgrade, use the new package contracts and compatibility layer.'}</p></div></div>
+      <div data-paimind-developer-toolbar><div><h3>{zh ? '稳定集成边界' : 'Stable integration boundaries'}</h3><p>{zh ? '这些条目随当前 包版本发布，不是运行时发现结果。升级时以新包中的契约与兼容层为准。' : 'These entries ship with the current package version; they are not runtime discovery. On upgrade, use the new package contracts and compatibility layer.'}</p></div></div>
       <ul data-paimind-developer-list>{PAIMIND_INTEGRATION_REFERENCES.map(reference => <li key={reference.id} data-paimind-developer-card data-reference-id={reference.id}><div data-paimind-developer-card-header><code>{reference.contract}</code><span data-paimind-developer-badge>{zh ? '随包发布' : 'Bundled reference'}</span></div><p>{zh ? reference.descriptionZh : reference.descriptionEn}</p><div data-paimind-developer-badges><span data-paimind-developer-badge>{reference.kind}</span><span data-paimind-developer-badge>{zh ? '所有者' : 'Owner'}: {reference.owner}</span></div></li>)}</ul>
     </div>}
   </section>

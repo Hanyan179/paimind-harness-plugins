@@ -1,6 +1,6 @@
-import type { PaimindInvariantContext } from '@paimind/harness-compat'
+import type { PaimindInvariantContext } from '@hansen/harness-compat'
 
-const PACKAGE_NAME = '@paimind/workspace-project'
+const PACKAGE_NAME = '@hansen/workspace-project'
 
 /** Cordis invariant companion name. */
 export const name = 'paimind-workspace-project-invariant'

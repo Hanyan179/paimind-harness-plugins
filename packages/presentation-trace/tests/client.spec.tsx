@@ -1,9 +1,9 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { PaimindArtifactView } from '@paimind/artifacts'
-import type { PaimindLocaleSource } from '@paimind/harness-compat'
-import type { PaimindSidebarTabScope } from '@paimind/better-sidebar-adapter'
-import type { PaimindBentoPreviewService, PaimindBentoPreviewSnapshot } from '@paimind/renderer-bento'
+import type { PaimindArtifactView } from '@hansen/artifacts'
+import type { PaimindLocaleSource } from '@hansen/harness-compat'
+import type { PaimindSidebarTabScope } from '@hansen/better-sidebar-adapter'
+import type { PaimindBentoPreviewService, PaimindBentoPreviewSnapshot } from '@hansen/renderer-bento'
 import { PresentationTraceRegistry } from '../src/index.ts'
 import { PresentationTracePanel } from '../src/client/index.tsx'
 

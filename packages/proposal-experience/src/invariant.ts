@@ -1,6 +1,6 @@
-import type { PaimindInvariantContext } from '@paimind/harness-compat'
+import type { PaimindInvariantContext } from '@hansen/harness-compat'
 
-const PACKAGE_NAME = '@paimind/proposal-experience'
+const PACKAGE_NAME = '@hansen/proposal-experience'
 
 export const name = 'paimind-proposal-experience-invariant'
 export const inject = ['invariants']

@@ -19,7 +19,7 @@ Harness `0.1.0-rc.6` intentionally exposes no browser RPC that accepts arbitrary
 | Open files for direct authoring | Native id-only directory handoff | Harness `agentPreset.openDocument` |
 | Undo a Builder-created Preset | Native delete, before it is bound to another Session | Harness `agentPreset.remove` |
 | Restore arbitrary edited composition text | Not available in `rc.6`; no fake undo | None |
-| Builder draft, composition-plus-metadata fingerprint receipt and lifecycle display | Product metadata only; never Agent configuration | `@paimind/agent-builder` |
+| Builder draft, composition-plus-metadata fingerprint receipt and lifecycle display | Product metadata only; never Agent configuration | `@hansen/agent-builder` |
 
 ## Whitelisted request contract
 
@@ -35,13 +35,13 @@ No Host path, raw Cordis YAML, plugin module, arbitrary JSON or composition text
 
 ## Package and compatibility seams
 
-### `@paimind/harness-compat`
+### `@hansen/harness-compat`
 
 - Adds version-isolated `read`, `copy`, `openDocument` and `remove` Agent Preset methods.
 - Exposes only the native Workspace new-Session action, Session binding and conversation draft setter needed for the Creator handoff.
 - Keeps every `@deepseek-ai/*` import and `rc.6` shape outside feature packages.
 
-### `@paimind/agent-builder`
+### `@hansen/agent-builder`
 
 - Registers one independent `settings.section` and one `Agents` Extension Center descriptor.
 - Left column: create/modify mode, live source/target selection, optional display name and natural-language requirement.

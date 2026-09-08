@@ -4,19 +4,19 @@ import {
   definePaimindScheduleRunReport,
   type PaimindNotificationSource,
   type PaimindScheduleActionRegistration,
-} from '@paimind/contracts'
-import { PaimindHostService, type PaimindStorageDomainFacility } from '@paimind/harness-compat/host'
-import type { PaimindHostWebServer } from '@paimind/harness-compat'
-import type { PaimindNotificationProducer, PaimindNotificationService } from '@paimind/notifications'
+} from '@hansen/contracts'
+import { PaimindHostService, type PaimindStorageDomainFacility } from '@hansen/harness-compat/host'
+import type { PaimindHostWebServer } from '@hansen/harness-compat'
+import type { PaimindNotificationProducer, PaimindNotificationService } from '@hansen/notifications'
 import {
   PaimindReplayGuard,
   paimindPlatformIdentifierSchema,
   paimindPlatformNotificationSchema,
   paimindScheduleActionRegistrationSchema,
   verifyPaimindRequestSignature,
-} from '@paimind/platform-sdk'
-import type { PaimindSchedulerServiceApi } from '@paimind/platform-scheduler'
-import type { PaimindHttpScheduleAdapter } from '@paimind/scheduler-adapter-http'
+} from '@hansen/platform-sdk'
+import type { PaimindSchedulerServiceApi } from '@hansen/platform-scheduler'
+import type { PaimindHttpScheduleAdapter } from '@hansen/scheduler-adapter-http'
 
 export const name = 'paimind-platform-api'
 export const PAIMIND_PLATFORM_API_PREFIX = '/paimind/platform/v1'

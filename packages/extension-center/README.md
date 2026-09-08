@@ -1,4 +1,4 @@
-# `@paimind/extension-center`
+# `@hansen/extension-center`
 
 PAIMind product capability catalog projected over the native Harness Plugin Registry.
 
@@ -19,7 +19,7 @@ Role: **Client plugin**. It owns the product projection described above; Harness
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/contracts` (`workspace:^`), `@hansen/harness-compat` (`workspace:^`).
 - External runtime or peer dependencies: `react` (`>=18.0.0 <20.0.0`).
 - Client service injection: `@deepseek-ai/dsh-api-remotes`, `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-locale`, `@deepseek-ai/dsh-client-ui-settings`, `@deepseek-ai/dsh-host-plugin-inventory`.
 

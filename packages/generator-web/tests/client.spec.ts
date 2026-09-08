@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createClientContextFixture } from '@paimind/testkit'
+import { createClientContextFixture } from '@hansen/testkit'
 import { apply } from '../src/client/index.js'
 
 describe('R2 generator Extension Center contribution', () => {

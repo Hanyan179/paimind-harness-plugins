@@ -17,7 +17,7 @@
 ## Boundaries
 
 - 只在本仓库开发 PAIMind 插件，不修改、复制或内嵌 DeepSeek Harness 源码。
-- Harness 版本相关逻辑统一放在 `@paimind/harness-compat`。
+- Harness 版本相关逻辑统一放在 `@hansen/harness-compat`。
 - 平台 Core、业务 Adapter 与 Harness Runtime 保持分层；业务逻辑和业务页面不进入通用平台核心。
 - 不导入原型 Mock Data、浏览器本地状态或业务系统内部页面。
 - 用户可见能力必须完成定向测试、真实 Harness 组合和浏览器预验收，并保留验收证据。
@@ -28,7 +28,7 @@
 - 本仓库是 PAIMind Product Line（产品线）的长期开发基线；新能力、既有能力优化、Adapter（适配器）与组合验收都在这里完成。Enterprise Line（企业线）只有在用户明确恢复时才进入当前交付范围。
 - 新需求先判断是新增 Plugin（插件）、扩展既有 Plugin，还是只需修改共享 Adapter；不因页面相近就把不同 Domain（领域）的业务状态合并到一个包。
 - 每个用户入口、可写状态、Runtime Service（运行时服务）与持久化 Namespace（命名空间）必须有唯一 Owner（所有者）。跨包复用通过 Contract（契约）和 Service（服务）完成，不直接读写其他包的内部状态。
-- Harness 没有公开的稳定能力必须通过 `@paimind/harness-compat` 隔离；不允许多个功能包各自实现同一组 Harness DOM（页面结构）或版本兼容逻辑。
+- Harness 没有公开的稳定能力必须通过 `@hansen/harness-compat` 隔离；不允许多个功能包各自实现同一组 Harness DOM（页面结构）或版本兼容逻辑。
 - 新能力进入开发前按 [`docs/plans/plugin-product-roadmap.md`](docs/plans/plugin-product-roadmap.md) 完成 Ownership（所有权）与 Conflict Review（冲突评审），完成后再进入真实 Harness 组合和浏览器验收。
 
 ## Agent, Skill and Workspace boundaries

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { createClientContextFixture } from '@paimind/testkit'
+import { createClientContextFixture } from '@hansen/testkit'
 
 vi.mock('pdfjs-dist', () => ({
   GlobalWorkerOptions: {},
@@ -16,7 +16,7 @@ vi.mock('pdfjs-dist/build/pdf.worker.min.mjs?raw', () => ({ default: 'worker' })
 
 import { apply, PdfPreview } from '../src/client/index.tsx'
 
-describe('FP06 PAIMind PDF renderer', () => {
+describe('FP06 PDF renderer', () => {
   it('registers one higher-priority PDF channel through the stable adapter', () => {
     const fixture = createClientContextFixture()
     const registerFileViewer = vi.fn(() => () => {})

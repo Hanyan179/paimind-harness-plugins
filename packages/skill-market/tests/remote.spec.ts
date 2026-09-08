@@ -4,7 +4,7 @@ import { TYPERT } from '../src/typert.ts'
 
 describe('Skill Center strict Remote contract', () => {
   it('publishes one shared descriptor set to Host and Client', () => {
-    expect(TYPERT.package).toBe('@paimind/skill-market')
+    expect(TYPERT.package).toBe('@hansen/skill-market')
     expect(TYPERT.invocations).toBe(PAIMIND_SKILL_INSTALLER_REMOTE_DESCRIPTORS)
     expect(TYPERT_REMOTE.descriptors).toBe(PAIMIND_SKILL_INSTALLER_REMOTE_DESCRIPTORS)
     expect(PAIMIND_SKILL_INSTALLER_REMOTE_DESCRIPTORS.every(item => item.result.mode === 'strict')).toBe(true)
@@ -19,7 +19,7 @@ describe('Skill Center strict Remote contract', () => {
     const optional = {
       kind: 'system', canonicalId: 'system:paimind-skill-installation', name: 'paimind-skill-installation',
       description: 'Install Business Skills from GitHub', availability: 'optional', userControl: 'atomic',
-      sourcePluginId: '@paimind/skill-market',
+      sourcePluginId: '@hansen/skill-market',
     }
     expect(descriptor?.result.schema.parse({ items: [mandatory, optional] })).toEqual({ items: [mandatory, optional] })
     expect(() => descriptor?.result.schema.parse({

@@ -10,10 +10,10 @@ DeepSeek Harness（宿主框架）是唯一 Runtime Spine（运行时主干）�
 
 PAIMind 的六个 Feature Pack（功能包）并不都会向 Skill Catalog（技能目录）写内容。当前直接参与技能目录计算的主链只有：
 
-1. `@paimind/skill-market` 提供 User Skill Policy（用户技能策略）、Business Skill Repository（业务技能仓库）、Session Selection（会话选择）和唯一 Skill Scope Resolver（技能作用域解析器）。
-2. `@paimind/agent-builder` 提供 Agent Profile（智能体配置）中的 Business Skill Reference（业务技能引用）与 Persona（人设），但 Persona 不保存技能名称或正文。
-3. `@paimind/workspace-blueprints` 提供 Workspace Composition Receipt（工作区组合回执）中的 Business Skill Reference，并可为入口 Session（会话）绑定一个 Agent Reference（智能体引用）。
-4. `@paimind/harness-compat` 把已解析的 Business Skill Definition（业务技能定义）投影到当前 Agent Scope（智能体作用域）的 Harness Native Skill Provider（宿主原生技能提供方）。
+1. `@hansen/skill-market` 提供 User Skill Policy（用户技能策略）、Business Skill Repository（业务技能仓库）、Session Selection（会话选择）和唯一 Skill Scope Resolver（技能作用域解析器）。
+2. `@hansen/agent-builder` 提供 Agent Profile（智能体配置）中的 Business Skill Reference（业务技能引用）与 Persona（人设），但 Persona 不保存技能名称或正文。
+3. `@hansen/workspace-blueprints` 提供 Workspace Composition Receipt（工作区组合回执）中的 Business Skill Reference，并可为入口 Session（会话）绑定一个 Agent Reference（智能体引用）。
+4. `@hansen/harness-compat` 把已解析的 Business Skill Definition（业务技能定义）投影到当前 Agent Scope（智能体作用域）的 Harness Native Skill Provider（宿主原生技能提供方）。
 5. Harness 原生 `ctx.skills` 合并 Global/System Layer（全局／系统层）与当前 Agent Layer（智能体层），`@deepseek-ai/dsh-tool-skill` 只把摘要交给模型，并在模型调用 `skill({ name })` 时加载同一份 Canonical `SKILL.md`（权威技能正文）。
 
 ## 2. Plugin Suite 与 Harness 总体关系
@@ -23,8 +23,8 @@ flowchart TB
   User["用户与 AI 入口<br/>Conversation（对话） · Agent Center（智能体中心）<br/>Skill Center（技能中心） · Workspace Blueprint（工作区蓝图）"]
 
   subgraph Control["PAIMind Control Plane（控制面）"]
-    Bundle["@paimind/harness-bundle<br/>安装组合清单"]
-    Extension["@paimind/extension-center<br/>六个 Feature Pack 的产品开关"]
+    Bundle["@hansen/harness-bundle<br/>安装组合清单"]
+    Extension["@hansen/extension-center<br/>六个 Feature Pack 的产品开关"]
   end
 
   subgraph Packs["PAIMind Product Feature Packs（产品功能包）"]
@@ -37,9 +37,9 @@ flowchart TB
   end
 
   subgraph Shared["PAIMind Shared Support（共享支撑）"]
-    Contracts["@paimind/contracts<br/>跨插件公开数据契约"]
-    Compat["@paimind/harness-compat<br/>唯一版本与宿主适配边界"]
-    UI["@paimind/ui-foundation<br/>共享界面基础"]
+    Contracts["@hansen/contracts<br/>跨插件公开数据契约"]
+    Compat["@hansen/harness-compat<br/>唯一版本与宿主适配边界"]
+    UI["@hansen/ui-foundation<br/>共享界面基础"]
   end
 
   subgraph Harness["DeepSeek Harness（宿主框架）"]
@@ -92,7 +92,7 @@ flowchart TB
   class Loader,Native,Registries,Loop harness;
 ```
 
-这张图按 Product Ownership（产品所有权）组织，而不是把 40 个 Package（包）的每条 `package.json` 依赖都展开。六个 Feature Pack（功能包）是用户可理解的组合层；Package（包）仍然各自构建、测试和卸载。`@paimind/harness-compat` 是所有 Harness Version-sensitive Logic（宿主版本敏感逻辑）的唯一边界。
+这张图按 Product Ownership（产品所有权）组织，而不是把 40 个 Package（包）的每条 `package.json` 依赖都展开。六个 Feature Pack（功能包）是用户可理解的组合层；Package（包）仍然各自构建、测试和卸载。`@hansen/harness-compat` 是所有 Harness Version-sensitive Logic（宿主版本敏感逻辑）的唯一边界。
 
 ### 2.1 Agent、Skill 与 Workspace 核心插件关系
 
@@ -100,11 +100,11 @@ flowchart TB
 flowchart LR
   User["用户入口<br/>对话 · Agent Center · Skill Center · Workspace Blueprint"]
 
-  AgentMarket["@paimind/agent-market<br/>Agent Center 产品界面"]
-  AgentBuilder["@paimind/agent-builder<br/>Profile · Persona · Preset / Session Binding"]
-  SkillMarket["@paimind/skill-market<br/>Repository · User Policy · Resolver"]
-  Blueprints["@paimind/workspace-blueprints<br/>Folder Package · Composition Receipt"]
-  Compat["@paimind/harness-compat<br/>Native Projection（原生投影）"]
+  AgentMarket["@hansen/agent-market<br/>Agent Center 产品界面"]
+  AgentBuilder["@hansen/agent-builder<br/>Profile · Persona · Preset / Session Binding"]
+  SkillMarket["@hansen/skill-market<br/>Repository · User Policy · Resolver"]
+  Blueprints["@hansen/workspace-blueprints<br/>Folder Package · Composition Receipt"]
+  Compat["@hansen/harness-compat<br/>Native Projection（原生投影）"]
 
   Presets["Harness Preset / Agent / Session<br/>宿主原生对象"]
   Skills["Harness ctx.skills<br/>宿主原生分层技能注册表"]
@@ -134,7 +134,7 @@ flowchart LR
   class Presets,Skills harness;
 ```
 
-这里没有把 UI Read（界面读取）误画成 Runtime Ownership（运行时所有权）：`@paimind/agent-market` 是产品界面，`@paimind/agent-builder` 与 `@paimind/skill-market` 提供各自领域服务，最终 Preset、Session 与 Skill Registry 仍由 Harness 持有。
+这里没有把 UI Read（界面读取）误画成 Runtime Ownership（运行时所有权）：`@hansen/agent-market` 是产品界面，`@hansen/agent-builder` 与 `@hansen/skill-market` 提供各自领域服务，最终 Preset、Session 与 Skill Registry 仍由 Harness 持有。
 
 ## 3. AI 进入 Session 后的内容装配与 Skill Catalog 生成
 
@@ -144,7 +144,7 @@ flowchart TB
 
   subgraph Identity["A. Identity & Instructions（身份与指令轨道）"]
     PlatformPrompt["Harness System Prompt Sections<br/>平台身份 · 安全规则 · Runtime Invariant"]
-    AgentProfile["@paimind/agent-builder<br/>Agent Profile：role · goal · behavior · instructions"]
+    AgentProfile["@hansen/agent-builder<br/>Agent Profile：role · goal · behavior · instructions"]
     NativePreset["Harness Native Preset（原生预设）<br/>standard Foundation + Persona"]
     WorkspaceFiles["$DSH_HOME/AGENTS.md<br/>Project / nested AGENTS.md"]
     InstructionLoader["@deepseek-ai/dsh-agent-instructions<br/>按 cwd 发现、去重、预算控制"]
@@ -153,7 +153,7 @@ flowchart TB
 
   subgraph SkillSources["B. Skill Sources & Scope Inputs（技能来源与作用域输入）"]
     SystemSource["Harness / Source Plugins<br/>System Skill：摘要 + Canonical Body + 必需 Tool"]
-    BusinessRepo["@paimind/skill-market<br/>Business Skill Repository<br/>$DSH_HOME/.paimind-skill-market/skills"]
+    BusinessRepo["@hansen/skill-market<br/>Business Skill Repository<br/>$DSH_HOME/.paimind-skill-market/skills"]
     UserPolicy["User Skill Policy<br/>Optional System 开关<br/>Business 可用门禁 + Direct Default"]
     AgentRefs["Agent Profile References<br/>preferredSkillNames"]
     WorkspaceReceipt["Workspace Composition Receipt<br/>Business Skill name + digest"]
@@ -161,10 +161,10 @@ flowchart TB
   end
 
   subgraph Resolve["C. PAIMind Skill Resolution（技能解析）"]
-    Resolver["@paimind/skill-market<br/>Stateless Skill Scope Resolver"]
+    Resolver["@hansen/skill-market<br/>Stateless Skill Scope Resolver"]
     Gate["Eligibility Gate + Digest Check<br/>名称冲突 Fail Closed + Canonical ID 去重"]
     BusinessDefs["Effective Business Skill Definitions<br/>仅当前 Session 有效的完整定义"]
-    CompatProjection["@paimind/harness-compat<br/>一个 Replaceable Agent-scoped Provider"]
+    CompatProjection["@hansen/harness-compat<br/>一个 Replaceable Agent-scoped Provider"]
   end
 
   subgraph HarnessRuntime["D. Harness Native Runtime（宿主原生运行时）"]
@@ -232,9 +232,9 @@ flowchart TB
 ```mermaid
 sequenceDiagram
   participant H as Harness Agent Lifecycle（宿主智能体生命周期）
-  participant SM as @paimind/skill-market
+  participant SM as @hansen/skill-market
   participant R as Skill Scope Resolver（技能作用域解析器）
-  participant C as @paimind/harness-compat
+  participant C as @hansen/harness-compat
   participant S as ctx.skills
   participant M as Model（模型）
 
@@ -303,7 +303,7 @@ Direct Session（普通会话）使用用户的 Direct Default（普通对话默
 | 内容 | Canonical Location（权威位置） | Runtime Entry（运行时入口） | 是否进入 Skill Catalog | 关键规则 |
 | --- | --- | --- | --- | --- |
 | 平台身份、安全规则、不可关闭的运行时不变量 | Harness System Prompt Section（宿主系统提示词段） | System Prompt Assembly（系统提示词装配） | 否 | 不能伪装成可关闭 Skill |
-| Agent 的角色、目标、行为和补充要求 | `@paimind/agent-builder` 的 Agent Profile，并投影到 Harness Native Preset Persona（宿主原生预设人设） | 当前 Agent Scope 的 Persona | 否 | Persona 不保存 Skill 名称、摘要或正文 |
+| Agent 的角色、目标、行为和补充要求 | `@hansen/agent-builder` 的 Agent Profile，并投影到 Harness Native Preset Persona（宿主原生预设人设） | 当前 Agent Scope 的 Persona | 否 | Persona 不保存 Skill 名称、摘要或正文 |
 | 用户级与项目级工作规则 | `$DSH_HOME/AGENTS.md`、项目与子目录 `AGENTS.md` | `@deepseek-ai/dsh-agent-instructions` 按 Session `cwd` 注入历史 | 否 | 以有来源、受预算控制的 user-role message 进入；不复制为 Workspace 或 Agent 状态 |
 | System Skill 的场景、方法和工具使用说明 | Harness 或 Source Plugin 拥有的 Canonical `SKILL.md` / `ctx.skills.register()` | Harness Global/System Skill Layer（全局／系统技能层） | 是，先摘要 | Optional System Skill 必须由同一来源原子启停摘要、正文、必需 Tool 与客户端能力 |
 | 用户或业务团队维护的 Business Skill Package | `$DSH_HOME/.paimind-skill-market/skills/<name>/` | Resolver 选中后，经 Agent-scoped Provider 进入 `ctx.skills` | 有条件进入 | 安装不等于进入会话；必须同时满足已安装、用户启用和至少一个有效 Scope 引用 |

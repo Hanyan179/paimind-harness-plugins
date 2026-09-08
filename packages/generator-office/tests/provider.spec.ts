@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import ExcelJS from 'exceljs'
 import { decodePDFRawStream, PDFArray, PDFDocument, PDFRawStream } from 'pdf-lib'
 import { describe, expect, it, vi } from 'vitest'
-import { normalizePresentationTrace } from '@paimind/presentation-trace'
+import { normalizePresentationTrace } from '@hansen/presentation-trace'
 import { generateOfficeArtifact } from '../src/cli.js'
 import { apply, presentationProvider, spreadsheetProvider } from '../src/index.js'
 

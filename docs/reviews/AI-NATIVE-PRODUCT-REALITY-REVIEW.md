@@ -105,10 +105,10 @@ Constraints（约束）:
 
 新增 Host-side Registry（宿主侧注册表），但不新增 Workspace、Session 或 Job 模型：
 
-- `@paimind/artifact-runtime`: Generator Registry、`tool/result.meta` Envelope、Session Projection、Native Job correlation、权限与失败收敛。
-- `@paimind/generator-presentation`: PPTX 生成；需要时复用同一源 spec 派生 PDF。
-- `@paimind/generator-spreadsheet`: XLSX 生成和公式校验。
-- `@paimind/generator-web`: HTML document 生成，文本写入走嵌套的 Harness native `write` Tool；Bento 保持后续独立 Provider/Renderer。
+- `@hansen/artifact-runtime`: Generator Registry、`tool/result.meta` Envelope、Session Projection、Native Job correlation、权限与失败收敛。
+- `@hansen/generator-presentation`: PPTX 生成；需要时复用同一源 spec 派生 PDF。
+- `@hansen/generator-spreadsheet`: XLSX 生成和公式校验。
+- `@hansen/generator-web`: HTML document 生成，文本写入走嵌套的 Harness native `write` Tool；Bento 保持后续独立 Provider/Renderer。
 - 每个 Provider 通过 Harness Tool Registry 暴露明确 schema，并由 Agent Preset 组合决定是否可见。
 - Binary Generator 通过 Harness Subprocess/Sandbox 或未来公开 Binary FS Provider 产出；不得用浏览器、DOM 或宿主绝对路径旁路权限。
 
@@ -133,7 +133,7 @@ Data ownership（数据所有权）:
 - 当前 Harness Remote 只有只读 Inventory，因此 v1 只提供真实状态、分类、详情和配置入口；在公开 mutation API 出现前，不伪造安装/卸载/启停按钮。
 - Extension Center 不打开 Agent、Task、Viewer 等产品页面；真实入口仍位于各功能自己的 Header、Conversation、Settings 或 Preview surface。
 
-Agent Center 与 Extension Center 也保持职责分离：Extension Center 管理 `@paimind/agent-market` 这个扩展能力；Agent Center 展示和治理 Harness Agent Preset Catalog。Preset 是执行对象，PAIMind 的分类、市场、收藏与企业治理只是 keyed-by-preset-id 的产品元数据，不是第二套 Agent 配置。
+Agent Center 与 Extension Center 也保持职责分离：Extension Center 管理 `@hansen/agent-market` 这个扩展能力；Agent Center 展示和治理 Harness Agent Preset Catalog。Preset 是执行对象，PAIMind 的分类、市场、收藏与企业治理只是 keyed-by-preset-id 的产品元数据，不是第二套 Agent 配置。
 
 ## 6. Package reclassification（功能包重分类）
 
@@ -169,7 +169,7 @@ Exit Criteria（退出条件）:
 ### Phase R1 — Native surface rationalization（原生表面收敛）
 
 1. 从 Bundle 与 UI 移除 PAIMind Launcher；保留代码到可回滚删除完成后再退役包。
-2. 建立 `@paimind/extension-center` 与 Extension Registry；按七个产品类别展示 PAIMind descriptor，并 join Harness Plugin Registry 的技术状态。
+2. 建立 `@hansen/extension-center` 与 Extension Registry；按七个产品类别展示 PAIMind descriptor，并 join Harness Plugin Registry 的技术状态。
 3. 从 Bundle 移除 FP03 空 marker，并把其测试改为 Native Reuse regression（原生复用回归）。
 4. FP04 改为 Headless Adapter，删除可见 Header action；验证下游仍可取 Workspace/Session context。
 5. Extension Center 与 Harness Settings → Plugins 并存：前者是产品能力管理，后者是技术清单；安装/卸载仍走 Harness Profile/CLI，直到公开管理 API 可用。
@@ -265,7 +265,7 @@ R2 已于 2026-08-15 通过 Product Truth Plane（产品事实平面）门禁，
 
 - 真实 Agent 从空白 Workspace/Session 生成并同路径更新 PPTX、PDF、公式 XLSX、HTML 与 Bento；QA Fixture 和 Preview Query 未参与完成证据。
 - 十个成功 Native Job 和一个 Read Only 失败 Job 证明 Task Monitor、Conversation Deliverable 与 Artifact Projection 消费同一事实链；失败没有伪产物。
-- Better Sidebar 的 browser-native PDF iframe 在选定 Chromium 中为空白，因此新增独立 `@paimind/renderer-pdf`，只通过稳定 Adapter 注册 `.pdf` 通道；没有修改或直接依赖 provider 内部代码。
+- Better Sidebar 的 browser-native PDF iframe 在选定 Chromium 中为空白，因此新增独立 `@hansen/renderer-pdf`，只通过稳定 Adapter 注册 `.pdf` 通道；没有修改或直接依赖 provider 内部代码。
 - PPTX revision 3 通过同一 `tool/result.meta` 和 `paimind.artifacts` Session Projection 携带 `ArtifactTraceEnvelopeV1`；真实 Trace 展示来源、三页、计算、代码和 Validate/Render/Publish lineage。
 - 页面刷新保留当前进程 Job；Harness 重启诚实清空 Job History，但恢复五种最新 Artifact、Deliverable、Viewer 与 Trace。
 - 当时阶段门禁为 41 个测试文件 / 122 项测试、Type Check、Production Build、12-client framework gate，以及 Harness rc.6 + Better Sidebar 0.11.0 的安装/启动/卸载/恢复/Extension Center 缺席/上游零差异；R7 的最终选择与更高门禁见第 16 节。
@@ -285,7 +285,7 @@ R2 已于 2026-08-15 通过 Product Truth Plane（产品事实平面）门禁，
 ## 14. R5 execution update（R5 执行更新）
 
 - Harness `0.1.0-rc.6` 不存在 Notification 领域对象或公开 Notification API；FP12 因此只新增最小的 message/read-state sidecar，而不复制 Workspace、Session、Job、Schedule 或 Artifact 状态机。
-- `@paimind/notifications` 已实现 Host-trusted producer、bounded Harness-profile Storage Domain、idempotent publish、compare-and-set read mutation、strict Typert Remote、plain-text rendering 和 closed safe target union。
+- `@hansen/notifications` 已实现 Host-trusted producer、bounded Harness-profile Storage Domain、idempotent publish、compare-and-set read mutation、strict Typert Remote、plain-text rendering 和 closed safe target union。
 - 第一个生产 Consumer 只读取真实 Generator Tool Result 中的版本化 Artifact metadata；不解析模型正文、文件名、路径或 HTML。通知写入异常在原生 Tool Result 之后隔离，不能把成功会话变成失败。
 - Notification Center 归类到 Extension Center 的 `Automation`，但真实入口是独立 sidebar-footer bell 与 responsive Overlay/Drawer；Extension Center 不承担 Launcher 职责。
 - 53 个测试文件 / 156 项测试、Type Check、Production Build、16-client framework gate、完整 exact Harness composition、Extension Center 缺席和 Notification Center 单独缺席启动、卸载清理及上游零差异均通过。

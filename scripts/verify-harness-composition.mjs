@@ -266,7 +266,7 @@ try {
   dsh(['--profile', 'web', '--dump-config'], 'initialize isolated web profile')
   await mkdir(withoutCenterBundleRoot, { recursive: true })
   await writeFile(resolve(withoutCenterBundleRoot, 'package.json'), JSON.stringify({
-    name: '@paimind/test-without-extension-center',
+    name: '@hansen/test-without-extension-center',
     version: '0.0.0',
     private: true,
     type: 'module',
@@ -275,49 +275,49 @@ try {
   }, null, 2))
   await writeFile(resolve(withoutCenterBundleRoot, 'cordis.patch.yml'), `- insert:
     - id: paimind-runtime-orbs
-      name: '@paimind/runtime-orbs'
+      name: '@hansen/runtime-orbs'
     - id: paimind-branding
-      name: '@paimind/branding'
+      name: '@hansen/branding'
     - id: paimind-workspace-project
-      name: '@paimind/workspace-project'
+      name: '@hansen/workspace-project'
     - id: paimind-workspace-blueprints
-      name: '@paimind/workspace-blueprints'
+      name: '@hansen/workspace-blueprints'
     - id: paimind-better-sidebar-adapter
-      name: '@paimind/better-sidebar-adapter'
+      name: '@hansen/better-sidebar-adapter'
     - id: paimind-task-monitor
-      name: '@paimind/task-monitor'
+      name: '@hansen/task-monitor'
     - id: paimind-artifact-runtime
-      name: '@paimind/artifact-runtime'
+      name: '@hansen/artifact-runtime'
     - id: paimind-generator-web
-      name: '@paimind/generator-web'
+      name: '@hansen/generator-web'
     - id: paimind-generator-office
-      name: '@paimind/generator-office'
+      name: '@hansen/generator-office'
     - id: paimind-generator-bento
-      name: '@paimind/generator-bento'
+      name: '@hansen/generator-bento'
     - id: paimind-renderer-bento
-      name: '@paimind/renderer-bento'
+      name: '@hansen/renderer-bento'
     - id: paimind-renderer-pdf
-      name: '@paimind/renderer-pdf'
+      name: '@hansen/renderer-pdf'
     - id: paimind-artifacts
-      name: '@paimind/artifacts'
+      name: '@hansen/artifacts'
     - id: paimind-conversation-artifact-renderer
-      name: '@paimind/conversation-artifact-renderer'
+      name: '@hansen/conversation-artifact-renderer'
     - id: paimind-presentation-trace
-      name: '@paimind/presentation-trace'
+      name: '@hansen/presentation-trace'
     - id: paimind-agent-market
-      name: '@paimind/agent-market'
+      name: '@hansen/agent-market'
     - id: paimind-agent-builder
-      name: '@paimind/agent-builder'
+      name: '@hansen/agent-builder'
     - id: paimind-skill-market
-      name: '@paimind/skill-market'
+      name: '@hansen/skill-market'
     - id: paimind-notifications
-      name: '@paimind/notifications'
+      name: '@hansen/notifications'
     - id: paimind-developer-resources
-      name: '@paimind/developer-resources'
+      name: '@hansen/developer-resources'
 `)
   await mkdir(withoutTaskMonitorBundleRoot, { recursive: true })
   await writeFile(resolve(withoutTaskMonitorBundleRoot, 'package.json'), JSON.stringify({
-    name: '@paimind/test-without-task-monitor',
+    name: '@hansen/test-without-task-monitor',
     version: '0.0.0',
     private: true,
     type: 'module',
@@ -326,47 +326,47 @@ try {
   }, null, 2))
   await writeFile(resolve(withoutTaskMonitorBundleRoot, 'cordis.patch.yml'), `- insert:
     - id: paimind-extension-center
-      name: '@paimind/extension-center'
+      name: '@hansen/extension-center'
     - id: paimind-runtime-orbs
-      name: '@paimind/runtime-orbs'
+      name: '@hansen/runtime-orbs'
     - id: paimind-branding
-      name: '@paimind/branding'
+      name: '@hansen/branding'
     - id: paimind-workspace-project
-      name: '@paimind/workspace-project'
+      name: '@hansen/workspace-project'
     - id: paimind-workspace-blueprints
-      name: '@paimind/workspace-blueprints'
+      name: '@hansen/workspace-blueprints'
     - id: paimind-better-sidebar-adapter
-      name: '@paimind/better-sidebar-adapter'
+      name: '@hansen/better-sidebar-adapter'
     - id: paimind-artifact-runtime
-      name: '@paimind/artifact-runtime'
+      name: '@hansen/artifact-runtime'
     - id: paimind-generator-web
-      name: '@paimind/generator-web'
+      name: '@hansen/generator-web'
     - id: paimind-generator-office
-      name: '@paimind/generator-office'
+      name: '@hansen/generator-office'
     - id: paimind-generator-bento
-      name: '@paimind/generator-bento'
+      name: '@hansen/generator-bento'
     - id: paimind-renderer-bento
-      name: '@paimind/renderer-bento'
+      name: '@hansen/renderer-bento'
     - id: paimind-renderer-pdf
-      name: '@paimind/renderer-pdf'
+      name: '@hansen/renderer-pdf'
     - id: paimind-artifacts
-      name: '@paimind/artifacts'
+      name: '@hansen/artifacts'
     - id: paimind-conversation-artifact-renderer
-      name: '@paimind/conversation-artifact-renderer'
+      name: '@hansen/conversation-artifact-renderer'
     - id: paimind-presentation-trace
-      name: '@paimind/presentation-trace'
+      name: '@hansen/presentation-trace'
     - id: paimind-agent-market
-      name: '@paimind/agent-market'
+      name: '@hansen/agent-market'
     - id: paimind-agent-builder
-      name: '@paimind/agent-builder'
+      name: '@hansen/agent-builder'
     - id: paimind-skill-market
-      name: '@paimind/skill-market'
+      name: '@hansen/skill-market'
     - id: paimind-notifications
-      name: '@paimind/notifications'
+      name: '@hansen/notifications'
 `)
   await mkdir(withoutAgentMarketBundleRoot, { recursive: true })
   await writeFile(resolve(withoutAgentMarketBundleRoot, 'package.json'), JSON.stringify({
-    name: '@paimind/test-without-agent-market',
+    name: '@hansen/test-without-agent-market',
     version: '0.0.0',
     private: true,
     type: 'module',
@@ -375,47 +375,47 @@ try {
   }, null, 2))
   await writeFile(resolve(withoutAgentMarketBundleRoot, 'cordis.patch.yml'), `- insert:
     - id: paimind-extension-center
-      name: '@paimind/extension-center'
+      name: '@hansen/extension-center'
     - id: paimind-runtime-orbs
-      name: '@paimind/runtime-orbs'
+      name: '@hansen/runtime-orbs'
     - id: paimind-branding
-      name: '@paimind/branding'
+      name: '@hansen/branding'
     - id: paimind-workspace-project
-      name: '@paimind/workspace-project'
+      name: '@hansen/workspace-project'
     - id: paimind-workspace-blueprints
-      name: '@paimind/workspace-blueprints'
+      name: '@hansen/workspace-blueprints'
     - id: paimind-better-sidebar-adapter
-      name: '@paimind/better-sidebar-adapter'
+      name: '@hansen/better-sidebar-adapter'
     - id: paimind-task-monitor
-      name: '@paimind/task-monitor'
+      name: '@hansen/task-monitor'
     - id: paimind-artifact-runtime
-      name: '@paimind/artifact-runtime'
+      name: '@hansen/artifact-runtime'
     - id: paimind-generator-web
-      name: '@paimind/generator-web'
+      name: '@hansen/generator-web'
     - id: paimind-generator-office
-      name: '@paimind/generator-office'
+      name: '@hansen/generator-office'
     - id: paimind-generator-bento
-      name: '@paimind/generator-bento'
+      name: '@hansen/generator-bento'
     - id: paimind-renderer-bento
-      name: '@paimind/renderer-bento'
+      name: '@hansen/renderer-bento'
     - id: paimind-renderer-pdf
-      name: '@paimind/renderer-pdf'
+      name: '@hansen/renderer-pdf'
     - id: paimind-artifacts
-      name: '@paimind/artifacts'
+      name: '@hansen/artifacts'
     - id: paimind-conversation-artifact-renderer
-      name: '@paimind/conversation-artifact-renderer'
+      name: '@hansen/conversation-artifact-renderer'
     - id: paimind-presentation-trace
-      name: '@paimind/presentation-trace'
+      name: '@hansen/presentation-trace'
     - id: paimind-agent-builder
-      name: '@paimind/agent-builder'
+      name: '@hansen/agent-builder'
     - id: paimind-skill-market
-      name: '@paimind/skill-market'
+      name: '@hansen/skill-market'
     - id: paimind-notifications
-      name: '@paimind/notifications'
+      name: '@hansen/notifications'
 `)
   await mkdir(withoutAgentBuilderBundleRoot, { recursive: true })
   await writeFile(resolve(withoutAgentBuilderBundleRoot, 'package.json'), JSON.stringify({
-    name: '@paimind/test-without-agent-builder',
+    name: '@hansen/test-without-agent-builder',
     version: '0.0.0',
     private: true,
     type: 'module',
@@ -424,47 +424,47 @@ try {
   }, null, 2))
   await writeFile(resolve(withoutAgentBuilderBundleRoot, 'cordis.patch.yml'), `- insert:
     - id: paimind-extension-center
-      name: '@paimind/extension-center'
+      name: '@hansen/extension-center'
     - id: paimind-runtime-orbs
-      name: '@paimind/runtime-orbs'
+      name: '@hansen/runtime-orbs'
     - id: paimind-branding
-      name: '@paimind/branding'
+      name: '@hansen/branding'
     - id: paimind-workspace-project
-      name: '@paimind/workspace-project'
+      name: '@hansen/workspace-project'
     - id: paimind-workspace-blueprints
-      name: '@paimind/workspace-blueprints'
+      name: '@hansen/workspace-blueprints'
     - id: paimind-better-sidebar-adapter
-      name: '@paimind/better-sidebar-adapter'
+      name: '@hansen/better-sidebar-adapter'
     - id: paimind-task-monitor
-      name: '@paimind/task-monitor'
+      name: '@hansen/task-monitor'
     - id: paimind-artifact-runtime
-      name: '@paimind/artifact-runtime'
+      name: '@hansen/artifact-runtime'
     - id: paimind-generator-web
-      name: '@paimind/generator-web'
+      name: '@hansen/generator-web'
     - id: paimind-generator-office
-      name: '@paimind/generator-office'
+      name: '@hansen/generator-office'
     - id: paimind-generator-bento
-      name: '@paimind/generator-bento'
+      name: '@hansen/generator-bento'
     - id: paimind-renderer-bento
-      name: '@paimind/renderer-bento'
+      name: '@hansen/renderer-bento'
     - id: paimind-renderer-pdf
-      name: '@paimind/renderer-pdf'
+      name: '@hansen/renderer-pdf'
     - id: paimind-artifacts
-      name: '@paimind/artifacts'
+      name: '@hansen/artifacts'
     - id: paimind-conversation-artifact-renderer
-      name: '@paimind/conversation-artifact-renderer'
+      name: '@hansen/conversation-artifact-renderer'
     - id: paimind-presentation-trace
-      name: '@paimind/presentation-trace'
+      name: '@hansen/presentation-trace'
     - id: paimind-agent-market
-      name: '@paimind/agent-market'
+      name: '@hansen/agent-market'
     - id: paimind-skill-market
-      name: '@paimind/skill-market'
+      name: '@hansen/skill-market'
     - id: paimind-notifications
-      name: '@paimind/notifications'
+      name: '@hansen/notifications'
 `)
   await mkdir(withoutSkillMarketBundleRoot, { recursive: true })
   await writeFile(resolve(withoutSkillMarketBundleRoot, 'package.json'), JSON.stringify({
-    name: '@paimind/test-without-skill-market',
+    name: '@hansen/test-without-skill-market',
     version: '0.0.0',
     private: true,
     type: 'module',
@@ -473,47 +473,47 @@ try {
   }, null, 2))
   await writeFile(resolve(withoutSkillMarketBundleRoot, 'cordis.patch.yml'), `- insert:
     - id: paimind-extension-center
-      name: '@paimind/extension-center'
+      name: '@hansen/extension-center'
     - id: paimind-runtime-orbs
-      name: '@paimind/runtime-orbs'
+      name: '@hansen/runtime-orbs'
     - id: paimind-branding
-      name: '@paimind/branding'
+      name: '@hansen/branding'
     - id: paimind-workspace-project
-      name: '@paimind/workspace-project'
+      name: '@hansen/workspace-project'
     - id: paimind-workspace-blueprints
-      name: '@paimind/workspace-blueprints'
+      name: '@hansen/workspace-blueprints'
     - id: paimind-better-sidebar-adapter
-      name: '@paimind/better-sidebar-adapter'
+      name: '@hansen/better-sidebar-adapter'
     - id: paimind-task-monitor
-      name: '@paimind/task-monitor'
+      name: '@hansen/task-monitor'
     - id: paimind-artifact-runtime
-      name: '@paimind/artifact-runtime'
+      name: '@hansen/artifact-runtime'
     - id: paimind-generator-web
-      name: '@paimind/generator-web'
+      name: '@hansen/generator-web'
     - id: paimind-generator-office
-      name: '@paimind/generator-office'
+      name: '@hansen/generator-office'
     - id: paimind-generator-bento
-      name: '@paimind/generator-bento'
+      name: '@hansen/generator-bento'
     - id: paimind-renderer-bento
-      name: '@paimind/renderer-bento'
+      name: '@hansen/renderer-bento'
     - id: paimind-renderer-pdf
-      name: '@paimind/renderer-pdf'
+      name: '@hansen/renderer-pdf'
     - id: paimind-artifacts
-      name: '@paimind/artifacts'
+      name: '@hansen/artifacts'
     - id: paimind-conversation-artifact-renderer
-      name: '@paimind/conversation-artifact-renderer'
+      name: '@hansen/conversation-artifact-renderer'
     - id: paimind-presentation-trace
-      name: '@paimind/presentation-trace'
+      name: '@hansen/presentation-trace'
     - id: paimind-agent-market
-      name: '@paimind/agent-market'
+      name: '@hansen/agent-market'
     - id: paimind-agent-builder
-      name: '@paimind/agent-builder'
+      name: '@hansen/agent-builder'
     - id: paimind-notifications
-      name: '@paimind/notifications'
+      name: '@hansen/notifications'
 `)
   await mkdir(withoutNotificationsBundleRoot, { recursive: true })
   await writeFile(resolve(withoutNotificationsBundleRoot, 'package.json'), JSON.stringify({
-    name: '@paimind/test-without-notifications',
+    name: '@hansen/test-without-notifications',
     version: '0.0.0',
     private: true,
     type: 'module',
@@ -522,47 +522,47 @@ try {
   }, null, 2))
   await writeFile(resolve(withoutNotificationsBundleRoot, 'cordis.patch.yml'), `- insert:
     - id: paimind-extension-center
-      name: '@paimind/extension-center'
+      name: '@hansen/extension-center'
     - id: paimind-runtime-orbs
-      name: '@paimind/runtime-orbs'
+      name: '@hansen/runtime-orbs'
     - id: paimind-branding
-      name: '@paimind/branding'
+      name: '@hansen/branding'
     - id: paimind-workspace-project
-      name: '@paimind/workspace-project'
+      name: '@hansen/workspace-project'
     - id: paimind-workspace-blueprints
-      name: '@paimind/workspace-blueprints'
+      name: '@hansen/workspace-blueprints'
     - id: paimind-better-sidebar-adapter
-      name: '@paimind/better-sidebar-adapter'
+      name: '@hansen/better-sidebar-adapter'
     - id: paimind-task-monitor
-      name: '@paimind/task-monitor'
+      name: '@hansen/task-monitor'
     - id: paimind-artifact-runtime
-      name: '@paimind/artifact-runtime'
+      name: '@hansen/artifact-runtime'
     - id: paimind-generator-web
-      name: '@paimind/generator-web'
+      name: '@hansen/generator-web'
     - id: paimind-generator-office
-      name: '@paimind/generator-office'
+      name: '@hansen/generator-office'
     - id: paimind-generator-bento
-      name: '@paimind/generator-bento'
+      name: '@hansen/generator-bento'
     - id: paimind-renderer-bento
-      name: '@paimind/renderer-bento'
+      name: '@hansen/renderer-bento'
     - id: paimind-renderer-pdf
-      name: '@paimind/renderer-pdf'
+      name: '@hansen/renderer-pdf'
     - id: paimind-artifacts
-      name: '@paimind/artifacts'
+      name: '@hansen/artifacts'
     - id: paimind-conversation-artifact-renderer
-      name: '@paimind/conversation-artifact-renderer'
+      name: '@hansen/conversation-artifact-renderer'
     - id: paimind-presentation-trace
-      name: '@paimind/presentation-trace'
+      name: '@hansen/presentation-trace'
     - id: paimind-agent-market
-      name: '@paimind/agent-market'
+      name: '@hansen/agent-market'
     - id: paimind-agent-builder
-      name: '@paimind/agent-builder'
+      name: '@hansen/agent-builder'
     - id: paimind-skill-market
-      name: '@paimind/skill-market'
+      name: '@hansen/skill-market'
 `)
   await mkdir(withoutSchedulerBundleRoot, { recursive: true })
   await writeFile(resolve(withoutSchedulerBundleRoot, 'package.json'), JSON.stringify({
-    name: '@paimind/test-without-scheduler',
+    name: '@hansen/test-without-scheduler',
     version: '0.0.0',
     private: true,
     type: 'module',
@@ -574,7 +574,7 @@ try {
   const fullPatch = sourceBundlePatch
   await mkdir(stagedFullBundleRoot, { recursive: true })
   await writeFile(resolve(stagedFullBundleRoot, 'package.json'), JSON.stringify({
-    name: '@paimind/harness-bundle',
+    name: '@hansen/harness-bundle',
     version: '0.1.0-alpha.0',
     private: true,
     type: 'module',
@@ -585,7 +585,7 @@ try {
   await writeFile(resolve(stagedFullBundleRoot, 'cordis.patch.yml'), fullPatch)
   await mkdir(visualExperienceBundleRoot, { recursive: true })
   await writeFile(resolve(visualExperienceBundleRoot, 'package.json'), JSON.stringify({
-    name: '@paimind/test-visual-experience-bundle',
+    name: '@hansen/test-visual-experience-bundle',
     version: '0.0.0',
     private: true,
     type: 'module',
@@ -595,9 +595,9 @@ try {
   }, null, 2))
   await writeFile(resolve(visualExperienceBundleRoot, 'cordis.patch.yml'), `- insert:
     - id: paimind-branding
-      name: '@paimind/branding'
+      name: '@hansen/branding'
     - id: paimind-visual-experience
-      name: '@paimind/visual-experience'
+      name: '@hansen/visual-experience'
 `)
   const isolationPatchWithoutVisualExperience = withoutBundleEntries(fullPatch, [
     'paimind-visual-experience',
@@ -624,7 +624,7 @@ try {
   await writeFile(resolve(withoutSchedulerBundleRoot, 'cordis.patch.yml'), withoutSchedulerPatch)
   await mkdir(withoutUserSettingsBundleRoot, { recursive: true })
   await writeFile(resolve(withoutUserSettingsBundleRoot, 'package.json'), JSON.stringify({
-    name: '@paimind/test-without-user-settings',
+    name: '@hansen/test-without-user-settings',
     version: '0.0.0',
     private: true,
     type: 'module',
@@ -640,7 +640,7 @@ try {
   await writeFile(resolve(withoutUserSettingsBundleRoot, 'cordis.patch.yml'), withoutUserSettingsPatch)
   await mkdir(withoutDeveloperResourcesBundleRoot, { recursive: true })
   await writeFile(resolve(withoutDeveloperResourcesBundleRoot, 'package.json'), JSON.stringify({
-    name: '@paimind/test-without-developer-resources',
+    name: '@hansen/test-without-developer-resources',
     version: '0.0.0',
     private: true,
     type: 'module',
@@ -699,42 +699,42 @@ try {
   for (const marker of [
     'better-sidebar', 'dsh-better-sidebar',
     'dsh-better-sidebar-plugin-office', '@huanlin/dsh-plugin-better-sidebar-plugin-office',
-    'paimind-extension-center', '@paimind/extension-center',
+    'paimind-extension-center', '@hansen/extension-center',
     'paimind-pack-experience', 'paimind-pack-agents',
     'paimind-pack-content', 'paimind-pack-proposal',
     'paimind-pack-automation', 'paimind-pack-operations',
     'paimind-capability-runtime-orbs',
-    'paimind-runtime-orbs', '@paimind/runtime-orbs',
-    'paimind-branding', '@paimind/branding',
-    'paimind-visual-experience', '@paimind/visual-experience',
-    'paimind-conversation-title', '@paimind/conversation-title',
-    'paimind-workspace-project', '@paimind/workspace-project',
-    'paimind-workspace-blueprints', '@paimind/workspace-blueprints',
-    'paimind-better-sidebar-adapter', '@paimind/better-sidebar-adapter',
-    'paimind-task-monitor', '@paimind/task-monitor',
-    'paimind-artifact-runtime', '@paimind/artifact-runtime',
-    'paimind-generator-web', '@paimind/generator-web',
-    'paimind-generator-office', '@paimind/generator-office',
-    'paimind-generator-bento', '@paimind/generator-bento',
-    'paimind-category-analysis-adapter', '@paimind/category-analysis-adapter',
-    'paimind-fact-layer', '@paimind/fact-layer',
-    'paimind-renderer-bento', '@paimind/renderer-bento',
-    'paimind-renderer-pdf', '@paimind/renderer-pdf',
-    'paimind-artifacts', '@paimind/artifacts',
-    'paimind-conversation-artifact-renderer', '@paimind/conversation-artifact-renderer',
-    'paimind-presentation-trace', '@paimind/presentation-trace',
-    'paimind-proposal-experience', '@paimind/proposal-experience',
-    'paimind-walmart-proposal-adapter', '@paimind/walmart-proposal-adapter',
-    'paimind-agent-market', '@paimind/agent-market',
-    'paimind-agent-builder', '@paimind/agent-builder',
-    'paimind-skill-market', '@paimind/skill-market',
-    'paimind-notifications', '@paimind/notifications',
-    'paimind-platform-scheduler', '@paimind/platform-scheduler',
-    'paimind-scheduler-adapter-harness', '@paimind/scheduler-adapter-harness',
-    'paimind-scheduler-adapter-http', '@paimind/scheduler-adapter-http',
-    'paimind-scheduler-adapter-feishu-bot', '@paimind/scheduler-adapter-feishu-bot',
-    'paimind-user-settings', '@paimind/user-settings',
-    'paimind-developer-resources', '@paimind/developer-resources',
+    'paimind-runtime-orbs', '@hansen/runtime-orbs',
+    'paimind-branding', '@hansen/branding',
+    'paimind-visual-experience', '@hansen/visual-experience',
+    'paimind-conversation-title', '@hansen/conversation-title',
+    'paimind-workspace-project', '@hansen/workspace-project',
+    'paimind-workspace-blueprints', '@hansen/workspace-blueprints',
+    'paimind-better-sidebar-adapter', '@hansen/better-sidebar-adapter',
+    'paimind-task-monitor', '@hansen/task-monitor',
+    'paimind-artifact-runtime', '@hansen/artifact-runtime',
+    'paimind-generator-web', '@hansen/generator-web',
+    'paimind-generator-office', '@hansen/generator-office',
+    'paimind-generator-bento', '@hansen/generator-bento',
+    'paimind-category-analysis-adapter', '@hansen/category-analysis-adapter',
+    'paimind-fact-layer', '@hansen/fact-layer',
+    'paimind-renderer-bento', '@hansen/renderer-bento',
+    'paimind-renderer-pdf', '@hansen/renderer-pdf',
+    'paimind-artifacts', '@hansen/artifacts',
+    'paimind-conversation-artifact-renderer', '@hansen/conversation-artifact-renderer',
+    'paimind-presentation-trace', '@hansen/presentation-trace',
+    'paimind-proposal-experience', '@hansen/proposal-experience',
+    'paimind-walmart-proposal-adapter', '@hansen/walmart-proposal-adapter',
+    'paimind-agent-market', '@hansen/agent-market',
+    'paimind-agent-builder', '@hansen/agent-builder',
+    'paimind-skill-market', '@hansen/skill-market',
+    'paimind-notifications', '@hansen/notifications',
+    'paimind-platform-scheduler', '@hansen/platform-scheduler',
+    'paimind-scheduler-adapter-harness', '@hansen/scheduler-adapter-harness',
+    'paimind-scheduler-adapter-http', '@hansen/scheduler-adapter-http',
+    'paimind-scheduler-adapter-feishu-bot', '@hansen/scheduler-adapter-feishu-bot',
+    'paimind-user-settings', '@hansen/user-settings',
+    'paimind-developer-resources', '@hansen/developer-resources',
   ]) {
     if (!installed.includes(marker)) {
       const schedulerRows = installed.split('\n').filter(line => /schedule/i.test(line)).join('\n')
@@ -760,72 +760,72 @@ try {
   await bootAndProbe([
     'dsh-better-sidebar',
     '@huanlin/dsh-plugin-better-sidebar-plugin-office',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/visual-experience',
-    '@paimind/conversation-title',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/conversation-artifact-renderer',
-    '@paimind/presentation-trace',
-    '@paimind/proposal-experience',
-    '@paimind/agent-market',
-    '@paimind/skill-market',
-    '@paimind/notifications',
-    '@paimind/platform-scheduler',
-    '@paimind/user-settings',
-    '@paimind/developer-resources',
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/visual-experience',
+    '@hansen/conversation-title',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/conversation-artifact-renderer',
+    '@hansen/presentation-trace',
+    '@hansen/proposal-experience',
+    '@hansen/agent-market',
+    '@hansen/skill-market',
+    '@hansen/notifications',
+    '@hansen/platform-scheduler',
+    '@hansen/user-settings',
+    '@hansen/developer-resources',
   ], [
-    '@paimind/agent-builder',
-    '@paimind/platform-api',
-    '@paimind/scheduler-adapter-harness',
-    '@paimind/scheduler-adapter-http',
-    '@paimind/scheduler-adapter-feishu-bot',
+    '@hansen/agent-builder',
+    '@hansen/platform-api',
+    '@hansen/scheduler-adapter-harness',
+    '@hansen/scheduler-adapter-http',
+    '@hansen/scheduler-adapter-feishu-bot',
   ])
 
   dsh([
     'plugin', '--profile', 'web', 'remove',
-    '@paimind/harness-bundle',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/visual-experience',
-    '@paimind/conversation-title',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/artifact-runtime',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/conversation-artifact-renderer',
-    '@paimind/presentation-trace',
-    '@paimind/proposal-experience',
-    '@paimind/walmart-proposal-adapter',
-    '@paimind/agent-market',
-    '@paimind/agent-builder',
-    '@paimind/skill-market',
-    '@paimind/notifications',
-    '@paimind/platform-api',
-    '@paimind/platform-scheduler',
-    '@paimind/scheduler-adapter-harness',
-    '@paimind/scheduler-adapter-http',
-    '@paimind/scheduler-adapter-feishu-bot',
-    '@paimind/user-settings',
-    '@paimind/developer-resources',
+    '@hansen/harness-bundle',
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/visual-experience',
+    '@hansen/conversation-title',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/artifact-runtime',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/conversation-artifact-renderer',
+    '@hansen/presentation-trace',
+    '@hansen/proposal-experience',
+    '@hansen/walmart-proposal-adapter',
+    '@hansen/agent-market',
+    '@hansen/agent-builder',
+    '@hansen/skill-market',
+    '@hansen/notifications',
+    '@hansen/platform-api',
+    '@hansen/platform-scheduler',
+    '@hansen/scheduler-adapter-harness',
+    '@hansen/scheduler-adapter-http',
+    '@hansen/scheduler-adapter-feishu-bot',
+    '@hansen/user-settings',
+    '@hansen/developer-resources',
     '@huanlin/dsh-plugin-better-sidebar-plugin-office',
     'dsh-better-sidebar',
   ], 'remove PAIMind packages')
@@ -869,19 +869,19 @@ try {
     'plugin', '--profile', 'web', 'add', visualExperienceBundleRoot, brandingRoot, visualExperienceRoot,
   ], 'install Visual Experience as an independent plugin')
   await bootAndProbe([
-    '@paimind/branding', '@paimind/visual-experience',
+    '@hansen/branding', '@hansen/visual-experience',
   ])
   dsh([
     'plugin', '--profile', 'web', 'remove',
-    '@paimind/test-visual-experience-bundle', '@paimind/visual-experience',
+    '@hansen/test-visual-experience-bundle', '@hansen/visual-experience',
   ], 'remove Visual Experience independently')
-  await bootAndProbe([], ['@paimind/visual-experience'])
+  await bootAndProbe([], ['@hansen/visual-experience'])
   dsh([
-    'plugin', '--profile', 'web', 'remove', '@paimind/branding',
+    'plugin', '--profile', 'web', 'remove', '@hansen/branding',
   ], 'remove Visual Experience companion branding')
   const visualExperienceRemoved = dsh(['--profile', 'web', '--dump-config'], 'confirm Visual Experience cleanup')
   if (visualExperienceRemoved.includes('paimind-visual-experience')
-    || visualExperienceRemoved.includes('@paimind/visual-experience')
+    || visualExperienceRemoved.includes('@hansen/visual-experience')
     || visualExperienceRemoved.includes('paimind-branding')) {
     throw new Error('Visual Experience or its companion branding remained after independent removal')
   }
@@ -915,47 +915,47 @@ try {
   ], 'install independent features without Extension Center or bundle')
   await bootAndProbe([
     'dsh-better-sidebar',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-market',
-    '@paimind/skill-market',
-    '@paimind/notifications',
-    '@paimind/developer-resources',
-  ], ['@paimind/extension-center', '@paimind/agent-builder'])
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-market',
+    '@hansen/skill-market',
+    '@hansen/notifications',
+    '@hansen/developer-resources',
+  ], ['@hansen/extension-center', '@hansen/agent-builder'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
-    '@paimind/test-without-extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/artifact-runtime',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/walmart-proposal-adapter',
-    '@paimind/agent-market',
-    '@paimind/agent-builder',
-    '@paimind/skill-market',
-    '@paimind/notifications',
-    '@paimind/developer-resources',
+    '@hansen/test-without-extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/artifact-runtime',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/walmart-proposal-adapter',
+    '@hansen/agent-market',
+    '@hansen/agent-builder',
+    '@hansen/skill-market',
+    '@hansen/notifications',
+    '@hansen/developer-resources',
     'dsh-better-sidebar',
   ], 'remove independent features after Extension Center absence probe')
   const independentRemoved = dsh(['--profile', 'web', '--dump-config'], 'confirm independent feature cleanup')
@@ -988,49 +988,49 @@ try {
     notificationsRoot,
   ], 'install product composition without Task Monitor')
   const withoutTaskMonitor = dsh(['--profile', 'web', '--dump-config'], 'dump composition without Task Monitor')
-  if (withoutTaskMonitor.includes('paimind-task-monitor') || withoutTaskMonitor.includes('@paimind/task-monitor')) {
+  if (withoutTaskMonitor.includes('paimind-task-monitor') || withoutTaskMonitor.includes('@hansen/task-monitor')) {
     throw new Error('Task Monitor remained in its isolated-removal composition')
   }
   await bootAndProbe([
     'dsh-better-sidebar',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-market',
-    '@paimind/skill-market',
-    '@paimind/notifications',
-  ], ['@paimind/task-monitor', '@paimind/agent-builder'])
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-market',
+    '@hansen/skill-market',
+    '@hansen/notifications',
+  ], ['@hansen/task-monitor', '@hansen/agent-builder'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
-    '@paimind/test-without-task-monitor',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/artifact-runtime',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-market',
-    '@paimind/agent-builder',
-    '@paimind/skill-market',
-    '@paimind/notifications',
+    '@hansen/test-without-task-monitor',
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/artifact-runtime',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-market',
+    '@hansen/agent-builder',
+    '@hansen/skill-market',
+    '@hansen/notifications',
     'dsh-better-sidebar',
   ], 'remove composition after Task Monitor isolation probe')
   const taskIsolationRemoved = dsh(['--profile', 'web', '--dump-config'], 'confirm Task Monitor isolation cleanup')
@@ -1063,49 +1063,49 @@ try {
     notificationsRoot,
   ], 'install product composition without Agent Market')
   const withoutAgentMarket = dsh(['--profile', 'web', '--dump-config'], 'dump composition without Agent Market')
-  if (withoutAgentMarket.includes('paimind-agent-market') || withoutAgentMarket.includes('@paimind/agent-market')) {
+  if (withoutAgentMarket.includes('paimind-agent-market') || withoutAgentMarket.includes('@hansen/agent-market')) {
     throw new Error('Agent Market remained in its isolated-removal composition')
   }
   await bootAndProbe([
     'dsh-better-sidebar',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/skill-market',
-    '@paimind/notifications',
-  ], ['@paimind/agent-market', '@paimind/agent-builder'])
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/skill-market',
+    '@hansen/notifications',
+  ], ['@hansen/agent-market', '@hansen/agent-builder'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
-    '@paimind/test-without-agent-market',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/artifact-runtime',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-builder',
-    '@paimind/skill-market',
-    '@paimind/notifications',
+    '@hansen/test-without-agent-market',
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/artifact-runtime',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-builder',
+    '@hansen/skill-market',
+    '@hansen/notifications',
     'dsh-better-sidebar',
   ], 'remove composition after Agent Market isolation probe')
   const agentIsolationRemoved = dsh(['--profile', 'web', '--dump-config'], 'confirm Agent Market isolation cleanup')
@@ -1138,50 +1138,50 @@ try {
     notificationsRoot,
   ], 'install product composition without Agent Builder')
   const withoutAgentBuilder = dsh(['--profile', 'web', '--dump-config'], 'dump composition without Agent Builder')
-  if (withoutAgentBuilder.includes('paimind-agent-builder') || withoutAgentBuilder.includes('@paimind/agent-builder')) {
+  if (withoutAgentBuilder.includes('paimind-agent-builder') || withoutAgentBuilder.includes('@hansen/agent-builder')) {
     throw new Error('Agent Builder remained in its isolated-removal composition')
   }
   await bootAndProbe([
     'dsh-better-sidebar',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-market',
-    '@paimind/skill-market',
-    '@paimind/notifications',
-  ], ['@paimind/agent-builder'])
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-market',
+    '@hansen/skill-market',
+    '@hansen/notifications',
+  ], ['@hansen/agent-builder'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
-    '@paimind/test-without-agent-builder',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/artifact-runtime',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-market',
-    '@paimind/skill-market',
-    '@paimind/notifications',
+    '@hansen/test-without-agent-builder',
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/artifact-runtime',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-market',
+    '@hansen/skill-market',
+    '@hansen/notifications',
     'dsh-better-sidebar',
   ], 'remove composition after Agent Builder isolation probe')
   const builderIsolationRemoved = dsh(['--profile', 'web', '--dump-config'], 'confirm Agent Builder isolation cleanup')
@@ -1214,49 +1214,49 @@ try {
     notificationsRoot,
   ], 'install product composition without Skill Market')
   const withoutSkillMarket = dsh(['--profile', 'web', '--dump-config'], 'dump composition without Skill Market')
-  if (withoutSkillMarket.includes('paimind-skill-market') || withoutSkillMarket.includes('@paimind/skill-market')) {
+  if (withoutSkillMarket.includes('paimind-skill-market') || withoutSkillMarket.includes('@hansen/skill-market')) {
     throw new Error('Skill Market remained in its isolated-removal composition')
   }
   await bootAndProbe([
     'dsh-better-sidebar',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-market',
-    '@paimind/notifications',
-  ], ['@paimind/skill-market', '@paimind/agent-builder'])
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-market',
+    '@hansen/notifications',
+  ], ['@hansen/skill-market', '@hansen/agent-builder'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
-    '@paimind/test-without-skill-market',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/artifact-runtime',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-market',
-    '@paimind/agent-builder',
-    '@paimind/notifications',
+    '@hansen/test-without-skill-market',
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/artifact-runtime',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-market',
+    '@hansen/agent-builder',
+    '@hansen/notifications',
     'dsh-better-sidebar',
   ], 'remove composition after Skill Market isolation probe')
   const skillIsolationRemoved = dsh(['--profile', 'web', '--dump-config'], 'confirm Skill Market isolation cleanup')
@@ -1289,49 +1289,49 @@ try {
     skillMarketRoot,
   ], 'install product composition without Notification Center')
   const withoutNotifications = dsh(['--profile', 'web', '--dump-config'], 'dump composition without Notification Center')
-  if (withoutNotifications.includes('paimind-notifications') || withoutNotifications.includes('@paimind/notifications')) {
+  if (withoutNotifications.includes('paimind-notifications') || withoutNotifications.includes('@hansen/notifications')) {
     throw new Error('Notification Center remained in its isolated-removal composition')
   }
   await bootAndProbe([
     'dsh-better-sidebar',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-market',
-    '@paimind/skill-market',
-  ], ['@paimind/notifications', '@paimind/agent-builder'])
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-market',
+    '@hansen/skill-market',
+  ], ['@hansen/notifications', '@hansen/agent-builder'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
-    '@paimind/test-without-notifications',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/artifact-runtime',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-market',
-    '@paimind/agent-builder',
-    '@paimind/skill-market',
+    '@hansen/test-without-notifications',
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/artifact-runtime',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-market',
+    '@hansen/agent-builder',
+    '@hansen/skill-market',
     'dsh-better-sidebar',
   ], 'remove composition after Notification Center isolation probe')
   const notificationIsolationRemoved = dsh(['--profile', 'web', '--dump-config'], 'confirm Notification Center isolation cleanup')
@@ -1368,8 +1368,8 @@ try {
   ], 'install product composition without PAIMind Scheduler')
   const withoutScheduler = dsh(['--profile', 'web', '--dump-config'], 'dump composition without PAIMind Scheduler')
   if (withoutScheduler.includes('paimind-platform-scheduler')
-    || withoutScheduler.includes('@paimind/platform-scheduler')
-    || withoutScheduler.includes('@paimind/scheduler-adapter-')) {
+    || withoutScheduler.includes('@hansen/platform-scheduler')
+    || withoutScheduler.includes('@hansen/scheduler-adapter-')) {
     throw new Error('PAIMind Scheduler remained in its isolated-removal composition')
   }
   for (const retiredNativeMarker of ['@deepseek-ai/dsh-time-context', '@deepseek-ai/dsh-schedule']) {
@@ -1377,49 +1377,49 @@ try {
   }
   await bootAndProbe([
     'dsh-better-sidebar',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-market',
-    '@paimind/skill-market',
-    '@paimind/notifications',
-    '@paimind/developer-resources',
-  ], ['@paimind/agent-builder', '@paimind/platform-scheduler', '@paimind/scheduler-adapter-harness', '@paimind/scheduler-adapter-http', '@paimind/scheduler-adapter-feishu-bot', '@paimind/platform-api'])
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-market',
+    '@hansen/skill-market',
+    '@hansen/notifications',
+    '@hansen/developer-resources',
+  ], ['@hansen/agent-builder', '@hansen/platform-scheduler', '@hansen/scheduler-adapter-harness', '@hansen/scheduler-adapter-http', '@hansen/scheduler-adapter-feishu-bot', '@hansen/platform-api'])
   dsh([
     'plugin', '--profile', 'web', 'remove',
-    '@paimind/test-without-scheduler',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/artifact-runtime',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/walmart-proposal-adapter',
-    '@paimind/agent-market',
-    '@paimind/agent-builder',
-    '@paimind/skill-market',
-    '@paimind/notifications',
-    '@paimind/developer-resources',
+    '@hansen/test-without-scheduler',
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/artifact-runtime',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/walmart-proposal-adapter',
+    '@hansen/agent-market',
+    '@hansen/agent-builder',
+    '@hansen/skill-market',
+    '@hansen/notifications',
+    '@hansen/developer-resources',
     'dsh-better-sidebar',
   ], 'remove composition after PAIMind Scheduler isolation probe')
   const schedulerIsolationRemoved = dsh(['--profile', 'web', '--dump-config'], 'confirm PAIMind Scheduler isolation cleanup')
@@ -1463,74 +1463,74 @@ try {
     developerResourcesRoot,
   ], 'install product composition without PAIMind User Settings')
   const withoutUserSettings = dsh(['--profile', 'web', '--dump-config'], 'dump composition without PAIMind User Settings')
-  if (withoutUserSettings.includes('paimind-user-settings') || withoutUserSettings.includes('@paimind/user-settings')) {
+  if (withoutUserSettings.includes('paimind-user-settings') || withoutUserSettings.includes('@hansen/user-settings')) {
     throw new Error('PAIMind User Settings remained in its isolated-removal composition')
   }
   for (const retainedMarker of [
-    '@paimind/extension-center', '@paimind/runtime-orbs', '@paimind/notifications',
-    '@paimind/platform-scheduler', '@paimind/walmart-proposal-adapter',
+    '@hansen/extension-center', '@hansen/runtime-orbs', '@hansen/notifications',
+    '@hansen/platform-scheduler', '@hansen/walmart-proposal-adapter',
     "name: '@deepseek-ai/dsh-settings-file'",
   ]) {
     if (!withoutUserSettings.includes(retainedMarker)) throw new Error(`User Settings isolation lost ${retainedMarker}`)
   }
   await bootAndProbe([
     'dsh-better-sidebar',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-market',
-    '@paimind/skill-market',
-    '@paimind/notifications',
-    '@paimind/platform-scheduler',
-    '@paimind/developer-resources',
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-market',
+    '@hansen/skill-market',
+    '@hansen/notifications',
+    '@hansen/platform-scheduler',
+    '@hansen/developer-resources',
   ], [
-    '@paimind/user-settings',
-    '@paimind/agent-builder',
-    '@paimind/platform-api',
-    '@paimind/scheduler-adapter-harness',
-    '@paimind/scheduler-adapter-http',
-    '@paimind/scheduler-adapter-feishu-bot',
+    '@hansen/user-settings',
+    '@hansen/agent-builder',
+    '@hansen/platform-api',
+    '@hansen/scheduler-adapter-harness',
+    '@hansen/scheduler-adapter-http',
+    '@hansen/scheduler-adapter-feishu-bot',
   ])
   dsh([
     'plugin', '--profile', 'web', 'remove',
-    '@paimind/test-without-user-settings',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/artifact-runtime',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-market',
-    '@paimind/agent-builder',
-    '@paimind/skill-market',
-    '@paimind/notifications',
-    '@paimind/walmart-proposal-adapter',
-    '@paimind/platform-api',
-    '@paimind/platform-scheduler',
-    '@paimind/scheduler-adapter-harness',
-    '@paimind/scheduler-adapter-http',
-    '@paimind/scheduler-adapter-feishu-bot',
-    '@paimind/developer-resources',
+    '@hansen/test-without-user-settings',
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/artifact-runtime',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-market',
+    '@hansen/agent-builder',
+    '@hansen/skill-market',
+    '@hansen/notifications',
+    '@hansen/walmart-proposal-adapter',
+    '@hansen/platform-api',
+    '@hansen/platform-scheduler',
+    '@hansen/scheduler-adapter-harness',
+    '@hansen/scheduler-adapter-http',
+    '@hansen/scheduler-adapter-feishu-bot',
+    '@hansen/developer-resources',
     'dsh-better-sidebar',
   ], 'remove composition after PAIMind User Settings isolation probe')
   const userSettingsIsolationRemoved = dsh(['--profile', 'web', '--dump-config'], 'confirm PAIMind User Settings isolation cleanup')
@@ -1575,12 +1575,12 @@ try {
   ], 'install product composition without PAIMind Developer Resources')
   const withoutDeveloperResources = dsh(['--profile', 'web', '--dump-config'], 'dump composition without PAIMind Developer Resources')
   if (withoutDeveloperResources.includes('paimind-developer-resources')
-    || withoutDeveloperResources.includes('@paimind/developer-resources')) {
+    || withoutDeveloperResources.includes('@hansen/developer-resources')) {
     throw new Error('PAIMind Developer Resources remained in its isolated-removal composition')
   }
   for (const retainedMarker of [
-    '@paimind/extension-center', '@paimind/runtime-orbs', '@paimind/task-monitor',
-    '@paimind/user-settings', '@paimind/walmart-proposal-adapter',
+    '@hansen/extension-center', '@hansen/runtime-orbs', '@hansen/task-monitor',
+    '@hansen/user-settings', '@hansen/walmart-proposal-adapter',
     '@deepseek-ai/dsh-host-plugin-inventory',
   ]) {
     if (!withoutDeveloperResources.includes(retainedMarker)) {
@@ -1589,62 +1589,62 @@ try {
   }
   await bootAndProbe([
     'dsh-better-sidebar',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-market',
-    '@paimind/skill-market',
-    '@paimind/notifications',
-    '@paimind/platform-scheduler',
-    '@paimind/user-settings',
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-market',
+    '@hansen/skill-market',
+    '@hansen/notifications',
+    '@hansen/platform-scheduler',
+    '@hansen/user-settings',
   ], [
-    '@paimind/developer-resources',
-    '@paimind/agent-builder',
-    '@paimind/platform-api',
-    '@paimind/scheduler-adapter-harness',
-    '@paimind/scheduler-adapter-http',
-    '@paimind/scheduler-adapter-feishu-bot',
+    '@hansen/developer-resources',
+    '@hansen/agent-builder',
+    '@hansen/platform-api',
+    '@hansen/scheduler-adapter-harness',
+    '@hansen/scheduler-adapter-http',
+    '@hansen/scheduler-adapter-feishu-bot',
   ])
   dsh([
     'plugin', '--profile', 'web', 'remove',
-    '@paimind/test-without-developer-resources',
-    '@paimind/extension-center',
-    '@paimind/runtime-orbs',
-    '@paimind/branding',
-    '@paimind/workspace-project',
-    '@paimind/workspace-blueprints',
-    '@paimind/better-sidebar-adapter',
-    '@paimind/task-monitor',
-    '@paimind/artifact-runtime',
-    '@paimind/generator-web',
-    '@paimind/generator-office',
-    '@paimind/generator-bento',
-    '@paimind/renderer-bento',
-    '@paimind/renderer-pdf',
-    '@paimind/artifacts',
-    '@paimind/presentation-trace',
-    '@paimind/agent-market',
-    '@paimind/agent-builder',
-    '@paimind/skill-market',
-    '@paimind/notifications',
-    '@paimind/walmart-proposal-adapter',
-    '@paimind/platform-api',
-    '@paimind/platform-scheduler',
-    '@paimind/scheduler-adapter-harness',
-    '@paimind/scheduler-adapter-http',
-    '@paimind/scheduler-adapter-feishu-bot',
-    '@paimind/user-settings',
+    '@hansen/test-without-developer-resources',
+    '@hansen/extension-center',
+    '@hansen/runtime-orbs',
+    '@hansen/branding',
+    '@hansen/workspace-project',
+    '@hansen/workspace-blueprints',
+    '@hansen/better-sidebar-adapter',
+    '@hansen/task-monitor',
+    '@hansen/artifact-runtime',
+    '@hansen/generator-web',
+    '@hansen/generator-office',
+    '@hansen/generator-bento',
+    '@hansen/renderer-bento',
+    '@hansen/renderer-pdf',
+    '@hansen/artifacts',
+    '@hansen/presentation-trace',
+    '@hansen/agent-market',
+    '@hansen/agent-builder',
+    '@hansen/skill-market',
+    '@hansen/notifications',
+    '@hansen/walmart-proposal-adapter',
+    '@hansen/platform-api',
+    '@hansen/platform-scheduler',
+    '@hansen/scheduler-adapter-harness',
+    '@hansen/scheduler-adapter-http',
+    '@hansen/scheduler-adapter-feishu-bot',
+    '@hansen/user-settings',
     'dsh-better-sidebar',
   ], 'remove composition after PAIMind Developer Resources isolation probe')
   const developerResourcesIsolationRemoved = dsh(['--profile', 'web', '--dump-config'], 'confirm PAIMind Developer Resources isolation cleanup')

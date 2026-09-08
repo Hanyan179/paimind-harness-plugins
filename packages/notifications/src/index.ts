@@ -6,7 +6,7 @@ import {
   type NotificationRecord,
   type PaimindNotificationPublishInput,
   type PaimindNotificationSource,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import {
   PaimindHostRemoteService,
   definePaimindStorageDomain,
@@ -15,7 +15,7 @@ import {
   type PaimindStorageDomainFacility,
   type PaimindStorageDomainHandle,
   type PaimindStorageTable,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 
 export const name = 'paimind-notifications'
 export const PAIMIND_NOTIFICATION_DOMAIN = 'paimind_notifications'

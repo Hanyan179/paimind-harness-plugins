@@ -43,7 +43,7 @@ import {
   type PaimindSessionBusinessSkillSelectionV1,
   type PaimindUserSkillPolicyReplaceInput,
   type PaimindUserSkillPolicyV1,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import {
   describePaimindHostLoaderEntry,
   definePaimindHarnessTool,
@@ -58,8 +58,8 @@ import {
   type PaimindScopedSkillProjection,
   type PaimindHostToolRegistry,
   type PaimindToolRunContext,
-} from '@paimind/harness-compat/host'
-import type { PaimindHostWebServer } from '@paimind/harness-compat'
+} from '@hansen/harness-compat/host'
+import type { PaimindHostWebServer } from '@hansen/harness-compat'
 import { PAIMIND_SKILL_UPLOAD_PATH } from './catalog.js'
 import {
   RECOMMENDED_SKILL_CATALOG,
@@ -86,7 +86,7 @@ const PAIMIND_SKILL_INSTALLATION_SKILL = 'paimind-skill-installation'
 const PAIMIND_SKILL_INSTALLATION_DESCRIPTION = 'Inspect and install a public GitHub Skill into the PAIMind Skill Center, then optionally attach it to the current managed Agent. Use when the user asks to import, install, update, or bind a Skill from GitHub.'
 const PAIMIND_SKILL_AUTHORING_SKILL = 'paimind-skill-authoring'
 const PAIMIND_SKILL_AUTHORING_DESCRIPTION = 'Create a new Business Skill and hand an unsaved draft to the PAIMind Skill Center for review. Use when the user asks to create, write, or design a new Skill.'
-const PAIMIND_SKILL_MARKET_PLUGIN_ID = '@paimind/skill-market'
+const PAIMIND_SKILL_MARKET_PLUGIN_ID = '@hansen/skill-market'
 const PAIMIND_AGENT_AUTHORING_SKILL = 'paimind-agent-authoring'
 const PAIMIND_GENUI_SKILL = 'genui'
 const PAIMIND_GENUI_DESCRIPTION = 'Generate and render structured interactive user interfaces when a task benefits from forms, tables, dashboards, or other visual interaction.'
@@ -98,7 +98,7 @@ const RETIRED_SYSTEM_BUSINESS_SKILLS = new Map<string, string>([
   ['skill-creator', 'skill-creator-1.0.0.zip'],
   ['skill-installer', 'skill-installer-1.0.0.zip'],
 ])
-export { PAIMIND_SKILL_INSPECT_GITHUB_TOOL, PAIMIND_SKILL_INSTALL_TOOL } from '@paimind/contracts'
+export { PAIMIND_SKILL_INSPECT_GITHUB_TOOL, PAIMIND_SKILL_INSTALL_TOOL } from '@hansen/contracts'
 export { PAIMIND_SKILL_PREPARE_CREATE_TOOL }
 
 function packagedSkillBody(url: URL): string {

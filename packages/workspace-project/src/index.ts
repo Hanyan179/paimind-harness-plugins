@@ -1,10 +1,10 @@
-import type { ProjectRef } from '@paimind/contracts'
+import type { ProjectRef } from '@hansen/contracts'
 import type {
   HarnessSessionListSnapshot,
   HarnessSessionService,
   HarnessWorkspaceListSnapshot,
   HarnessWorkspaceService,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 
 /** Host half of the FP04 UI plugin. */
 export const name = 'paimind-workspace-project'

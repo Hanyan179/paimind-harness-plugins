@@ -7,6 +7,6 @@ describe('Walmart adapter invariant', () => {
     apply({ invariants: { register } })
     expect(name).toBe('paimind-walmart-proposal-adapter-invariant')
     expect(inject).toEqual(['invariants'])
-    expect(register).toHaveBeenCalledWith('@paimind/walmart-proposal-adapter', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('@hansen/walmart-proposal-adapter', expect.any(Function))
   })
 })

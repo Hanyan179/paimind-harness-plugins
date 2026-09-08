@@ -5,7 +5,7 @@ import {
   type PaimindNotificationLevel,
   type PaimindScheduleActionRegistration,
   type PaimindScheduleRunReport,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 
 export const PAIMIND_PLATFORM_CONTRACT_VERSION = '1.0' as const
 

@@ -7,6 +7,6 @@ describe('FP08 invariant registration', () => {
     apply({ invariants: { register } })
     expect(name).toBe('paimind-presentation-trace-invariant')
     expect(inject).toEqual(['invariants'])
-    expect(register).toHaveBeenCalledWith('@paimind/presentation-trace', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('@hansen/presentation-trace', expect.any(Function))
   })
 })

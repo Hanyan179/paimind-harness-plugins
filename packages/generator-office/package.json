@@ -1,5 +1,5 @@
 {
-  "name": "@paimind/generator-office",
+  "name": "@hansen/generator-office",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": {
@@ -40,10 +40,10 @@
   },
   "dependencies": {
     "@embedpdf/fonts-sc": "1.0.0",
-    "@paimind/artifact-runtime": "workspace:^",
-    "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^",
-    "@paimind/presentation-contracts": "workspace:^",
+    "@hansen/artifact-runtime": "workspace:^",
+    "@hansen/contracts": "workspace:^",
+    "@hansen/harness-compat": "workspace:^",
+    "@hansen/presentation-contracts": "workspace:^",
     "exceljs": "4.4.0",
     "pdfkit": "0.20.1",
     "pptxgenjs": "4.0.1"
@@ -52,13 +52,13 @@
     "react": ">=18.0.0 <20.0.0"
   },
   "devDependencies": {
-    "@paimind/presentation-trace": "workspace:^",
-    "@paimind/testkit": "workspace:^",
+    "@hansen/presentation-trace": "workspace:^",
+    "@hansen/testkit": "workspace:^",
     "@types/pdfkit": "0.17.5",
     "pdf-lib": "1.17.1",
     "react": "^18.3.1"
   },
-  "paimindBuild": {
+  "hansenBuild": {
     "node": [
       "src/index.ts",
       "src/cli.ts",

@@ -1,9 +1,9 @@
 {
-  "name": "@paimind/platform-api",
+  "name": "@hansen/platform-api",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "Authenticated server-to-server API for PAIMind notifications and scheduled actions",
+  "description": "Authenticated server-to-server API for Hansen notifications and scheduled actions",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -14,15 +14,15 @@
   },
   "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
   "dependencies": {
-    "@paimind/contracts": "workspace:^",
-    "@paimind/harness-compat": "workspace:^",
-    "@paimind/notifications": "workspace:^",
-    "@paimind/platform-sdk": "workspace:^",
-    "@paimind/platform-scheduler": "workspace:^",
-    "@paimind/scheduler-adapter-http": "workspace:^",
+    "@hansen/contracts": "workspace:^",
+    "@hansen/harness-compat": "workspace:^",
+    "@hansen/notifications": "workspace:^",
+    "@hansen/platform-sdk": "workspace:^",
+    "@hansen/platform-scheduler": "workspace:^",
+    "@hansen/scheduler-adapter-http": "workspace:^",
     "zod": "^4.4.3"
   },
-  "devDependencies": { "@paimind/testkit": "workspace:^" },
-  "paimindBuild": { "node": ["src/index.ts", "src/invariant.ts"] },
+  "devDependencies": { "@hansen/testkit": "workspace:^" },
+  "hansenBuild": { "node": ["src/index.ts", "src/invariant.ts"] },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }

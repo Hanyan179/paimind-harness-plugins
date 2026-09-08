@@ -1,6 +1,6 @@
-import type { PaimindInvariantContext } from '@paimind/harness-compat'
+import type { PaimindInvariantContext } from '@hansen/harness-compat'
 
-const PACKAGE_NAME = '@paimind/better-sidebar-adapter'
+const PACKAGE_NAME = '@hansen/better-sidebar-adapter'
 
 export const name = 'paimind-better-sidebar-adapter-invariant'
 export const inject = ['invariants']

@@ -12,7 +12,7 @@ PAIMind 将可移植的 OpenAI 官方 Skill 原则适配到 DeepSeek Harness。�
 | `paimind-skill-authoring` | 创建和改进 Codex Skill | System Skill（系统级技能）；通过结构化 Tool（工具）生成未保存草稿，交给 Skill Center（技能中心）编辑和保存 |
 | `paimind-skill-installation` | 从目录或 GitHub 安装 Codex Skill | System Skill（系统级技能）；不直接写宿主目录，必须经过技能市场检查、确认和受管安装 |
 
-`openai-docs` 仍可作为 Business Skill（业务技能）目录包安装。Creator 与 Installer 已从市场目录移出，由 `@paimind/skill-market` 与对应 Tool（工具）共同管理 Lifecycle（生命周期），避免系统能力被业务包重复安装。
+`openai-docs` 仍可作为 Business Skill（业务技能）目录包安装。Creator 与 Installer 已从市场目录移出，由 `@hansen/skill-market` 与对应 Tool（工具）共同管理 Lifecycle（生命周期），避免系统能力被业务包重复安装。
 
 ## 验证原则
 

@@ -44,7 +44,7 @@ function systemLifecycleHarness() {
       async list() {
         return [...skills.values()].map(skill => ({
           name: skill.name, description: skill.description,
-          source: 'bundled', provider: '@paimind/skill-market',
+          source: 'bundled', provider: '@hansen/skill-market',
         }))
       },
       register(skill: { readonly name: string; readonly description: string; readonly content: string }) {
@@ -114,7 +114,7 @@ describe('streaming Skill installer', () => {
     }> = []
     const liveSystemSkills = [{
       name: 'future-system-skill', description: 'A future source-owned System Skill',
-      source: 'bundled', provider: '@paimind/future-system',
+      source: 'bundled', provider: '@hansen/future-system',
     }]
     const context = {
       reflect: { provide: () => {} }, webServer: { register: () => () => {} },
@@ -122,7 +122,7 @@ describe('streaming Skill installer', () => {
         async list() {
           return [
             ...liveSystemSkills,
-            ...registeredSkills.map(skill => ({ ...skill, source: 'bundled', provider: '@paimind/skill-market' })),
+            ...registeredSkills.map(skill => ({ ...skill, source: 'bundled', provider: '@hansen/skill-market' })),
           ]
         },
         register(skill: { name: string; description: string; content: string }) { registeredSkills.push(skill); return () => {} },
@@ -190,7 +190,7 @@ describe('streaming Skill installer', () => {
       }),
       expect.objectContaining({
         name: 'paimind-skill-installation', availability: 'optional', userControl: 'atomic',
-        sourcePluginId: '@paimind/skill-market',
+        sourcePluginId: '@hansen/skill-market',
       }),
     ] })
 
@@ -271,7 +271,7 @@ describe('streaming Skill installer', () => {
       describeAgentAuthoringCapability() {
         return {
           name: 'paimind-agent-authoring', description: 'Create a reviewable Agent draft.',
-          sourcePluginId: '@paimind/agent-builder',
+          sourcePluginId: '@hansen/agent-builder',
         }
       },
       setAgentAuthoringEnabled,
@@ -348,7 +348,7 @@ describe('streaming Skill installer', () => {
     const agentSource = {
       async businessSkillNamesForPreset() { return [] },
       describeAgentAuthoringCapability() {
-        return { name: 'paimind-agent-authoring' as const, description: 'Create a reviewable Agent draft.', sourcePluginId: '@paimind/agent-builder' }
+        return { name: 'paimind-agent-authoring' as const, description: 'Create a reviewable Agent draft.', sourcePluginId: '@hansen/agent-builder' }
       },
       setAgentAuthoringEnabled(enabled: boolean) {
         agentAuthoringEnabled = enabled
@@ -470,7 +470,7 @@ describe('streaming Skill installer', () => {
         async list() {
           return [{
             name: 'future-system-skill', description: 'A future source-owned System Skill',
-            whenToUse: 'Use for future work', source: 'bundled', provider: '@paimind/future-system',
+            whenToUse: 'Use for future work', source: 'bundled', provider: '@hansen/future-system',
           }]
         },
         register: () => () => {},
@@ -484,7 +484,7 @@ describe('streaming Skill installer', () => {
     await expect(service.listSystemSkills()).resolves.toEqual({ items: [{
       kind: 'system', canonicalId: 'system:future-system-skill', name: 'future-system-skill',
       description: 'A future source-owned System Skill', whenToUse: 'Use for future work',
-      availability: 'mandatory', userControl: 'locked', sourcePluginId: '@paimind/future-system',
+      availability: 'mandatory', userControl: 'locked', sourcePluginId: '@hansen/future-system',
     }] })
     await expect(service.saveSkillSource({
       name: 'future-system-skill', description: 'Conflicting business package', instructions: 'Do not save.',

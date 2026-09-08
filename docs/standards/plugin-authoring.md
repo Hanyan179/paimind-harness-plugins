@@ -29,7 +29,7 @@ Every package has exactly one role in `package-roles.json`:
   package that is not mounted as an independent product runtime.
 
 Every client or headless plugin must be reachable from
-`@paimind/harness-bundle` through production dependency edges. A shared-support
+`@hansen/harness-bundle` through production dependency edges. A shared-support
 package must have a real production or development consumer; the bundle itself
 is the composition root. A package with no registered role, no consumer, or no
 reachable runtime path is an orphan and fails the gate. Counts are never a
@@ -58,8 +58,8 @@ permanent rule.
 - Loader row order does not establish activation order. Required services are
   declared through Cordis `inject`; optional services use `ctx.get(name)`.
 - Harness-version-sensitive imports and adapters live only in
-  `@paimind/harness-compat`. Better Sidebar imports live only in
-  `@paimind/better-sidebar-adapter`.
+  `@hansen/harness-compat`. Better Sidebar imports live only in
+  `@hansen/better-sidebar-adapter`.
 - Selected external providers are exact versions from the compatibility matrix.
   Feature packages never depend on `latest`, a caret range, a Git branch, or an
   unverified provider version.

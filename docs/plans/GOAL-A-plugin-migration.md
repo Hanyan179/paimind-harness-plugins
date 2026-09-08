@@ -108,7 +108,7 @@ composition. The audit also narrowed prototype retirement to the truthful
 non-destructive condition: the old runtime entry and dependencies are retired,
 while retained local source edits are preserved rather than reset.
 
-Post-Goal-A product decision RQ-103 activates `@paimind/platform-scheduler` as
+Post-Goal-A product decision RQ-103 activates `@hansen/platform-scheduler` as
 the single PAIMind Scheduled Tasks surface in the formal Bundle, together with
 its Harness, HTTP and Feishu-bot Adapter services. The former
 The former Session-local scheduler facade remained buildable but unselected at that checkpoint;

@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { definePresentationOutline } from '@paimind/presentation-contracts'
+import { definePresentationOutline } from '@hansen/presentation-contracts'
 
 const path = process.argv[2]
 if (!path) throw new Error('outline path is required')

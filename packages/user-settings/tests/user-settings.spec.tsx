@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { PaimindSettingsScope, PaimindSettingsScopeSnapshot } from '@paimind/harness-compat'
+import type { PaimindSettingsScope, PaimindSettingsScopeSnapshot } from '@hansen/harness-compat'
 import {
   DEFAULT_PAIMIND_PERSONALIZATION,
   PaimindUserSettingsService,
@@ -28,7 +28,7 @@ class MemoryScope implements PaimindSettingsScope<PaimindPersonalization> {
   async unset(): Promise<void> {}
 }
 
-describe('FP14 PAIMind personalization', () => {
+describe('FP14 personalization', () => {
   it('renders only enabled, meaningful personalization as bounded user context', () => {
     expect(renderPaimindPersonalizationContext(DEFAULT_PAIMIND_PERSONALIZATION)).toBe('')
     const custom = decodePaimindPersonalization({
@@ -48,7 +48,7 @@ describe('FP14 PAIMind personalization', () => {
     expect(decodePaimindPersonalization({ ...DEFAULT_PAIMIND_PERSONALIZATION, personality: 'verbose' })).toBeUndefined()
   })
 
-  it('reads and mutates the canonical Host namespace through the narrow PAIMind remote', async () => {
+  it('reads and mutates the canonical Host namespace through the narrow remote', async () => {
     const mutate = vi.fn(async () => {})
     const settings = {
       writable: true,
@@ -90,7 +90,7 @@ describe('FP14 PAIMind personalization', () => {
     expect(mutate).toHaveBeenCalledOnce()
   })
 
-  it('keeps native revision/CAS semantics across the PAIMind client remote', async () => {
+  it('keeps native revision/CAS semantics across the client remote', async () => {
     let value = DEFAULT_PAIMIND_PERSONALIZATION
     let revision = 11
     const mutate = vi.fn(async (request: { field: keyof PaimindPersonalization; value: unknown; expectedRevision: number }) => {
@@ -123,7 +123,7 @@ describe('FP14 PAIMind personalization', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /务实/ })) })
     expect(scope.getSnapshot().value?.personality).toBe('pragmatic')
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'PAIMind 应该了解什么？' }), { target: { value: '我是产品经理。' } })
+    fireEvent.change(screen.getByRole('textbox', { name: '助手应该了解什么？' }), { target: { value: '我是产品经理。' } })
     fireEvent.change(screen.getByRole('textbox', { name: '特别要求' }), { target: { value: '明确区分事实与判断。' } })
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: '保存个性化' })) })
     await waitFor(() => { expect(scope.getSnapshot().value).toMatchObject({ aboutMe: '我是产品经理。', customInstructions: '明确区分事实与判断。' }) })

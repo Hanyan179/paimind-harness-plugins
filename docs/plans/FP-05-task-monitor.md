@@ -2,7 +2,7 @@
 
 ## Outcome
 
-`@paimind/task-monitor` consolidates the native Harness `agent-preset`,
+`@hansen/task-monitor` consolidates the native Harness `agent-preset`,
 `subagent-catalog`, `job-list` and `session-log-download` Session-header seats. A compact icon trigger in the
 right-side Session utility position opens a read-only desktop
 Popover or narrow-screen Bottom Sheet that combines the current Session and
@@ -27,7 +27,7 @@ API. Better Sidebar is not its entry surface or state source.
 | MCP | Display exact `mcp__<server>__<tool>` calls only; request-catalog availability is not a used state | Tool and paginated Session History |
 | Project association | Reuse | `Project = Workspace` projection |
 | Session Log download | Delegate without copying | Harness `sessionLogDownload` controller |
-| Read-only summary and navigation | PAIMind contribution | `@paimind/task-monitor` |
+| Read-only summary and navigation | PAIMind contribution | `@hansen/task-monitor` |
 | Progress guesses, connection guesses and shadow state | Forbidden | None |
 
 ## Public projection
@@ -216,7 +216,7 @@ pass; unit fixtures or prior screenshots do not satisfy that promotion.
   measured `544px` wide with no document or panel horizontal overflow.
 - Focused verification passed 3 files / 13 tests and a standalone browser
   bundle. The repository-wide Type Check is currently blocked by unrelated
-  in-progress `@paimind/harness-compat/client-surface` source, so this revision
+  in-progress `@hansen/harness-compat/client-surface` source, so this revision
   does not claim a fresh full release gate.
 
 ## 2026-08-17 Agent-resource grouping read-back

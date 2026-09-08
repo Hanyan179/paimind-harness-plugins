@@ -3,7 +3,7 @@ import type {
   PaimindArtifactRuntimeHostContext,
   PaimindHostAgent,
   PaimindToolRunContext,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 import {
   ArtifactGeneratorRegistry,
   artifactWorkspaceRelativePath,

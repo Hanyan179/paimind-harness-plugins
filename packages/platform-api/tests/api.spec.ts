@@ -1,6 +1,6 @@
 import { Readable } from 'node:stream'
 import { describe, expect, it, vi } from 'vitest'
-import { PaimindReplayGuard, signPaimindRequest } from '@paimind/platform-sdk'
+import { PaimindReplayGuard, signPaimindRequest } from '@hansen/platform-sdk'
 import { PaimindPlatformApiService } from '../src/index.ts'
 
 const SECRET = 'platform-api-test-secret-with-more-than-32-characters'

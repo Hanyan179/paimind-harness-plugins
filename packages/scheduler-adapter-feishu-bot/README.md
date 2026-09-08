@@ -1,4 +1,4 @@
-# `@paimind/scheduler-adapter-feishu-bot`
+# `@hansen/scheduler-adapter-feishu-bot`
 
 Feishu custom-bot webhook adapter for PAIMind platform Scheduler.
 
@@ -19,7 +19,7 @@ Role: **Headless plugin**. It owns its service or adapter boundary and exposes n
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`), `@paimind/platform-scheduler` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/contracts` (`workspace:^`), `@hansen/harness-compat` (`workspace:^`), `@hansen/platform-scheduler` (`workspace:^`).
 - External runtime or peer dependencies: None.
 - Client service injection: None.
 

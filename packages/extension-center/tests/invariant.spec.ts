@@ -6,6 +6,6 @@ describe('Extension Center invariant companion', () => {
     const dispose = vi.fn()
     const register = vi.fn(() => dispose)
     expect(apply({ invariants: { register } })).toBe(dispose)
-    expect(register).toHaveBeenCalledWith('@paimind/extension-center', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('@hansen/extension-center', expect.any(Function))
   })
 })

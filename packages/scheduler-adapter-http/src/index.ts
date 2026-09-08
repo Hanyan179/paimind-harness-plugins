@@ -5,10 +5,10 @@ import {
   type PaimindNotificationSource,
   type PaimindScheduleActionRegistration,
   type PaimindScheduleRunAction,
-} from '@paimind/contracts'
-import { PaimindHostService } from '@paimind/harness-compat/host'
-import { signPaimindRequest } from '@paimind/platform-sdk'
-import type { PaimindScheduleExecutor, PaimindSchedulerServiceApi } from '@paimind/platform-scheduler'
+} from '@hansen/contracts'
+import { PaimindHostService } from '@hansen/harness-compat/host'
+import { signPaimindRequest } from '@hansen/platform-sdk'
+import type { PaimindScheduleExecutor, PaimindSchedulerServiceApi } from '@hansen/platform-scheduler'
 
 export const name = 'paimind-scheduler-adapter-http'
 export const PAIMIND_HTTP_SCHEDULER_ADAPTER_ID = 'adapter:paimind-http'

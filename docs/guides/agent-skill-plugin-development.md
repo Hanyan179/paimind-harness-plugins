@@ -4,13 +4,13 @@
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm --filter @paimind/skill-market typecheck
-pnpm --filter @paimind/agent-builder typecheck
-pnpm --filter @paimind/agent-market typecheck
+pnpm --filter @hansen/skill-market typecheck
+pnpm --filter @hansen/agent-builder typecheck
+pnpm --filter @hansen/agent-market typecheck
 pnpm run build
 ```
 
-正式组合继续使用 `@paimind/skill-market`、`@paimind/agent-market` 和无界面的 `@paimind/agent-builder`。不要新增 Agent 或 Skill 运行注册表，也不要修改 DeepSeek Harness 上游源码。
+正式组合继续使用 `@hansen/skill-market`、`@hansen/agent-market` 和无界面的 `@hansen/agent-builder`。不要新增 Agent 或 Skill 运行注册表，也不要修改 DeepSeek Harness 上游源码。
 
 ## Skill 开发
 

@@ -1,4 +1,4 @@
-# `@paimind/workspace-project`
+# `@hansen/workspace-project`
 
 Headless PAIMind Project context adapter over native DeepSeek Harness Workspaces.
 
@@ -19,7 +19,7 @@ Role: **Client plugin**. It owns the product projection described above; Harness
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/contracts` (`workspace:^`), `@hansen/harness-compat` (`workspace:^`).
 - External runtime or peer dependencies: None.
 - Client service injection: `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-ui-workspace`.
 

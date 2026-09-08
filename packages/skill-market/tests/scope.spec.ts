@@ -3,17 +3,17 @@ import type {
   PaimindBusinessSkillReference,
   PaimindSkillScopeInputV1,
   PaimindSystemSkillReference,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import { resolvePaimindSkillScope } from '../src/scope.js'
 
 const mandatory = (name: string): PaimindSystemSkillReference => ({
   kind: 'system', canonicalId: `system:${name}`, name, description: `${name} system capability`,
-  availability: 'mandatory', userControl: 'locked', sourcePluginId: `@paimind/${name}`,
+  availability: 'mandatory', userControl: 'locked', sourcePluginId: `@hansen/${name}`,
 })
 
 const optional = (name: string): PaimindSystemSkillReference => ({
   kind: 'system', canonicalId: `system:${name}`, name, description: `${name} optional capability`,
-  availability: 'optional', userControl: 'atomic', sourcePluginId: `@paimind/${name}`,
+  availability: 'optional', userControl: 'atomic', sourcePluginId: `@hansen/${name}`,
 })
 
 const digest = (character: string): `sha256:${string}` => `sha256:${character.repeat(64)}`

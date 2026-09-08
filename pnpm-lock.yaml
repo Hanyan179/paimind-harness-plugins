@@ -83,17 +83,17 @@ importers:
       '@deepseek-ai/dsh-home-paths':
         specifier: 0.1.1-rc.2
         version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -102,23 +102,23 @@ importers:
 
   packages/agent-market:
     dependencies:
-      '@paimind/agent-builder':
+      '@hansen/agent-builder':
         specifier: workspace:^
         version: link:../agent-builder
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/skill-market':
+      '@hansen/skill-market':
         specifier: workspace:^
         version: link:../skill-market
-      '@paimind/ui-foundation':
+      '@hansen/ui-foundation':
         specifier: workspace:^
         version: link:../ui-foundation
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -130,32 +130,32 @@ importers:
 
   packages/artifact-runtime:
     dependencies:
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
 
   packages/artifacts:
     dependencies:
-      '@paimind/better-sidebar-adapter':
+      '@hansen/better-sidebar-adapter':
         specifier: workspace:^
         version: link:../better-sidebar-adapter
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/renderer-bento':
+      '@hansen/renderer-bento':
         specifier: workspace:^
         version: link:../renderer-bento
-      '@paimind/workspace-project':
+      '@hansen/workspace-project':
         specifier: workspace:^
         version: link:../workspace-project
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -167,14 +167,14 @@ importers:
 
   packages/better-sidebar-adapter:
     dependencies:
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/workspace-project':
+      '@hansen/workspace-project':
         specifier: workspace:^
         version: link:../workspace-project
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       dsh-better-sidebar:
@@ -189,11 +189,11 @@ importers:
 
   packages/branding:
     dependencies:
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       react:
@@ -205,20 +205,20 @@ importers:
 
   packages/category-analysis-adapter:
     dependencies:
-      '@paimind/artifact-runtime':
+      '@hansen/artifact-runtime':
         specifier: workspace:^
         version: link:../artifact-runtime
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/presentation-contracts':
+      '@hansen/presentation-contracts':
         specifier: workspace:^
         version: link:../presentation-contracts
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
 
@@ -226,14 +226,14 @@ importers:
 
   packages/conversation-artifact-renderer:
     dependencies:
-      '@paimind/artifacts':
+      '@hansen/artifacts':
         specifier: workspace:^
         version: link:../artifacts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -245,11 +245,11 @@ importers:
 
   packages/conversation-title:
     dependencies:
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -261,14 +261,14 @@ importers:
 
   packages/developer-resources:
     dependencies:
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       react:
@@ -280,17 +280,17 @@ importers:
 
   packages/extension-center:
     dependencies:
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       react:
@@ -302,39 +302,39 @@ importers:
 
   packages/fact-layer:
     dependencies:
-      '@paimind/artifact-runtime':
+      '@hansen/artifact-runtime':
         specifier: workspace:^
         version: link:../artifact-runtime
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/presentation-contracts':
+      '@hansen/presentation-contracts':
         specifier: workspace:^
         version: link:../presentation-contracts
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
 
   packages/generator-bento:
     dependencies:
-      '@paimind/artifact-runtime':
+      '@hansen/artifact-runtime':
         specifier: workspace:^
         version: link:../artifact-runtime
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/presentation-contracts':
+      '@hansen/presentation-contracts':
         specifier: workspace:^
         version: link:../presentation-contracts
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       react:
@@ -346,16 +346,16 @@ importers:
       '@embedpdf/fonts-sc':
         specifier: 1.0.0
         version: 1.0.0
-      '@paimind/artifact-runtime':
+      '@hansen/artifact-runtime':
         specifier: workspace:^
         version: link:../artifact-runtime
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/presentation-contracts':
+      '@hansen/presentation-contracts':
         specifier: workspace:^
         version: link:../presentation-contracts
       exceljs:
@@ -368,10 +368,10 @@ importers:
         specifier: 4.0.1
         version: 4.0.1
     devDependencies:
-      '@paimind/presentation-trace':
+      '@hansen/presentation-trace':
         specifier: workspace:^
         version: link:../presentation-trace
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@types/pdfkit':
@@ -386,17 +386,17 @@ importers:
 
   packages/generator-web:
     dependencies:
-      '@paimind/artifact-runtime':
+      '@hansen/artifact-runtime':
         specifier: workspace:^
         version: link:../artifact-runtime
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       react:
@@ -408,103 +408,103 @@ importers:
       '@huanlin/dsh-plugin-better-sidebar-plugin-office':
         specifier: 0.1.2
         version: 0.1.2(@deepseek-ai/dsh-client-runtime@0.1.1-rc.2(601e9129357dc48738583e18d75d19b2))(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(cordis@4.0.0-rc.8)(dsh-better-sidebar@0.17.1(fad6fbbdaca3f1f6e57e6754b9e71d9e))(pdfjs-dist@6.2.108)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
-      '@paimind/agent-builder':
+      '@hansen/agent-builder':
         specifier: workspace:^
         version: link:../agent-builder
-      '@paimind/agent-market':
+      '@hansen/agent-market':
         specifier: workspace:^
         version: link:../agent-market
-      '@paimind/artifact-runtime':
+      '@hansen/artifact-runtime':
         specifier: workspace:^
         version: link:../artifact-runtime
-      '@paimind/artifacts':
+      '@hansen/artifacts':
         specifier: workspace:^
         version: link:../artifacts
-      '@paimind/better-sidebar-adapter':
+      '@hansen/better-sidebar-adapter':
         specifier: workspace:^
         version: link:../better-sidebar-adapter
-      '@paimind/branding':
+      '@hansen/branding':
         specifier: workspace:^
         version: link:../branding
-      '@paimind/category-analysis-adapter':
+      '@hansen/category-analysis-adapter':
         specifier: workspace:^
         version: link:../category-analysis-adapter
-      '@paimind/conversation-artifact-renderer':
+      '@hansen/conversation-artifact-renderer':
         specifier: workspace:^
         version: link:../conversation-artifact-renderer
-      '@paimind/conversation-title':
+      '@hansen/conversation-title':
         specifier: workspace:^
         version: link:../conversation-title
-      '@paimind/developer-resources':
+      '@hansen/developer-resources':
         specifier: workspace:^
         version: link:../developer-resources
-      '@paimind/extension-center':
+      '@hansen/extension-center':
         specifier: workspace:^
         version: link:../extension-center
-      '@paimind/fact-layer':
+      '@hansen/fact-layer':
         specifier: workspace:^
         version: link:../fact-layer
-      '@paimind/generator-bento':
+      '@hansen/generator-bento':
         specifier: workspace:^
         version: link:../generator-bento
-      '@paimind/generator-office':
+      '@hansen/generator-office':
         specifier: workspace:^
         version: link:../generator-office
-      '@paimind/generator-web':
+      '@hansen/generator-web':
         specifier: workspace:^
         version: link:../generator-web
-      '@paimind/notifications':
+      '@hansen/notifications':
         specifier: workspace:^
         version: link:../notifications
-      '@paimind/platform-api':
+      '@hansen/platform-api':
         specifier: workspace:^
         version: link:../platform-api
-      '@paimind/platform-scheduler':
+      '@hansen/platform-scheduler':
         specifier: workspace:^
         version: link:../scheduler
-      '@paimind/presentation-trace':
+      '@hansen/presentation-trace':
         specifier: workspace:^
         version: link:../presentation-trace
-      '@paimind/proposal-experience':
+      '@hansen/proposal-experience':
         specifier: workspace:^
         version: link:../proposal-experience
-      '@paimind/renderer-bento':
+      '@hansen/renderer-bento':
         specifier: workspace:^
         version: link:../renderer-bento
-      '@paimind/renderer-pdf':
+      '@hansen/renderer-pdf':
         specifier: workspace:^
         version: link:../renderer-pdf
-      '@paimind/runtime-orbs':
+      '@hansen/runtime-orbs':
         specifier: workspace:^
         version: link:../runtime-orbs
-      '@paimind/scheduler-adapter-feishu-bot':
+      '@hansen/scheduler-adapter-feishu-bot':
         specifier: workspace:^
         version: link:../scheduler-adapter-feishu-bot
-      '@paimind/scheduler-adapter-harness':
+      '@hansen/scheduler-adapter-harness':
         specifier: workspace:^
         version: link:../scheduler-adapter-harness
-      '@paimind/scheduler-adapter-http':
+      '@hansen/scheduler-adapter-http':
         specifier: workspace:^
         version: link:../scheduler-adapter-http
-      '@paimind/skill-market':
+      '@hansen/skill-market':
         specifier: workspace:^
         version: link:../skill-market
-      '@paimind/task-monitor':
+      '@hansen/task-monitor':
         specifier: workspace:^
         version: link:../task-monitor
-      '@paimind/user-settings':
+      '@hansen/user-settings':
         specifier: workspace:^
         version: link:../user-settings
-      '@paimind/visual-experience':
+      '@hansen/visual-experience':
         specifier: workspace:^
         version: link:../visual-experience
-      '@paimind/walmart-proposal-adapter':
+      '@hansen/walmart-proposal-adapter':
         specifier: workspace:^
         version: link:../walmart-proposal-adapter
-      '@paimind/workspace-blueprints':
+      '@hansen/workspace-blueprints':
         specifier: workspace:^
         version: link:../workspace-blueprints
-      '@paimind/workspace-project':
+      '@hansen/workspace-project':
         specifier: workspace:^
         version: link:../workspace-project
       dsh-better-sidebar:
@@ -543,32 +543,32 @@ importers:
       '@deepseek-ai/schemastery':
         specifier: ^3.18.1
         version: 3.18.1
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
 
   packages/notifications:
     dependencies:
-      '@paimind/artifacts':
+      '@hansen/artifacts':
         specifier: workspace:^
         version: link:../artifacts
-      '@paimind/better-sidebar-adapter':
+      '@hansen/better-sidebar-adapter':
         specifier: workspace:^
         version: link:../better-sidebar-adapter
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/ui-foundation':
+      '@hansen/ui-foundation':
         specifier: workspace:^
         version: link:../ui-foundation
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -583,42 +583,42 @@ importers:
 
   packages/platform-api:
     dependencies:
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/notifications':
+      '@hansen/notifications':
         specifier: workspace:^
         version: link:../notifications
-      '@paimind/platform-scheduler':
+      '@hansen/platform-scheduler':
         specifier: workspace:^
         version: link:../scheduler
-      '@paimind/platform-sdk':
+      '@hansen/platform-sdk':
         specifier: workspace:^
         version: link:../platform-sdk
-      '@paimind/scheduler-adapter-http':
+      '@hansen/scheduler-adapter-http':
         specifier: workspace:^
         version: link:../scheduler-adapter-http
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
 
   packages/platform-sdk:
     dependencies:
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
 
@@ -626,26 +626,26 @@ importers:
 
   packages/presentation-trace:
     dependencies:
-      '@paimind/artifacts':
+      '@hansen/artifacts':
         specifier: workspace:^
         version: link:../artifacts
-      '@paimind/better-sidebar-adapter':
+      '@hansen/better-sidebar-adapter':
         specifier: workspace:^
         version: link:../better-sidebar-adapter
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/renderer-bento':
+      '@hansen/renderer-bento':
         specifier: workspace:^
         version: link:../renderer-bento
-      '@paimind/workspace-project':
+      '@hansen/workspace-project':
         specifier: workspace:^
         version: link:../workspace-project
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -657,11 +657,11 @@ importers:
 
   packages/proposal-experience:
     dependencies:
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -673,14 +673,14 @@ importers:
 
   packages/renderer-bento:
     dependencies:
-      '@paimind/better-sidebar-adapter':
+      '@hansen/better-sidebar-adapter':
         specifier: workspace:^
         version: link:../better-sidebar-adapter
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -692,17 +692,17 @@ importers:
 
   packages/renderer-pdf:
     dependencies:
-      '@paimind/better-sidebar-adapter':
+      '@hansen/better-sidebar-adapter':
         specifier: workspace:^
         version: link:../better-sidebar-adapter
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
       pdfjs-dist:
         specifier: 6.2.108
         version: 6.2.108
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -714,14 +714,14 @@ importers:
 
   packages/runtime-orbs:
     dependencies:
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
       thinking-orbs:
         specifier: 0.3.1
         version: 0.3.1(react@18.3.1)
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       react:
@@ -736,20 +736,20 @@ importers:
       '@js-temporal/polyfill':
         specifier: ^0.5.1
         version: 0.5.1
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@paimind/notifications':
+      '@hansen/notifications':
         specifier: workspace:^
         version: link:../notifications
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -764,52 +764,52 @@ importers:
 
   packages/scheduler-adapter-feishu-bot:
     dependencies:
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/platform-scheduler':
+      '@hansen/platform-scheduler':
         specifier: workspace:^
         version: link:../scheduler
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
 
   packages/scheduler-adapter-harness:
     dependencies:
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/platform-scheduler':
+      '@hansen/platform-scheduler':
         specifier: workspace:^
         version: link:../scheduler
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
 
   packages/scheduler-adapter-http:
     dependencies:
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/platform-scheduler':
+      '@hansen/platform-scheduler':
         specifier: workspace:^
         version: link:../scheduler
-      '@paimind/platform-sdk':
+      '@hansen/platform-sdk':
         specifier: workspace:^
         version: link:../platform-sdk
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
 
@@ -818,10 +818,10 @@ importers:
       '@deepseek-ai/dsh-home-paths':
         specifier: 0.1.1-rc.2
         version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
       fflate:
@@ -837,7 +837,7 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -852,23 +852,23 @@ importers:
 
   packages/task-monitor:
     dependencies:
-      '@paimind/artifacts':
+      '@hansen/artifacts':
         specifier: workspace:^
         version: link:../artifacts
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/workspace-project':
+      '@hansen/workspace-project':
         specifier: workspace:^
         version: link:../workspace-project
       lucide-react:
         specifier: 1.34.0
         version: 1.34.0(react@18.3.1)
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -883,7 +883,7 @@ importers:
 
   packages/testkit:
     dependencies:
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
 
@@ -891,17 +891,17 @@ importers:
 
   packages/user-settings:
     dependencies:
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -913,14 +913,14 @@ importers:
 
   packages/visual-experience:
     dependencies:
-      '@paimind/branding':
+      '@hansen/branding':
         specifier: workspace:^
         version: link:../branding
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -935,20 +935,20 @@ importers:
 
   packages/walmart-proposal-adapter:
     dependencies:
-      '@paimind/artifact-runtime':
+      '@hansen/artifact-runtime':
         specifier: workspace:^
         version: link:../artifact-runtime
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
-      '@paimind/presentation-contracts':
+      '@hansen/presentation-contracts':
         specifier: workspace:^
         version: link:../presentation-contracts
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
 
@@ -957,17 +957,17 @@ importers:
       '@deepseek-ai/dsh-home-paths':
         specifier: 0.1.1-rc.2
         version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
       '@testing-library/react':
@@ -982,14 +982,14 @@ importers:
 
   packages/workspace-project:
     dependencies:
-      '@paimind/contracts':
+      '@hansen/contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@paimind/harness-compat':
+      '@hansen/harness-compat':
         specifier: workspace:^
         version: link:../harness-compat
     devDependencies:
-      '@paimind/testkit':
+      '@hansen/testkit':
         specifier: workspace:^
         version: link:../testkit
 

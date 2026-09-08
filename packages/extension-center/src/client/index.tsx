@@ -10,7 +10,7 @@ import {
 import {
   PAIMIND_EXTENSION_CATEGORIES,
   type PaimindExtensionDescriptor,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import {
   contributePaimindExtension,
   type HarnessPluginInventoryRemote,
@@ -20,7 +20,7 @@ import {
   type HarnessSettingsSectionOwnerProps,
   type PaimindExtensionCenterClientContext,
   projectHarnessPluginTechnicalState,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import {
   PaimindAgentIcon,
   PaimindCheckIcon,
@@ -33,7 +33,7 @@ import {
   PaimindSearchIcon,
   PaimindSkillIcon,
   PaimindWarningIcon,
-} from '@paimind/harness-compat/client-icons'
+} from '@hansen/harness-compat/client-icons'
 import {
   compareExtensionDescriptors,
   type ExtensionTechnicalState,
@@ -48,16 +48,16 @@ import TYPERT_REMOTE from '../remote.js'
 export const inject = ['slots', 'locale', 'remote', 'remote.pluginInventory']
 
 const SLOT = 'paimind.extension'
-const STYLE_ID = '@paimind/extension-center'
+const STYLE_ID = '@hansen/extension-center'
 
 const SELF: PaimindExtensionDescriptor = {
   id: 'paimind:extension-center',
-  packageName: '@paimind/extension-center',
+  packageName: '@hansen/extension-center',
   category: 'developer',
   nameZh: '扩展中心',
   nameEn: 'Extension Center',
-  descriptionZh: '按产品类别管理 PAIMind 能力，并映射 Harness 的真实技术加载状态。',
-  descriptionEn: 'Manages PAIMind capabilities by product category and projects native Harness loader state.',
+  descriptionZh: '按产品类别管理 能力，并映射 Harness 的真实技术加载状态。',
+  descriptionEn: 'Manages capabilities by product category and projects native Harness loader state.',
   surface: 'settings',
   maturity: 'available',
   order: -100,
@@ -76,13 +76,13 @@ const ATTENTION_STATES = new Set<ExtensionTechnicalState>(['failed', 'disabled',
 const CATEGORY_SET = new Set<string>(PAIMIND_EXTENSION_CATEGORIES)
 const MATURITY_SET = new Set<string>(['available', 'technical-preview', 'reopened'])
 const SURFACE_SET = new Set<string>(['shell', 'conversation', 'settings', 'header-button', 'side-card', 'preview', 'headless'])
-const BOOT_CLIENT_SENTINEL_BY_PACK_ID = Object.freeze<Record<string, `@paimind/${string}`>>({
-  'paimind:pack:experience': '@paimind/branding',
-  'paimind:pack:agents': '@paimind/agent-market',
-  'paimind:pack:content': '@paimind/artifacts',
-  'paimind:pack:proposal': '@paimind/proposal-experience',
-  'paimind:pack:automation': '@paimind/notifications',
-  'paimind:pack:operations': '@paimind/task-monitor',
+const BOOT_CLIENT_SENTINEL_BY_PACK_ID = Object.freeze<Record<string, `@hansen/${string}`>>({
+  'paimind:pack:experience': '@hansen/branding',
+  'paimind:pack:agents': '@hansen/agent-market',
+  'paimind:pack:content': '@hansen/artifacts',
+  'paimind:pack:proposal': '@hansen/proposal-experience',
+  'paimind:pack:automation': '@hansen/notifications',
+  'paimind:pack:operations': '@hansen/task-monitor',
 })
 const BOOT_CONSISTENCY_ATTRIBUTE = 'data-paimind-boot-consistency'
 const BOOT_RECOVERY_SESSION_KEY = 'paimind:feature-pack-client-recovery-v1'
@@ -270,7 +270,7 @@ function isDescriptor(value: unknown): value is Readonly<PaimindExtensionDescrip
   return typeof candidate.id === 'string'
     && candidate.id.startsWith('paimind:')
     && typeof candidate.packageName === 'string'
-    && candidate.packageName.startsWith('@paimind/')
+    && candidate.packageName.startsWith('@hansen/')
     && typeof candidate.category === 'string'
     && CATEGORY_SET.has(candidate.category)
     && typeof candidate.nameZh === 'string'
@@ -390,7 +390,7 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
       projectHarnessPluginTechnicalState(packageName, inventory.snapshot).technicalState,
     ]))
   }, [featurePacks, inventory])
-  const expectedPackPackageNames = (pack: Readonly<PaimindFeaturePackState>): readonly `@paimind/${string}`[] => {
+  const expectedPackPackageNames = (pack: Readonly<PaimindFeaturePackState>): readonly `@hansen/${string}`[] => {
     const intentionallyDisabled = new Set<string>(pack.capabilities
       .filter(capability => !(capability.desiredEnabled ?? capability.enabled))
       .flatMap(capability => capability.packageNames))
@@ -541,7 +541,7 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
           const capability = selectedPack.capabilities.find(item => item.packageNames.includes(packageName))
           const TechnicalIcon = technicalState === 'active' ? PaimindCheckIcon : ATTENTION_STATES.has(technicalState) ? PaimindWarningIcon : null
           return <div key={packageName} data-paimind-pack-extension-row>
-            <div><strong>{descriptor === undefined ? packageName.replace('@paimind/', '') : (zh ? descriptor.nameZh : descriptor.nameEn)}</strong><code>{packageName}</code></div>
+            <div><strong>{descriptor === undefined ? packageName.replace('@hansen/', '') : (zh ? descriptor.nameZh : descriptor.nameEn)}</strong><code>{packageName}</code></div>
             <span data-paimind-extension-badge data-state={technicalState}>{TechnicalIcon !== null && <TechnicalIcon aria-hidden="true" />}{zh ? TECHNICAL_COPY[technicalState].zh : TECHNICAL_COPY[technicalState].en}</span>
             {capability !== undefined && <button
               type="button" role="switch" data-paimind-feature-switch
@@ -588,7 +588,7 @@ export async function apply(ctx: ExtensionCenterClientContext): Promise<() => Pr
   const disposeRemote = await ctx.remote.$mount(TYPERT_REMOTE)
   const mounted = ctx.inject([...inject, 'remote.paimindFeaturePacks'], scopeCtx => {
     const featurePackRemote = scopeCtx.remote.paimindFeaturePacks
-    if (featurePackRemote === undefined) throw new Error('PAIMind Feature Pack Remote did not mount')
+    if (featurePackRemote === undefined) throw new Error('Feature Pack Remote did not mount')
     scopeCtx.effect(installStyle, 'paimind-extension-center: style')
     contributePaimindExtension(scopeCtx.slots, SELF)
 

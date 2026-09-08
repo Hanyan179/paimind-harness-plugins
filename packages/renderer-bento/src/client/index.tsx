@@ -1,6 +1,6 @@
 import { Component, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ErrorInfo, type ReactNode } from 'react'
-import { contributePaimindExtension, type PaimindClientContext } from '@paimind/harness-compat'
-import type { PaimindSidebarService, PaimindSidebarTabScope } from '@paimind/better-sidebar-adapter'
+import { contributePaimindExtension, type PaimindClientContext } from '@hansen/harness-compat'
+import type { PaimindSidebarService, PaimindSidebarTabScope } from '@hansen/better-sidebar-adapter'
 import {
   BENTO_INFO_PATH,
   type BentoSandboxInfo,
@@ -133,7 +133,7 @@ export class BentoPreviewStore implements PaimindBentoPreviewService {
   dispose(): void { this.inspectors.length = 0; this.listeners.clear() }
 }
 
-const STYLE_ID = '@paimind/renderer-bento'
+const STYLE_ID = '@hansen/renderer-bento'
 const STYLE = `
 [data-paimind-bento] { container-name:paimind-bento; container-type:inline-size; width:100%; height:100%; min-width:0; min-height:0; display:grid; grid-template-rows:auto auto minmax(0,1fr); overflow:hidden; color:var(--dsw-alias-label-primary,#202124); background:var(--dsw-alias-bg-layer-1,transparent); }
 [data-paimind-bento-header] { padding: 10px 12px 6px; }
@@ -183,6 +183,15 @@ const STYLE = `
 @container paimind-bento (max-width:1040px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr)}[data-paimind-bento-canvas][data-has-slide-rail='true']{grid-template-columns:104px minmax(0,1fr)}}
 @container paimind-bento (max-width:900px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(280px,58%) minmax(0,42%);overflow:hidden}[data-paimind-bento-inspector]{border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16));border-left:0}[data-paimind-bento-canvas][data-has-slide-rail='true']{grid-template-columns:76px minmax(0,1fr)}[data-paimind-bento-slide-rail]{padding-inline:5px}[data-paimind-bento-slide-item]{grid-template-columns:1fr}[data-paimind-bento-slide-number]{position:absolute;z-index:2;top:5px;left:5px;min-width:14px;padding:1px 3px;border-radius:4px;color:var(--dsw-alias-label-primary-inverted,#fff);background:color-mix(in srgb,var(--dsw-alias-bg-base,#071725) 86%,transparent)}}
 @container paimind-bento (max-width:620px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(240px,54%) minmax(0,46%)}[data-paimind-bento-canvas][data-has-slide-rail='true']{grid-template-columns:64px minmax(0,1fr)}[data-paimind-bento-slide-rail]{padding-inline:3px}[data-paimind-bento-workbench][data-mode='preview'] [data-paimind-bento-stage]{padding:8px}[data-paimind-bento-player-controls]{bottom:10px}}
+[data-paimind-bento][data-expanded='true'] { position:fixed; inset:0; z-index:10000; width:100vw; height:100dvh; background:var(--dsw-alias-bg-layer-1,#fff); }
+[data-paimind-bento]:fullscreen { width:100vw; height:100dvh; }
+[data-paimind-bento-toolbar] { justify-content:space-between; gap:8px; flex-wrap:wrap; }
+[data-paimind-bento-actions] { display:flex; align-items:center; gap:8px; }
+[data-paimind-bento-actions] button { padding:7px 12px; border:1px solid var(--dsw-alias-border-l1,#ccd2db); border-radius:8px; color:inherit; background:var(--dsw-alias-bg-layer-2,#f5f7fa); cursor:pointer; font-size:12px; }
+[data-paimind-bento-actions] button:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:2px; }
+[data-paimind-bento-workbench][data-mode='trace'] { grid-template-columns:minmax(0,1fr) clamp(300px,26%,380px); }
+[data-paimind-bento-stage] { background:var(--dsw-alias-bg-base,#e8ebf0); }
+@container paimind-bento (max-width:1000px) { [data-paimind-bento-workbench][data-mode='trace'] { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(240px,60%) minmax(0,40%); } }
 @media(prefers-reduced-motion:reduce){[data-paimind-bento] *,[data-paimind-bento] *::before,[data-paimind-bento] *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 `
 
@@ -190,7 +199,7 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = '@paimind/renderer-bento'
+  style.dataset.paimindPlugin = '@hansen/renderer-bento'
   style.textContent = STYLE
   document.head.append(style)
   return () => { style.remove() }
@@ -335,6 +344,31 @@ export function BentoPreviewPanel(props: { readonly store: BentoPreviewStore; re
   const [readySourceUrl, setReadySourceUrl] = useState<string | null>(null)
   const [error, setError] = useState(false)
   const frameRef = useRef<HTMLIFrameElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
+  const [expanded, setExpanded] = useState(false)
+  const [railVisible, setRailVisible] = useState(true)
+  useEffect(() => {
+    const onFullscreenChange = (): void => { if (document.fullscreenElement == null) setExpanded(false) }
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape' && document.fullscreenElement == null) setExpanded(false)
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [])
+  const toggleExpanded = (): void => {
+    if (expanded) {
+      setExpanded(false)
+      if (document.fullscreenElement === panelRef.current) void document.exitFullscreen().catch(() => {})
+    } else {
+      setExpanded(true)
+      // Keep the viewport expansion available when an embedded browser declines fullscreen.
+      void panelRef.current?.requestFullscreen?.().catch(() => {})
+    }
+  }
   useEffect(() => {
     const request = snapshot.request
     setSource(null)
@@ -389,21 +423,25 @@ export function BentoPreviewPanel(props: { readonly store: BentoPreviewStore; re
   const inspectorSlides = props.store.getInspector()?.getSlideNavigation?.()?.slides ?? []
   const slides = snapshot.slides.length > 0 ? snapshot.slides : snapshot.mode === 'preview' ? [] : inspectorSlides
   const activeSlide = Math.min(slides.length, Math.max(1, snapshot.runtimeEvent?.slide ?? snapshot.slideTarget?.slide ?? 1))
-  const showSlideRail = snapshot.mode !== 'preview' && source !== null && slides.length > 0
+  const showSlideRail = railVisible && snapshot.mode !== 'preview' && source !== null && slides.length > 0
   return (
-    <section data-paimind-bento aria-label={zh ? 'Bento 隔离预览' : 'Isolated Bento preview'}>
+    <section ref={panelRef} data-paimind-bento data-expanded={expanded} aria-label={zh ? 'Bento 隔离预览' : 'Isolated Bento preview'}>
       <header data-paimind-bento-header>
         <div data-paimind-bento-heading><strong>{request?.title ?? (zh ? 'Bento 预览' : 'Bento Preview')}</strong>
-        <span>{zh ? '独立 Origin · 无外部网络资源' : 'Isolated origin · no external network resources'}</span></div>
+        <span>{zh ? '演示工作台 · 预览、编辑与数据溯源' : 'Presentation workbench · preview, edit and trace'}</span></div>
       </header>
       <div data-paimind-bento-toolbar>
         <div data-paimind-bento-modes aria-label={zh ? '工作台模式' : 'Workbench mode'}>{(['preview', 'edit', 'trace'] as const).map(mode => <BentoModeButton key={mode} mode={mode} active={snapshot.mode === mode} disabled={mode === 'trace' && props.store.getInspector() === null} zh={zh} onClick={() => { props.store.setMode(mode) }} />)}</div>
+        <div data-paimind-bento-actions>
+          {snapshot.mode !== 'preview' && <button type="button" aria-pressed={railVisible} onClick={() => setRailVisible(!railVisible)}>{zh ? (railVisible ? '收起缩略图' : '显示缩略图') : (railVisible ? 'Hide thumbnails' : 'Show thumbnails')}</button>}
+          <button type="button" aria-pressed={expanded} onClick={toggleExpanded}>{zh ? (expanded ? '退出全屏' : '全屏工作台') : (expanded ? 'Exit fullscreen' : 'Fullscreen workbench')}</button>
+        </div>
       </div>
       <div data-paimind-bento-workbench data-mode={snapshot.mode}>
       <div data-paimind-bento-canvas data-has-slide-rail={showSlideRail}>
       {showSlideRail && <BentoSlideRail slides={slides} activeSlide={activeSlide} source={source} store={props.store} zh={zh} />}
       <div data-paimind-bento-stage>
-        {snapshot.mode === 'edit' && <div role="status" data-paimind-bento-edit-guidance>{zh ? '可编辑标题、说明与展示文案 · 事实值和派生指标已锁定' : 'Edit titles, explanations, and presentation copy · facts and derived metrics are locked'}</div>}
+        {snapshot.mode === 'edit' && <div role="status" data-paimind-bento-edit-guidance>{zh ? '可试改标题和说明，刷新后恢复；需要保存请让助手修订文件。数据与计算结果不可直接修改。' : 'Try editing titles and copy; reload restores the file. Ask the assistant to save revisions; facts and derived metrics are locked'}</div>}
         {request === null ? <div data-paimind-bento-state>{zh ? '请打开一个 Bento 产物。' : 'Open a Bento artifact.'}</div>
           : error ? <div role="alert" data-paimind-bento-state data-error="true">{zh ? 'Bento 隔离服务不可用；原生会话不受影响。' : 'The isolated Bento service is unavailable; native conversation remains available.'}</div>
             : source === null ? <div data-paimind-bento-state>{zh ? '正在建立隔离预览…' : 'Preparing isolated preview…'}</div>
@@ -435,12 +473,12 @@ class BentoErrorBoundary extends Component<{ readonly children: ReactNode }, { r
 export function apply(ctx: BentoClientContext): void {
   contributePaimindExtension(ctx.slots, {
     id: 'paimind:renderer-bento',
-    packageName: '@paimind/renderer-bento',
+    packageName: '@hansen/renderer-bento',
     category: 'content-rendering',
     nameZh: 'Bento 渲染器',
     nameEn: 'Bento Renderer',
-    descriptionZh: 'PAIMind 自研的隔离式 Bento 预览通道，仅依赖稳定的预览与侧卡适配契约。',
-    descriptionEn: 'PAIMind-owned isolated Bento preview channel using only stable preview and side-card adapters.',
+    descriptionZh: '独立的隔离式 Bento 预览通道，仅依赖稳定的预览与侧卡适配契约。',
+    descriptionEn: 'isolated Bento preview channel using only stable preview and side-card adapters.',
     surface: 'preview',
     maturity: 'technical-preview',
     order: 20,

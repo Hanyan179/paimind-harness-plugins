@@ -4,7 +4,7 @@ import {
   type PresentationDesignV1,
   type PresentationStylePreset,
   type PresentationTemplateId,
-} from '@paimind/presentation-contracts'
+} from '@hansen/presentation-contracts'
 
 export const HTML_PRESENTATION_SCHEMA = 'paimind.html-presentation/v1' as const
 

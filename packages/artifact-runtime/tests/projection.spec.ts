@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { artifactToolMeta, artifactProjectionDefinition } from '../src/index.js'
-import type { ArtifactProducedEnvelopeV1, ArtifactTraceEnvelopeV1 } from '@paimind/contracts'
-import type { PaimindSessionProjectionDefinition } from '@paimind/harness-compat/host'
+import type { ArtifactProducedEnvelopeV1, ArtifactTraceEnvelopeV1 } from '@hansen/contracts'
+import type { PaimindSessionProjectionDefinition } from '@hansen/harness-compat/host'
 
 const currentHarnessDefinition: PaimindSessionProjectionDefinition<
   ReturnType<typeof artifactProjectionDefinition.init>,

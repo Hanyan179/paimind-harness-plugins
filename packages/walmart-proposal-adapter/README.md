@@ -1,4 +1,4 @@
-# `@paimind/walmart-proposal-adapter`
+# `@hansen/walmart-proposal-adapter`
 
 Native Harness Tool adapter for deterministic Walmart demo-data preparation, proposal analysis and outline CLIs.
 
@@ -17,8 +17,8 @@ Role: **Headless plugin**. It prepares one clearly labeled deterministic synthet
 
 ## Dependencies
 
-- `@paimind/artifact-runtime` owns Job and Artifact publication.
-- `@paimind/presentation-contracts` validates the generated Outline.
+- `@hansen/artifact-runtime` owns Job and Artifact publication.
+- `@hansen/presentation-contracts` validates the generated Outline.
 - Runtime resources use Python 3.12 through the packaged hash-locked `uv.lock`.
 - The analysis source baseline is `1f9fd80ea073a4ab4b5665b2300f7930f3f0520f`.
 

@@ -120,12 +120,12 @@ for (const pkg of packages) {
     if (manifest.dsh?.client?.platform !== 'web') {
       fail('client', `${name} has no dsh.client web discovery metadata`)
     }
-    if (!manifest.paimindBuild?.client) fail('client', `${name} has no client build entry`)
+    if (!manifest.hansenBuild?.client) fail('client', `${name} has no client build entry`)
     if (!manifest.exports?.['./client']) fail('client', `${name} has no ./client export`)
     if (!manifest.exports?.['./package.json']) {
       fail('client', `${name} has no ./package.json discovery export`)
     }
-  } else if (manifest.dsh?.client !== undefined || manifest.paimindBuild?.client !== undefined) {
+  } else if (manifest.dsh?.client !== undefined || manifest.hansenBuild?.client !== undefined) {
     fail('client', `${name} is ${role?.role ?? 'unregistered'} but declares a client`)
   }
 
@@ -136,7 +136,7 @@ for (const pkg of packages) {
     'devDependencies',
   ]) {
     for (const [dependency, version] of Object.entries(manifest[group] ?? {})) {
-      if (!dependency.startsWith('@paimind/')) continue
+      if (!dependency.startsWith('@hansen/')) continue
       if (!byName.has(dependency)) {
         fail('dependency', `${name} ${group} references missing ${dependency}`)
       }
@@ -162,7 +162,7 @@ for (const pkg of packages) {
 }
 
 for (const pkg of packages) {
-  if (pkg.manifest.name === '@paimind/harness-bundle') continue
+  if (pkg.manifest.name === '@hansen/harness-bundle') continue
   if ((incoming.get(pkg.manifest.name) ?? []).length === 0) {
     fail('orphan', `${pkg.manifest.name} has no package consumer`)
   }
@@ -183,16 +183,16 @@ const visit = name => {
   reachable.add(name)
   for (const dependency of productionEdges.get(name) ?? []) visit(dependency)
 }
-visit('@paimind/harness-bundle')
+visit('@hansen/harness-bundle')
 for (const [name, role] of roles) {
   if ((role.role === 'client-plugin' || role.role === 'headless-plugin') && !reachable.has(name)) {
-    fail('reachability', `${name} is not reachable from @paimind/harness-bundle`)
+    fail('reachability', `${name} is not reachable from @hansen/harness-bundle`)
   }
 }
 
-const bundle = byName.get('@paimind/harness-bundle')?.manifest
+const bundle = byName.get('@hansen/harness-bundle')?.manifest
 for (const provider of matrix.providers) {
-  if (provider.owner === 'external' || provider.owner === '@paimind/better-sidebar-adapter') {
+  if (provider.owner === 'external' || provider.owner === '@hansen/better-sidebar-adapter') {
     const selected = bundle?.dependencies?.[provider.package]
     if (selected !== provider.version) {
       fail('version', `bundle must pin ${provider.package}@${provider.version}; found ${selected ?? 'missing'}`)

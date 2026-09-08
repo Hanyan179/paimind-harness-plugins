@@ -1,9 +1,9 @@
 {
-  "name": "@paimind/renderer-bento",
+  "name": "@hansen/renderer-bento",
   "version": "0.1.0-alpha.0",
   "license": "UNLICENSED",
   "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-  "description": "Isolated-origin Bento preview plugin for PAIMind artifacts",
+  "description": "Isolated-origin Bento preview plugin for Hansen artifacts",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -20,22 +20,22 @@
         "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-locale",
         "@deepseek-ai/dsh-client-ui-slots",
-        "@paimind/better-sidebar-adapter"
+        "@hansen/better-sidebar-adapter"
       ],
       "platform": "web"
     }
   },
   "dependencies": {
-    "@paimind/better-sidebar-adapter": "workspace:^",
-    "@paimind/harness-compat": "workspace:^"
+    "@hansen/better-sidebar-adapter": "workspace:^",
+    "@hansen/harness-compat": "workspace:^"
   },
   "peerDependencies": { "react": ">=18.0.0 <20.0.0" },
   "devDependencies": {
-    "@paimind/testkit": "workspace:^",
+    "@hansen/testkit": "workspace:^",
     "@testing-library/react": "^16.3.2",
     "react": "^18.3.1"
   },
-  "paimindBuild": {
+  "hansenBuild": {
     "node": ["src/index.ts", "src/invariant.ts"],
     "client": "src/client/index.tsx"
   },

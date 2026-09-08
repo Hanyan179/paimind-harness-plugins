@@ -34,7 +34,7 @@ interface PaimindPersonalization {
 }
 ```
 
-- Package name remains `@paimind/user-settings` for installation compatibility.
+- Package name remains `@hansen/user-settings` for installation compatibility.
 - Host namespace remains `paimind-user-settings` and uses the canonical Harness Settings document, schema validation and native revision/CAS.
 - Client entry is named `Personalization` / `个性化`; there is no standalone Personal Center runtime.
 - Empty defaults or `enabled: false` produce no model context.
@@ -61,7 +61,7 @@ The context identifies itself as user-authored long-term defaults. It explicitly
 - Stale revision or write failure: reread the canonical Host namespace and show only committed values.
 - Invalid or overlong fields: reject before persistence and context projection.
 - Removing FP14 removes only the settings entry and future personalization context.
-- Notifications remain publish/read-state behavior owned by `@paimind/notifications`.
+- Notifications remain publish/read-state behavior owned by `@hansen/notifications`.
 - Runtime Orb motion follows only the operating-system reduced-motion preference.
 - Memory is not inferred from conversation history and is not presented as implemented.
 

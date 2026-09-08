@@ -4,20 +4,20 @@
 
 ## Outcome
 
-FP06 makes PDF and PPTX artifacts associated with the current Harness Session and Workspace openable from their exact Artifact or file links. It no longer registers a permanent `PAIMind Artifacts` tab. PPTX preview, slide navigation and download reuse the selected Better Sidebar provider. Real browser validation proved that the provider's browser-native PDF Blob iframe was blank in the selected Chromium surface, so FP06 adds a removable local `@paimind/renderer-pdf` channel through the stable adapter; it does not patch or fork provider source and does not create a separate PPTX renderer.
+FP06 makes PDF and PPTX artifacts associated with the current Harness Session and Workspace openable from their exact Artifact or file links. It no longer registers a permanent `PAIMind Artifacts` tab. PPTX preview, slide navigation and download reuse the selected Better Sidebar provider. Real browser validation proved that the provider's browser-native PDF Blob iframe was blank in the selected Chromium surface, so FP06 adds a removable local `@hansen/renderer-pdf` channel through the stable adapter; it does not patch or fork provider source and does not create a separate PPTX renderer.
 
-This keeps the feature upgradeable while `dsh-better-sidebar` evolves independently: artifact product semantics depend only on `@paimind/better-sidebar-adapter`, and the adapter exposes a capability result instead of provider records or types.
+This keeps the feature upgradeable while `dsh-better-sidebar` evolves independently: artifact product semantics depend only on `@hansen/better-sidebar-adapter`, and the adapter exposes a capability result instead of provider records or types.
 
 ## Capability mapping
 
 | Capability | Decision | Owner |
 |---|---|---|
 | Turn-scoped produced-file facts | Reuse | Harness `deliverables` Turn data |
-| Session and Workspace identity | Reuse | Harness Session plus `@paimind/workspace-project` |
-| PDF preview and download | Migrate through stable adapter | `@paimind/renderer-pdf`, with Better Sidebar `pdf` fallback |
+| Session and Workspace identity | Reuse | Harness Session plus `@hansen/workspace-project` |
+| PDF preview and download | Migrate through stable adapter | `@hansen/renderer-pdf`, with Better Sidebar `pdf` fallback |
 | PPTX preview, slide navigation and download | Reuse | Better Sidebar `pptx` viewer |
-| Artifact association, scope filters and product states | Migrate | `@paimind/artifacts` |
-| Safe path resolution and provider capability check | Migrate at boundary | `@paimind/artifacts` plus `@paimind/better-sidebar-adapter` |
+| Artifact association, scope filters and product states | Migrate | `@hansen/artifacts` |
+| Safe path resolution and provider capability check | Migrate at boundary | `@hansen/artifacts` plus `@hansen/better-sidebar-adapter` |
 | Separate PAIMind PPT renderer | Delete from scope | None |
 | HTML, Bento and Spreadsheet artifacts | Later | FP07 |
 | Presentation source trace | Later | FP08 |
@@ -25,21 +25,21 @@ This keeps the feature upgradeable while `dsh-better-sidebar` evolves independen
 
 ## Package and contract boundaries
 
-### `@paimind/better-sidebar-adapter`
+### `@hansen/better-sidebar-adapter`
 
 - Contract v4 retains `registerFileViewer(definition)`, `getFileCapability(path)` and `openFile(request)`, and adds hidden on-demand tabs plus per-open dynamic titles.
 - Mirrors only the provider methods needed to match an enabled viewer, verify the hidden editor tab, close a stale editor instance and open the refreshed path.
 - Returns structured `opened`, `provider-unavailable`, `editor-unavailable`, `viewer-unavailable` or `failed` results.
 - Maps the narrow viewer registration shape needed by independent PAIMind renderers without exposing provider descriptors, stores or reducers.
 
-### `@paimind/renderer-pdf`
+### `@hansen/renderer-pdf`
 
-- Registers only the higher-priority `paimind:pdf` capability through `@paimind/better-sidebar-adapter` contract v4.
+- Registers only the higher-priority `paimind:pdf` capability through `@hansen/better-sidebar-adapter` contract v4.
 - Bundles PDF.js and its worker locally; it reads the provider-supplied media URL and owns no file transport or Artifact state.
 - Contains its own render error boundary and Download action. Uninstalling it restores the provider's original `pdf` viewer.
 - Does not import Better Sidebar modules, patch provider DOM or alter the native conversation.
 
-### `@paimind/artifacts`
+### `@hansen/artifacts`
 
 - Publishes `ctx.paimindArtifacts` as an observable projection registry; producers retain durable ownership.
 - Registers no fixed Better Sidebar tab; it retains the Artifact registry, projection, exact path router and deep-link router.

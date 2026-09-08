@@ -4,8 +4,8 @@ import type {
   HarnessSessionListSnapshot,
   HarnessSessionService,
   PaimindLocaleSource,
-} from '@paimind/harness-compat'
-import { PaimindProductSurfaceController } from '@paimind/harness-compat/client-surface'
+} from '@hansen/harness-compat'
+import { PaimindProductSurfaceController } from '@hansen/harness-compat/client-surface'
 import {
   SkillCenterSurface,
   SkillCenterTrigger,
@@ -29,7 +29,7 @@ const builtInSkills = [
   },
   {
     kind: 'system', canonicalId: 'system:paimind-skill-installation', name: 'paimind-skill-installation', description: 'Install Business Skills from GitHub',
-    availability: 'optional', userControl: 'atomic', sourcePluginId: '@paimind/skill-market',
+    availability: 'optional', userControl: 'atomic', sourcePluginId: '@hansen/skill-market',
   },
 ] as const
 
@@ -123,7 +123,7 @@ function runtime(current: string | undefined | null = 'session-1'): { sessions: 
   }
 }
 
-afterEach(() => { cleanup(); document.head.querySelectorAll('style[data-paimind-plugin="@paimind/skill-market"]').forEach(node => { node.remove() }) })
+afterEach(() => { cleanup(); document.head.querySelectorAll('style[data-paimind-plugin="@hansen/skill-market"]').forEach(node => { node.remove() }) })
 
 describe('Skill Market business UI', () => {
   it('stacks the shared footer actions in expanded and collapsed sidebars', () => {
@@ -143,7 +143,7 @@ describe('Skill Market business UI', () => {
   it('keeps its stylesheet while overlapping plugin lifecycles hand over ownership', () => {
     const disposeFirst = installSkillMarketStyle()
     const disposeSecond = installSkillMarketStyle()
-    const style = document.head.querySelector('style[data-paimind-plugin="@paimind/skill-market"]')
+    const style = document.head.querySelector('style[data-paimind-plugin="@hansen/skill-market"]')
     expect(style).not.toBeNull()
     expect(style).toHaveAttribute('data-paimind-style-refs', '2')
     disposeFirst()

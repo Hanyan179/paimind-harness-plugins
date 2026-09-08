@@ -8,7 +8,7 @@ import {
   setPaimindHostLoaderEntryEnabled,
   type PaimindHostLoaderFacility,
   type PaimindHostSettingsFacility,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 import {
   PAIMIND_FEATURE_PACKS,
   PAIMIND_FEATURE_PACK_SETTINGS_NAMESPACE,
@@ -412,7 +412,7 @@ export function createPaimindBootReadinessInjection(
     const alert = document.createElement('div')
     alert.setAttribute('data-paimind-boot-readiness-error', '')
     alert.setAttribute('role', 'alert')
-    alert.textContent = 'PAIMind 启动未在限定时间内完成。请刷新页面；启动诊断已保留。'
+    alert.textContent = '应用启动未在限定时间内完成。请刷新页面；启动诊断已保留。'
     boot.append(alert)
   }
   const failOrRecover = () => {

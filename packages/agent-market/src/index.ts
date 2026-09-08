@@ -1,4 +1,4 @@
-import type { HarnessAgentPresetEntry } from '@paimind/harness-compat'
+import type { HarnessAgentPresetEntry } from '@hansen/harness-compat'
 
 /** Client-only feature host companion required by the Harness Loader. */
 export const name = 'paimind-agent-market'

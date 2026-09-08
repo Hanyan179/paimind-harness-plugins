@@ -1,11 +1,10 @@
-import type { HarnessAgentChoice } from '@paimind/harness-compat'
+import type { HarnessAgentChoice } from '@hansen/harness-compat'
 import AI_WORKFLOW_ARCHITECT_AVATAR from '../../assets/ai-workflow-architect-agent.webp'
 import CONTENT_EXPRESSION_AVATAR from '../../assets/content-expression-agent.webp'
 import PERSONAL_COFFEE_AVATAR from '../../assets/personal-coffee-agent.webp'
 import PROJECT_PROGRESS_AVATAR from '../../assets/project-progress-agent.webp'
 import SENIOR_AI_PRODUCT_MANAGER_AVATAR from '../../assets/senior-ai-product-manager-agent.webp'
 import TECHNICAL_EXPERT_AVATAR from '../../assets/technical-expert-agent.webp'
-import PARAMONT_BRAND_FALLBACK from '../../assets/paramont-brand-fallback.webp'
 
 export const PAIMIND_AGENT_AVATAR_ICON_PREFIX = 'paimind-agent-avatar:'
 
@@ -22,10 +21,10 @@ export interface PaimindAgentAvatarIdentity {
  * frozen avatar; RC8 platform modes use the corresponding frozen personal
  * role portrait selected for FP17. Unknown valid Presets receive only a
  * deterministic visual projection from the published pool; invalid ids use
- * the Paramont brand fallback. Neither path creates identity metadata.
+ * the neutral Agent fallback. Neither path creates identity metadata.
  */
 const AVATAR_BY_CANONICAL_ID: Readonly<Record<string, readonly [string, string]>> = Object.freeze({
-  paimind: ['paramont-brand-fallback', PARAMONT_BRAND_FALLBACK],
+  paimind: ['default-agent', TECHNICAL_EXPERT_AVATAR],
   standard: ['technical-expert-agent', TECHNICAL_EXPERT_AVATAR],
   code: ['technical-expert-agent', TECHNICAL_EXPERT_AVATAR],
   ptc: ['ai-workflow-architect-agent', AI_WORKFLOW_ARCHITECT_AVATAR],
@@ -81,8 +80,8 @@ export function resolvePaimindAgentAvatar(
     })
   }
   return Object.freeze({
-    canonicalId: choice.id, asset: PARAMONT_BRAND_FALLBACK,
-    assetKey: 'paramont-brand-fallback', fallback: true, projected: false,
+    canonicalId: choice.id, asset: TECHNICAL_EXPERT_AVATAR,
+    assetKey: 'default-agent', fallback: true, projected: false,
   })
 }
 

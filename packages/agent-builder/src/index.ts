@@ -10,7 +10,7 @@ import {
   PAIMIND_SKILL_INSTALL_TOOL,
   PAIMIND_STANDARD_AGENT_BASE_PRESET_ID,
   PAIMIND_SYSTEM_SKILL_NAMES,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import {
   definePaimindHarnessTool,
   PaimindHostRemoteService,
@@ -20,7 +20,7 @@ import {
   type PaimindHostSettingsFacility,
   type PaimindHostToolRegistry,
   type PaimindToolRunContext,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 export { AGENT_AUTHORING_SESSION_PREFIX } from './client-contract.js'
 
 export const name = 'paimind-agent-builder'
@@ -35,7 +35,7 @@ const STATE_VERSION = 1
 const PAIMIND_AGENT_AUTHORING_SKILL = 'paimind-agent-authoring'
 const PAIMIND_AGENT_SKILL_BINDING_TOOL = 'paimind_agent_skill_binding'
 const PAIMIND_AGENT_AUTHORING_SKILL_DESCRIPTION = 'Create or configure a PAIMind Agent from an ordinary conversation and hand a complete draft to the reviewable Agent Builder. Use when the user asks to create, build, configure, or revise an Agent or intelligent assistant.'
-const PAIMIND_AGENT_AUTHORING_SOURCE_PLUGIN_ID = '@paimind/agent-builder'
+const PAIMIND_AGENT_AUTHORING_SOURCE_PLUGIN_ID = '@hansen/agent-builder'
 
 function packagedSkillBody(url: URL): string {
   const source = readFileSync(url, 'utf8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n')

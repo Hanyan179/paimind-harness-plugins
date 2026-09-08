@@ -1,4 +1,4 @@
-# `@paimind/skill-market`
+# `@hansen/skill-market`
 
 PAIMind center-column Skill Center, Business Skill authoring workspace, catalog adapter, and recoverable installer product layer over native Harness Skills.
 
@@ -35,7 +35,7 @@ Role: **Client + host product plugin**. It contributes a `sidebar.footer.action`
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/contracts` (`workspace:^`), `@hansen/harness-compat` (`workspace:^`).
 - External runtime or peer dependencies: `@deepseek-ai/dsh-home-paths` (`0.1.0-rc.8`), `fflate` (`^0.8.3`), `yaml` (`^2.9.0`), `yauzl` (`^3.2.0`), `zod` (`^4.4.3`), `react` (`>=18.0.0 <20.0.0`).
 - Client service injection: `@deepseek-ai/dsh-client-connection`, `@deepseek-ai/dsh-client-locale`, `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-api-remotes`, `@deepseek-ai/dsh-client-ui-conversation`, `@deepseek-ai/dsh-client-ui-primitives`, `@deepseek-ai/dsh-client-ui-slots`.
 
@@ -43,7 +43,7 @@ The manifest is authoritative for dependency direction and version selection.
 
 ## Lifecycle and failure
 
-Harness discovers `./client` through `dsh.client`. Cordis waits for declared injected services before activation. The non-modal Center keeps the native sidebar visible and uses `@paimind/harness-compat` to portal only into the native conversation column; while open, only that column's native conversation occupant is inert and accessibility-hidden. A missing or ambiguous native anchor fails closed with no `document.body` fallback. The overlay Slot owns no route or domain state, and UI, listeners and registrations are scoped so hot reload or uninstall restores the native shell exactly.
+Harness discovers `./client` through `dsh.client`. Cordis waits for declared injected services before activation. The non-modal Center keeps the native sidebar visible and uses `@hansen/harness-compat` to portal only into the native conversation column; while open, only that column's native conversation occupant is inert and accessibility-hidden. A missing or ambiguous native anchor fails closed with no `document.body` fallback. The overlay Slot owns no route or domain state, and UI, listeners and registrations are scoped so hot reload or uninstall restores the native shell exactly.
 
 ## Published files
 

@@ -8,6 +8,6 @@ describe('FP05 adapter invariant companion', () => {
     expect(name).toBe('paimind-better-sidebar-adapter-invariant')
     expect(inject).toEqual(['invariants'])
     expect(apply({ invariants: { register } })).toBe(dispose)
-    expect(register).toHaveBeenCalledWith('@paimind/better-sidebar-adapter', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('@hansen/better-sidebar-adapter', expect.any(Function))
   })
 })

@@ -14,14 +14,14 @@ import {
   type PaimindArtifactPreviewChannel,
   type PaimindArtifactProjectionV1,
   type PaimindArtifactToolMetaV1,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import type {
   PaimindArtifactRuntimeHostContext,
   PaimindHostAgent,
   PaimindSessionEvent,
   PaimindToolExecutionResult,
   PaimindToolRunContext,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 
 export const name = 'paimind-artifact-runtime'
 export const inject = ['jobs', 'tools', 'fs', 'workspaceRegistry', 'sessionProjections']

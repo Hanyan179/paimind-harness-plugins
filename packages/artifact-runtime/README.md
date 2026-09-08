@@ -1,4 +1,4 @@
-# `@paimind/artifact-runtime`
+# `@hansen/artifact-runtime`
 
 Native Harness Job and tool-result projection runtime for PAIMind artifacts.
 
@@ -18,7 +18,7 @@ Role: **Headless plugin**. It owns its service or adapter boundary and exposes n
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/contracts` (`workspace:^`), `@hansen/harness-compat` (`workspace:^`).
 - External runtime or peer dependencies: None.
 - Client service injection: None.
 

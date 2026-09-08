@@ -1,4 +1,4 @@
-# `@paimind/ui-foundation`
+# `@hansen/ui-foundation`
 
 Shared PAIMind client tokens and lightweight UI primitives over Harness theme variables.
 

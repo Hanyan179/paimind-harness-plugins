@@ -10,12 +10,12 @@ import {
   type RuntimeOrbDockProps,
   type RuntimeOrbState,
   type PaimindLocaleSource,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 
 /** Host services required before the FP01 client contribution can register. */
 export const inject = ['slots', 'locale']
 
-const STYLE_ID = '@paimind/runtime-orbs'
+const STYLE_ID = '@hansen/runtime-orbs'
 const PREVIEW_QUERY = 'paimindOrbPreview'
 const FAULT_QUERY = 'paimindOrbFault'
 const STYLE = `
@@ -445,7 +445,7 @@ export function RuntimeOrbPreview(): ReactNode {
   return (
     <RuntimeOrbBoundary>
       {faultRequested() ? <RuntimeOrbFault /> : (
-        <aside data-paimind-runtime-orb-preview aria-label="PAIMind Runtime Orb Preview">
+        <aside data-paimind-runtime-orb-preview aria-label="Runtime Orb Preview">
           <h2 data-paimind-runtime-orb-preview-heading>Runtime Orb Preview</h2>
           <p data-paimind-runtime-orb-preview-note>
             QA only · one active orb; choose a state below
@@ -506,7 +506,7 @@ function installStyle(): () => void {
 export function apply(ctx: PaimindClientContext): void {
   contributePaimindExtension(ctx.slots, {
     id: 'paimind:runtime-orbs',
-    packageName: '@paimind/runtime-orbs',
+    packageName: '@hansen/runtime-orbs',
     category: 'experience',
     nameZh: '运行状态球',
     nameEn: 'Runtime Orb',

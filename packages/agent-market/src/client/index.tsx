@@ -16,7 +16,7 @@ import { createPortal } from 'react-dom'
 import {
   PAIMIND_STANDARD_AGENT_BASE_PRESET_ID,
   type PaimindUserSkillPolicyV1,
-} from '@paimind/contracts'
+} from '@hansen/contracts'
 import {
   contributePaimindExtension,
   installHarnessAgentPresetSettingsNavigation,
@@ -34,7 +34,7 @@ import {
   type HarnessWorkspaceService,
   type PaimindClientContext,
   type PaimindLocaleSource,
-} from '@paimind/harness-compat'
+} from '@hansen/harness-compat'
 import {
   PaimindAgentIcon,
   PaimindCheckIcon,
@@ -49,7 +49,7 @@ import {
   PaimindTrashIcon,
   PaimindUserIcon,
   PaimindWarningIcon,
-} from '@paimind/harness-compat/client-icons'
+} from '@hansen/harness-compat/client-icons'
 import {
   PaimindAgentBuilderRequestController,
   PaimindProductSurfaceController,
@@ -59,7 +59,7 @@ import {
   setPaimindProductCenterNativeConversation,
   type PaimindAgentBuilderRequestSnapshot,
   type PaimindProductCenterHost,
-} from '@paimind/harness-compat/client-surface'
+} from '@hansen/harness-compat/client-surface'
 import type {
   AgentBusinessProfile,
   AgentBusinessProfileInput,
@@ -68,15 +68,15 @@ import type {
   AgentProfileSnapshot,
   AgentSessionBinding,
   AgentVerificationRecord,
-} from '@paimind/agent-builder'
-import { AGENT_AUTHORING_SESSION_PREFIX } from '@paimind/agent-builder/client-contract'
-import type { SkillInstallerSnapshot, SkillInstallRecord } from '@paimind/skill-market'
+} from '@hansen/agent-builder'
+import { AGENT_AUTHORING_SESSION_PREFIX } from '@hansen/agent-builder/client-contract'
+import type { SkillInstallerSnapshot, SkillInstallRecord } from '@hansen/skill-market'
 import {
   SKILL_PRODUCT_CATEGORIES,
   metadataForSkill,
   type SkillProductCategoryFilter,
-} from '@paimind/skill-market/catalog'
-import AGENT_TYPERT_REMOTE from '@paimind/agent-builder/remote'
+} from '@hansen/skill-market/catalog'
+import AGENT_TYPERT_REMOTE from '@hansen/agent-builder/remote'
 import {
   collectBusinessAgentCategories,
   metadataForPreset,
@@ -105,7 +105,7 @@ import {
   type AgentAuthoringTurnResult,
   type AgentAuthoringWatchCallbacks,
 } from './authoring-session.js'
-import { PAIMIND_UI_FOUNDATION_CSS } from '@paimind/ui-foundation'
+import { PAIMIND_UI_FOUNDATION_CSS } from '@hansen/ui-foundation'
 
 export type {
   AgentAuthoringDraftContext,
@@ -117,7 +117,7 @@ export type {
 
 const BASE_INJECT = ['slots', 'locale', 'remote', 'sessions', 'workspaces', 'conversation'] as const
 export const inject = [...BASE_INJECT]
-const STYLE_ID = '@paimind/agent-market'
+const STYLE_ID = '@hansen/agent-market'
 
 function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
@@ -948,7 +948,7 @@ export class AgentCenterRuntime implements TestHistoryReader {
   }
 
   /**
-   * Dedicated PAIMind Sessions are recognized by namespace. An ordinary
+   * Dedicated Sessions are recognized by namespace. An ordinary
    * Session is promoted only after its durable history contains a real
    * paimind_agent_prepare_create Tool result; prompt keywords never route UI.
    */
@@ -996,7 +996,7 @@ export class AgentCenterRuntime implements TestHistoryReader {
       || await this.detectCompletedAuthoringSession(sessionId)
     if (!recognized || row === undefined
       || (sessionId.startsWith(AGENT_AUTHORING_SESSION_PREFIX) && row.agentPreset !== PAIMIND_STANDARD_AGENT_BASE_PRESET_ID)) {
-      throw new Error('当前会话不是 PAIMind 原生智能体创建会话')
+      throw new Error('当前会话不是原生智能体创建会话')
     }
     const cached = this.authoringDrafts.get(sessionId)
     let draft = cached?.draft ?? fallbackDraft
@@ -1301,7 +1301,7 @@ export class AgentCenterRuntime implements TestHistoryReader {
 }
 
 /**
- * Route only canonical PAIMind Standard authoring Sessions back into the existing Agent
+ * Route only canonical Standard authoring Sessions back into the existing Agent
  * Builder surface. Harness still owns Session selection and history.
  */
 export function installAgentAuthoringSessionNavigation(
@@ -2240,7 +2240,7 @@ export function AgentCenterSection(props: AgentCenterSectionProps): React.JSX.El
   const mine = useMemo(() => personalProfiles.filter(row => `${row.name} ${row.description} ${row.role} ${row.goal}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())), [personalProfiles, query])
   const templates = roster.status === 'ready' ? roster.roster.presets.filter(row => row.broken === undefined && row.trust === 'system' && row.id === PAIMIND_STANDARD_AGENT_BASE_PRESET_ID) : []
   useEffect(() => replacePaimindAgentAvatarOverrides(
-    '@paimind/agent-market',
+    '@hansen/agent-market',
     Object.fromEntries(profileRows.flatMap(profile => profile.avatarId === undefined ? [] : [[profile.agentId, profile.avatarId]])),
   ), [profileRows])
   useEffect(() => {
@@ -3086,7 +3086,7 @@ export async function apply(ctx: AgentCenterClientContext): Promise<() => Promis
       'paimind-agent-market: authoring Session message projection',
     )
     contributePaimindExtension(scope.slots, {
-      id: 'paimind:agent-market', packageName: '@paimind/agent-market', category: 'agents',
+      id: 'paimind:agent-market', packageName: '@hansen/agent-market', category: 'agents',
       nameZh: '智能体中心', nameEn: 'Agent Center',
       descriptionZh: '配置个人智能体并在真实 Harness 对话中运行。',
       descriptionEn: 'Configure personal Agents and run them in real Harness conversations.',

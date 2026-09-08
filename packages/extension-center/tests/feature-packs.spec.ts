@@ -22,7 +22,7 @@ describe('Product Feature Pack composition', () => {
       expect.objectContaining({
         id: 'paimind:capability:runtime-orbs',
         loaderEntryId: 'paimind-capability-runtime-orbs',
-        packageNames: ['@paimind/runtime-orbs'],
+        packageNames: ['@hansen/runtime-orbs'],
       }),
     ]))
   })
@@ -115,7 +115,7 @@ describe('Product Feature Pack composition', () => {
         if (id === 'paimind-pack-operations' && options.disabled !== true && failOperationsStart) {
           failOperationsStart = false
           delete entry.options.disabled
-          throw new Error('Cannot find package @paimind/task-monitor')
+          throw new Error('Cannot find package @hansen/task-monitor')
         }
         if (options.disabled === true) entry.options.disabled = true
         else delete entry.options.disabled
@@ -135,7 +135,7 @@ describe('Product Feature Pack composition', () => {
 
     await expect(service.mutate({
       id: 'paimind:pack:operations', enabled: true, expectedRevision: 4,
-    })).rejects.toThrow('Cannot find package @paimind/task-monitor')
+    })).rejects.toThrow('Cannot find package @hansen/task-monitor')
     expect(entries.get('paimind-pack-operations')?.options.disabled).toBe(true)
     expect(settingsMutate).toHaveBeenCalledTimes(2)
     expect(settingsMutate.mock.invocationCallOrder[0]).toBeLessThan(loader.update.mock.invocationCallOrder[0]!)
@@ -202,7 +202,7 @@ describe('Product Feature Pack composition', () => {
             proposalFailurePending = false
             for (const sibling of entries.values()) sibling.active = false
             throw new AggregateError(
-              [new Error('Cannot find package @paimind/proposal-experience')],
+              [new Error('Cannot find package @hansen/proposal-experience')],
               'failed to apply loader entry paimind-pack-proposal (cordis:group)',
             )
           }
@@ -234,7 +234,7 @@ describe('Product Feature Pack composition', () => {
       expect(byId.get('paimind:pack:proposal')).toMatchObject({
         desiredEnabled: true,
         enabled: false,
-        failure: 'Cannot find package @paimind/proposal-experience',
+        failure: 'Cannot find package @hansen/proposal-experience',
       })
       expect(entries.get('paimind-pack-proposal')?.options.disabled).toBe(true)
       await Promise.all(cleanups.map(async cleanup => { await cleanup() }))

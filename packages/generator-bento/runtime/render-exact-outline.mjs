@@ -7,7 +7,7 @@ import {
   definePresentationOutline,
   traceFromPresentationOutline,
   validatePresentationTraceability,
-} from '@paimind/presentation-contracts'
+} from '@hansen/presentation-contracts'
 import { renderTraceableBentoDocument } from '../lib/index.js'
 
 const ROOT = process.cwd()

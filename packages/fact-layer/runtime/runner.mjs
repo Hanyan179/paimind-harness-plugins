@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
-import { defineAnalysisDataResult, definePresentationFactSet } from '@paimind/presentation-contracts'
+import { defineAnalysisDataResult, definePresentationFactSet } from '@hansen/presentation-contracts'
 
 const ROOT = process.cwd()
 function canonical(value) {

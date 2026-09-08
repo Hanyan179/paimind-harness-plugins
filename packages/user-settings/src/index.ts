@@ -9,7 +9,7 @@ import {
   type PaimindHostSettingsFacility,
   type PaimindHostSettingsMutationOperation,
   type PaimindHostSystemPrompt,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 import {
   DEFAULT_PAIMIND_PERSONALIZATION,
   PAIMIND_PERSONALITIES,

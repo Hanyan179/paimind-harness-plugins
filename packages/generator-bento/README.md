@@ -1,4 +1,4 @@
-# `@paimind/generator-bento`
+# `@hansen/generator-bento`
 
 Native Harness Tool provider for PAIMind Bento presentation artifacts.
 
@@ -25,7 +25,7 @@ Role: **Client plugin**. It owns the product projection described above; Harness
 
 ## Dependencies
 
-- Internal runtime dependencies: `@paimind/artifact-runtime` (`workspace:^`), `@paimind/contracts` (`workspace:^`), `@paimind/harness-compat` (`workspace:^`).
+- Internal runtime dependencies: `@hansen/artifact-runtime` (`workspace:^`), `@hansen/contracts` (`workspace:^`), `@hansen/harness-compat` (`workspace:^`).
 - External runtime or peer dependencies: `react` (`>=18.0.0 <20.0.0`).
 - Client service injection: `@deepseek-ai/dsh-client-ui-slots`.
 

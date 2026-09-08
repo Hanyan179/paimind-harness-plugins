@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { PaimindScheduleExecutor } from '@paimind/platform-scheduler'
-import { createPaimindHarnessScheduledMessage } from '@paimind/harness-compat/host'
+import type { PaimindScheduleExecutor } from '@hansen/platform-scheduler'
+import { createPaimindHarnessScheduledMessage } from '@hansen/harness-compat/host'
 import { PaimindHarnessScheduleAdapterService } from '../src/index.ts'
 import {
   installPaimindAgentScheduleAction,

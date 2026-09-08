@@ -1,11 +1,11 @@
-import { contributePaimindExtension, type PaimindClientContext } from '@paimind/harness-compat'
+import { contributePaimindExtension, type PaimindClientContext } from '@hansen/harness-compat'
 
 export const inject = ['slots']
 
 export function apply(ctx: PaimindClientContext): void {
   contributePaimindExtension(ctx.slots, {
     id: 'paimind:generator-web',
-    packageName: '@paimind/generator-web',
+    packageName: '@hansen/generator-web',
     category: 'content-rendering',
     nameZh: '网页产物生成器',
     nameEn: 'Web Artifact Generator',

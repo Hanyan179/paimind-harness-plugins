@@ -1,7 +1,7 @@
 import {
   registerPaimindHostSettings,
   type PaimindHostSettingsFacility,
-} from '@paimind/harness-compat/host'
+} from '@hansen/harness-compat/host'
 import {
   PAIMIND_VISUAL_EXPERIENCE_FIELDS,
   PAIMIND_VISUAL_EXPERIENCE_NAMESPACE,

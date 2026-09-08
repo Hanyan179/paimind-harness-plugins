@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { ArtifactProducedEnvelopeV1, ArtifactTraceEnvelopeV1, PaimindArtifactProjectionV1 } from '@paimind/contracts'
-import type { HarnessSessionService } from '@paimind/harness-compat'
+import type { ArtifactProducedEnvelopeV1, ArtifactTraceEnvelopeV1, PaimindArtifactProjectionV1 } from '@hansen/contracts'
+import type { HarnessSessionService } from '@hansen/harness-compat'
 import { HarnessProjectedPresentationTraceSource } from '../src/index.ts'
 
 function observable<T>(initial: T) {
