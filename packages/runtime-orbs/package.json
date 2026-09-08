@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@hansen/harness-compat": "workspace:^",
+    "@hansen/ui-foundation": "workspace:^",
     "thinking-orbs": "0.3.1"
   },
   "peerDependencies": {

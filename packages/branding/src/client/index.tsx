@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  contributePaimindExtension, installHarnessDocumentBranding, locateHarnessBrandSeats,
+  markHarnessClientStyle, contributePaimindExtension, installHarnessDocumentBranding, locateHarnessBrandSeats,
   resolveHarnessSettingsNamespace,
   type HarnessBrandSeats, type HarnessHeroBrandSeat, type PaimindClientContext,
   type PaimindSettingsScope, type PaimindSettingsScopeBinder,
@@ -228,6 +228,7 @@ export function BrandingSettingsSection({ scope, locale }: BrandProps & { readon
 function installStyle(): () => void {
   const style = document.createElement('style')
   style.id = STYLE_ID
+  markHarnessClientStyle(style, STYLE_ID)
   style.dataset.paimindPlugin = STYLE_ID
   style.textContent = STYLE
   document.head.append(style)

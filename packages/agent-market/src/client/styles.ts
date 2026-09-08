@@ -68,6 +68,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   min-height: 0;
   overflow: hidden;
   isolation: isolate;
+  container: paimind-agent-center / inline-size;
   color: var(--paimind-agent-ink);
   background: var(--paimind-agent-bg);
   font: inherit;
@@ -145,7 +146,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   gap: 8px;
   margin: 0 0 8px;
   color: var(--paimind-agent-accent);
-  font-size: 11px;
+  font-size:12px;
   font-weight: 740;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -222,7 +223,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   font-size: 12px;
   line-height: 18px;
   cursor: pointer;
-  transition: border-color .16s ease, background-color .16s ease, color .16s ease;
+  transition: border-color var(--paimind-motion-fast) ease, background-color var(--paimind-motion-fast) ease, color var(--paimind-motion-fast) ease;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-button]:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--paimind-agent-accent) 34%, var(--paimind-agent-line));
@@ -284,7 +285,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   padding: 1px 6px;
   border-radius: 999px;
   background: color-mix(in srgb, currentColor 10%, transparent);
-  font-size: 9px;
+  font-size:12px;
   text-align: center;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-business-filter] {
@@ -292,7 +293,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   align-items: center;
   gap: 8px;
   color: var(--paimind-agent-muted);
-  font-size: 10px;
+  font-size:12px;
   font-weight: 650;
   white-space: nowrap;
 }
@@ -305,7 +306,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   color: var(--paimind-agent-ink);
   background: var(--paimind-agent-bg);
   font: inherit;
-  font-size: 11px;
+  font-size:12px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-section-head] {
   display: flex;
@@ -322,7 +323,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-section-head] p {
   margin: 4px 0 0;
   color: var(--paimind-agent-muted);
-  font-size: 11px;
+  font-size:12px;
   line-height: 18px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-section-actions] {
@@ -332,7 +333,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-result-count] {
   color: var(--paimind-agent-muted);
-  font-size: 10px;
+  font-size:12px;
   white-space: nowrap;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-grid],
@@ -395,7 +396,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   height: 100%;
   display: grid;
   place-items: center;
-  transition: opacity .14s ease;
+  transition: opacity var(--paimind-motion-fast) ease;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-avatar-seat][data-paimind-agent-avatar-ready='true'] > [data-paimind-agent-avatar-fallback],
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-avatar-seat]:has(> [data-paimind-agent-avatar]) > [data-paimind-agent-avatar-fallback] {
@@ -418,7 +419,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   margin-top: 2px;
   overflow: hidden;
   color: var(--paimind-agent-muted);
-  font-size: 9px;
+  font-size:12px;
   line-height: 15px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -444,7 +445,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-card] > p {
   margin: 0;
   color: var(--paimind-agent-muted);
-  font-size: 11px;
+  font-size:12px;
   line-height: 18px;
   overflow-wrap: anywhere;
 }
@@ -461,7 +462,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   gap: 9px;
   margin-top: auto;
   color: var(--paimind-agent-muted);
-  font-size: 9px;
+  font-size:12px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-card-context] span {
   display: inline-flex;
@@ -516,7 +517,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   display: block;
   border-radius: 9px;
   background: var(--paimind-agent-soft);
-  animation: paimind-agent-loading 1.3s ease-in-out infinite;
+  animation: paimind-agent-loading var(--paimind-motion-loop) ease-in-out var(--paimind-motion-iterations);
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-loading-card] span {
   width: 42px;
@@ -541,7 +542,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   padding: 10px 12px;
   border: 1px solid var(--paimind-agent-line);
   border-radius: 10px;
-  font-size: 11px;
+  font-size:12px;
   line-height: 18px;
   overflow-wrap: anywhere;
 }
@@ -632,7 +633,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   display: grid;
   gap: 8px;
   color: var(--paimind-agent-muted);
-  font-size: 11px;
+  font-size:12px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-starter-suggestions] > span {
   color: var(--paimind-agent-ink);
@@ -651,7 +652,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   color: var(--paimind-agent-muted);
   background: var(--paimind-agent-panel);
   font: inherit;
-  font-size: 11px;
+  font-size:12px;
   line-height: 17px;
   text-align: left;
   cursor: pointer;
@@ -676,7 +677,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   border-radius: 10px;
   color: var(--paimind-agent-muted);
   background: var(--paimind-agent-bg);
-  font-size: 10px;
+  font-size:12px;
   line-height: 17px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-starter-note] svg {
@@ -689,7 +690,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   border-radius: 9px;
   color: var(--dsw-alias-state-error-primary, #d04444);
   background: color-mix(in srgb, currentColor 7%, var(--paimind-agent-panel));
-  font-size: 11px;
+  font-size:12px;
   line-height: 18px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-starter-actions] {
@@ -737,7 +738,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   border-radius: 999px;
   opacity: 0;
   transform: translateY(-50%);
-  transition: opacity 140ms ease, background-color 140ms ease;
+  transition: opacity var(--paimind-motion-fast) ease, background-color var(--paimind-motion-fast) ease;
   background: color-mix(in srgb, var(--paimind-agent-accent) 54%, transparent);
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-splitter]:is(:hover, :focus-visible)::after,
@@ -790,7 +791,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-form-kicker] {
   margin: 0 0 3px !important;
   color: var(--paimind-agent-accent) !important;
-  font-size: 10px !important;
+  font-size:12px !important;
   font-weight: 730;
   letter-spacing: .09em;
   text-transform: uppercase;
@@ -805,7 +806,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   max-width: 760px;
   margin: 4px 0 0;
   color: var(--paimind-agent-muted);
-  font-size: 11px;
+  font-size:12px;
   line-height: 18px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-builder-close] {
@@ -832,7 +833,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   border-radius: 999px;
   color: var(--paimind-agent-muted);
   background: var(--paimind-agent-soft);
-  font-size: 9px;
+  font-size:12px;
   font-weight: 650;
   white-space: nowrap;
 }
@@ -849,7 +850,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   padding: 9px clamp(18px, 2.4vw, 30px);
   color: var(--dsw-alias-state-error-primary, #d04444);
   background: color-mix(in srgb, currentColor 7%, var(--paimind-agent-panel));
-  font-size: 10px;
+  font-size:12px;
   line-height: 17px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-form-body] {
@@ -895,10 +896,13 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-avatar-picker] legend {
   margin-bottom: 7px;
   color: var(--paimind-agent-muted);
-  font-size: 10px;
+  font-size:12px;
   font-weight: 650;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-avatar-picker] > div {
+  max-height: 232px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
@@ -928,7 +932,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-avatar-picker] small {
   width: 100%;
   overflow: hidden;
-  font-size: 8px;
+  font-size: 10px;
   line-height: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -943,7 +947,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   border-radius: 12px;
   color: var(--paimind-agent-muted);
   background: color-mix(in srgb, var(--paimind-agent-accent) 6%, var(--paimind-agent-panel));
-  font-size: 10px;
+  font-size:12px;
   line-height: 16px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-ai-update-icon] {
@@ -966,7 +970,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-ai-update] strong {
   display: block;
   color: var(--paimind-agent-ink);
-  font-size: 11px;
+  font-size:12px;
   line-height: 16px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-ai-update] p {
@@ -982,7 +986,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   border-radius: 999px;
   color: var(--paimind-agent-accent);
   background: color-mix(in srgb, var(--paimind-agent-accent) 9%, transparent);
-  font-size: 9px;
+  font-size:12px;
   line-height: 14px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-ai-update] button {
@@ -993,7 +997,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   color: var(--paimind-agent-muted);
   background: var(--paimind-agent-panel);
   font: inherit;
-  font-size: 9px;
+  font-size:12px;
   cursor: pointer;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-ai-update] button[data-primary='true'] {
@@ -1011,7 +1015,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   border-radius: 999px;
   color: var(--paimind-agent-accent);
   background: color-mix(in srgb, var(--paimind-agent-accent) 7%, var(--paimind-agent-panel));
-  font-size: 10px;
+  font-size:12px;
   line-height: 16px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-form-panel] {
@@ -1036,7 +1040,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   border-radius: 9px;
   color: var(--paimind-agent-accent);
   background: color-mix(in srgb, var(--paimind-agent-accent) 9%, var(--paimind-agent-panel));
-  font-size: 9px;
+  font-size:12px;
   font-weight: 760;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-panel-head] h3,
@@ -1051,7 +1055,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   display: block;
   margin: 2px 0 0;
   color: var(--paimind-agent-muted);
-  font-size: 10px;
+  font-size:12px;
   font-weight: 500;
   line-height: 16px;
 }
@@ -1065,7 +1069,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   display: grid;
   gap: 6px;
   color: var(--paimind-agent-muted);
-  font-size: 10px;
+  font-size:12px;
   font-weight: 620;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-field][data-wide='true'] {
@@ -1126,7 +1130,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-skills-toggle] > span:last-child {
   flex: none;
   color: var(--paimind-agent-muted);
-  font-size: 9px;
+  font-size:12px;
   white-space: nowrap;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-skill-picker] {
@@ -1152,7 +1156,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   border-radius: 9px;
   color: var(--paimind-agent-muted) !important;
   background: var(--paimind-agent-bg);
-  font-size: 10px !important;
+  font-size:12px !important;
   font-weight: 500 !important;
   line-height: 17px !important;
 }
@@ -1185,7 +1189,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   color: var(--paimind-agent-muted);
   background: var(--paimind-agent-panel);
   font: inherit;
-  font-size: 10px;
+  font-size:12px;
   font-weight: 650;
   cursor: pointer;
 }
@@ -1214,7 +1218,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   color: var(--paimind-agent-muted);
   background: var(--paimind-agent-panel);
   font: inherit;
-  font-size: 9px;
+  font-size:12px;
   cursor: pointer;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-skill-categories] button small {
@@ -1235,7 +1239,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   gap: 10px;
   margin: 9px 0 7px;
   color: var(--paimind-agent-muted);
-  font-size: 9px;
+  font-size:12px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-skill-results] {
   max-height: 360px;
@@ -1279,7 +1283,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-skill] strong {
   min-width: 0;
   color: var(--paimind-agent-ink);
-  font-size: 10px;
+  font-size:12px;
   line-height: 16px;
   overflow-wrap: anywhere;
 }
@@ -1296,7 +1300,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   display: -webkit-box;
   overflow: hidden;
   color: var(--paimind-agent-muted);
-  font-size: 9px;
+  font-size:12px;
   font-style: normal;
   line-height: 15px;
   -webkit-box-orient: vertical;
@@ -1307,14 +1311,14 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   border: 1px dashed var(--paimind-agent-line);
   border-radius: 10px;
   color: var(--paimind-agent-muted);
-  font-size: 10px;
+  font-size:12px;
   text-align: center;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-runtime-note] {
   margin: 0;
   padding: 4px 2px;
   color: var(--paimind-agent-muted);
-  font-size: 9px;
+  font-size:12px;
   line-height: 16px;
 }
 
@@ -1368,7 +1372,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-conversation-head] p {
   margin: 2px 0 0;
   color: var(--paimind-agent-muted);
-  font-size: 9px;
+  font-size:12px;
   line-height: 15px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-creator-permission] {
@@ -1412,7 +1416,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   color: var(--paimind-agent-muted);
   background: transparent;
   font: inherit;
-  font-size: 10px;
+  font-size:12px;
   font-weight: 650;
   cursor: pointer;
 }
@@ -1454,12 +1458,12 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-native-status] strong {
   color: var(--paimind-agent-ink);
-  font-size: 10px;
+  font-size:12px;
   line-height: 15px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-native-status] small {
   overflow: hidden;
-  font-size: 9px;
+  font-size:12px;
   line-height: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1507,7 +1511,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-test-profile] p {
   margin: 3px 0 0;
   color: var(--paimind-agent-muted);
-  font-size: 9px;
+  font-size:12px;
   line-height: 15px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-test-composition] {
@@ -1620,14 +1624,14 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-test-history] > header strong {
   color: var(--paimind-agent-ink);
-  font-size: 11px;
+  font-size:12px;
   line-height: 16px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-test-history] > header [data-paimind-agent-button] {
   flex: none;
   min-height: 28px;
   padding: 5px 8px;
-  font-size: 9px;
+  font-size:12px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-test-history] ul {
   min-height: 0;
@@ -1695,7 +1699,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   white-space: nowrap;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-test-history] li strong {
-  font-size: 10px;
+  font-size:12px;
   line-height: 15px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-test-history] li small,
@@ -1731,7 +1735,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-test-ready] strong {
   color: var(--paimind-agent-ink);
-  font-size: 10px;
+  font-size:12px;
   line-height: 15px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-test-ready] small {
@@ -1801,7 +1805,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-message] p {
   margin: 0;
-  font-size: 10px;
+  font-size:12px;
   line-height: 17px;
   overflow-wrap: anywhere;
 }
@@ -1852,7 +1856,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   color: var(--paimind-agent-ink);
   background: var(--paimind-agent-bg);
   font: inherit;
-  font-size: 10px;
+  font-size:12px;
   line-height: 17px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-conversation-hint] {
@@ -1891,7 +1895,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-test-gate] p {
   max-width: 290px;
   margin: 5px 0 0;
-  font-size: 9px;
+  font-size:12px;
   line-height: 16px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-test-empty] {
@@ -1905,7 +1909,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-test-empty] p {
   max-width: 240px;
   margin: 7px 0 0;
-  font-size: 9px;
+  font-size:12px;
   line-height: 16px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-test-status] {
@@ -1914,7 +1918,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   border-radius: 9px;
   color: var(--paimind-agent-muted);
   background: var(--paimind-agent-soft);
-  font-size: 9px;
+  font-size:12px;
   line-height: 15px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-test-status][data-status='complete'] {
@@ -1934,7 +1938,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   color: var(--paimind-agent-accent);
   background: var(--paimind-agent-panel);
   font: inherit;
-  font-size: 9px;
+  font-size:12px;
   font-weight: 650;
   cursor: pointer;
 }
@@ -1952,7 +1956,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-form-actions] > p {
   margin: 0;
   color: var(--paimind-agent-muted);
-  font-size: 9px;
+  font-size:12px;
   line-height: 15px;
 }
 [data-paimind-product-surface='agent-center'] [data-paimind-agent-form-actions] > div {
@@ -1961,6 +1965,18 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   gap: 8px;
 }
 
+@container paimind-agent-center (max-width:900px) {
+  [data-paimind-product-surface='agent-center'] [data-paimind-agent-hero] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+@container paimind-agent-center (max-width:620px) {
+  [data-paimind-product-surface='agent-center'] [data-paimind-agent-grid],
+  [data-paimind-product-surface='agent-center'] [data-paimind-agent-loading-grid] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 @media(max-width:980px) {
   [data-paimind-product-center-host][data-paimind-product-center-native-conversation] {
     --paimind-agent-native-conversation-width: clamp(320px, 40vw, 400px);
@@ -2159,18 +2175,7 @@ div:has(> div > button[data-paimind-product-trigger='agent-center'][data-wide='f
   }
 }
 
-@media(prefers-reduced-motion:reduce) {
-  [data-paimind-product-surface='agent-center'] [data-paimind-agent-button],
-  [data-paimind-product-surface='agent-center'] [data-paimind-agent-tab] {
-    transition: none;
-  }
-  [data-paimind-product-surface='agent-center'] [data-paimind-agent-loading-card] :is(span, strong, i) {
-    animation: none;
-  }
-  [data-paimind-product-surface='agent-center'] [data-paimind-agent-splitter]::after {
-    transition: none;
-  }
-}
+
 
 @media(forced-colors:active) {
   [data-paimind-product-surface='agent-center'] [data-paimind-agent-button],

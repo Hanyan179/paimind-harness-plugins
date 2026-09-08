@@ -79,6 +79,8 @@ const proposalExperienceRoot = resolve(repositoryRoot, 'packages/proposal-experi
 const walmartProposalAdapterRoot = resolve(repositoryRoot, 'packages/walmart-proposal-adapter')
 const agentMarketRoot = resolve(repositoryRoot, 'packages/agent-market')
 const agentBuilderRoot = resolve(repositoryRoot, 'packages/agent-builder')
+const mcpCenterRoot = resolve(repositoryRoot, 'packages/mcp-center')
+const feishuCliMcpRoot = resolve(repositoryRoot, 'packages/feishu-cli-mcp')
 const skillMarketRoot = resolve(repositoryRoot, 'packages/skill-market')
 const notificationsRoot = resolve(repositoryRoot, 'packages/notifications')
 const platformApiRoot = resolve(repositoryRoot, 'packages/platform-api')
@@ -686,6 +688,8 @@ try {
     agentMarketRoot,
     agentBuilderRoot,
     skillMarketRoot,
+    mcpCenterRoot,
+    feishuCliMcpRoot,
     notificationsRoot,
     platformApiRoot,
     schedulerRoot,
@@ -727,6 +731,8 @@ try {
     'paimind-walmart-proposal-adapter', '@hansen/walmart-proposal-adapter',
     'paimind-agent-market', '@hansen/agent-market',
     'paimind-agent-builder', '@hansen/agent-builder',
+    'paimind-mcp-center', '@hansen/mcp-center',
+    'paimind-feishu-cli-mcp', '@hansen/feishu-cli-mcp',
     'paimind-skill-market', '@hansen/skill-market',
     'paimind-notifications', '@hansen/notifications',
     'paimind-platform-scheduler', '@hansen/platform-scheduler',
@@ -779,12 +785,14 @@ try {
     '@hansen/presentation-trace',
     '@hansen/proposal-experience',
     '@hansen/agent-market',
+    '@hansen/mcp-center',
     '@hansen/skill-market',
     '@hansen/notifications',
     '@hansen/platform-scheduler',
     '@hansen/user-settings',
     '@hansen/developer-resources',
   ], [
+    '@hansen/feishu-cli-mcp', // Template provider is headless, with no client manifest.
     '@hansen/agent-builder',
     '@hansen/platform-api',
     '@hansen/scheduler-adapter-harness',
@@ -909,6 +917,8 @@ try {
     agentMarketRoot,
     agentBuilderRoot,
     skillMarketRoot,
+    mcpCenterRoot,
+    feishuCliMcpRoot,
     notificationsRoot,
     walmartProposalAdapterRoot,
     developerResourcesRoot,
@@ -985,6 +995,8 @@ try {
     agentMarketRoot,
     agentBuilderRoot,
     skillMarketRoot,
+    mcpCenterRoot,
+    feishuCliMcpRoot,
     notificationsRoot,
   ], 'install product composition without Task Monitor')
   const withoutTaskMonitor = dsh(['--profile', 'web', '--dump-config'], 'dump composition without Task Monitor')
@@ -1060,6 +1072,8 @@ try {
     presentationTraceRoot,
     agentBuilderRoot,
     skillMarketRoot,
+    mcpCenterRoot,
+    feishuCliMcpRoot,
     notificationsRoot,
   ], 'install product composition without Agent Market')
   const withoutAgentMarket = dsh(['--profile', 'web', '--dump-config'], 'dump composition without Agent Market')
@@ -1135,6 +1149,8 @@ try {
     presentationTraceRoot,
     agentMarketRoot,
     skillMarketRoot,
+    mcpCenterRoot,
+    feishuCliMcpRoot,
     notificationsRoot,
   ], 'install product composition without Agent Builder')
   const withoutAgentBuilder = dsh(['--profile', 'web', '--dump-config'], 'dump composition without Agent Builder')
@@ -1287,6 +1303,8 @@ try {
     agentMarketRoot,
     agentBuilderRoot,
     skillMarketRoot,
+    mcpCenterRoot,
+    feishuCliMcpRoot,
   ], 'install product composition without Notification Center')
   const withoutNotifications = dsh(['--profile', 'web', '--dump-config'], 'dump composition without Notification Center')
   if (withoutNotifications.includes('paimind-notifications') || withoutNotifications.includes('@hansen/notifications')) {
@@ -1362,6 +1380,8 @@ try {
     agentMarketRoot,
     agentBuilderRoot,
     skillMarketRoot,
+    mcpCenterRoot,
+    feishuCliMcpRoot,
     notificationsRoot,
     walmartProposalAdapterRoot,
     developerResourcesRoot,
@@ -1453,6 +1473,8 @@ try {
     agentMarketRoot,
     agentBuilderRoot,
     skillMarketRoot,
+    mcpCenterRoot,
+    feishuCliMcpRoot,
     notificationsRoot,
     walmartProposalAdapterRoot,
     platformApiRoot,
@@ -1564,6 +1586,8 @@ try {
     agentMarketRoot,
     agentBuilderRoot,
     skillMarketRoot,
+    mcpCenterRoot,
+    feishuCliMcpRoot,
     notificationsRoot,
     walmartProposalAdapterRoot,
     platformApiRoot,

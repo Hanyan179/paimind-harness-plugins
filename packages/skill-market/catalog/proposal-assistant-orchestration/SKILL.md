@@ -1,6 +1,7 @@
 ---
+display-name: 采购提案助手
 name: proposal-assistant-orchestration
-description: Orchestrate adaptive proposal background questions, internal Skill matching, user-facing content and data selection, verified analysis, and a traceable Bento presentation final deliverable. Use when a user starts, resumes, edits, or goes back in a proposal workflow.
+description: 澄清提案需求，组织分析、演示制作和数据来源说明。
 ---
 
 # Proposal Assistant Orchestration for Harness
@@ -13,11 +14,13 @@ Use this mode when the user requests a complete demo, every selection screen, or
 
 For a new complete demo, present these decisions individually in order through native `ask_user_question`, waiting for each answer. Even when the brief suggests an answer, show it for interactive confirmation in this mode. On resume, preserve decisions already confirmed in this demo; do not restart completed steps.
 
-1. Customer — `paimind.proposal.customer/v1`. Offer only executable synthetic scenarios, including Dollar General and Walmart.
+1. Customer — `paimind.proposal.customer/v1`. Offer only executable synthetic scenarios, including Dollar General and Walmart. Keep customer choices separate from deck purposes: choosing Walmart does not confirm Growth & investment ask.
 2. Department or category — `paimind.proposal.departments/v1`. Use the exact supported scenario scope. For the Walmart demo, show Kids Crafts as the supported category without inventing department codes or unsupported alternatives. For Dollar General, use the supported departments described below. Explain fixed demo scope when only one choice is available.
 3. Deck purpose — `paimind.proposal.deck-type/v1`. Present the relevant maintained purposes and descriptions; Walmart buyer purposes include Growth & investment ask, Seasonal reset proposal, and Performance & partnership review.
 4. Visual style — `paimind.proposal.deck-style/v1`. Always show the existing Strategy Consulting, Paramont Signature and Playful Storybook choices and wait for the user's selection. Do not replace the style assets, select a style silently, or skip this screen because the customer or purpose is known. Preserve the selected style identifier for the supported presentation Tool inputs; never claim a style was applied without checking the returned deck metadata.
 5. Content & data — `paimind.proposal.content-data/v1`. Load and match the analysis Skills first, then offer complete, executable business content packages. For Walmart, combine the two loaded offerings into one clearly described choice such as "Complete buyer proposal: investment priorities + assortment opportunities"; its selection explicitly authorizes both analyses required by the outline builder. Do not present the two required halves as independently sufficient deck packages. For the complete Dollar General demo, offer a package containing performance, department roles and opportunity priorities. Do not add non-executable options merely to create more choices. The answer confirms scope and starts execution; no extra confirmation screen is needed.
+
+In complete-demo mode, completion requires all five question IDs above to have an answer in the current conversation. A fixed category still gets its own one-option confirmation card. Do not move from Customer directly to Style or combine Customer with Purpose. Before each question, check the answered IDs and ask the first missing one. Historical workspace context is background, never an answer to a new demo's questions. The adaptive-intake instruction to skip known answers below does not apply to this mode.
 
 This sequence is owned by this Skill and the Agent's native question calls, not a client-side step machine. Do not copy the workflow into the Agent persona or plugin configuration. BACK returns to an earlier material decision while retaining valid answers. An explicit cancellation or a later user request for analysis only overrides the demo scope; acknowledge that the complete deck demo is paused rather than repeatedly requesting paired content.
 
@@ -81,11 +84,13 @@ After Content & data is confirmed, execute only the loaded Skill capabilities re
 8. Call `generate_traceable_bento_from_outline` with the exact Outline Artifact ID and exact Fact Set Artifact ID -> `proposal-demo/deck/<proposal-slug>.bento.html`. Do not read, copy, or resend the complete generated Outline.
 9. Return the Bento Artifact as the single primary final deliverable, followed by one short English note stating that its Preview, Edit, and Trace modes are available in one workbench. Clearly label the Dollar General dataset as synthetic demonstration data. If the current user explicitly requested an editable PPTX export, return that requested Artifact after the Bento Artifact as a secondary export.
 
+For Walmart outline generation, pass `style_preset` explicitly: Strategy Consulting = `strategy-consulting`, Paramont Signature = `paramont-signature`, Playful Storybook = `playful-storybook`. The Tool resolves the matching registered template. Its legacy retail default is not a substitute for the user's choice. Before rendering, read the generated Outline's `design` metadata and verify both `stylePreset` and `templateId` against the selected pair above; correct a mismatch before delivery.
+
 ### Walmart synthetic demonstration
 
 1. `prepare_walmart_demo_data` -> `proposal-demo/frozen/walmart/source-manifest.json`.
 2. Pass the exact returned current-Session manifest Artifact ID to `analyze_fineline_investment` and `analyze_white_space` for the selected Walmart content -> `proposal-demo/analysis/walmart.fineline.data-result.json` and `proposal-demo/analysis/walmart.white-space.data-result.json`.
-3. Pass only the two exact analysis Artifact IDs to `build_walmart_buyer_proposal_outline` -> `proposal-demo/deck/<proposal-slug>.outline.json`.
+3. Pass the two exact analysis Artifact IDs and the confirmed `style_preset` to `build_walmart_buyer_proposal_outline` -> `proposal-demo/deck/<proposal-slug>.outline.json`.
 4. Call `generate_traceable_bento_from_outline` with that exact trusted complete Outline Artifact ID -> `proposal-demo/deck/<proposal-slug>.bento.html`.
 5. Return the Bento Artifact as the primary deliverable and state clearly that every Walmart figure is synthetic demonstration data. If the current user explicitly requested editable PPT generation, call `generate_pptx_from_outline` only after Bento succeeds and return the PPTX as the secondary export.
 
@@ -95,7 +100,7 @@ After Content & data is confirmed, execute only the loaded Skill capabilities re
 2. Run `analyze_fineline_investment` only when `Fineline Investment Priorities (Recommended)` is selected.
 3. Run `analyze_white_space` only when `Assortment White-space Opportunities (Recommended)` is selected.
 4. The current Walmart outline Tool requires both analysis Artifacts. If the user selected only one, explain this verified contract and ask whether to add the paired content; do not silently run unselected analysis.
-5. Choose a meaningful proposal slug from the current request and Session, then call `build_walmart_buyer_proposal_outline` with the exact two Artifact IDs -> `proposal-demo/deck/<proposal-slug>.outline.json`. Do not reuse a fixed configured filename across proposals.
+5. Choose a meaningful proposal slug from the current request and Session, then call `build_walmart_buyer_proposal_outline` with the exact two Artifact IDs and confirmed `style_preset` -> `proposal-demo/deck/<proposal-slug>.outline.json`. Do not reuse a fixed configured filename across proposals.
 6. Call `generate_traceable_bento_from_outline` with that exact trusted complete Outline Artifact ID -> `proposal-demo/deck/<proposal-slug>.bento.html`. Do not pass a fabricated Fact Set ID and do not copy the complete Outline into the Tool call.
 7. Return the Bento Artifact as the primary final deliverable. If the current user explicitly requested an editable PPTX export, return that requested Artifact after the Bento Artifact as a secondary export. Never claim external-data acceptance unless the approved manifest and its source hashes were actually verified in this Session.
 

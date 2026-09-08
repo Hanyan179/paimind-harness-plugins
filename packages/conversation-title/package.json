@@ -30,6 +30,7 @@
     }
   },
   "dependencies": {
+    "@hansen/ui-foundation": "workspace:^",
     "@hansen/harness-compat": "workspace:^"
   },
   "peerDependencies": {

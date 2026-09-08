@@ -1,0 +1,92 @@
+{
+  "mode": "Built-in image generation",
+  "date": "2026-09-07",
+  "styleReference": "content-expression-agent.webp",
+  "encoding": "128x128 WebP, cwebp quality 82 method 6; source PNGs retained outside repository",
+  "avatars": [
+    {
+      "id": "research-partner",
+      "label": "研究伙伴",
+      "prompt": "Use case: stylized-concept. Create ONE new square avatar illustration for an AI assistant selection library. The attached image is a STYLE REFERENCE only, not an edit target. Match its warm peach/cream background, polished 3D character-illustration aesthetic, soft studio lighting, clean friendly face, subtle stylized facial proportions, and professional approachable mood. New character: A friendly young East Asian woman with a short chestnut bob and round spectacles, teal jacket, holding a small closed notebook. Composition: centered single head and upper torso, facing camera with a slight three-quarter turn, head large enough to read at 32px, entire hair silhouette fully inside frame with 12% safe margins for circular cropping, shoulders visible; simple very light cream-peach background. Keep face distinct and expressive, illustration not a photograph; do not create another copy of the reference person. No text, letters, logos, watermark, border, collage or additional characters. One character only. Deliver the square final image.",
+      "source": "/Users/hansen/.codex/generated_images/01a079c7-204f-7d50-8b82-a65499caeda5/exec-49dd8229-1ff7-44a3-9ddf-255c2fe0e19f.png",
+      "file": "research-partner.webp"
+    },
+    {
+      "id": "data-analyst",
+      "label": "数据分析",
+      "prompt": "Use case: stylized-concept. Create ONE new square avatar illustration for an AI assistant selection library. The attached image is a STYLE REFERENCE only, not an edit target. Match its warm peach/cream background, polished 3D character-illustration aesthetic, soft studio lighting, clean friendly face, subtle stylized facial proportions, and professional approachable mood. New character: A warm young Black man with short textured curls, sage green sweater, holding a small tablet showing three simple abstract bars. Composition: centered single head and upper torso, facing camera with a slight three-quarter turn, head large enough to read at 32px, entire hair silhouette fully inside frame with 12% safe margins for circular cropping, shoulders visible; simple very light cream-peach background. Keep face distinct and expressive, illustration not a photograph; do not create another copy of the reference person. No text, letters, logos, watermark, border, collage or additional characters. One character only. Deliver the square final image.",
+      "source": "/Users/hansen/.codex/generated_images/01a079c7-204f-7d50-8b82-a65499caeda5/exec-23967099-03c3-4d92-961c-4973786ad5c3.png",
+      "file": "data-analyst.webp"
+    },
+    {
+      "id": "customer-success",
+      "label": "客户协作",
+      "prompt": "Use case: stylized-concept. Create ONE new square avatar illustration for an AI assistant selection library. The attached image is a STYLE REFERENCE only, not an edit target. Match its warm peach/cream background, polished 3D character-illustration aesthetic, soft studio lighting, clean friendly face, subtle stylized facial proportions, and professional approachable mood. New character: A cheerful East Asian man with neatly swept dark hair, soft blue overshirt, one hand lightly raised in greeting. Composition: centered single head and upper torso, facing camera with a slight three-quarter turn, head large enough to read at 32px, entire hair silhouette fully inside frame with 12% safe margins for circular cropping, shoulders visible; simple very light cream-peach background. Keep face distinct and expressive, illustration not a photograph; do not create another copy of the reference person. No text, letters, logos, watermark, border, collage or additional characters. One character only. Deliver the square final image.",
+      "source": "/Users/hansen/.codex/generated_images/01a079c7-204f-7d50-8b82-a65499caeda5/exec-dc317442-a788-4fc0-a6c0-ac666073218f.png",
+      "file": "customer-success.webp"
+    },
+    {
+      "id": "language-partner",
+      "label": "语言伙伴",
+      "prompt": "Use case: stylized-concept. Create ONE new square avatar illustration for an AI assistant selection library. The attached image is a STYLE REFERENCE only, not an edit target. Match its warm peach/cream background, polished 3D character-illustration aesthetic, soft studio lighting, clean friendly face, subtle stylized facial proportions, and professional approachable mood. New character: A thoughtful woman with medium brown skin, dark wavy shoulder-length hair, soft lavender cardigan and a simple notebook held close. Composition: centered single head and upper torso, facing camera with a slight three-quarter turn, head large enough to read at 32px, entire hair silhouette fully inside frame with 12% safe margins for circular cropping, shoulders visible; simple very light cream-peach background. Keep face distinct and expressive, illustration not a photograph; do not create another copy of the reference person. No text, letters, logos, watermark, border, collage or additional characters. One character only. Deliver the square final image.",
+      "source": "/Users/hansen/.codex/generated_images/01a079c7-204f-7d50-8b82-a65499caeda5/exec-62617136-b80c-4e24-a6ce-9beabe02d13c.png",
+      "file": "language-partner.webp"
+    },
+    {
+      "id": "finance-planner",
+      "label": "财务规划",
+      "prompt": "Use case: stylized-concept. Create ONE new square avatar illustration for an AI assistant selection library. The attached image is a STYLE REFERENCE only, not an edit target. Match its warm peach/cream background, polished 3D character-illustration aesthetic, soft studio lighting, clean friendly face, subtle stylized facial proportions, and professional approachable mood. New character: A calm middle-aged East Asian woman with short silver hair and slim round glasses, navy blazer, small tan folio. Composition: centered single head and upper torso, facing camera with a slight three-quarter turn, head large enough to read at 32px, entire hair silhouette fully inside frame with 12% safe margins for circular cropping, shoulders visible; simple very light cream-peach background. Keep face distinct and expressive, illustration not a photograph; do not create another copy of the reference person. No text, letters, logos, watermark, border, collage or additional characters. One character only. Deliver the square final image.",
+      "source": "/Users/hansen/.codex/generated_images/01a079c7-204f-7d50-8b82-a65499caeda5/exec-3e89e309-3b4d-463e-ac45-6654c58bc1f9.png",
+      "file": "finance-planner.webp"
+    },
+    {
+      "id": "learning-coach",
+      "label": "学习教练",
+      "prompt": "Use case: stylized-concept. Create ONE new square avatar illustration for an AI assistant selection library. The attached image is a STYLE REFERENCE only, not an edit target. Match its warm peach/cream background, polished 3D character-illustration aesthetic, soft studio lighting, clean friendly face, subtle stylized facial proportions, and professional approachable mood. New character: A friendly young man with light brown skin, soft curly hair, warm mustard knit cardigan, holding one closed blue book. Composition: centered single head and upper torso, facing camera with a slight three-quarter turn, head large enough to read at 32px, entire hair silhouette fully inside frame with 12% safe margins for circular cropping, shoulders visible; simple very light cream-peach background. Keep face distinct and expressive, illustration not a photograph; do not create another copy of the reference person. No text, letters, logos, watermark, border, collage or additional characters. One character only. Deliver the square final image.",
+      "source": "/Users/hansen/.codex/generated_images/01a079c7-204f-7d50-8b82-a65499caeda5/exec-c6f7fd70-f496-4018-ba7b-d67eb99fdf42.png",
+      "file": "learning-coach.webp"
+    },
+    {
+      "id": "creative-designer",
+      "label": "创意设计",
+      "prompt": "Use case: stylized-concept. Create ONE new square avatar illustration for an AI assistant selection library. The attached image is a STYLE REFERENCE only, not an edit target. Match its warm peach/cream background, polished 3D character-illustration aesthetic, soft studio lighting, clean friendly face, subtle stylized facial proportions, and professional approachable mood. New character: A stylish East Asian woman with a dark pixie haircut, coral jacket over cream top, holding a single pencil. Composition: centered single head and upper torso, facing camera with a slight three-quarter turn, head large enough to read at 32px, entire hair silhouette fully inside frame with 12% safe margins for circular cropping, shoulders visible; simple very light cream-peach background. Keep face distinct and expressive, illustration not a photograph; do not create another copy of the reference person. No text, letters, logos, watermark, border, collage or additional characters. One character only. Deliver the square final image.",
+      "source": "/Users/hansen/.codex/generated_images/01a079c7-204f-7d50-8b82-a65499caeda5/exec-a731872b-af3a-4452-81b2-044d8f2d97bd.png",
+      "file": "creative-designer.webp"
+    },
+    {
+      "id": "operations-partner",
+      "label": "运营伙伴",
+      "prompt": "Use case: stylized-concept. Create ONE new square avatar illustration for an AI assistant selection library. The attached image is a STYLE REFERENCE only, not an edit target. Match its warm peach/cream background, polished 3D character-illustration aesthetic, soft studio lighting, clean friendly face, subtle stylized facial proportions, and professional approachable mood. New character: A composed Black woman with natural coily hair in a high bun, light aqua blouse, holding a simple cream clipboard. Composition: centered single head and upper torso, facing camera with a slight three-quarter turn, head large enough to read at 32px, entire hair silhouette fully inside frame with 12% safe margins for circular cropping, shoulders visible; simple very light cream-peach background. Keep face distinct and expressive, illustration not a photograph; do not create another copy of the reference person. No text, letters, logos, watermark, border, collage or additional characters. One character only. Deliver the square final image.",
+      "source": "/Users/hansen/.codex/generated_images/01a079c7-204f-7d50-8b82-a65499caeda5/exec-759bc1ed-84ba-4c22-9661-7c85563b9cdb.png",
+      "file": "operations-partner.webp"
+    },
+    {
+      "id": "legal-reader",
+      "label": "条款审阅",
+      "prompt": "Use case: stylized-concept. Create ONE new square avatar illustration for an AI assistant selection library. The attached image is a STYLE REFERENCE only, not an edit target. Match its warm peach/cream background, polished 3D character-illustration aesthetic, soft studio lighting, clean friendly face, subtle stylized facial proportions, and professional approachable mood. New character: A thoughtful middle-aged man with olive skin, neatly trimmed beard and dark curly hair, muted charcoal jacket, holding a slim closed folder. Composition: centered single head and upper torso, facing camera with a slight three-quarter turn, head large enough to read at 32px, entire hair silhouette fully inside frame with 12% safe margins for circular cropping, shoulders visible; simple very light cream-peach background. Keep face distinct and expressive, illustration not a photograph; do not create another copy of the reference person. No text, letters, logos, watermark, border, collage or additional characters. One character only. Deliver the square final image.",
+      "source": "/Users/hansen/.codex/generated_images/01a079c7-204f-7d50-8b82-a65499caeda5/exec-3759a596-3862-4c83-a40b-082368f69bf5.png",
+      "file": "legal-reader.webp"
+    },
+    {
+      "id": "supply-chain",
+      "label": "供应链",
+      "prompt": "Use case: stylized-concept. Create ONE new square avatar illustration for an AI assistant selection library. The attached image is a STYLE REFERENCE only, not an edit target. Match its warm peach/cream background, polished 3D character-illustration aesthetic, soft studio lighting, clean friendly face, subtle stylized facial proportions, and professional approachable mood. New character: A warm East Asian man with short dark hair and rectangular glasses, muted forest-green collared shirt, holding a small plain cardboard parcel. Composition: centered single head and upper torso, facing camera with a slight three-quarter turn, head large enough to read at 32px, entire hair silhouette fully inside frame with 12% safe margins for circular cropping, shoulders visible; simple very light cream-peach background. Keep face distinct and expressive, illustration not a photograph; do not create another copy of the reference person. No text, letters, logos, watermark, border, collage or additional characters. One character only. Deliver the square final image.",
+      "source": "/Users/hansen/.codex/generated_images/01a079c7-204f-7d50-8b82-a65499caeda5/exec-06d49f4b-3955-4e50-9422-28c5203d4cdc.png",
+      "file": "supply-chain.webp"
+    },
+    {
+      "id": "wellbeing-coach",
+      "label": "生活教练",
+      "prompt": "Use case: stylized-concept. Create ONE new square avatar illustration for an AI assistant selection library. The attached image is a STYLE REFERENCE only, not an edit target. Match its warm peach/cream background, polished 3D character-illustration aesthetic, soft studio lighting, clean friendly face, subtle stylized facial proportions, and professional approachable mood. New character: A gentle woman with warm brown skin and soft shoulder-length curls, dusty rose cardigan, relaxed open hands. Composition: centered single head and upper torso, facing camera with a slight three-quarter turn, head large enough to read at 32px, entire hair silhouette fully inside frame with 12% safe margins for circular cropping, shoulders visible; simple very light cream-peach background. Keep face distinct and expressive, illustration not a photograph; do not create another copy of the reference person. No text, letters, logos, watermark, border, collage or additional characters. One character only. Deliver the square final image.",
+      "source": "/Users/hansen/.codex/generated_images/01a079c7-204f-7d50-8b82-a65499caeda5/exec-f0b4ce94-3c69-455d-a385-10507296aeec.png",
+      "file": "wellbeing-coach.webp"
+    },
+    {
+      "id": "strategy-partner",
+      "label": "策略伙伴",
+      "prompt": "Use case: stylized-concept. Create ONE new square avatar illustration for an AI assistant selection library. The attached image is a STYLE REFERENCE only, not an edit target. Match its warm peach/cream background, polished 3D character-illustration aesthetic, soft studio lighting, clean friendly face, subtle stylized facial proportions, and professional approachable mood. New character: A composed silver-haired East Asian man with a kind face, muted indigo jacket over cream sweater, holding a small closed notebook. Composition: centered single head and upper torso, facing camera with a slight three-quarter turn, head large enough to read at 32px, entire hair silhouette fully inside frame with 12% safe margins for circular cropping, shoulders visible; simple very light cream-peach background. Keep face distinct and expressive, illustration not a photograph; do not create another copy of the reference person. No text, letters, logos, watermark, border, collage or additional characters. One character only. Deliver the square final image.",
+      "source": "/Users/hansen/.codex/generated_images/01a079c7-204f-7d50-8b82-a65499caeda5/exec-da94431f-1dee-44d8-be9a-82e1f277da8b.png",
+      "file": "strategy-partner.webp"
+    }
+  ]
+}

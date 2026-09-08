@@ -268,11 +268,17 @@ export class PaimindHarnessScheduleAdapterService
           }
         }
       })()
-      this.adapterCtx.jobs.start({
+      const jobId = this.adapterCtx.jobs.start({
         kind: 'paimind-schedule',
-        label: `Scheduled action · ${input.nameEn}`,
+        label: request.scheduleName,
         owner: handle.agent,
         run: () => ({ cancel: abort, done }),
+      })
+      // The adapter already delivers this result through the scheduler and
+      // notification services. Claim native completion before settlement so
+      // the same agent is not woken to summarize its own completed work again.
+      void this.adapterCtx.jobs.wait(jobId, 86_400_000, handle.agent).catch(error => {
+        console.warn('[paimind-scheduler-adapter-harness] completion observation failed', error)
       })
     } catch (error) {
       signal.removeEventListener('abort', abort)

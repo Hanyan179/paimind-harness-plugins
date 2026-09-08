@@ -1,3 +1,5 @@
+export { Tooltip as PaimindTooltip } from '@deepseek-ai/dsh-client-ui-primitives'
+
 import type {
   HarnessAgentChoice,
   HarnessAgentChoiceBridge,
@@ -6,19 +8,34 @@ import type {
   HarnessAgentPresetSeatControl,
 } from './index.js'
 
+export { installPaimindCompactNavigation, type PaimindNavigationEntry } from './client-navigation.js'
+
 /** Shared product-surface ids; Harness still owns shell routing and history. */
-export const PAIMIND_PRODUCT_SURFACE_IDS = ['agent-center', 'skill-center', 'workspace-blueprints'] as const
+export const PAIMIND_PRODUCT_SURFACE_IDS = ['agent-center', 'skill-center', 'mcp-center', 'workspace-blueprints'] as const
 
 export type PaimindProductSurfaceId = typeof PAIMIND_PRODUCT_SURFACE_IDS[number]
 
-const agentAvatarOverrides = new Map<string, ReadonlyMap<string, string>>()
-const agentAvatarOverrideListeners = new Set<() => void>()
+interface AgentAvatarPresentation {
+  readonly overrides: Map<string, ReadonlyMap<string, string>>
+  readonly listeners: Set<() => void>
+}
+const AVATAR_PRESENTATION = Symbol.for('@hansen/agent-avatar-presentation/v1')
+const createAvatarPresentation = (): AgentAvatarPresentation => ({ overrides: new Map(), listeners: new Set() })
+const serverAvatarPresentation = /* @__PURE__ */ createAvatarPresentation()
+function avatarPresentation(): AgentAvatarPresentation {
+  if (typeof document === 'undefined') return serverAvatarPresentation
+  // Each feature bundles Compat independently. Share this existing, ephemeral
+  // presentation map in the current document, never in persistent storage.
+  const host = document as Document & { [AVATAR_PRESENTATION]?: AgentAvatarPresentation }
+  return host[AVATAR_PRESENTATION] ??= createAvatarPresentation()
+}
 
 /** Shared presentation-only avatar overrides; canonical Harness Preset ids remain unchanged. */
 export function replacePaimindAgentAvatarOverrides(
   owner: string,
   entries: Readonly<Record<string, string>>,
 ): () => void {
+  const { overrides: agentAvatarOverrides, listeners: agentAvatarOverrideListeners } = avatarPresentation()
   const normalized = new Map(Object.entries(entries).filter(([id, avatarId]) => id.trim() !== '' && avatarId.trim() !== ''))
   agentAvatarOverrides.set(owner, normalized)
   for (const listener of agentAvatarOverrideListeners) listener()
@@ -33,6 +50,7 @@ export function replacePaimindAgentAvatarOverrides(
 }
 
 export function resolvePaimindAgentAvatarOverride(canonicalId: string): string {
+  const { overrides: agentAvatarOverrides } = avatarPresentation()
   for (const entries of [...agentAvatarOverrides.values()].reverse()) {
     const avatarId = entries.get(canonicalId)
     if (avatarId !== undefined) return avatarId
@@ -41,6 +59,7 @@ export function resolvePaimindAgentAvatarOverride(canonicalId: string): string {
 }
 
 export function subscribePaimindAgentAvatarOverrides(listener: () => void): () => void {
+  const { listeners: agentAvatarOverrideListeners } = avatarPresentation()
   agentAvatarOverrideListeners.add(listener)
   return () => { agentAvatarOverrideListeners.delete(listener) }
 }
@@ -69,7 +88,9 @@ function productSurfaceTrigger(
   doc: Document,
   id: PaimindProductSurfaceId,
 ): HTMLButtonElement | null {
-  return doc.querySelector<HTMLButtonElement>(`button[data-paimind-product-trigger="${id}"]`)
+  return doc.querySelector<HTMLButtonElement>(`button[data-paimind-navigation-target="${id}"]`)
+    ?? doc.querySelector<HTMLButtonElement>('button[data-paimind-resource-library-trigger]')
+    ?? doc.querySelector<HTMLButtonElement>(`button[data-paimind-product-trigger="${id}"]`)
 }
 
 function tryRequestPaimindProductSurface(
@@ -116,12 +137,12 @@ export function requestPaimindAgentBuilder(
   win.dispatchEvent(event)
 }
 
-/** A switch is offered only while the target plugin has a live sidebar entry. */
+/** Availability comes from the source contribution, independent of shortcuts. */
 export function isPaimindProductSurfaceAvailable(
   id: PaimindProductSurfaceId,
   doc: Document = document,
 ): boolean {
-  return productSurfaceTrigger(doc, id) !== null
+  return doc.querySelector(`button[data-paimind-product-trigger="${id}"]`) !== null
 }
 
 /**
@@ -409,7 +430,7 @@ export class PaimindProductSurfaceController {
     if (this.closeBlockers.size > 0) return false
     this.publish(closedSnapshot)
     if (!restoreFocus) return true
-    const target = this.restoreTarget?.isConnected === true
+    const target = this.restoreTarget?.isConnected === true && !this.restoreTarget.hasAttribute('data-paimind-navigation-source')
       ? this.restoreTarget
       : productSurfaceTrigger(this.doc, this.id)
     this.win.setTimeout(() => { target?.focus() }, 0)
@@ -747,6 +768,12 @@ export function installPaimindProductSurfaceInteraction(
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== 'Escape') return
+    const view = doc.defaultView
+    if (view && event.target instanceof view.Element && event.target.closest('[data-paimind-resource-navigation]')) return
+    const nestedDialog = view !== null && event.target instanceof view.Element
+      ? event.target.closest('[role="dialog"]') : null
+    // Nested dialogs own their Escape handling before the outer Center closes.
+    if (nestedDialog !== null && nestedDialog !== root && root.contains(nestedDialog)) return
     event.preventDefault()
     if (!controller.close()) event.stopImmediatePropagation()
   }
@@ -757,6 +784,9 @@ export function installPaimindProductSurfaceInteraction(
     if (root.contains(target)) return
 
     const element = target instanceof view.Element ? target : target.parentElement
+    // Discovery, search and pinning do not navigate away from the current page.
+    // A selection dispatches the original source action, which handles switching.
+    if (element?.closest('[data-paimind-resource-navigation]')) return
     const trigger = element?.closest<HTMLElement>('[data-paimind-product-trigger]')
     if (trigger?.dataset.paimindProductTrigger === controller.id) return
 

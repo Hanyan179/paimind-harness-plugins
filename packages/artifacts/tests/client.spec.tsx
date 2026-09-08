@@ -213,7 +213,7 @@ describe('FP06-FP07 artifact client surface', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('directory traversal')
     expect(provider.openFile).not.toHaveBeenCalled()
     act(() => { language.set('zh-CN') })
-    expect(screen.getByText('产物')).toBeInTheDocument()
+    expect(screen.getByText('交付文件')).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('目录穿越')
     fireEvent.click(screen.getByRole('button', { name: '当前工作区' }))
     expect(screen.getByText('Other Session')).toBeInTheDocument()

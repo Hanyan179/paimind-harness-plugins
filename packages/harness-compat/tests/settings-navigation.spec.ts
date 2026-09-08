@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  installHarnessSettingsTriggerAccessibility,
+  installHarnessSettingsSectionScrollReset,
   installHarnessAgentPresetSettingsNavigation,
   installHarnessSettingsNavigationIcons,
   resolveHarnessAgentPresetSeatControl,
@@ -46,6 +48,38 @@ describe('Harness native Agent Presets settings navigation', () => {
     const adapter = installHarnessAgentPresetSettingsNavigation(slots('Other', 'other'), document)
     expect(button.hidden).toBe(false)
     expect(adapter.open()).toBe(false)
+    adapter.dispose()
+  })
+
+  it('hides only the localized native General picker and restores it across remounts', async () => {
+    let label = 'Agent 预设'
+    const registry = slots(label)
+    registry.entries = () => [{ options: { id: 'agent-presets', label: () => label } }]
+    const row = (title: string, id: string): string => `<div id="${id}" style="display: flex"><div><div>${title}</div><div>Explanation</div></div><span><button aria-haspopup="menu">Choice</button></span></div>`
+    document.body.innerHTML = `<div role="dialog"><nav><button>${label}</button></nav><div data-slot="settings.general.item">${row(label, 'native')}${row('权限', 'permission')}</div><div>${row(label, 'unrelated')}</div></div>`
+    const native = document.getElementById('native')!
+    const adapter = installHarnessAgentPresetSettingsNavigation(registry, document)
+    expect(native.hidden).toBe(true)
+    expect(document.getElementById('permission')!.hidden).toBe(false)
+    expect(document.getElementById('unrelated')!.hidden).toBe(false)
+
+    label = 'Agent presets'
+    document.querySelector('nav button')!.textContent = label
+    document.querySelector('[data-slot="settings.general.item"]')!.innerHTML = row(label, 'remounted')
+    await vi.waitFor(() => expect(document.getElementById('remounted')!.hidden).toBe(true))
+    expect(native.hidden).toBe(false)
+    expect(native.style.display).toBe('flex')
+    adapter.dispose()
+    expect(document.getElementById('remounted')!.hidden).toBe(false)
+    expect(document.getElementById('remounted')!.style.display).toBe('flex')
+    expect(document.querySelector('[data-paimind-hidden-settings-section]')).toBeNull()
+  })
+
+  it('leaves ambiguous native General rows visible', () => {
+    const row = '<div><div><div>Agent 预设</div></div><button aria-haspopup="menu">Standard</button></div>'
+    document.body.innerHTML = `<div role="dialog"><nav><button>Agent 预设</button></nav><div data-slot="settings.general.item">${row}${row}</div></div>`
+    const adapter = installHarnessAgentPresetSettingsNavigation(slots('Agent 预设'), document)
+    expect([...document.querySelectorAll<HTMLElement>('[data-slot="settings.general.item"] > div')].every(item => !item.hidden)).toBe(true)
     adapter.dispose()
   })
 
@@ -155,5 +189,47 @@ describe('Harness native Agent Preset selector control', () => {
 
   it('fails closed when the native selector Slot shape is unavailable', () => {
     expect(resolveHarnessAgentPresetSeatControl(slots('Agent 预设'))).toBeNull()
+  })
+})
+
+
+describe('native Settings accessible label lifecycle', () => {
+  it('updates only owned labels and preserves names later supplied by the host', async () => {
+    document.documentElement.lang = 'zh'
+    document.body.innerHTML = '<button><span data-slot="settings.trigger"></span></button>'
+    const button = document.querySelector('button')!
+    const dispose = installHarnessSettingsTriggerAccessibility(document)
+    expect(button).toHaveAttribute('aria-label', '设置')
+    document.documentElement.lang = 'en'
+    await vi.waitFor(() => expect(button).toHaveAttribute('aria-label', 'Settings'))
+    button.setAttribute('aria-label', 'Host settings')
+    document.documentElement.lang = 'zh'
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(button).toHaveAttribute('aria-label', 'Host settings')
+    dispose()
+    expect(button).toHaveAttribute('aria-label', 'Host settings')
+  })
+})
+
+
+describe('Settings section scroll position', () => {
+  it('resets only on native navigation, preserving in-page scrolling and stopping on disposal', async () => {
+    document.body.innerHTML = '<div role="dialog"><nav><button aria-current="true">First</button><button>Second</button></nav><div id="options"><div data-slot="settings.section">Content</div></div></div>'
+    const options = document.getElementById('options')!
+    const [first, second] = document.querySelectorAll('nav button')
+    const dispose = installHarnessSettingsSectionScrollReset(document)
+    options.scrollTop = 220
+    document.querySelector('[data-slot]')!.append(document.createElement('p'))
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(options.scrollTop).toBe(220)
+    first!.removeAttribute('aria-current')
+    second!.setAttribute('aria-current', 'true')
+    await vi.waitFor(() => expect(options.scrollTop).toBe(0))
+    dispose()
+    options.scrollTop = 150
+    second!.removeAttribute('aria-current')
+    first!.setAttribute('aria-current', 'true')
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(options.scrollTop).toBe(150)
   })
 })

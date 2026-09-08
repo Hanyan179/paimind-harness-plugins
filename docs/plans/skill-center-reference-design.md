@@ -8,9 +8,9 @@
 
 PAIMind 不新建第二套 Skill Runtime（技能运行时）。Skill Center（技能中心）复用 Harness 已有的 folder-based Skill（文件夹技能）、`ctx.skills` Layered Registry（分层注册表）、Skill Catalog（技能目录）、按需正文加载与目录 Watcher（监听器）。PAIMind 只补齐用户级 Skill Policy（技能策略）、Business Skill（业务技能）的发现与生命周期，以及 Session（会话）和 Agent（智能体）的作用域选择。
 
-Skill Center 采用 Qwen Work（千问办公）已经验证的三个主视图：
+Skill Center（技能中心）最初参考三个主视图的组织方式；2026-09-07 按用户确认，将第一个视图扩展为全部业务技能：
 
-1. `市场`：可安装的 Business Skill Package（业务技能包）。
+1. `全部技能`：市场目录与本机已安装 Business Skill Package（业务技能包）的去重并集，完整包含已安装集合。
 2. `内置`：Harness 当前可见的 System Skill Catalog（系统技能目录）投影；定义只读，可选系统技能允许用户启用或停用。
 3. `已安装`：Skill Center 受管 Business Skill Repository（业务技能仓库）。
 
@@ -33,7 +33,7 @@ Skill Center 与 Agent Center 不各自生成一份目录。两者只提供不�
 | Object（对象） | Canonical owner（权威所有者） | Persistence（持久化） | Product surface（产品界面） |
 | --- | --- | --- | --- |
 | System Skill Definition（系统技能定义） | Harness 或提供能力的 Source Plugin（来源插件） | 源码包、Bundled Root（内置目录）或 `ctx.skills.register()` | Skill Center 的 `内置` 定义只读视图 |
-| Business Skill Package（业务技能包） | `@hansen/skill-market` | `$DSH_HOME/.paimind-skill-market/skills/<name>/` | `市场 / 已安装 / 添加技能` |
+| Business Skill Package（业务技能包） | `@hansen/skill-market` | `$DSH_HOME/.paimind-skill-market/skills/<name>/` | `全部技能 / 已安装 / 添加技能` |
 | User Skill Policy（用户技能策略） | `@hansen/skill-market` | 用户级可用状态、普通对话默认选择；只保存 Skill Reference（技能引用） | `内置 / 已安装` 的开关和使用范围 |
 | Session Skill Attachment（会话技能挂载） | 当前 Live Session（实时会话）；Skill Center 只做产品投影 | 当前进程内的 Agent-scoped Native Provider（智能体作用域原生提供方），不得写入 Persona 或自定义未知 Session Event（会话事件） | 已安装详情中的 `用于当前对话` |
 | Agent Skill Attachment（智能体技能挂载） | Harness Agent Preset（宿主智能体预设）；Agent Center 只做产品投影 | Agent Profile（智能体配置）中的 Business Skill Reference（业务技能引用）；不生成第二个可扫描技能目录 | Agent Builder（智能体构建器）及已安装详情中的确认入口 |
@@ -102,7 +102,7 @@ Agent Session（智能体会话）默认不继承 `UserDefaultBusiness`，以保
 
 ### Primary views（主视图）
 
-- `市场`：Business Skill 推荐目录，支持分类、来源、搜索、检查、安装和更新。页面不提供点赞或收藏；没有可信社区行为数据时，不用浏览器本地偏好制造流行度信号。
+- `全部技能`：Business Skill（业务技能）推荐目录与安装清单的临时去重并集，支持分类、来源、搜索、检查、安装、更新和跳转已安装管理。安装记录存在时统一使用已安装说明；私有技能进入总目录不等于上架。页面不提供点赞或收藏。
 - `内置`：System Skill Catalog，显示名称、说明、来源插件、Mandatory/Optional（必需/可选）和用户启用状态；定义不可编辑或卸载，可选项可以启用或停用。
 - `已安装`：用户已创建、导入或安装的 Business Skill，支持编辑、更新、可恢复卸载、用户级启用/停用、普通对话默认使用、当前对话选择和 Agent 挂载。
 

@@ -1,0 +1,107 @@
+{
+  "date": "2026-09-07",
+  "url": "http://127.0.0.1:3080/",
+  "all": [
+    "openai-docs",
+    "bento-ppt",
+    "fineline-investment-analysis",
+    "white-space-analysis",
+    "build-walmart-buyer-proposal-outline",
+    "category-performance-analysis",
+    "category-opportunity-analysis",
+    "proposal-assistant-orchestration",
+    "human-writing",
+    "lark-doc",
+    "lark-shared",
+    "meeting-action-items",
+    "ppt-master",
+    "security-best-practices",
+    "verification-before-completion"
+  ],
+  "installed": [
+    "openai-docs",
+    "bento-ppt",
+    "fineline-investment-analysis",
+    "white-space-analysis",
+    "build-walmart-buyer-proposal-outline",
+    "human-writing",
+    "lark-doc",
+    "lark-shared",
+    "meeting-action-items",
+    "ppt-master",
+    "security-best-practices",
+    "verification-before-completion"
+  ],
+  "filteredInstalled": [
+    "openai-docs",
+    "bento-ppt",
+    "fineline-investment-analysis",
+    "white-space-analysis",
+    "build-walmart-buyer-proposal-outline",
+    "human-writing",
+    "lark-doc",
+    "lark-shared",
+    "meeting-action-items",
+    "ppt-master",
+    "security-best-practices",
+    "verification-before-completion"
+  ],
+  "catalog": [
+    "openai-docs",
+    "bento-ppt",
+    "fineline-investment-analysis",
+    "white-space-analysis",
+    "build-walmart-buyer-proposal-outline",
+    "category-performance-analysis",
+    "category-opportunity-analysis",
+    "proposal-assistant-orchestration"
+  ],
+  "descriptionsMatch": true,
+  "installPreview": {
+    "name": "category-performance-analysis",
+    "fileCount": 3,
+    "expandedBytes": 1789,
+    "confirmed": false,
+    "cancelled": true
+  },
+  "managementNavigation": "human-writing -> 已安装详情",
+  "final": {
+    "documentWidth": 1629,
+    "names": [
+      "openai-docs",
+      "bento-ppt",
+      "fineline-investment-analysis",
+      "white-space-analysis",
+      "build-walmart-buyer-proposal-outline",
+      "category-performance-analysis",
+      "category-opportunity-analysis",
+      "proposal-assistant-orchestration",
+      "human-writing",
+      "lark-doc",
+      "lark-shared",
+      "meeting-action-items",
+      "ppt-master",
+      "security-best-practices",
+      "verification-before-completion"
+    ],
+    "tabs": [
+      "全部技能15",
+      "内置4",
+      "已安装12"
+    ],
+    "viewport": 1629
+  },
+  "checks": {
+    "installedSubset": true,
+    "filteredInstalledMatches": true,
+    "namesUnique": true,
+    "relatedTests": {
+      "files": 16,
+      "passed": 164
+    },
+    "sourceFailures": "covered by automated tests",
+    "typecheck": "passed",
+    "build": "passed"
+  },
+  "artifactDirectory": "/Users/hansen/.codex/visualizations/2026/09/07/01a079c7-204f-7d50-8b82-a65499caeda5/skill-center-union"
+}

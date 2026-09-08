@@ -414,7 +414,8 @@ function normalizeV2(value: UnknownRecord, sources: readonly PaimindTraceSourceR
     })()
     const blocks = declaredBlocks.length === 0 ? [Object.freeze({ blockId: 'slide-overview', label: 'Slide overview', description: 'Registered facts for this slide.' })] : declaredBlocks
     unique(blocks.map(block => block.blockId), `${label}.block ids`)
-    if (!Array.isArray(entry.metrics) || entry.metrics.length === 0) throw new Error(`${label}.metrics must be a non-empty array`)
+    // Narrative and section slides may have no metrics; any dangling binding still fails below.
+    if (!Array.isArray(entry.metrics)) throw new Error(`${label}.metrics must be an array`)
     const metrics = entry.metrics.map((metric, index) => normalizeMetric(metric, `${label}.metrics[${index}]`, new Set(blocks.map(block => block.blockId)), sourceIds))
     unique(metrics.map(metric => metric.metricId), `${label}.metric ids`)
     const factIds = new Set(metrics.flatMap(metric => metric.facts.map(fact => fact.factId)))

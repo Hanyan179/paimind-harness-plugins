@@ -4,6 +4,12 @@
 
 本项目是 PAIMind 面向 DeepSeek Harness 的独立 Plugin Suite（插件套件）。一个项目包含现有与未来的全部 PAIMind 产品能力，以及配套的 Adapter、SDK、公共契约、文档和验收证据；不以某一个功能或定时任务为项目边界。
 
+## Canonical local baseline
+
+- 唯一本地开发与运行基线为 `codex/unified-product-baseline`，固定目录为 `/Users/hansen/Documents/PAIMind-workspace/paimind-harness-plugins`。
+- 本地 `3080` 服务只加载此目录的插件；历史工作副本用于恢复和参考，不作为日常启动入口。新变更须从此分支派生并合回。
+- 保留现有 `.dsh-home` 中的会话、工作区与用户配置；包路径更新不迁移或重建业务数据。
+
 ## Goal
 
 在不修改 Harness 主体源码的前提下，将 PAIMind 能力建设为可安装、可卸载、可升级、可测试和可交付的 Harness 插件。

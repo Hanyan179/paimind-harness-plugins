@@ -10,14 +10,14 @@ import {
 } from '../src/index.js'
 
 describe('Product Feature Pack composition', () => {
-  it('projects thirty-two runtime packages through six product-facing packs beside the control plane', () => {
+  it('projects runtime packages without duplicate ownership through six product-facing packs beside the control plane', () => {
     const packageNames = PAIMIND_FEATURE_PACKS.flatMap(pack => pack.packageNames)
     expect(PAIMIND_FEATURE_PACKS.map(pack => pack.id)).toEqual([
       'paimind:pack:experience', 'paimind:pack:agents', 'paimind:pack:content',
       'paimind:pack:proposal', 'paimind:pack:automation', 'paimind:pack:operations',
     ])
-    expect(packageNames).toHaveLength(32)
-    expect(new Set(packageNames).size).toBe(32)
+    expect(new Set(packageNames).size).toBe(packageNames.length)
+    expect(PAIMIND_FEATURE_PACKS.find(pack => pack.id === 'paimind:pack:agents')?.packageNames).toContain('@hansen/mcp-center')
     expect(PAIMIND_FEATURE_PACKS[0]?.capabilities).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: 'paimind:capability:runtime-orbs',

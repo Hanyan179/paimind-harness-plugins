@@ -5,6 +5,7 @@ import {
   PaimindAgentBuilderRequestController,
   PaimindProductSurfaceController,
   requestPaimindAgentBuilder,
+  resolvePaimindAgentAvatarOverride,
 } from '@hansen/harness-compat/client-surface'
 import {
   AgentCenterRuntime,
@@ -123,6 +124,10 @@ function services() {
         text: 'The real model reviewed the current brief and is ready for the next instruction.',
         proposal: null,
       }}),
+      prepareAuthoringSession: vi.fn().mockImplementation(async ({ onSessionCreated }: { readonly onSessionCreated?: (sessionId: string) => void }) => {
+        onSessionCreated?.('session-authoring')
+        return { sessionId: 'session-authoring', cursor: -1 }
+      }),
       prepareAuthoringContext: vi.fn().mockResolvedValue(undefined),
       suppressAutomaticMigration: vi.fn(() => vi.fn()),
       watchAuthoringSession: vi.fn((_sessionId, _afterSeq, _skills, callbacks) => {
@@ -168,6 +173,10 @@ function services() {
         for (const listener of sessionListeners) listener()
       }),
     },
+    emitAuthoringRunning() {
+      if (authoringWatch === null) throw new Error('Authoring watcher is not connected')
+      act(() => { authoringWatch?.onRunning?.() })
+    },
     emitAuthoringTurn(result: Readonly<{
       sessionId: string
       turn: number
@@ -194,6 +203,22 @@ afterEach(() => {
 })
 
 describe('Agent Center business UI', () => {
+  it('keeps saved portraits available while the Center is closed and clears them when the plugin surface unmounts', async () => {
+    const fixture = services()
+    fixture.profiles.listProfiles.mockResolvedValue({ ok: true, value: { profiles: [{ ...profile, presetId: 'native-mine', avatarId: 'research-partner' }] } })
+    const controller = new PaimindProductSurfaceController('agent-center', window, document)
+    const view = render(<AgentCenterSurface controller={controller} api={api()} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
+    expect(controller.getSnapshot().open).toBe(false)
+    await waitFor(() => expect(resolvePaimindAgentAvatarOverride('native-mine')).toBe('research-partner'))
+    expect(resolvePaimindAgentAvatarOverride('mine')).toBe('mine')
+    fixture.profiles.listProfiles.mockResolvedValue({ ok: true, value: { profiles: [{ ...profile, presetId: 'native-mine', avatarId: 'finance-planner' }] } })
+    fireEvent.focus(window)
+    await waitFor(() => expect(resolvePaimindAgentAvatarOverride('native-mine')).toBe('finance-planner'))
+    view.unmount()
+    expect(resolvePaimindAgentAvatarOverride('native-mine')).toBe('native-mine')
+    controller.dispose()
+  })
+
   it('stacks the shared footer actions in expanded and collapsed sidebars', () => {
     expect(AGENT_CENTER_STYLE).toContain("button[data-paimind-product-trigger='agent-center'][data-wide='true'])")
     expect(AGENT_CENTER_STYLE).toContain("button[data-paimind-product-trigger='agent-center'][data-wide='false'])")
@@ -290,6 +315,18 @@ describe('Agent Center business UI', () => {
 
     await waitFor(() => expect(policy.getSnapshot()).toMatchObject({ status: 'ready', enabled: true, policyRevision: 2 }))
     expect(getUserSkillPolicy).toHaveBeenCalledTimes(2)
+    policy.dispose()
+  })
+
+  it('recovers authoring after a transient policy failure using the same policy owner', async () => {
+    const getUserSkillPolicy = vi.fn().mockRejectedValueOnce(new Error('not ready')).mockResolvedValue({ ok: true, value: {
+      schema: 'paimind.user-skill-policy/v1', revision: 2,
+      enabledOptionalSystemSkillNames: ['paimind-agent-authoring'], enabledBusinessSkillNames: [], directBusinessSkillNames: [],
+    } })
+    const policy = new PaimindAgentAuthoringPolicyController({ listInstalled: vi.fn(), getUserSkillPolicy } as never, window)
+    await waitFor(() => expect(policy.getSnapshot().status).toBe('error'))
+    await policy.refresh()
+    expect(policy.getSnapshot()).toMatchObject({ status: 'ready', enabled: true, policyRevision: 2 })
     policy.dispose()
   })
 
@@ -543,7 +580,7 @@ describe('Agent Center business UI', () => {
     expect(within(examples).getAllByRole('button')).toHaveLength(4)
     fireEvent.click(within(examples).getByRole('button', { name: 'Create an Agent that helps me check delivery risks.' }))
     expect(screen.getByLabelText('What Agent do you want to create?')).toHaveValue('Create an Agent that helps me check delivery risks.')
-    expect(screen.getByText(/automatically sends this sentence as the first message/)).toBeInTheDocument()
+    expect(screen.getByText(/only after you send it yourself/)).toBeInTheDocument()
     expect(screen.queryByLabelText('Agent name (editable later)')).toBeNull()
     expect(screen.queryByLabelText('Base mode')).toBeNull()
     expect(fixture.runtime.start).not.toHaveBeenCalled()
@@ -558,10 +595,13 @@ describe('Agent Center business UI', () => {
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Create Personal Agent' })[0]!)
     fireEvent.change(screen.getByLabelText('What Agent do you want to create?'), { target: { value: 'Review a business workflow' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
 
     await waitFor(() => expect(center.scrollTop).toBe(0))
     expect(screen.getByRole('region', { name: 'Create Agent' })).toBeInTheDocument()
+    await waitFor(() => expect(fixture.runtime.prepareAuthoringSession).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ prompt: 'Review a business workflow' })))
+    expect(fixture.runtime.author).not.toHaveBeenCalled()
+    expect(fixture.profiles.saveProfile).not.toHaveBeenCalled()
   })
 
   it('exposes canonical avatar seats for managed Agents without platform-mode cards', async () => {
@@ -923,6 +963,57 @@ describe('Agent Center business UI', () => {
     runtime.dispose()
   })
 
+  it.each(['personal', 'business'] as const)('prepares the %s native composer without submitting a model turn or saving an Agent', async productKind => {
+    const prompt = 'Review delivery risks before making a promise'
+    const draft = {
+      productKind, businessCategory: '', name: '', description: prompt,
+      basePresetId: 'standard', role: '', goal: '', behavior: '', instructions: '', preferredSkillNames: [],
+    }
+    const ctx = {}
+    const setDraft = vi.fn()
+    const inputFor = vi.fn(() => ({ setDraft }))
+    const open = vi.fn()
+    const sessionPrompt = vi.fn()
+    const fixture = services()
+    fixture.profiles.sealAuthoringSession.mockImplementation(async ({ sessionId }) => ({ ok: true, value: { sessionId, agentPreset: 'standard', sealed: true } }))
+    fixture.profiles.prepareAuthoringTurn.mockImplementation(async ({ sessionId }) => ({ ok: true, value: { sessionId, prepared: true } }))
+    const authoringApi = {
+      create: vi.fn().mockImplementation(async ({ sessionId }) => ({ result: { ok: true, value: { sessionId, agentPreset: 'standard' } } })),
+      history: vi.fn().mockResolvedValue({ result: { ok: true, value: { events: [], hasMore: false } } }),
+      prompt: vi.fn(),
+    }
+    const runtime = new AgentCenterRuntime(null, fixture.profiles as never, {
+      list: { getSnapshot: () => ({ current: undefined, byId: {} }), subscribe: () => () => {} },
+      binding: () => open.mock.calls.length === 0 ? undefined : { ctx, session: { prompt: sessionPrompt } },
+      open,
+    } as never, {
+      list: { getSnapshot: () => ({ items: [], recentWorkspaceId: 'workspace-recent' }) },
+    } as never, { input: { for: inputFor } } as never, authoringApi as never)
+
+    const prepared = await runtime.prepareAuthoringSession({ draft, prompt, skills: [], locale: 'en' })
+
+    expect(authoringApi.create).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: prepared.sessionId, agentPreset: 'standard', workspaceId: 'workspace-recent',
+    }), expect.any(AbortSignal))
+    expect(fixture.profiles.sealAuthoringSession).toHaveBeenCalledWith({ sessionId: prepared.sessionId })
+    expect(fixture.profiles.prepareAuthoringTurn).toHaveBeenCalledWith(expect.objectContaining({ sessionId: prepared.sessionId, draft }))
+    expect(open).toHaveBeenCalledWith(prepared.sessionId)
+    expect(inputFor).toHaveBeenCalledWith(ctx)
+    expect(setDraft).toHaveBeenCalledExactlyOnceWith(prompt)
+    expect(prepared.cursor).toBe(-1)
+    expect(authoringApi.prompt).not.toHaveBeenCalled()
+    expect(sessionPrompt).not.toHaveBeenCalled()
+    expect(fixture.profiles.saveProfile).not.toHaveBeenCalled()
+
+    // A failed scope check must not expose a second ready-to-send composer.
+    fixture.profiles.sealAuthoringSession.mockResolvedValue({ ok: true, value: { sessionId: 'wrong-session', agentPreset: 'standard', sealed: true } })
+    await expect(runtime.prepareAuthoringSession({ draft, prompt, skills: [], locale: 'en' })).rejects.toThrow('系统能力隔离')
+    expect(setDraft).toHaveBeenCalledTimes(1)
+    expect(open).toHaveBeenCalledTimes(1)
+    expect(authoringApi.prompt).not.toHaveBeenCalled()
+    runtime.dispose()
+  })
+
   it('adapts configuration turns to the native Standard Session API contract and parses only the model proposal', async () => {
     const events: Array<{ readonly event: { readonly type: string; readonly seq: number; readonly data?: unknown } }> = []
     const sessionListeners = new Set<() => void>()
@@ -1154,7 +1245,7 @@ describe('Agent Center business UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create Personal Agent' }))
     expect(screen.getByRole('dialog', { name: 'Start with one sentence' })).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('What Agent do you want to create?'), { target: { value: 'Help me review short documents' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
     expect(screen.queryByLabelText('Base mode')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /Business Skills \(optional\)/ }))
     expect(screen.getByText(/stay out of the global catalog/)).toBeInTheDocument()
@@ -1193,7 +1284,7 @@ describe('Agent Center business UI', () => {
     await screen.findByRole('heading', { name: 'Research Agent' })
     fireEvent.click(screen.getByRole('button', { name: 'Create Personal Agent' }))
     fireEvent.change(screen.getByLabelText('What Agent do you want to create?'), { target: { value: 'Analyze product decisions' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
     await screen.findByRole('button', { name: 'Save Personal Agent' })
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Product Analyst' } })
     fireEvent.click(screen.getByRole('button', { name: 'Product partner' }))
@@ -1242,7 +1333,7 @@ describe('Agent Center business UI', () => {
     await screen.findByRole('heading', { name: 'Research Agent' })
     fireEvent.click(screen.getByRole('button', { name: 'Create Personal Agent' }))
     fireEvent.change(screen.getByLabelText('What Agent do you want to create?'), { target: { value: 'Save exactly once' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
     await screen.findByRole('button', { name: 'Save Personal Agent' })
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'One Save Agent' } })
     fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Product analyst' } })
@@ -1287,14 +1378,14 @@ describe('Agent Center business UI', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Create Business Agent' })[1]!)
     expect(screen.getByRole('dialog', { name: 'Start with one sentence' })).toHaveAttribute('aria-modal', 'true')
     fireEvent.change(screen.getByLabelText('What Agent do you want to create?'), { target: { value: 'Maintain product decisions with evidence' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
     expect(screen.getByRole('region', { name: 'Create Agent' })).not.toHaveAttribute('aria-modal')
     await screen.findByText('Creation assistant is ready')
     await waitFor(() => expect(fixture.runtime.watchAuthoringSession).toHaveBeenCalledWith(
-      'session-authoring', 3, expect.any(Array), expect.any(Object),
+      'session-authoring', -1, expect.any(Array), expect.any(Object),
     ))
-    expect(fixture.runtime.author).toHaveBeenCalledWith(expect.objectContaining({
-      sessionId: null,
+    expect(fixture.runtime.author).not.toHaveBeenCalled()
+    expect(fixture.runtime.prepareAuthoringSession).toHaveBeenCalledWith(expect.objectContaining({
       prompt: 'Maintain product decisions with evidence',
     }))
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'PDM Assistant' } })
@@ -1671,18 +1762,6 @@ describe('Agent Center business UI', () => {
     vi.mocked(fixture.runtime.currentAuthoringSessionId).mockImplementation(() => (
       fixture.runtime.currentSessionId() === 'session-authoring' ? 'session-authoring' : null
     ))
-    let finishAuthoring: ((result: Readonly<{
-      sessionId: string
-      turn: number
-      endSeq: number
-      text: string
-      proposal: null
-    }>) => void) | null = null
-    vi.mocked(fixture.runtime.author).mockImplementation(({ onSessionCreated }) => {
-      fixture.runtime.openSession('session-authoring')
-      onSessionCreated?.('session-authoring')
-      return new Promise(resolve => { finishAuthoring = resolve })
-    })
     const controller = new PaimindProductSurfaceController('agent-center', window, document)
     const center = document.createElement('main')
     const nativeConversation = document.createElement('div')
@@ -1707,8 +1786,10 @@ describe('Agent Center business UI', () => {
     await screen.findByRole('main', { name: 'Agent Center' })
     fireEvent.click(screen.getByRole('button', { name: 'Create Personal Agent' }))
     fireEvent.change(screen.getByLabelText('What Agent do you want to create?'), { target: { value: 'Create a customer follow-up Agent' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
 
+    await screen.findByText('Creation assistant is ready')
+    fixture.emitAuthoringRunning()
     await screen.findByText('Creation assistant is working')
     await waitFor(() => expect(nativeConversation).not.toHaveAttribute('inert'))
     fireEvent.click(screen.getByRole('radio', { name: 'B2B sales follow-up' }))
@@ -1716,7 +1797,7 @@ describe('Agent Center business UI', () => {
     expect(screen.getByRole('main', { name: 'Agent Center' })).toBeInTheDocument()
 
     await act(async () => {
-      finishAuthoring?.({ sessionId: 'session-authoring', turn: 1, endSeq: 3, text: 'Draft ready', proposal: null })
+      fixture.emitAuthoringTurn({ sessionId: 'session-authoring', turn: 1, endSeq: 3, text: 'Draft ready', proposal: null })
     })
     controller.dispose()
   })
@@ -1797,7 +1878,7 @@ describe('Agent Center business UI', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Personal Agent' }))
     fireEvent.change(screen.getByLabelText('What Agent do you want to create?'), { target: { value: 'Review a business workflow' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
     const builder = screen.getByRole('region', { name: 'Create Agent' })
     expect(builder.closest('[data-paimind-agent-center]')).toHaveAttribute('data-builder-open', 'true')
     await screen.findByText('Creation assistant is ready')
@@ -1839,14 +1920,13 @@ describe('Agent Center business UI', () => {
     center.append(nativeConversation)
     document.body.append(center)
     let authoringTurn = 0
-    vi.mocked(fixture.runtime.author).mockImplementation(async ({ onSessionCreated }) => {
+    vi.mocked(fixture.runtime.prepareAuthoringSession).mockImplementation(async ({ onSessionCreated }) => {
       authoringTurn += 1
       const sessionId = authoringTurn === 1 ? 'session-authoring-first' : 'session-authoring-second'
       fixture.runtime.openSession(sessionId)
       onSessionCreated?.(sessionId)
       return {
-        sessionId, turn: 1, endSeq: 3,
-        text: 'Draft ready', proposal: null,
+        sessionId, cursor: -1,
       }
     })
     render(<>
@@ -1858,7 +1938,7 @@ describe('Agent Center business UI', () => {
     await screen.findByRole('main', { name: 'Agent Center' })
     fireEvent.click(screen.getByRole('button', { name: 'Create Personal Agent' }))
     fireEvent.change(screen.getByLabelText('What Agent do you want to create?'), { target: { value: 'Review a delivery promise' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
     const firstBuilder = await screen.findByRole('region', { name: 'Create Agent' })
     await waitFor(() => expect(fixture.runtime.currentSessionId()).toBe('session-authoring-first'))
     fireEvent.keyDown(firstBuilder, { key: 'Escape' })
@@ -1870,7 +1950,7 @@ describe('Agent Center business UI', () => {
     await screen.findByRole('main', { name: 'Agent Center' })
     fireEvent.click(screen.getByRole('button', { name: 'Create Personal Agent' }))
     fireEvent.change(screen.getByLabelText('What Agent do you want to create?'), { target: { value: 'Review a second delivery promise' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
     const secondBuilder = await screen.findByRole('region', { name: 'Create Agent' })
     await waitFor(() => expect(fixture.runtime.currentSessionId()).toBe('session-authoring-second'))
     const closeAndReturn = within(secondBuilder).getByRole('button', { name: 'Close and return' })
@@ -1896,7 +1976,7 @@ describe('Agent Center business UI', () => {
     const starter = screen.getByRole('dialog', { name: 'Start with one sentence' })
     await waitFor(() => expect(screen.getByLabelText('What Agent do you want to create?')).toHaveFocus())
     fireEvent.change(screen.getByLabelText('What Agent do you want to create?'), { target: { value: 'Help me focus' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
     const builder = screen.getByRole('region', { name: 'Create Agent' })
     expect(builder).not.toHaveAttribute('aria-modal')
     await screen.findByText('Creation assistant is ready')
@@ -1921,7 +2001,8 @@ describe('Agent Center business UI', () => {
     expect(AGENT_CENTER_STYLE).toContain('inset: auto 0 0 !important;')
     expect(AGENT_CENTER_STYLE).toContain('height: var(--paimind-agent-native-conversation-height) !important;')
     expect(AGENT_CENTER_STYLE).toContain('grid-template-columns: repeat(3, minmax(0, 1fr));')
-    expect(AGENT_CENTER_STYLE).toContain('@media(prefers-reduced-motion:reduce)')
+    expect(AGENT_CENTER_STYLE).toContain('var(--paimind-motion-loop)')
+    expect(AGENT_CENTER_STYLE).toContain('var(--paimind-motion-iterations)')
     expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-splitter]')
     expect(AGENT_CENTER_STYLE).toContain('[data-paimind-agent-draft-question-recovered] > :not([data-paimind-agent-draft-projection])')
     expect(AGENT_CENTER_STYLE).toContain('cursor: col-resize;')

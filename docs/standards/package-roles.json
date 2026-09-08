@@ -1,45 +1,215 @@
 {
   "schemaVersion": 1,
   "packages": [
-    { "name": "@hansen/agent-builder", "path": "packages/agent-builder", "role": "headless-plugin" },
-    { "name": "@hansen/agent-market", "path": "packages/agent-market", "role": "client-plugin" },
-    { "name": "@hansen/artifact-runtime", "path": "packages/artifact-runtime", "role": "headless-plugin" },
-    { "name": "@hansen/artifacts", "path": "packages/artifacts", "role": "client-plugin" },
-    { "name": "@hansen/better-sidebar-adapter", "path": "packages/better-sidebar-adapter", "role": "client-plugin" },
-    { "name": "@hansen/branding", "path": "packages/branding", "role": "client-plugin" },
-    { "name": "@hansen/category-analysis-adapter", "path": "packages/category-analysis-adapter", "role": "headless-plugin" },
-    { "name": "@hansen/conversation-artifact-renderer", "path": "packages/conversation-artifact-renderer", "role": "client-plugin" },
-    { "name": "@hansen/conversation-title", "path": "packages/conversation-title", "role": "client-plugin" },
-    { "name": "@hansen/contracts", "path": "packages/contracts", "role": "shared-support" },
-    { "name": "@hansen/developer-resources", "path": "packages/developer-resources", "role": "client-plugin" },
-    { "name": "@hansen/extension-center", "path": "packages/extension-center", "role": "client-plugin" },
-    { "name": "@hansen/fact-layer", "path": "packages/fact-layer", "role": "headless-plugin" },
-    { "name": "@hansen/generator-bento", "path": "packages/generator-bento", "role": "client-plugin" },
-    { "name": "@hansen/generator-office", "path": "packages/generator-office", "role": "client-plugin" },
-    { "name": "@hansen/generator-web", "path": "packages/generator-web", "role": "client-plugin" },
-    { "name": "@hansen/harness-bundle", "path": "packages/harness-bundle", "role": "shared-support" },
-    { "name": "@hansen/harness-compat", "path": "packages/harness-compat", "role": "shared-support" },
-    { "name": "@hansen/notifications", "path": "packages/notifications", "role": "client-plugin" },
-    { "name": "@hansen/platform-api", "path": "packages/platform-api", "role": "headless-plugin" },
-    { "name": "@hansen/platform-sdk", "path": "packages/platform-sdk", "role": "shared-support" },
-    { "name": "@hansen/presentation-contracts", "path": "packages/presentation-contracts", "role": "shared-support" },
-    { "name": "@hansen/presentation-trace", "path": "packages/presentation-trace", "role": "client-plugin" },
-    { "name": "@hansen/proposal-experience", "path": "packages/proposal-experience", "role": "client-plugin" },
-    { "name": "@hansen/renderer-bento", "path": "packages/renderer-bento", "role": "client-plugin" },
-    { "name": "@hansen/renderer-pdf", "path": "packages/renderer-pdf", "role": "client-plugin" },
-    { "name": "@hansen/runtime-orbs", "path": "packages/runtime-orbs", "role": "client-plugin" },
-    { "name": "@hansen/scheduler-adapter-feishu-bot", "path": "packages/scheduler-adapter-feishu-bot", "role": "headless-plugin" },
-    { "name": "@hansen/scheduler-adapter-harness", "path": "packages/scheduler-adapter-harness", "role": "headless-plugin" },
-    { "name": "@hansen/scheduler-adapter-http", "path": "packages/scheduler-adapter-http", "role": "headless-plugin" },
-    { "name": "@hansen/platform-scheduler", "path": "packages/scheduler", "role": "client-plugin" },
-    { "name": "@hansen/skill-market", "path": "packages/skill-market", "role": "client-plugin" },
-    { "name": "@hansen/task-monitor", "path": "packages/task-monitor", "role": "client-plugin" },
-    { "name": "@hansen/testkit", "path": "packages/testkit", "role": "shared-support" },
-    { "name": "@hansen/ui-foundation", "path": "packages/ui-foundation", "role": "shared-support" },
-    { "name": "@hansen/user-settings", "path": "packages/user-settings", "role": "client-plugin" },
-    { "name": "@hansen/visual-experience", "path": "packages/visual-experience", "role": "client-plugin" },
-    { "name": "@hansen/workspace-blueprints", "path": "packages/workspace-blueprints", "role": "client-plugin" },
-    { "name": "@hansen/workspace-project", "path": "packages/workspace-project", "role": "client-plugin" },
-    { "name": "@hansen/walmart-proposal-adapter", "path": "packages/walmart-proposal-adapter", "role": "headless-plugin" }
+    {
+      "name": "@hansen/agent-builder",
+      "path": "packages/agent-builder",
+      "role": "headless-plugin"
+    },
+    {
+      "name": "@hansen/agent-market",
+      "path": "packages/agent-market",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/artifact-runtime",
+      "path": "packages/artifact-runtime",
+      "role": "headless-plugin"
+    },
+    {
+      "name": "@hansen/artifacts",
+      "path": "packages/artifacts",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/better-sidebar-adapter",
+      "path": "packages/better-sidebar-adapter",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/branding",
+      "path": "packages/branding",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/category-analysis-adapter",
+      "path": "packages/category-analysis-adapter",
+      "role": "headless-plugin"
+    },
+    {
+      "name": "@hansen/conversation-artifact-renderer",
+      "path": "packages/conversation-artifact-renderer",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/conversation-title",
+      "path": "packages/conversation-title",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/contracts",
+      "path": "packages/contracts",
+      "role": "shared-support"
+    },
+    {
+      "name": "@hansen/developer-resources",
+      "path": "packages/developer-resources",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/extension-center",
+      "path": "packages/extension-center",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/fact-layer",
+      "path": "packages/fact-layer",
+      "role": "headless-plugin"
+    },
+    {
+      "name": "@hansen/generator-bento",
+      "path": "packages/generator-bento",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/generator-office",
+      "path": "packages/generator-office",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/generator-web",
+      "path": "packages/generator-web",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/harness-bundle",
+      "path": "packages/harness-bundle",
+      "role": "shared-support"
+    },
+    {
+      "name": "@hansen/harness-compat",
+      "path": "packages/harness-compat",
+      "role": "shared-support"
+    },
+    {
+      "name": "@hansen/notifications",
+      "path": "packages/notifications",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/platform-api",
+      "path": "packages/platform-api",
+      "role": "headless-plugin"
+    },
+    {
+      "name": "@hansen/platform-sdk",
+      "path": "packages/platform-sdk",
+      "role": "shared-support"
+    },
+    {
+      "name": "@hansen/presentation-contracts",
+      "path": "packages/presentation-contracts",
+      "role": "shared-support"
+    },
+    {
+      "name": "@hansen/presentation-trace",
+      "path": "packages/presentation-trace",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/proposal-experience",
+      "path": "packages/proposal-experience",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/renderer-bento",
+      "path": "packages/renderer-bento",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/renderer-pdf",
+      "path": "packages/renderer-pdf",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/runtime-orbs",
+      "path": "packages/runtime-orbs",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/scheduler-adapter-feishu-bot",
+      "path": "packages/scheduler-adapter-feishu-bot",
+      "role": "headless-plugin"
+    },
+    {
+      "name": "@hansen/scheduler-adapter-harness",
+      "path": "packages/scheduler-adapter-harness",
+      "role": "headless-plugin"
+    },
+    {
+      "name": "@hansen/scheduler-adapter-http",
+      "path": "packages/scheduler-adapter-http",
+      "role": "headless-plugin"
+    },
+    {
+      "name": "@hansen/platform-scheduler",
+      "path": "packages/scheduler",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/skill-market",
+      "path": "packages/skill-market",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/task-monitor",
+      "path": "packages/task-monitor",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/testkit",
+      "path": "packages/testkit",
+      "role": "shared-support"
+    },
+    {
+      "name": "@hansen/ui-foundation",
+      "path": "packages/ui-foundation",
+      "role": "shared-support"
+    },
+    {
+      "name": "@hansen/user-settings",
+      "path": "packages/user-settings",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/visual-experience",
+      "path": "packages/visual-experience",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/workspace-blueprints",
+      "path": "packages/workspace-blueprints",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/workspace-project",
+      "path": "packages/workspace-project",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/walmart-proposal-adapter",
+      "path": "packages/walmart-proposal-adapter",
+      "role": "headless-plugin"
+    },
+    {
+      "name": "@hansen/mcp-center",
+      "path": "packages/mcp-center",
+      "role": "client-plugin"
+    },
+    {
+      "name": "@hansen/feishu-cli-mcp",
+      "path": "packages/feishu-cli-mcp",
+      "role": "headless-plugin"
+    }
   ]
 }

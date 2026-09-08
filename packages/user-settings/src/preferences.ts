@@ -88,3 +88,10 @@ export interface PaimindPersonalizationMutationRequest {
   readonly value: unknown
   readonly expectedRevision: number
 }
+
+/** Commit the two user-authored text fields together under one native revision. */
+export interface PaimindPersonalizationTextRequest {
+  readonly aboutMe: string
+  readonly customInstructions: string
+  readonly expectedRevision: number
+}

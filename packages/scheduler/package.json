@@ -31,6 +31,7 @@
     }
   },
   "dependencies": {
+    "@hansen/ui-foundation": "workspace:^",
     "@js-temporal/polyfill": "^0.5.1",
     "@hansen/contracts": "workspace:^",
     "@hansen/harness-compat": "workspace:^",

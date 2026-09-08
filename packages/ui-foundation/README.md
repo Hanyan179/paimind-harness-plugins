@@ -6,7 +6,9 @@ Package rules: [Plugin Authoring Standard](../../docs/standards/plugin-authoring
 
 ## Responsibility
 
-Role: **Shared support package**. It defines presentation-only tokens and scoped primitive styles. It does not register a Harness lifecycle, own a product surface, or replace native Harness components.
+Role: **Shared support package**. It defines presentation-only tokens, scoped primitive styles and the shared motion contract. It does not register a Harness lifecycle, own a product surface, or replace native Harness components.
+
+Canonical usage: [UI foundation contract](../../docs/standards/ui-foundation.md).
 
 ## Public entry points
 
@@ -22,7 +24,7 @@ Role: **Shared support package**. It defines presentation-only tokens and scoped
 
 ## Lifecycle and failure
 
-Client plugins include the exported CSS in their own Cordis-managed style node. All rules are scoped below `data-paimind-ui-scope`, so missing consumers or unloads cannot alter native Harness UI.
+Client plugins include the exported CSS in their own Cordis-managed style node. Primitive rules are scoped below `data-paimind-ui-scope`; motion duration tokens also support explicitly owned `data-paimind-motion-scope` roots. Consumers opt into these rules and clean up their own styles on unload.
 
 ## Published files
 
@@ -34,3 +36,11 @@ Only built JavaScript, source maps and declarations under `lib/` are published. 
 - `pnpm run check:packages`
 - `pnpm run check:packs`
 - `pnpm run check:api`
+
+## Motion lifecycle
+
+`resolvePaimindMotion` defines system/on/off behavior. `installPaimindMotionPreference` is installed once by Visual Experience; `readPaimindMotion` and `subscribePaimindMotion` work across independently bundled clients and fall back to the OS when the source is absent. The foundation has no storage, network service, host lifecycle, or business state. Motion CSS only defines opt-in duration tokens; it does not suppress arbitrary host or generated-content animations.
+
+## Shared controls and keyboard
+
+`data-paimind-ui-switch` provides a 44 px target and shared track/knob geometry while leaving layout to its consumer. Narrow-screen controls and radio labels use 44 px targets. `handlePaimindTabKey` activates and focuses local tabs using arrow keys, Home and End, excluding disabled, hidden and nested tabs. The consumer owns selected state and roving `tabIndex`. Motion loops consume `--paimind-motion-iterations` together with duration tokens.

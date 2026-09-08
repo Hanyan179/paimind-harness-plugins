@@ -1,12 +1,37 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "src", "outDir": "lib/types", "emitDeclarationOnly": true },
-  "include": ["src"],
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "emitDeclarationOnly": true
+  },
+  "include": [
+    "src"
+  ],
   "references": [
-    { "path": "../artifacts" },
-    { "path": "../contracts" },
-    { "path": "../harness-compat" },
-    { "path": "../testkit" },
-    { "path": "../workspace-project" }
+    {
+      "path": "../artifacts"
+    },
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../harness-compat"
+    },
+    {
+      "path": "../testkit"
+    },
+    {
+      "path": "../workspace-project"
+    },
+    {
+      "path": "../agent-builder"
+    },
+    {
+      "path": "../mcp-center"
+    },
+    {
+      "path": "../ui-foundation"
+    }
   ]
 }

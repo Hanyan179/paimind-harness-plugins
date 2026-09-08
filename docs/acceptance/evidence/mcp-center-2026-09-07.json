@@ -1,0 +1,230 @@
+{
+  "schema": "paimind.mcp-acceptance-evidence/v1",
+  "date": "2026-09-07",
+  "host": "http://127.0.0.1:3080",
+  "runtime": "@deepseek-ai/dsh@0.1.1-rc.2",
+  "source": "Authoritative native session JSONL and observed browser UI; no model claims used as tool success evidence",
+  "sessions": [
+    {
+      "role": "writer",
+      "sessionId": "session-e7203154-cb9d-4c0b-b9a8-a93923198937",
+      "presetId": "0907-21fcf6",
+      "requestToolCounts": [
+        {
+          "seq": 13,
+          "count": 0
+        },
+        {
+          "seq": 2253,
+          "count": 4
+        },
+        {
+          "seq": 3867,
+          "count": 4
+        }
+      ],
+      "calls": [
+        {
+          "callId": "call_00_YVLzKgCdz5DsdxRgzXdO3777",
+          "name": "mcp__paimind_9677102d59e090b3d042__feishu_identity",
+          "turn": 2,
+          "step": 1,
+          "resultSeq": 5179,
+          "isError": false,
+          "ok": true,
+          "outcome": "succeeded"
+        },
+        {
+          "callId": "call_00_RMIzjijc81nzD3vY3U3w9729",
+          "name": "mcp__paimind_9677102d59e090b3d042__feishu_create_document",
+          "turn": 3,
+          "step": 2,
+          "resultSeq": 11712,
+          "isError": false,
+          "ok": true,
+          "outcome": "succeeded",
+          "documentRevision": 3
+        },
+        {
+          "callId": "call_00_hTY6niofWVmAlW7K70oZ4508",
+          "name": "mcp__paimind_9677102d59e090b3d042__feishu_read_document",
+          "turn": 3,
+          "step": 3,
+          "resultSeq": 11893,
+          "isError": false,
+          "ok": true,
+          "outcome": "succeeded",
+          "documentRevision": 3
+        },
+        {
+          "callId": "call_00_HzMgn4OVvfEERftWGeIK8736",
+          "name": "mcp__paimind_9677102d59e090b3d042__feishu_read_document",
+          "turn": 4,
+          "step": 1,
+          "resultSeq": 13088,
+          "isError": false,
+          "ok": true,
+          "outcome": "succeeded",
+          "documentRevision": 3
+        },
+        {
+          "callId": "call_00_2ww45ydGr8JEDoS5IqHQ6063",
+          "name": "mcp__paimind_9677102d59e090b3d042__feishu_update_document",
+          "turn": 4,
+          "step": 2,
+          "resultSeq": 13410,
+          "isError": false,
+          "ok": true,
+          "outcome": "succeeded",
+          "documentRevision": 4
+        },
+        {
+          "callId": "call_00_fXYRYGNJwb9WibDQyFYn2862",
+          "name": "mcp__paimind_9677102d59e090b3d042__feishu_read_document",
+          "turn": 4,
+          "step": 3,
+          "resultSeq": 13515,
+          "isError": false,
+          "ok": true,
+          "outcome": "succeeded",
+          "documentRevision": 4
+        }
+      ]
+    },
+    {
+      "role": "checker",
+      "sessionId": "session-5cadd9ba-bb19-41fb-ab6f-ace8ea321465",
+      "presetId": "0907-6c769c",
+      "requestToolCounts": [
+        {
+          "seq": 13,
+          "count": 4
+        },
+        {
+          "seq": 255,
+          "count": 0
+        },
+        {
+          "seq": 487,
+          "count": 4
+        },
+        {
+          "seq": 1497,
+          "count": 0
+        }
+      ],
+      "calls": [
+        {
+          "callId": "call_00_v9yzfBmluo6G77Upmph68419",
+          "name": "mcp__paimind_b8380e204a07b20440c7__feishu_identity",
+          "turn": 1,
+          "step": 1,
+          "resultSeq": 122,
+          "isError": false,
+          "ok": true,
+          "outcome": "succeeded"
+        },
+        {
+          "callId": "call_00_GjHIKh3W5OR8gmkIUGTZ7717",
+          "name": "mcp__paimind_b8380e204a07b20440c7__feishu_identity",
+          "turn": 3,
+          "step": 1,
+          "resultSeq": 1399,
+          "isError": false,
+          "ok": true,
+          "outcome": "succeeded"
+        }
+      ]
+    }
+  ],
+  "document": {
+    "url": "https://paramont.feishu.cn/docx/YEUKdY1a0oucudxmnkDcnpUMnLe",
+    "beforeRevision": 3,
+    "afterRevision": 4,
+    "firstParagraphPreserved": true,
+    "thirdParagraphPreserved": true,
+    "onlySecondParagraphChanged": true,
+    "finalParagraphs": [
+      "首版支持一人在自己的电脑上管理多条工具连接，连接归你本人。飞书账号的授权由本地命令行工具管理，平台不复制凭证。",
+      "保存连接后，平台不会自动分配给所有助手。你需要为目标助手显式勾选并保存；同一条个人连接可以供多个助手使用。停用后，已打开会话也不能继续发起新的工具调用。",
+      "验证要分开看两件事。协议连接成功是一层结果，真实文档写入后回读核对是另一层结果，各自单独验证，一层通过不能代表另一层通过。"
+    ],
+    "finalParagraphHashes": [
+      "03a9bf5dacf4a96ed3b43c50bcc5beeb290891e43f532270d6ce32cf5a001a5a",
+      "8f2b72ae3f6ae66a29b11a43ec7f4154700751ffc05550c7edab3e42bf79b508",
+      "2602d18e957d4d27e1de6414e3d1a2ed98d719254b315fdc50dca845fbede0be"
+    ],
+    "browserOpenedAndTextInspected": true
+  },
+  "finalReadbackAfterRebind": {
+    "sessionId": "session-16f11768-2955-4e76-b47f-c4165eb2a8a2",
+    "name": "mcp__paimind_6bd170d32a08ae091c24__feishu_read_document",
+    "callId": "call_00_EJZhxtowcuJfE6XAfVHU7563",
+    "ok": true,
+    "revision": 4,
+    "allThreeParagraphsMatch": true
+  },
+  "browserManagement": {
+    "fullProfileRestored": true,
+    "originalWorkspaceCount": 15,
+    "originalSessionFileCount": 263,
+    "featurePacksRunning": 6,
+    "featureExtensionsRunning": 33,
+    "independentSidebarOpened": true,
+    "missingExecutableFailureDisplayed": true,
+    "nameAndCategoryEdited": true,
+    "nameAndCategoryFiltersVerified": true,
+    "temporaryConnectionRemoved": true,
+    "writerUnboundAndRebound": true,
+    "checkerRemainsUnbound": true
+  },
+  "finalAgents": [
+    {
+      "agentId": "0907-21fcf6",
+      "name": "飞书写作助手 0907",
+      "revision": 3,
+      "preferredSkillNames": [
+        "human-writing",
+        "lark-doc",
+        "lark-shared"
+      ],
+      "connectionIds": [
+        "cede7168ebd74ecbb51bc2a14b3c1e22"
+      ]
+    },
+    {
+      "agentId": "0907-6c769c",
+      "name": "连接验收助手 0907",
+      "revision": 2,
+      "preferredSkillNames": [],
+      "connectionIds": []
+    }
+  ],
+  "engineering": {
+    "fullSuite": {
+      "files": 114,
+      "total": 611,
+      "passed": 610,
+      "failed": 1,
+      "failure": "packages/workspace-blueprints/tests/materializer.spec.ts:63; missing untracked empty template directories docs and outputs"
+    },
+    "typecheck": "passed",
+    "build": "passed",
+    "packageCompliance": 42,
+    "packagePackAudit": 42,
+    "apiSnapshot": 42,
+    "publint": 42,
+    "clientBundleBudget": 25,
+    "nodeNextExports": 136,
+    "framework": "passed",
+    "examples": "passed",
+    "documentationLinks": {
+      "files": 109,
+      "missing": 0
+    },
+    "realHostComposition": {
+      "installBootRemoveRestore": "passed",
+      "upstreamWorktreeDelta": 0
+    }
+  }
+}

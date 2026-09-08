@@ -79,6 +79,7 @@ interface WorkspaceBlueprintSkillValidationSource {
     readonly items: readonly Readonly<{
       readonly skillId: string
       readonly name: string
+      readonly displayName?: string
       readonly description: string
     }>[]
   }>>
@@ -182,7 +183,7 @@ export async function getWorkspaceBlueprintCompositionChoices(
               || !/^sha256:[a-f0-9]{64}$/.test(current.digest)) {
               throw new Error('Business Skill identity changed')
             }
-            return Object.freeze({ name: current.name, description: item.description, digest: current.digest as `sha256:${string}` })
+            return Object.freeze({ name: current.name, description: item.description, ...(item.displayName === undefined ? {} : { displayName: item.displayName }), digest: current.digest as `sha256:${string}` })
           })
           return choiceGroup('ready', [...items].sort((left, right) => left.name.localeCompare(right.name)))
         } catch {

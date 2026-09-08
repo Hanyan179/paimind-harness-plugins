@@ -5,11 +5,10 @@ never define an Agent identity, runtime, history or selection route.
 
 ## Source and conversion
 
-All portrait sources come from the frozen product prototype at
+The original six portrait sources come from the frozen product prototype at
 `../../../../paimind-agent-skill-prototype/public/assets/agents/avatars/`.
 The neutral fallback reuses the technical-expert portrait.
-No avatar was generated, redrawn or sourced from the Harness runtime home for
-this package.
+The twelve additional portraits below are generated illustrations. No avatar is sourced from the Harness runtime home.
 
 The frozen prototype's `ASSET-LICENSES.md` marks the personal-role portraits as
 private, user-authorized project assets. This package remains `UNLICENSED`;
@@ -51,3 +50,19 @@ invalid ids use the neutral technical-expert fallback. The native
 candidate order, keyboard model and canonical Preset selection remain owned by
 Harness. Native mode and plugin disposal remove injected images and restore the
 original native icon-token text.
+
+## Generated additions, 2026-09-07
+
+Twelve new fictional character illustrations were generated using the built-in
+image generation tool, one image per request, using `content-expression-agent.webp`
+as a style reference only. [The prompt set](generated-avatars-2026-09-07.json)
+records each exact prompt, retained source PNG path, and published WebP filename.
+The original PNGs stay outside the repository. Runtime assets are 128×128 WebP,
+encoded directly from the generated originals with cwebp quality 82, method 6.
+The twelve additions total 29,898 bytes before inline bundling.
+
+The expanded picker has eighteen portraits. New ids use explicit mappings; the
+original six-file hash pool is unchanged, preserving existing automatic portraits.
+An explicit `data-paimind-agent-avatar-choice` from the source-owned Agent Profile
+wins over the automatic projection. The preset id still identifies the Agent.
+Task Monitor's header and summary reuse these same reversible portrait seats.

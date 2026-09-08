@@ -35,7 +35,8 @@
     "@hansen/contracts": "workspace:^",
     "@hansen/harness-compat": "workspace:^",
     "@hansen/skill-market": "workspace:^",
-    "@hansen/ui-foundation": "workspace:^"
+    "@hansen/ui-foundation": "workspace:^",
+    "@hansen/mcp-center": "workspace:^"
   },
   "peerDependencies": { "react": ">=18.0.0 <20.0.0" },
   "devDependencies": {

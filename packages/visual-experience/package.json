@@ -47,7 +47,8 @@
   },
   "dependencies": {
     "@hansen/branding": "workspace:^",
-    "@hansen/harness-compat": "workspace:^"
+    "@hansen/harness-compat": "workspace:^",
+    "@hansen/ui-foundation": "workspace:^"
   },
   "peerDependencies": {
     "react": ">=18.0.0 <20.0.0",

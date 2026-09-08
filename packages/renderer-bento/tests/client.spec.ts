@@ -120,7 +120,7 @@ describe('FP07 Bento preview client store', () => {
     const listener = vi.fn()
     store.subscribe(listener)
     expect(store.open({ sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', path: '/workspace/deck.html', title: 'Deck' })).toBe(true)
-    expect(provider.openTab).toHaveBeenCalledWith('paimind:bento-preview', { title: 'Deck' })
+    expect(provider.openTab).toHaveBeenCalledWith('paimind:bento-preview', { title: 'Deck', path: '/workspace/deck.html' })
     expect(store.getSnapshot()).toMatchObject({ revision: 1, requestRevision: 1, request: { path: '/workspace/deck.html' }, runtimeEvent: null })
     expect(Object.isFrozen(store.getSnapshot().request)).toBe(true)
     expect(listener).toHaveBeenCalledOnce()

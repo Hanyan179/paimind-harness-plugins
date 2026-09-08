@@ -5,6 +5,18 @@ import PERSONAL_COFFEE_AVATAR from '../../assets/personal-coffee-agent.webp'
 import PROJECT_PROGRESS_AVATAR from '../../assets/project-progress-agent.webp'
 import SENIOR_AI_PRODUCT_MANAGER_AVATAR from '../../assets/senior-ai-product-manager-agent.webp'
 import TECHNICAL_EXPERT_AVATAR from '../../assets/technical-expert-agent.webp'
+import RESEARCH_PARTNER_AVATAR from '../../assets/research-partner.webp'
+import DATA_ANALYST_AVATAR from '../../assets/data-analyst.webp'
+import CUSTOMER_SUCCESS_AVATAR from '../../assets/customer-success.webp'
+import LANGUAGE_PARTNER_AVATAR from '../../assets/language-partner.webp'
+import FINANCE_PLANNER_AVATAR from '../../assets/finance-planner.webp'
+import LEARNING_COACH_AVATAR from '../../assets/learning-coach.webp'
+import CREATIVE_DESIGNER_AVATAR from '../../assets/creative-designer.webp'
+import OPERATIONS_PARTNER_AVATAR from '../../assets/operations-partner.webp'
+import LEGAL_READER_AVATAR from '../../assets/legal-reader.webp'
+import SUPPLY_CHAIN_AVATAR from '../../assets/supply-chain.webp'
+import WELLBEING_COACH_AVATAR from '../../assets/wellbeing-coach.webp'
+import STRATEGY_PARTNER_AVATAR from '../../assets/strategy-partner.webp'
 
 export const PAIMIND_AGENT_AVATAR_ICON_PREFIX = 'paimind-agent-avatar:'
 
@@ -24,6 +36,18 @@ export interface PaimindAgentAvatarIdentity {
  * the neutral Agent fallback. Neither path creates identity metadata.
  */
 const AVATAR_BY_CANONICAL_ID: Readonly<Record<string, readonly [string, string]>> = Object.freeze({
+  'research-partner': ['research-partner', RESEARCH_PARTNER_AVATAR],
+  'data-analyst': ['data-analyst', DATA_ANALYST_AVATAR],
+  'customer-success': ['customer-success', CUSTOMER_SUCCESS_AVATAR],
+  'language-partner': ['language-partner', LANGUAGE_PARTNER_AVATAR],
+  'finance-planner': ['finance-planner', FINANCE_PLANNER_AVATAR],
+  'learning-coach': ['learning-coach', LEARNING_COACH_AVATAR],
+  'creative-designer': ['creative-designer', CREATIVE_DESIGNER_AVATAR],
+  'operations-partner': ['operations-partner', OPERATIONS_PARTNER_AVATAR],
+  'legal-reader': ['legal-reader', LEGAL_READER_AVATAR],
+  'supply-chain': ['supply-chain', SUPPLY_CHAIN_AVATAR],
+  'wellbeing-coach': ['wellbeing-coach', WELLBEING_COACH_AVATAR],
+  'strategy-partner': ['strategy-partner', STRATEGY_PARTNER_AVATAR],
   paimind: ['default-agent', TECHNICAL_EXPERT_AVATAR],
   standard: ['technical-expert-agent', TECHNICAL_EXPERT_AVATAR],
   code: ['technical-expert-agent', TECHNICAL_EXPERT_AVATAR],

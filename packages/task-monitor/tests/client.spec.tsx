@@ -43,6 +43,7 @@ function props(language: PaimindLocaleSource): TaskMonitorActionProps {
   }
   return {
     sessionId: 'session-1', locale: language,
+    readResources: async (sessionId, presetId) => ({ sessionId, ...(presetId === undefined ? {} : { presetId }), names: { Analyst: 'Analyst', 'Research Agent': 'Research Agent' }, skillNames: [], connectionIds: [], connections: [], profiles: 'ready', mcps: 'ready' }),
     sessions: {
       list: { getSnapshot: () => sessionsSnapshot, subscribe: () => () => {} },
       open: vi.fn(), openSubagent: vi.fn(),
@@ -84,6 +85,42 @@ afterEach(() => {
 })
 
 describe('Task Monitor client', () => {
+  it('resolves the Agent name and configured resources before use, then discards a late response after a session switch', async () => {
+    const language = locale('zh')
+    let finish: ((value: Awaited<ReturnType<NonNullable<TaskMonitorActionProps['readResources']>>>) => void) | undefined
+    const readResources: NonNullable<TaskMonitorActionProps['readResources']> = vi.fn(async (sessionId, presetId) => {
+      if (sessionId === 'session-1') return await new Promise(resolve => { finish = resolve })
+      return { sessionId, ...(presetId === undefined ? {} : { presetId }), names: { 'other-id': '另一位助手' }, skillNames: ['other-skill'], connectionIds: [], connections: [], profiles: 'ready', mcps: 'ready' }
+    })
+    const base = props(language)
+    const { rerender, unmount } = render(<TaskMonitorAction {...base} readResources={readResources} />)
+    fireEvent.click(screen.getByRole('button', { name: '任务监控' }))
+    await waitFor(() => { expect(readResources).toHaveBeenCalledWith('session-1', 'Analyst') })
+    const nextSnapshot = { current: 'session-2', byId: { 'session-2': { id: 'session-2', displayTitle: 'Other', running: false, agentPreset: 'other-id' } } }
+    const next = { ...base, sessionId: 'session-2', sessions: { ...base.sessions, list: { getSnapshot: () => nextSnapshot, subscribe: () => () => {} } } }
+    rerender(<TaskMonitorAction {...next} readResources={readResources} />)
+    await waitFor(() => { expect(screen.getByRole('button', { name: '当前智能体：另一位助手' })).toBeInTheDocument() })
+    await act(async () => { finish!({ sessionId: 'session-1', presetId: 'Analyst', names: { Analyst: 'Wrong old name' }, skillNames: ['private-old-skill'], connectionIds: [], connections: [], profiles: 'ready', mcps: 'ready' }) })
+    expect(screen.queryByText('Wrong old name')).toBeNull()
+    expect(screen.queryByText('private-old-skill')).toBeNull()
+    expect(screen.getByText('other-skill').closest('li')).toHaveTextContent('已挂载')
+    unmount()
+  })
+
+  it('shows a readable configured Agent and connection without leaking IDs or inventing a call', async () => {
+    const base = props(locale('zh'))
+    render(<TaskMonitorAction {...base} readResources={async (sessionId, presetId) => ({ sessionId, ...(presetId === undefined ? {} : { presetId }), names: { Analyst: '飞书写作助手' }, avatars: { Analyst: 'research-partner' }, skillNames: ['human-writing'], connectionIds: ['a'.repeat(32)], connections: [{ id: 'a'.repeat(32), name: '个人文档连接', server: `paimind_${'b'.repeat(20)}`, enabled: true, mounted: true }], profiles: 'ready', mcps: 'ready' })} />)
+    fireEvent.click(screen.getByRole('button', { name: '任务监控' }))
+    await waitFor(() => { expect(screen.getByRole('button', { name: '当前智能体：飞书写作助手' })).toBeInTheDocument() })
+    expect([...document.querySelectorAll('[data-paimind-task-avatar]')].map(seat => seat.getAttribute('data-paimind-agent-avatar-choice'))).toEqual(['research-partner', 'research-partner'])
+    const row = screen.getByText('个人文档连接').closest('li')
+    expect(row).toHaveTextContent('已挂载')
+    expect(row).not.toHaveTextContent('已使用')
+    expect(screen.getByText('human-writing').closest('li')).toHaveTextContent('已挂载')
+    expect(screen.queryByText('Analyst')).toBeNull()
+    expect(document.querySelector('[data-paimind-task-resource-list]')).not.toHaveTextContent('paimind_')
+  })
+
   it('uses an icon trigger, orders the summary, loads exact resources, navigates outputs, and restores focus', async () => {
     const language = locale('en')
     const history = vi.fn(async () => ({ result: { ok: true as const, value: { hasMore: false, events: [
@@ -105,7 +142,7 @@ describe('Task Monitor client', () => {
     expect(screen.queryByText(/Refresh preserves process-local Jobs/)).toBeNull()
     expect(screen.getByRole('heading', { name: 'Task Summary' })).toBeInTheDocument()
     expect(screen.getAllByRole('heading', { level: 3 }).map(node => node.textContent)).toEqual([
-      'Task Progress', 'Agent, Skill & MCP', 'Input Files', 'Outputs & Artifacts',
+      'Task Progress', 'Agent, skills & connections', 'Input Files', 'Outputs & Artifacts',
     ])
     const subagentSummary = screen.getByRole('button', { name: 'View 1 Subagents' })
     expect(subagentSummary).toHaveTextContent('1Subagents')
@@ -143,7 +180,7 @@ describe('Task Monitor client', () => {
     expect(screen.queryByText('r2')).toBeNull()
     expect(screen.getByRole('button', { name: 'Quarterly Report' }).querySelector('[data-paimind-task-row-icon]')).toBeNull()
     const mainAgent = document.querySelector('[data-paimind-task-main-agent]')
-    expect(mainAgent).toHaveTextContent('Main AgentAnalystLead')
+    expect(mainAgent).toHaveTextContent('Current AgentAnalyst')
     expect(mainAgent?.querySelector('svg')).not.toBeNull()
     expect(document.querySelector('[data-paimind-task-chip]')).toBeNull()
     expect(mainAgent?.querySelector('[data-paimind-task-model-tooltip]')).toBeNull()
@@ -165,7 +202,7 @@ describe('Task Monitor client', () => {
     expect(subagent).toHaveAttribute('data-paimind-task-subagent')
     expect(subagent.querySelector('[data-paimind-task-agent-tooltip]')).toHaveTextContent('Researcher')
     expect(subagent.querySelector('[data-paimind-task-agent-avatar]')).toHaveAttribute('data-variant', 'browse')
-    expect(subagent).toHaveTextContent('Research Agent')
+    await waitFor(() => { expect(subagent).toHaveTextContent('Research Agent') })
     fireEvent.click(subagent)
     expect(value.sessions.openSubagent).toHaveBeenCalledWith({ parentSessionId: 'session-1', childSessionId: 'child-1', mode: 'continuable' })
     expect(screen.queryByRole('region', { name: 'Task Monitor' })).toBeNull()
@@ -214,7 +251,7 @@ describe('Task Monitor client', () => {
     }
     render(<TaskMonitorAction {...sparse} />)
     fireEvent.click(screen.getByRole('button', { name: 'Task Monitor' }))
-    expect(screen.queryByRole('heading', { name: 'Agent, Skill & MCP' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Assistants and capabilities' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Outputs & Artifacts' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Input Files' })).toBeNull()
     expect(screen.queryByText('No Project')).toBeNull()

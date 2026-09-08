@@ -1,13 +1,18 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "lib/types", "emitDeclarationOnly": true },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "references": [
     { "path": "../agent-builder" },
     { "path": "../contracts" },
     { "path": "../harness-compat" },
     { "path": "../skill-market" },
     { "path": "../ui-foundation" },
-    { "path": "../testkit" }
+    { "path": "../testkit" },
+    {
+      "path": "../mcp-center"
+    }
   ]
 }

@@ -1,3 +1,4 @@
+import { PAIMIND_UI_FOUNDATION_CSS } from '@hansen/ui-foundation'
 import {
   Component,
   useEffect,
@@ -12,6 +13,7 @@ import {
   type PaimindExtensionDescriptor,
 } from '@hansen/contracts'
 import {
+  markHarnessClientStyle,
   contributePaimindExtension,
   type HarnessPluginInventoryRemote,
   type HarnessPluginInventorySnapshot,
@@ -56,11 +58,26 @@ const SELF: PaimindExtensionDescriptor = {
   category: 'developer',
   nameZh: '扩展中心',
   nameEn: 'Extension Center',
-  descriptionZh: '按产品类别管理 能力，并映射 Harness 的真实技术加载状态。',
+  descriptionZh: '按用途开启或关闭功能，并查看当前可用状态。',
   descriptionEn: 'Manages capabilities by product category and projects native Harness loader state.',
   surface: 'settings',
   maturity: 'available',
   order: -100,
+}
+
+// Product labels for support packages that intentionally contribute no client surface.
+const SUPPORT_PACKAGE_NAMES: Readonly<Record<string, readonly [string, string]>> = {
+  '@hansen/agent-builder': ['智能体创建服务', 'Agent creation service'],
+  '@hansen/workspace-project': ['工作区连接', 'Workspace connection'],
+  '@hansen/better-sidebar-adapter': ['侧边文件与预览', 'Sidebar files and previews'],
+  '@hansen/artifact-runtime': ['文件生成服务', 'File generation service'],
+  '@hansen/category-analysis-adapter': ['类目分析', 'Category analysis'],
+  '@hansen/fact-layer': ['数据依据', 'Data evidence'],
+  '@hansen/walmart-proposal-adapter': ['沃尔玛采购提案', 'Walmart buyer proposals'],
+  '@hansen/scheduler-adapter-harness': ['智能任务执行', 'AI task execution'],
+  '@hansen/scheduler-adapter-http': ['外部服务调用', 'External service actions'],
+  '@hansen/platform-api': ['系统集成接口', 'Integration API'],
+  '@hansen/scheduler-adapter-feishu-bot': ['飞书消息交付', 'Feishu delivery'],
 }
 
 const TECHNICAL_COPY: Readonly<Record<ExtensionTechnicalState, { readonly zh: string; readonly en: string }>> = {
@@ -68,8 +85,8 @@ const TECHNICAL_COPY: Readonly<Record<ExtensionTechnicalState, { readonly zh: st
   loading: { zh: '加载中', en: 'Loading' },
   failed: { zh: '加载失败', en: 'Failed' },
   disabled: { zh: '已停用', en: 'Disabled' },
-  unobserved: { zh: '已启用 · 未观测', en: 'Enabled · Unobserved' },
-  unavailable: { zh: '注册表未发现', en: 'Not in registry' },
+  unobserved: { zh: '已启用 · 等待状态', en: 'Enabled · Unobserved' },
+  unavailable: { zh: '尚未就绪', en: 'Not in registry' },
 }
 
 const ATTENTION_STATES = new Set<ExtensionTechnicalState>(['failed', 'disabled', 'unavailable'])
@@ -115,60 +132,55 @@ const STYLE = `
 [data-paimind-feature-pack-section]{display:grid;gap:10px;margin:0 0 18px}
 [data-paimind-feature-pack-heading]{display:flex;align-items:end;justify-content:space-between;gap:12px}
 [data-paimind-feature-pack-heading] h3{margin:0;font-size:15px;line-height:22px}
-[data-paimind-feature-pack-heading] p{margin:2px 0 0;color:var(--extension-muted);font-size:11px;line-height:17px}
-[data-paimind-feature-pack-heading]>span{color:var(--extension-faint);font-size:11px}
+[data-paimind-feature-pack-heading] p{margin:2px 0 0;color:var(--extension-muted);font-size:12px;line-height:17px}
+[data-paimind-feature-pack-heading]>span{color:var(--extension-faint);font-size:12px}
 [data-paimind-feature-pack-grid]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 [data-paimind-feature-pack]{display:grid;gap:9px;padding:13px;border:1px solid var(--extension-line);border-radius:12px;background:color-mix(in srgb,var(--extension-surface) 94%,transparent)}
 [data-paimind-feature-pack][data-enabled='false']{background:color-mix(in srgb,var(--extension-soft) 80%,transparent)}
 [data-paimind-feature-pack-main]{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 [data-paimind-feature-pack-copy]{min-width:0}
 [data-paimind-feature-pack-copy] h4{margin:0;font-size:14px;line-height:20px}
-[data-paimind-feature-pack-copy] p{margin:3px 0 0;color:var(--extension-muted);font-size:11px;line-height:17px}
-[data-paimind-feature-pack-meta]{display:flex;flex-wrap:wrap;gap:5px;color:var(--extension-faint);font-size:10px;line-height:15px}
-[data-paimind-feature-pack-error]{margin:0;padding:7px 9px;border:1px solid color-mix(in srgb,#d83a52 34%,var(--extension-line));border-radius:8px;background:color-mix(in srgb,#d83a52 8%,transparent);color:#b4233b;font-size:11px;line-height:17px;overflow-wrap:anywhere}
-[data-paimind-feature-switch]{position:relative;flex:0 0 auto;width:40px;height:22px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--extension-faint) 36%,transparent);cursor:pointer}
-[data-paimind-feature-switch]::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform 160ms ease}
-[data-paimind-feature-switch][aria-checked='true']{background:var(--extension-accent)}
-[data-paimind-feature-switch][aria-checked='true']::after{transform:translateX(18px)}
-[data-paimind-feature-switch]:disabled{opacity:.5;cursor:not-allowed}
+[data-paimind-feature-pack-copy] p{margin:3px 0 0;color:var(--extension-muted);font-size:12px;line-height:17px}
+[data-paimind-feature-pack-meta]{display:flex;flex-wrap:wrap;gap:5px;color:var(--extension-faint);font-size:12px;line-height:15px}
+[data-paimind-feature-pack-error]{margin:0;padding:7px 9px;border:1px solid color-mix(in srgb,#d83a52 34%,var(--extension-line));border-radius:8px;background:color-mix(in srgb,#d83a52 8%,transparent);color:#b4233b;font-size:12px;line-height:17px;overflow-wrap:anywhere}
 [data-paimind-feature-capabilities]{display:grid;gap:6px;padding-top:8px;border-top:1px solid var(--extension-line)}
 [data-paimind-feature-capability]{display:flex;align-items:center;justify-content:space-between;gap:10px}
-[data-paimind-feature-capability] strong{display:block;font-size:11px;line-height:17px}
-[data-paimind-feature-capability] span{display:block;color:var(--extension-faint);font-size:10px;line-height:15px}
-[data-paimind-feature-pack-feedback]{min-height:17px;color:var(--extension-muted);font-size:11px;line-height:17px}
+[data-paimind-feature-capability] strong{display:block;font-size:12px;line-height:17px}
+[data-paimind-feature-capability] span{display:block;color:var(--extension-faint);font-size:12px;line-height:15px}
+[data-paimind-feature-pack-feedback]{min-height:17px;color:var(--extension-muted);font-size:12px;line-height:17px}
 [data-paimind-technical-catalog]{overflow:hidden;border:1px solid var(--extension-line);border-radius:14px;background:color-mix(in srgb,var(--extension-surface) 94%,transparent)}
 [data-paimind-technical-catalog]>summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;padding:14px 16px;color:var(--extension-muted);cursor:pointer;list-style:none}
 [data-paimind-technical-catalog]>summary::-webkit-details-marker{display:none}
 [data-paimind-technical-catalog]>summary:hover{background:var(--extension-soft)}
 [data-paimind-technical-catalog]>summary>span:first-child{display:grid;gap:2px}
 [data-paimind-technical-catalog]>summary strong{color:var(--extension-ink);font-size:14px;line-height:20px}
-[data-paimind-technical-catalog]>summary small{font-size:11px;line-height:17px}
-[data-paimind-technical-catalog]>summary svg{color:var(--extension-faint);transition:transform 160ms ease}
+[data-paimind-technical-catalog]>summary small{font-size:12px;line-height:17px}
+[data-paimind-technical-catalog]>summary svg{color:var(--extension-faint);transition:transform var(--paimind-motion-fast) ease}
 [data-paimind-technical-catalog][open]>summary svg{transform:rotate(180deg)}
 [data-paimind-technical-catalog-body]{padding:0 16px 16px;border-top:1px solid var(--extension-line)}
 [data-paimind-extension-summary]{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:hidden;margin:14px 0;border:1px solid var(--extension-line);border-radius:12px;background:color-mix(in srgb,var(--extension-surface) 90%,transparent)}
 [data-paimind-extension-summary] div{min-width:0;padding:10px 12px;border-right:1px solid var(--extension-line)}
 [data-paimind-extension-summary] div:last-child{border-right:0}
 [data-paimind-extension-summary] strong{display:block;font-size:16px;line-height:20px;font-weight:680;font-variant-numeric:tabular-nums}
-[data-paimind-extension-summary] span{display:block;margin-top:2px;overflow:hidden;color:var(--extension-muted);font-size:11px;line-height:16px;text-overflow:ellipsis;white-space:nowrap}
+[data-paimind-extension-summary] span{display:block;margin-top:2px;overflow:hidden;color:var(--extension-muted);font-size:12px;line-height:16px;text-overflow:ellipsis;white-space:nowrap}
 [data-paimind-extension-search]{position:relative;display:flex;align-items:center;margin:0 0 10px;color:var(--extension-faint)}
 [data-paimind-extension-search]>svg{position:absolute;left:12px;pointer-events:none}
 [data-paimind-extension-search] input{width:100%;min-width:0;height:38px;padding:0 34px 0 36px;border:1px solid var(--extension-line-strong);border-radius:10px;color:var(--extension-ink);background:var(--extension-surface);font:inherit;font-size:13px;outline:none}
 [data-paimind-extension-search] input::placeholder{color:var(--extension-faint)}
 [data-paimind-extension-search] input:focus-visible{border-color:var(--extension-accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--extension-accent) 18%,transparent)}
 [data-paimind-extension-categories]{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px;padding:0}
-[data-paimind-extension-category-button]{display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:5px 9px;border:1px solid var(--extension-line);border-radius:999px;color:var(--extension-muted);background:transparent;font:inherit;font-size:11px;line-height:18px;cursor:pointer}
-[data-paimind-extension-category-button] small{color:var(--extension-faint);font-size:10px;font-variant-numeric:tabular-nums}
+[data-paimind-extension-category-button]{display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:5px 9px;border:1px solid var(--extension-line);border-radius:999px;color:var(--extension-muted);background:transparent;font:inherit;font-size:12px;line-height:18px;cursor:pointer}
+[data-paimind-extension-category-button] small{color:var(--extension-faint);font-size:12px;font-variant-numeric:tabular-nums}
 [data-paimind-extension-category-button]:hover{border-color:var(--extension-line-strong);background:var(--extension-soft)}
 [data-paimind-extension-category-button]:focus-visible{outline:2px solid var(--extension-accent);outline-offset:2px}
 [data-paimind-extension-category-button][aria-pressed='true']{border-color:color-mix(in srgb,var(--extension-accent) 42%,var(--extension-line));color:var(--extension-accent);background:color-mix(in srgb,var(--extension-accent) 9%,transparent)}
-[data-paimind-extension-results]{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 2px 12px;color:var(--extension-muted);font-size:11px;line-height:17px}
+[data-paimind-extension-results]{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 2px 12px;color:var(--extension-muted);font-size:12px;line-height:17px}
 [data-paimind-extension-groups]{display:grid;gap:20px}
 [data-paimind-extension-group]{display:grid;gap:8px}
 [data-paimind-extension-group-header]{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:12px;padding:0 2px}
 [data-paimind-extension-group-header] h3{margin:0;font-size:13px;line-height:20px;font-weight:650}
-[data-paimind-extension-group-header] p{margin:1px 0 0;color:var(--extension-muted);font-size:11px;line-height:17px}
-[data-paimind-extension-group-header]>span{color:var(--extension-faint);font-size:11px;font-variant-numeric:tabular-nums}
+[data-paimind-extension-group-header] p{margin:1px 0 0;color:var(--extension-muted);font-size:12px;line-height:17px}
+[data-paimind-extension-group-header]>span{color:var(--extension-faint);font-size:12px;font-variant-numeric:tabular-nums}
 [data-paimind-extension-grid]{display:grid;gap:7px}
 [data-paimind-extension-card]{min-width:0;overflow:hidden;border:1px solid var(--extension-line);border-radius:12px;background:color-mix(in srgb,var(--extension-surface) 94%,transparent)}
 [data-paimind-extension-card][data-open='true']{border-color:color-mix(in srgb,var(--extension-accent) 26%,var(--extension-line));box-shadow:var(--paimind-shadow,var(--dsw-shadow-lv1,0 8px 24px rgba(39,63,102,.08)))}
@@ -181,10 +193,10 @@ const STYLE = `
 [data-paimind-extension-card-meta]{display:flex;align-items:center;justify-content:flex-end;gap:7px;min-width:max-content}
 [data-paimind-extension-card-meta]>svg{flex:none;color:var(--extension-faint)}
 [data-paimind-extension-card][data-open='true'] [data-paimind-extension-card-meta]>svg{transform:rotate(180deg)}
-[data-paimind-extension-location]{display:flex;align-items:center;gap:6px;min-width:0;grid-column:1/-1;color:var(--extension-faint);font-size:11px;line-height:16px}
+[data-paimind-extension-location]{display:flex;align-items:center;gap:6px;min-width:0;grid-column:1/-1;color:var(--extension-faint);font-size:12px;line-height:16px}
 [data-paimind-extension-location] svg{flex:none}
 [data-paimind-extension-location] span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-[data-paimind-extension-badge]{display:inline-flex;align-items:center;gap:4px;min-height:20px;padding:1px 6px;border-radius:6px;background:var(--extension-soft);color:var(--extension-muted);font-size:10px;line-height:16px;white-space:nowrap}
+[data-paimind-extension-badge]{display:inline-flex;align-items:center;gap:4px;min-height:20px;padding:1px 6px;border-radius:6px;background:var(--extension-soft);color:var(--extension-muted);font-size:12px;line-height:16px;white-space:nowrap}
 [data-paimind-extension-badge] svg{width:12px;height:12px}
 [data-paimind-extension-badge][data-state='active']{color:var(--dsw-alias-state-success-primary,#238c55);background:color-mix(in srgb,currentColor 10%,transparent)}
 [data-paimind-extension-badge][data-state='failed'],[data-paimind-extension-badge][data-state='unavailable']{color:var(--dsw-alias-state-error-primary,#d04444);background:color-mix(in srgb,currentColor 10%,transparent)}
@@ -192,10 +204,10 @@ const STYLE = `
 [data-paimind-extension-details]{padding:12px 13px 13px;border-top:1px solid var(--extension-line);background:color-mix(in srgb,var(--extension-soft) 72%,transparent)}
 [data-paimind-extension-details] dl{display:grid;grid-template-columns:124px minmax(0,1fr);gap:7px 12px;margin:0}
 [data-paimind-extension-details] div{display:contents}
-[data-paimind-extension-details] dt{color:var(--extension-faint);font-size:11px;line-height:17px}
+[data-paimind-extension-details] dt{color:var(--extension-faint);font-size:12px;line-height:17px}
 [data-paimind-extension-details] dd{min-width:0;margin:0;overflow-wrap:anywhere;color:var(--extension-muted);font-size:12px;line-height:17px}
-[data-paimind-extension-details] code{color:var(--extension-ink);font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,monospace);font-size:11px}
-[data-paimind-extension-technical-note]{margin:10px 0 0;padding-top:9px;border-top:1px solid var(--extension-line);color:var(--extension-faint);font-size:10px;line-height:16px}
+[data-paimind-extension-details] code{color:var(--extension-ink);font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,monospace);font-size:12px}
+[data-paimind-extension-technical-note]{margin:10px 0 0;padding-top:9px;border-top:1px solid var(--extension-line);color:var(--extension-faint);font-size:12px;line-height:16px}
 [data-paimind-extension-status]{display:grid;justify-items:center;gap:6px;padding:34px 16px;color:var(--extension-muted);font-size:13px;line-height:20px;text-align:center}
 [data-paimind-extension-status] h3,[data-paimind-extension-status] p{margin:0}
 [data-paimind-extension-status] h3{color:var(--extension-ink);font-size:14px;line-height:20px}
@@ -205,11 +217,11 @@ const STYLE = `
 [data-paimind-extension-skeletons]{display:grid;gap:8px;width:100%;margin-top:4px}
 [data-paimind-extension-skeleton]{height:78px;border:1px solid var(--extension-line);border-radius:12px;background:linear-gradient(100deg,var(--extension-soft) 20%,color-mix(in srgb,var(--extension-soft) 38%,var(--extension-surface)) 45%,var(--extension-soft) 70%);background-size:220% 100%}
 [data-paimind-extension-boundary]{margin:24px;padding:18px;border:1px solid var(--paimind-line,var(--dsw-alias-border-l1,rgba(110,128,154,.16)));border-radius:12px;color:var(--paimind-muted,var(--dsw-alias-label-secondary,#65718a));background:var(--paimind-glass,var(--dsw-alias-bg-layer-1,rgba(128,128,128,.05)));font-size:13px;line-height:20px}
-@media(prefers-reduced-motion:no-preference){[data-paimind-extension-card-meta]>svg{transition:transform 160ms ease}[data-paimind-extension-skeleton]{animation:paimind-extension-loading 1.4s ease-in-out infinite}}
+[data-paimind-extension-card-meta]>svg{transition:transform var(--paimind-motion-fast) ease}[data-paimind-extension-skeleton]{animation:paimind-extension-loading var(--paimind-motion-loop) ease-in-out var(--paimind-motion-iterations)}
 @keyframes paimind-extension-loading{to{background-position:-220% 0}}
 @media(max-width:760px){[data-paimind-feature-pack-grid]{grid-template-columns:1fr}}
-@media(max-width:560px){[data-paimind-extension-center]{position:fixed;z-index:4;inset:72px 24px 24px;min-height:0;padding:16px;overflow:auto;border-radius:16px;background:var(--extension-canvas);box-shadow:var(--dsw-shadow-lv3,0 18px 60px rgba(0,0,0,.18))}[data-paimind-extension-header] h2{font-size:19px;line-height:26px}[data-paimind-extension-summary] div{padding:8px}[data-paimind-extension-summary] strong{font-size:14px}[data-paimind-extension-summary] span{font-size:10px}[data-paimind-extension-card-summary]{grid-template-columns:minmax(0,1fr);gap:8px}[data-paimind-extension-card-meta]{justify-content:flex-start;min-width:0}[data-paimind-extension-location]{grid-column:1}[data-paimind-extension-details] dl{grid-template-columns:minmax(0,1fr);gap:2px 0}[data-paimind-extension-details] dd{margin-bottom:7px}}
-[data-paimind-extension-center]{display:grid;align-content:start;gap:18px;min-height:720px;padding:28px 30px}
+@media(max-width:560px){[data-paimind-extension-center]{position:fixed;z-index:4;inset:72px 24px 24px;min-height:0;padding:16px;overflow:auto;border-radius:16px;background:var(--extension-canvas);box-shadow:var(--dsw-shadow-lv3,0 18px 60px rgba(0,0,0,.18))}[data-paimind-extension-header] h2{font-size:19px;line-height:26px}[data-paimind-extension-summary] div{padding:8px}[data-paimind-extension-summary] strong{font-size:14px}[data-paimind-extension-summary] span{font-size:12px}[data-paimind-extension-card-summary]{grid-template-columns:minmax(0,1fr);gap:8px}[data-paimind-extension-card-meta]{justify-content:flex-start;min-width:0}[data-paimind-extension-location]{grid-column:1}[data-paimind-extension-details] dl{grid-template-columns:minmax(0,1fr);gap:2px 0}[data-paimind-extension-details] dd{margin-bottom:7px}}
+[data-paimind-extension-center]{display:grid;align-content:start;gap:18px;min-height:0;padding:28px 30px}
 [data-paimind-extension-header]{margin:0}
 [data-paimind-extension-header] h2{font-size:24px;line-height:32px}
 [data-paimind-pack-toolbar]{display:grid;grid-template-columns:minmax(240px,560px) auto;align-items:center;gap:18px}
@@ -219,7 +231,7 @@ const STYLE = `
 [data-paimind-pack-filter][aria-pressed='true']{color:var(--extension-accent);font-weight:650}
 [data-paimind-pack-filter][aria-pressed='true']::after{content:'';position:absolute;right:0;bottom:-1px;left:0;height:2px;border-radius:2px;background:var(--extension-accent)}
 [data-paimind-feature-pack-grid]{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-[data-paimind-feature-pack]{position:relative;display:grid;gap:14px;min-height:142px;padding:0;border-radius:16px;background:var(--extension-surface);transition:border-color 160ms ease,box-shadow 160ms ease}
+[data-paimind-feature-pack]{position:relative;display:grid;gap:14px;min-height:142px;padding:0;border-radius:16px;background:var(--extension-surface);transition:border-color var(--paimind-motion-fast) ease,box-shadow var(--paimind-motion-fast) ease}
 [data-paimind-feature-pack]:hover{border-color:color-mix(in srgb,var(--extension-accent) 28%,var(--extension-line));box-shadow:0 10px 30px rgba(37,58,92,.07)}
 [data-paimind-feature-pack][data-enabled='false']{opacity:.72;background:var(--extension-soft)}
 [data-paimind-feature-pack-open]{display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px;width:100%;padding:18px 70px 12px 18px;border:0;color:inherit;background:transparent;font:inherit;text-align:left;cursor:pointer}
@@ -228,7 +240,7 @@ const STYLE = `
 [data-paimind-feature-pack-copy] h4{font-size:15px;line-height:22px}
 [data-paimind-feature-pack-copy] p{display:-webkit-box;margin-top:4px;overflow:hidden;font-size:12px;line-height:18px;-webkit-box-orient:vertical;-webkit-line-clamp:2}
 [data-paimind-feature-pack]>[data-paimind-feature-switch]{position:absolute;top:22px;right:18px}
-[data-paimind-feature-pack-meta]{align-items:center;padding:0 18px 16px;font-size:11px}
+[data-paimind-feature-pack-meta]{align-items:center;padding:0 18px 16px;font-size:12px}
 [data-paimind-pack-state]{display:inline-flex;align-items:center;gap:5px}
 [data-paimind-pack-state]::before{content:'';width:6px;height:6px;border-radius:50%;background:#2aa66d}
 [data-paimind-pack-state][data-state='attention']::before{background:#d38b25}
@@ -244,12 +256,12 @@ const STYLE = `
 [data-paimind-pack-extensions]{overflow:hidden;border:1px solid var(--extension-line);border-radius:16px;background:var(--extension-surface)}
 [data-paimind-pack-extensions-header]{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--extension-line)}
 [data-paimind-pack-extensions-header] h4{margin:0;font-size:13px;line-height:20px}
-[data-paimind-pack-extensions-header] span{color:var(--extension-faint);font-size:11px}
+[data-paimind-pack-extensions-header] span{color:var(--extension-faint);font-size:12px}
 [data-paimind-pack-extension-row]{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:18px;align-items:center;min-height:66px;padding:11px 16px;border-bottom:1px solid var(--extension-line)}
 [data-paimind-pack-extension-row]:last-child{border-bottom:0}
 [data-paimind-pack-extension-row] strong{display:block;font-size:13px;line-height:19px}
-[data-paimind-pack-extension-row] code{display:block;margin-top:2px;color:var(--extension-faint);font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,monospace);font-size:10px;line-height:15px}
-[data-paimind-pack-extension-row] [data-paimind-extension-badge]{font-size:10px}
+[data-paimind-pack-extension-row] code{display:block;margin-top:2px;color:var(--extension-faint);font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,monospace);font-size:12px;line-height:15px}
+[data-paimind-pack-extension-row] [data-paimind-extension-badge]{font-size:12px}
 @media(max-width:920px){[data-paimind-pack-toolbar]{grid-template-columns:1fr}[data-paimind-pack-filters]{justify-content:flex-start;overflow-x:auto}[data-paimind-feature-pack-grid]{grid-template-columns:1fr}}
 @media(max-width:560px){[data-paimind-extension-center]{position:static;inset:auto;min-height:100%;padding:18px;border-radius:0;box-shadow:none}[data-paimind-pack-detail-header]{grid-template-columns:44px minmax(0,1fr)}[data-paimind-pack-detail-header]>[data-paimind-feature-switch]{grid-column:1/-1}[data-paimind-pack-extension-row]{grid-template-columns:minmax(0,1fr) auto}[data-paimind-pack-extension-row]>[data-paimind-feature-switch]{grid-column:1/-1}}
 `
@@ -258,8 +270,8 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = STYLE_ID
-  style.textContent = STYLE
+  style.dataset.paimindPlugin = STYLE_ID; markHarnessClientStyle(style, STYLE_ID)
+  style.textContent = `${PAIMIND_UI_FOUNDATION_CSS}\n${STYLE}`
   document.head.append(style)
   return () => { style.remove() }
 }
@@ -346,6 +358,7 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
   const [filter, setFilter] = useState<PackFilter>('all')
   const [selectedPackId, setSelectedPackId] = useState<string | null>(null)
   const [request, setRequest] = useState(0)
+  const [featureRequest, setFeatureRequest] = useState(0)
   const [inventory, setInventory] = useState<InventoryState>({ status: 'loading' })
   const [featurePacks, setFeaturePacks] = useState<FeaturePackState>({ status: 'loading' })
   const [pendingToggle, setPendingToggle] = useState<string | null>(null)
@@ -376,7 +389,7 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
       () => { if (current) setFeaturePacks({ status: 'error' }) },
     )
     return () => { current = false }
-  }, [props.describeFeaturePacks])
+  }, [props.describeFeaturePacks, featureRequest])
 
   const normalizedQuery = query.trim().toLocaleLowerCase(locale)
   const extensionByPackageName = useMemo(() => new Map(extensions.map(extension => [
@@ -472,7 +485,7 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
     return { state: 'enabled', label: zh ? '运行中' : 'Running' }
   }
 
-  return <section data-paimind-extension-center aria-label={zh ? '扩展中心' : 'Extension Center'}>
+  return <section data-paimind-ui-scope="extension-center" data-paimind-extension-center aria-label={zh ? '扩展中心' : 'Extension Center'}>
     <header data-paimind-extension-header>
       <h2>{zh ? '扩展中心' : 'Extension Center'}</h2>
     </header>
@@ -488,10 +501,10 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
         </nav>
       </div>
       {featurePacks.status === 'loading' && <div data-paimind-extension-status aria-busy="true">{zh ? '正在读取功能包状态…' : 'Reading Feature Pack state…'}</div>}
-      {featurePacks.status === 'error' && <div data-paimind-extension-status role="alert">{zh ? '暂时无法读取功能包状态。' : 'Feature Pack state is temporarily unavailable.'}</div>}
+      {featurePacks.status === 'error' && <div data-paimind-extension-status role="alert">{zh ? '暂时无法读取功能包状态。' : 'Feature Pack state is temporarily unavailable.'}<button type="button" data-paimind-ui-button onClick={() => { setRequest(value => value + 1); setFeatureRequest(value => value + 1) }}>{zh ? '重试' : 'Retry'}</button></div>}
       {featurePacks.status === 'unavailable' && <div data-paimind-extension-status role="note">{zh ? '当前不可管理功能包。' : 'Feature Packs are unavailable.'}</div>}
       {inventory.status === 'loading' && <div data-paimind-extension-status aria-busy="true" aria-live="polite"><PaimindRefreshIcon aria-hidden="true" /><p>{zh ? '正在同步扩展状态…' : 'Syncing extension status…'}</p></div>}
-      {inventory.status === 'error' && <div data-paimind-extension-status><PaimindWarningIcon aria-hidden="true" /><p role="alert">{zh ? '扩展状态暂时不可用。' : 'Extension status is temporarily unavailable.'}</p><button type="button" onClick={() => { setRequest(value => value + 1) }}><PaimindRefreshIcon aria-hidden="true" />{zh ? '重试' : 'Retry'}</button></div>}
+      {inventory.status === 'error' && <div data-paimind-extension-status><PaimindWarningIcon aria-hidden="true" /><p role="alert">{zh ? '扩展状态暂时不可用。' : 'Extension status is temporarily unavailable.'}</p><button type="button" onClick={() => { setRequest(value => value + 1); setFeatureRequest(value => value + 1) }}><PaimindRefreshIcon aria-hidden="true" />{zh ? '重试' : 'Retry'}</button></div>}
       {featurePacks.status === 'ready' && visiblePacks.length === 0 && <div data-paimind-pack-empty>{zh ? '没有匹配的功能包。' : 'No matching Feature Packs.'}</div>}
       {featurePacks.status === 'ready' && visiblePacks.length > 0 && <div data-paimind-feature-pack-grid>{visiblePacks.map(pack => {
         const desiredEnabled = pack.desiredEnabled ?? pack.enabled
@@ -507,7 +520,7 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
             <span data-paimind-feature-pack-copy><h4>{zh ? pack.nameZh : pack.nameEn}</h4><p>{zh ? pack.descriptionZh : pack.descriptionEn}</p></span>
           </button>
           <button
-            type="button" role="switch" data-paimind-feature-switch
+            type="button" role="switch" data-paimind-ui-switch data-paimind-feature-switch
             aria-label={`${zh ? pack.nameZh : pack.nameEn} · ${pack.failure === undefined ? (desiredEnabled ? (zh ? '已启用' : 'Enabled') : (zh ? '已关闭' : 'Disabled')) : (zh ? '启用失败' : 'Failed to enable')}`}
             aria-checked={desiredEnabled}
             disabled={!pack.installed || !featurePacks.view.writable || pendingToggle !== null}
@@ -525,7 +538,7 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
         <span data-paimind-feature-pack-icon><FeaturePackIcon id={selectedPack.id} /></span>
         <div><h3>{zh ? selectedPack.nameZh : selectedPack.nameEn}</h3><p>{zh ? selectedPack.descriptionZh : selectedPack.descriptionEn}</p></div>
         <button
-          type="button" role="switch" data-paimind-feature-switch
+          type="button" role="switch" data-paimind-ui-switch data-paimind-feature-switch
           aria-label={`${zh ? selectedPack.nameZh : selectedPack.nameEn} · ${(selectedPack.desiredEnabled ?? selectedPack.enabled) ? (zh ? '已启用' : 'Enabled') : (zh ? '已关闭' : 'Disabled')}`}
           aria-checked={selectedPack.desiredEnabled ?? selectedPack.enabled}
           disabled={!selectedPack.installed || featurePackView?.writable !== true || pendingToggle !== null}
@@ -541,10 +554,10 @@ export function ExtensionCenterSection(props: ExtensionCenterProps): React.JSX.E
           const capability = selectedPack.capabilities.find(item => item.packageNames.includes(packageName))
           const TechnicalIcon = technicalState === 'active' ? PaimindCheckIcon : ATTENTION_STATES.has(technicalState) ? PaimindWarningIcon : null
           return <div key={packageName} data-paimind-pack-extension-row>
-            <div><strong>{descriptor === undefined ? packageName.replace('@hansen/', '') : (zh ? descriptor.nameZh : descriptor.nameEn)}</strong><code>{packageName}</code></div>
+            <div><strong>{descriptor === undefined ? (SUPPORT_PACKAGE_NAMES[packageName]?.[zh ? 0 : 1] ?? packageName.replace('@hansen/', '')) : (zh ? descriptor.nameZh : descriptor.nameEn)}</strong><details data-paimind-extension-technical><summary>{zh ? '技术信息' : 'Technical details'}</summary><code>{packageName}</code></details></div>
             <span data-paimind-extension-badge data-state={technicalState}>{TechnicalIcon !== null && <TechnicalIcon aria-hidden="true" />}{zh ? TECHNICAL_COPY[technicalState].zh : TECHNICAL_COPY[technicalState].en}</span>
             {capability !== undefined && <button
-              type="button" role="switch" data-paimind-feature-switch
+              type="button" role="switch" data-paimind-ui-switch data-paimind-feature-switch
               aria-label={`${zh ? capability.nameZh : capability.nameEn} · ${capability.failure === undefined ? ((capability.desiredEnabled ?? capability.enabled) ? (zh ? '已启用' : 'Enabled') : (zh ? '已关闭' : 'Disabled')) : (zh ? '启用失败' : 'Failed to enable')}`}
               aria-checked={capability.desiredEnabled ?? capability.enabled}
               disabled={!selectedPack.enabled || selectedPack.failure !== undefined || !capability.installed || featurePackView?.writable !== true || pendingToggle !== null}

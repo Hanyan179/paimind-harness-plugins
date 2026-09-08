@@ -4,6 +4,7 @@ const skillName = z.string().regex(/^[a-z0-9][a-z0-9-]*$/)
 const digest = z.string().regex(/^sha256:[a-f0-9]{64}$/)
 const metadata = {
   name: skillName,
+  displayName: z.string().max(200).optional(),
   description: z.string(),
   whenToUse: z.string().optional(),
 } as const
@@ -58,7 +59,8 @@ const removal = z.object({
   skillId: skillName, removedAt: z.number().nonnegative(), recoverable: z.boolean(),
 }).readonly()
 const catalogItem = z.object({
-  id: skillName, name: skillName, description: z.string(), version: z.string(),
+  id: skillName, name: skillName, description: z.string(), displayNameZh: z.string().optional(), version: z.string(),
+  category: z.enum(['general', 'research', 'data', 'content', 'product', 'engineering', 'agent-tools']).optional(), tags: z.array(z.string()).readonly().optional(),
   source: z.string(), license: z.string(), digest,
 }).readonly()
 const skillNameList = z.array(skillName).max(10_000).readonly()

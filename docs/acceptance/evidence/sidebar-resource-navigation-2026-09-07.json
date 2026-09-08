@@ -1,0 +1,115 @@
+{
+  "date": "2026-09-07",
+  "url": "http://127.0.0.1:3080/",
+  "branch": "codex/mcp-center-feishu",
+  "baselineCommit": "d7078f53b75427f0344105bebccd4605c51e742f",
+  "artifactDirectory": "/Users/hansen/.codex/visualizations/2026/09/07/01a079c7-204f-7d50-8b82-a65499caeda5/sidebar-navigation",
+  "screenshots": [
+    "before.png",
+    "01-compact.png",
+    "02-library.png",
+    "03-narrow.png",
+    "04-final-library.png"
+  ],
+  "tests": {
+    "files": 10,
+    "passed": 154,
+    "newNavigationTests": 7,
+    "finalNavigationRerunPassed": 7
+  },
+  "build": "passed",
+  "typecheck": "passed",
+  "packageGates": "passed",
+  "composition": "passed",
+  "browser": {
+    "sourcePages": [
+      "agent-center",
+      "skill-center",
+      "mcp-center",
+      "workspace-blueprints"
+    ],
+    "sourceCount": 4,
+    "finalShortcuts": [
+      "agent-center",
+      "skill-center"
+    ],
+    "finalFooterHeight": 156,
+    "notificationHistoryCount": 46,
+    "notificationUnreadCount": 0,
+    "settings": "opened native dialog",
+    "search": "template entry filtered and opened",
+    "pinReplacement": "skill -> connection -> skill",
+    "reloadPersistence": "passed",
+    "escapeFocusReturn": "library trigger",
+    "viewportRestored": {
+      "width": 1629,
+      "height": 1225
+    },
+    "narrow": {
+      "width": 900,
+      "height": 640,
+      "popover": {
+        "x": 57.5,
+        "y": 32.625,
+        "width": 340,
+        "height": 519.375
+      }
+    },
+    "short": {
+      "width": 900,
+      "height": 480,
+      "popover": {
+        "x": 57.5,
+        "y": 12,
+        "width": 340,
+        "height": 380
+      },
+      "contentHeight": 517
+    },
+    "currentPagePreservation": "Skill and Agent centers stay open while browsing or dismissing the library"
+  },
+  "scope": {
+    "fullSuiteRerun": false,
+    "businessDataChanged": false,
+    "upstreamDelta": false,
+    "released": false
+  },
+  "settingsLayoutRegression": {
+    "cause": "The native Settings dialog is nested under the footer Settings container; a descendant button rule forced every button to 36px.",
+    "fix": "Compact only the button directly containing the native settings.trigger slot.",
+    "redTest": "Expected 180px, received 36px",
+    "targetedVerification": {
+      "files": 4,
+      "passed": 45,
+      "build": "passed",
+      "composition": "passed",
+      "packageGates": "passed"
+    },
+    "browser": {
+      "settingsTriggerWidth": 36,
+      "nativeSettingsTabWidth": 164,
+      "openConfigurationWidth": 94,
+      "languageWidth": 82,
+      "pages": [
+        "General Settings",
+        "Extension Center"
+      ],
+      "narrowViewport": {
+        "width": 900,
+        "height": 640
+      },
+      "restoredViewport": {
+        "width": 1629,
+        "height": 1225
+      },
+      "settingValuesChanged": false
+    },
+    "evidenceDirectory": "settings-layout-fix",
+    "screenshots": [
+      "before.png",
+      "after-general.png",
+      "after-extensions.png",
+      "after-narrow.png"
+    ]
+  }
+}

@@ -106,17 +106,17 @@ function fixture(options: { readonly includeWorkflow?: boolean } = {}) {
 
 function renderOverlay(f: ReturnType<typeof fixture>): void {
   render(<><SchedulerTrigger wide controller={f.controller} locale={locale()} /><SchedulerOverlay controller={f.controller} locale={locale()} /></>)
-  fireEvent.click(screen.getByRole('button', { name: 'Open Platform Scheduler' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Open Scheduled tasks' }))
 }
 
 describe('conversational Scheduled Tasks client', () => {
   it('creates one native setup conversation and leaves the exact starter prompt editable', async () => {
     const f = fixture()
     renderOverlay(f)
-    expect(await screen.findByRole('dialog', { name: 'Platform Scheduler' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Scheduled tasks' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'New task' }))
     expect(screen.getByRole('radiogroup', { name: 'Task type' })).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'Smart task' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Smart task' })).toBeChecked()
     expect(screen.getByRole('radio', { name: 'Workflow' })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Message task' })).toBeInTheDocument()
     expect(screen.queryByRole('radio', { name: 'Create with AI' })).toBeNull()
@@ -143,10 +143,10 @@ describe('conversational Scheduled Tasks client', () => {
     expect(screen.queryByText('Weekly project brief')).toBeNull()
     expect(screen.getByText('Daily competitor watch')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: 'All' }))
-    fireEvent.change(screen.getByLabelText('Search platform scheduled tasks'), { target: { value: 'project' } })
+    fireEvent.change(screen.getByLabelText('Search scheduled tasks'), { target: { value: 'project' } })
     expect(screen.getByText('Weekly project brief')).toBeInTheDocument()
     expect(screen.queryByText('Daily competitor watch')).toBeNull()
-    fireEvent.change(screen.getByLabelText('Search platform scheduled tasks'), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Search scheduled tasks'), { target: { value: '' } })
     fireEvent.click(screen.getByRole('tab', { name: 'Archived' }))
     expect(screen.getByText('Archived reminder')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Restore' }))
@@ -191,8 +191,8 @@ describe('conversational Scheduled Tasks client', () => {
     const f = fixture()
     const close = vi.fn()
     render(<SchedulerSettingsEntry controller={f.controller} locale={locale()} close={close} />)
-    expect(await screen.findByRole('heading', { name: 'Platform Scheduler' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Search platform scheduled tasks')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Scheduled tasks' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Search scheduled tasks')).toBeInTheDocument()
     expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['All', 'Enabled', 'Paused', 'Archived'])
     expect(screen.queryByRole('tab', { name: 'Run records' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'New task' }))

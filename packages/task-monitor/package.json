@@ -44,6 +44,7 @@
     }
   },
   "dependencies": {
+    "@hansen/ui-foundation": "workspace:^",
     "@hansen/artifacts": "workspace:^",
     "@hansen/contracts": "workspace:^",
     "@hansen/harness-compat": "workspace:^",
@@ -52,13 +53,17 @@
   },
   "peerDependencies": {
     "react": ">=18.0.0 <20.0.0",
-    "react-dom": ">=18.0.0 <20.0.0"
+    "react-dom": ">=18.0.0 <20.0.0",
+    "@hansen/agent-builder": "workspace:^",
+    "@hansen/mcp-center": "workspace:^"
   },
   "devDependencies": {
     "@hansen/testkit": "workspace:^",
     "@testing-library/react": "^16.3.2",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "@hansen/agent-builder": "workspace:^",
+    "@hansen/mcp-center": "workspace:^"
   },
   "hansenBuild": {
     "node": [
@@ -69,5 +74,13 @@
   },
   "scripts": {
     "typecheck": "tsc -b --pretty false"
+  },
+  "peerDependenciesMeta": {
+    "@hansen/agent-builder": {
+      "optional": true
+    },
+    "@hansen/mcp-center": {
+      "optional": true
+    }
   }
 }

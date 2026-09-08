@@ -1,3 +1,4 @@
+import { PAIMIND_UI_FOUNDATION_CSS, handlePaimindTabKey } from '@hansen/ui-foundation'
 import {
   Component,
   useEffect,
@@ -18,6 +19,7 @@ import {
   type PaimindScheduleUpdateInput,
 } from '@hansen/contracts'
 import {
+  markHarnessClientStyle,
   contributePaimindExtension,
   type HarnessRemoteMountService,
   type HarnessRemoteResult,
@@ -330,10 +332,12 @@ export const SCHEDULE_STARTER_PROMPT = '我们一起来设置一个已安排任�
 
 const STYLE_ID = '@hansen/platform-scheduler'
 const STYLE = `
+[data-paimind-scheduler-task-type]{display:flex;align-items:center;gap:8px}
+[data-paimind-scheduler-task-type] input{accent-color:var(--paimind-ui-accent)}
 [data-paimind-scheduler-trigger]{width:calc(100% + 8px);min-height:36px;margin:4px -4px;padding:7px 10px;display:flex;align-items:center;gap:9px;border:0;border-radius:14px;color:var(--dsw-alias-label-primary,#172033);background:transparent;font:inherit;font-size:14px;cursor:pointer}
 [data-paimind-scheduler-trigger]:hover,[data-paimind-scheduler-trigger]:focus-visible{background:var(--dsw-alias-interactive-bg-hover,rgba(80,100,140,.1))}
 [data-paimind-scheduler-trigger][data-wide='false']{width:38px;height:38px;margin:7px 0;padding:0;justify-content:center;border-radius:50%}
-[data-paimind-scheduler-compact-label]{font-size:11px;font-weight:750;letter-spacing:-.04em}
+[data-paimind-scheduler-compact-label]{font-size:12px;font-weight:750;letter-spacing:-.04em}
 [data-paimind-scheduler-settings]{display:grid;gap:18px;min-width:0;padding:24px;color:var(--dsw-alias-label-primary,#172033);container-type:inline-size}
 [data-paimind-scheduler-settings-header]{display:grid;gap:4px}
 [data-paimind-scheduler-settings-header] h2{margin:0;font-size:22px;line-height:30px}
@@ -343,7 +347,7 @@ const STYLE = `
 [data-paimind-scheduler-overview]>div{padding:13px 15px;border-right:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15))}
 [data-paimind-scheduler-overview]>div:last-child{border-right:0}
 [data-paimind-scheduler-overview] strong{display:block;font-size:18px;line-height:24px;font-variant-numeric:tabular-nums}
-[data-paimind-scheduler-overview] span{display:block;margin-top:2px;color:var(--dsw-alias-label-tertiary,#78849a);font-size:11px;line-height:16px}
+[data-paimind-scheduler-overview] span{display:block;margin-top:2px;color:var(--dsw-alias-label-tertiary,#78849a);font-size:12px;line-height:16px}
 [data-paimind-scheduler-settings] [data-paimind-scheduler-toolbar]{margin:0}
 [data-paimind-scheduler-overlay]{position:fixed;inset:0;z-index:2147482990;display:flex;justify-content:flex-end}
 [data-paimind-scheduler-mask]{position:absolute;inset:0;border:0;background:rgba(12,20,36,.34);backdrop-filter:blur(3px)}
@@ -366,7 +370,7 @@ const STYLE = `
 [data-paimind-scheduler-type-label]{color:var(--dsw-alias-label-secondary,#56627a);font-size:12px;font-weight:700}
 [data-paimind-scheduler-task-types]{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 [data-paimind-scheduler-task-type]{min-height:44px;padding:9px 10px;border:1px solid var(--dsw-alias-border-l2,rgba(110,125,150,.22));border-radius:13px;color:var(--dsw-alias-label-secondary,#56627a);background:var(--dsw-alias-bg-layer-1,#fff);font:inherit;font-size:13px;font-weight:650;cursor:pointer}
-[data-paimind-scheduler-task-type][aria-checked='true']{border-color:var(--dsw-alias-state-business-primary,#326af5);color:var(--dsw-alias-state-business-primary,#326af5);background:color-mix(in srgb,var(--dsw-alias-state-business-primary,#326af5) 8%,transparent);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary,#326af5) 10%,transparent)}
+[data-paimind-scheduler-task-type][data-checked='true']{border-color:var(--dsw-alias-state-business-primary,#326af5);color:var(--dsw-alias-state-business-primary,#326af5);background:color-mix(in srgb,var(--dsw-alias-state-business-primary,#326af5) 8%,transparent);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary,#326af5) 10%,transparent)}
 [data-paimind-scheduler-capability-empty]{padding:28px 18px;border:1px dashed var(--dsw-alias-border-l2,rgba(110,125,150,.24));border-radius:18px;color:var(--dsw-alias-label-tertiary,#78849a);text-align:center;font-size:13px}
 [data-paimind-scheduler-editor]{display:grid;gap:16px}
 [data-paimind-scheduler-editor-header]{display:flex;align-items:flex-start;gap:12px}
@@ -393,21 +397,31 @@ const STYLE = `
 [data-paimind-scheduler-row-action]:disabled{opacity:.45;cursor:not-allowed}
 [data-paimind-scheduler-status]{margin:0 0 14px;padding:10px 13px;border-radius:14px;color:var(--dsw-alias-label-secondary,#56627a);background:var(--dsw-alias-bg-layer-2,rgba(100,115,140,.08));font-size:12px}
 [data-paimind-scheduler-status][data-error='true']{color:var(--dsw-alias-state-error-primary,#c83c3c)}
-[data-paimind-scheduler-table]{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15));border-radius:20px;background:var(--dsw-alias-bg-layer-1,#fff)}
-[data-paimind-scheduler-table] th{padding:13px 14px;text-align:left;color:var(--dsw-alias-label-tertiary,#78849a);background:var(--dsw-alias-bg-layer-2,rgba(100,115,140,.045));font-size:11px;font-weight:700}
+[data-paimind-scheduler-table]{table-layout:fixed;width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15));border-radius:20px;background:var(--dsw-alias-bg-layer-1,#fff)}
+[data-paimind-scheduler-table] th{padding:13px 14px;text-align:left;color:var(--dsw-alias-label-tertiary,#78849a);background:var(--dsw-alias-bg-layer-2,rgba(100,115,140,.045));font-size:12px;font-weight:700}
 [data-paimind-scheduler-table] td{padding:15px 14px;border-top:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.12));vertical-align:top;font-size:13px}
 [data-paimind-scheduler-table] strong{display:block;line-height:20px}
+[data-paimind-scheduler-table] :is(th,td){overflow-wrap:anywhere}
+[data-paimind-scheduler-table] th:first-child{width:76px}
+[data-paimind-scheduler-table] th:nth-child(2),[data-paimind-scheduler-table] th:nth-child(3){width:116px}
+[data-paimind-scheduler-table] th:nth-child(4){width:82px}
+[data-paimind-scheduler-table] th:last-child{width:100px}
+[data-paimind-scheduler-row-action]{white-space:nowrap}
+[data-paimind-scheduler-run-result]{min-width:0;line-height:1.6}
+[data-paimind-scheduler-run-result] summary{cursor:pointer;color:var(--paimind-accent,#3471f5);font-weight:600}
+[data-paimind-scheduler-run-result] p{margin:6px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+
 [data-paimind-scheduler-task-link]{padding:0;border:0;color:inherit;background:transparent;font:inherit;text-align:left;cursor:pointer}
 [data-paimind-scheduler-task-link]:hover{color:var(--dsw-alias-state-business-primary,#326af5)}
-[data-paimind-scheduler-muted]{margin-top:3px;color:var(--dsw-alias-label-tertiary,#78849a);font-size:11px;line-height:17px}
-[data-paimind-scheduler-badge]{display:inline-flex;align-items:center;min-height:25px;padding:3px 9px;border-radius:999px;color:var(--dsw-alias-label-secondary,#56627a);background:var(--dsw-alias-bg-layer-2,rgba(100,115,140,.09));font-size:11px;font-weight:700}
+[data-paimind-scheduler-muted]{margin-top:3px;color:var(--dsw-alias-label-tertiary,#78849a);font-size:12px;line-height:17px}
+[data-paimind-scheduler-badge]{display:inline-flex;align-items:center;min-height:25px;padding:3px 9px;border-radius:999px;color:var(--dsw-alias-label-secondary,#56627a);background:var(--dsw-alias-bg-layer-2,rgba(100,115,140,.09));font-size:12px;font-weight:700}
 [data-paimind-scheduler-badge]{white-space:nowrap}
 [data-paimind-scheduler-badge][data-status='running']{color:var(--dsw-alias-state-business-primary,#326af5);background:color-mix(in srgb,currentColor 9%,transparent)}
 [data-paimind-scheduler-badge][data-status='succeeded'],[data-paimind-scheduler-badge][data-status='enabled']{color:#16835f;background:color-mix(in srgb,currentColor 9%,transparent)}
 [data-paimind-scheduler-badge][data-status='failed'],[data-paimind-scheduler-badge][data-status='needs_attention']{color:var(--dsw-alias-state-error-primary,#c83c3c);background:color-mix(in srgb,currentColor 9%,transparent)}
 [data-paimind-scheduler-badge][data-status='archived']{color:var(--dsw-alias-label-tertiary,#78849a);background:var(--dsw-alias-bg-layer-2,rgba(100,115,140,.09))}
 [data-paimind-scheduler-capability]{display:grid;gap:3px}
-[data-paimind-scheduler-capability] small{color:var(--dsw-alias-label-tertiary,#78849a);font-size:10px}
+[data-paimind-scheduler-capability] small{color:var(--dsw-alias-label-tertiary,#78849a);font-size:12px}
 [data-paimind-scheduler-row-actions]{display:flex;gap:7px;flex-wrap:wrap}
 [data-paimind-scheduler-task-list]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none}
 [data-paimind-scheduler-task-card]{display:grid;gap:13px;min-width:0;padding:15px;border:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15));border-radius:18px;background:var(--dsw-alias-bg-layer-1,#fff)}
@@ -415,10 +429,10 @@ const STYLE = `
 [data-paimind-scheduler-task-card-header]{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 [data-paimind-scheduler-task-card-header] [data-paimind-scheduler-task-link]{min-width:0}
 [data-paimind-scheduler-task-card-header] strong{display:block;overflow:hidden;font-size:14px;line-height:20px;text-overflow:ellipsis;white-space:nowrap}
-[data-paimind-scheduler-task-card-copy]{display:block;overflow:hidden;margin-top:3px;color:var(--dsw-alias-label-tertiary,#78849a);font-size:11px;line-height:17px;text-overflow:ellipsis;white-space:nowrap}
+[data-paimind-scheduler-task-card-copy]{display:block;overflow:hidden;margin-top:3px;color:var(--dsw-alias-label-tertiary,#78849a);font-size:12px;line-height:17px;text-overflow:ellipsis;white-space:nowrap}
 [data-paimind-scheduler-task-card-meta]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 [data-paimind-scheduler-task-card-meta]>div{display:grid;gap:3px;min-width:0}
-[data-paimind-scheduler-task-card-meta] span{color:var(--dsw-alias-label-tertiary,#78849a);font-size:10px;line-height:15px}
+[data-paimind-scheduler-task-card-meta] span{color:var(--dsw-alias-label-tertiary,#78849a);font-size:12px;line-height:15px}
 [data-paimind-scheduler-task-card-meta] strong{overflow:hidden;font-size:12px;line-height:18px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
 [data-paimind-scheduler-task-card] [data-paimind-scheduler-row-actions]{padding-top:11px;border-top:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.12))}
 [data-paimind-scheduler-empty]{padding:48px 24px;border:1px dashed var(--dsw-alias-border-l2,rgba(110,125,150,.24));border-radius:20px;color:var(--dsw-alias-label-tertiary,#78849a);text-align:center;font-size:13px}
@@ -428,14 +442,14 @@ const STYLE = `
 [data-paimind-scheduler-detail-header] p{margin:4px 0 0;color:var(--dsw-alias-label-tertiary,#78849a);font-size:12px}
 [data-paimind-scheduler-detail-summary]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 [data-paimind-scheduler-detail-summary]>div,[data-paimind-scheduler-instruction]{display:grid;gap:6px;padding:14px;border:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15));border-radius:16px;background:var(--dsw-alias-bg-layer-2,rgba(100,115,140,.045))}
-[data-paimind-scheduler-detail-summary] span,[data-paimind-scheduler-instruction]>span{color:var(--dsw-alias-label-tertiary,#78849a);font-size:11px;font-weight:700}
+[data-paimind-scheduler-detail-summary] span,[data-paimind-scheduler-instruction]>span{color:var(--dsw-alias-label-tertiary,#78849a);font-size:12px;font-weight:700}
 [data-paimind-scheduler-instruction] p{margin:0;white-space:pre-wrap;color:var(--dsw-alias-label-secondary,#56627a);font-size:13px;line-height:20px}
 [data-paimind-scheduler-detail-runs]{display:grid;gap:10px;margin-top:8px}
-@container(max-width:760px){[data-paimind-scheduler-settings] [data-paimind-scheduler-form]{grid-template-columns:1fr}[data-paimind-scheduler-settings] [data-paimind-scheduler-form] [data-wide='true']{grid-column:auto}[data-paimind-scheduler-settings] [data-paimind-scheduler-task-types]{grid-template-columns:repeat(3,minmax(0,1fr))}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] thead{display:none}[data-paimind-scheduler-settings] [data-paimind-scheduler-table],[data-paimind-scheduler-settings] [data-paimind-scheduler-table] tbody,[data-paimind-scheduler-settings] [data-paimind-scheduler-table] tr,[data-paimind-scheduler-settings] [data-paimind-scheduler-table] td{display:block;width:100%;box-sizing:border-box}[data-paimind-scheduler-settings] [data-paimind-scheduler-table]{border:0;background:transparent}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] tr{display:grid;gap:8px;margin-bottom:12px;padding:14px;border:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15));border-radius:16px;background:var(--dsw-alias-bg-layer-1,#fff)}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] td{display:grid;grid-template-columns:88px minmax(0,1fr);gap:10px;align-items:start;padding:0;border:0;line-height:20px}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] td:before{content:attr(data-label);color:var(--dsw-alias-label-tertiary,#78849a);font-size:11px;font-weight:700}[data-paimind-scheduler-settings] [data-paimind-scheduler-row-actions]{margin-top:2px}}
+@container(max-width:760px){[data-paimind-scheduler-settings] [data-paimind-scheduler-form]{grid-template-columns:1fr}[data-paimind-scheduler-settings] [data-paimind-scheduler-form] [data-wide='true']{grid-column:auto}[data-paimind-scheduler-settings] [data-paimind-scheduler-task-types]{grid-template-columns:repeat(3,minmax(0,1fr))}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] thead{display:none}[data-paimind-scheduler-settings] [data-paimind-scheduler-table],[data-paimind-scheduler-settings] [data-paimind-scheduler-table] tbody,[data-paimind-scheduler-settings] [data-paimind-scheduler-table] tr,[data-paimind-scheduler-settings] [data-paimind-scheduler-table] td{display:block;width:100%;box-sizing:border-box}[data-paimind-scheduler-settings] [data-paimind-scheduler-table]{border:0;background:transparent}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] tr{display:grid;gap:8px;margin-bottom:12px;padding:14px;border:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15));border-radius:16px;background:var(--dsw-alias-bg-layer-1,#fff)}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] td{display:grid;grid-template-columns:88px minmax(0,1fr);gap:10px;align-items:start;padding:0;border:0;line-height:20px}[data-paimind-scheduler-settings] [data-paimind-scheduler-table] td:before{content:attr(data-label);color:var(--dsw-alias-label-tertiary,#78849a);font-size:12px;font-weight:700}[data-paimind-scheduler-settings] [data-paimind-scheduler-row-actions]{margin-top:2px}}
 @container(max-width:760px){[data-paimind-scheduler-settings] [data-paimind-scheduler-task-list]{grid-template-columns:1fr}}
-@container(max-width:480px){[data-paimind-scheduler-settings]{gap:14px;padding:16px}[data-paimind-scheduler-settings] [data-paimind-scheduler-toolbar]{flex-direction:column;align-items:stretch}[data-paimind-scheduler-settings] [data-paimind-scheduler-search]{width:100%;min-width:0}[data-paimind-scheduler-settings] [data-paimind-scheduler-primary]{width:100%;margin-left:0;white-space:nowrap}[data-paimind-scheduler-settings] [data-paimind-scheduler-task-types]{grid-template-columns:repeat(2,minmax(0,1fr))}[data-paimind-scheduler-settings] [data-paimind-scheduler-filters]{flex-wrap:wrap}[data-paimind-scheduler-settings] [data-paimind-scheduler-overview]{grid-template-columns:1fr}[data-paimind-scheduler-settings] [data-paimind-scheduler-overview]>div{border-right:0;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15))}[data-paimind-scheduler-settings] [data-paimind-scheduler-overview]>div:last-child{border-bottom:0}[data-paimind-scheduler-settings] [data-paimind-scheduler-detail-header]{flex-direction:column}[data-paimind-scheduler-settings] [data-paimind-scheduler-detail-summary]{grid-template-columns:1fr}}
+@container(max-width:480px){[data-paimind-scheduler-form-actions]{flex-direction:column}[data-paimind-scheduler-form-actions]>button{width:100%;white-space:nowrap}[data-paimind-scheduler-editor-header]{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center}[data-paimind-scheduler-editor-header] h3{line-height:26px}[data-paimind-scheduler-editor-header]>button{white-space:nowrap}[data-paimind-scheduler-editor-header]>[data-paimind-scheduler-primary]{grid-column:1/-1}[data-paimind-scheduler-settings]{gap:14px;padding:16px}[data-paimind-scheduler-settings] [data-paimind-scheduler-toolbar]{flex-direction:column;align-items:stretch}[data-paimind-scheduler-settings] [data-paimind-scheduler-search]{width:100%;min-width:0}[data-paimind-scheduler-settings] [data-paimind-scheduler-primary]{width:100%;margin-left:0;white-space:nowrap}[data-paimind-scheduler-settings] [data-paimind-scheduler-task-types]{grid-template-columns:repeat(2,minmax(0,1fr))}[data-paimind-scheduler-settings] [data-paimind-scheduler-filters]{flex-wrap:wrap}[data-paimind-scheduler-settings] [data-paimind-scheduler-overview]{grid-template-columns:1fr}[data-paimind-scheduler-settings] [data-paimind-scheduler-overview]>div{border-right:0;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15))}[data-paimind-scheduler-settings] [data-paimind-scheduler-overview]>div:last-child{border-bottom:0}[data-paimind-scheduler-settings] [data-paimind-scheduler-detail-header]{flex-direction:column}[data-paimind-scheduler-settings] [data-paimind-scheduler-detail-summary]{grid-template-columns:1fr}}
 @media(max-width:760px){[data-paimind-scheduler-panel]{padding:18px}[data-paimind-scheduler-task-types]{grid-template-columns:repeat(3,minmax(0,1fr))}[data-paimind-scheduler-form]{grid-template-columns:1fr}[data-paimind-scheduler-table] thead{display:none}[data-paimind-scheduler-table],[data-paimind-scheduler-table] tbody,[data-paimind-scheduler-table] tr,[data-paimind-scheduler-table] td{display:block;width:100%;box-sizing:border-box}[data-paimind-scheduler-table] tr{padding:10px 0;border-top:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.12))}[data-paimind-scheduler-table] td{padding:7px 14px;border:0}}
-[data-paimind-scheduler-settings]{align-content:start;gap:18px;min-height:720px;padding:28px 30px}
+[data-paimind-scheduler-settings]{align-content:start;gap:18px;min-height:0;padding:28px 30px}
 [data-paimind-scheduler-settings-header] h2{font-size:24px;line-height:32px}
 [data-paimind-scheduler-toolbar]{display:grid;grid-template-columns:minmax(240px,560px) auto;gap:14px;margin:0}
 [data-paimind-scheduler-search]{position:relative;display:flex;align-items:center}
@@ -451,18 +465,18 @@ const STYLE = `
 [data-paimind-scheduler-group]{display:grid;gap:8px}
 [data-paimind-scheduler-group-header]{display:flex;align-items:center;gap:8px;padding:0 2px}
 [data-paimind-scheduler-group-header] h3{margin:0;font-size:13px;line-height:20px}
-[data-paimind-scheduler-group-header] span{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;color:var(--dsw-alias-label-tertiary,#78849a);background:var(--dsw-alias-bg-layer-2,rgba(100,115,140,.08));font-size:10px}
+[data-paimind-scheduler-group-header] span{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;color:var(--dsw-alias-label-tertiary,#78849a);background:var(--dsw-alias-bg-layer-2,rgba(100,115,140,.08));font-size:12px}
 [data-paimind-scheduler-task-list]{display:block;overflow:hidden;border:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.15));border-radius:16px;background:var(--dsw-alias-bg-layer-1,#fff)}
 [data-paimind-scheduler-task-card]{display:grid;grid-template-columns:82px minmax(220px,1fr) 120px auto;gap:18px;align-items:center;min-height:76px;padding:12px 14px;border:0;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.12));border-radius:0;background:transparent}
 [data-paimind-scheduler-task-card]:last-child{border-bottom:0}
 [data-paimind-scheduler-task-card][data-disabled='true']{opacity:.62;background:var(--dsw-alias-bg-layer-2,rgba(100,115,140,.025))}
 [data-paimind-scheduler-task-time]{display:grid;gap:2px}
 [data-paimind-scheduler-task-time] strong{font-size:14px;line-height:20px;font-variant-numeric:tabular-nums}
-[data-paimind-scheduler-task-time] span{overflow:hidden;color:var(--dsw-alias-label-tertiary,#78849a);font-size:9px;line-height:14px;text-overflow:ellipsis;white-space:nowrap}
+[data-paimind-scheduler-task-time] span{overflow:hidden;color:var(--dsw-alias-label-tertiary,#78849a);font-size:12px;line-height:14px;text-overflow:ellipsis;white-space:nowrap}
 [data-paimind-scheduler-task-link] strong{display:block;overflow:hidden;font-size:13px;line-height:20px;text-overflow:ellipsis;white-space:nowrap}
-[data-paimind-scheduler-task-card-copy]{margin-top:1px;font-size:10px;line-height:16px}
+[data-paimind-scheduler-task-card-copy]{margin-top:1px;font-size:12px;line-height:16px}
 [data-paimind-scheduler-task-result]{display:grid;justify-items:start;gap:4px}
-[data-paimind-scheduler-task-result] small{color:var(--dsw-alias-label-tertiary,#78849a);font-size:9px;white-space:nowrap}
+[data-paimind-scheduler-task-result] small{color:var(--dsw-alias-label-tertiary,#78849a);font-size:12px;white-space:nowrap}
 [data-paimind-scheduler-task-card] [data-paimind-scheduler-row-actions]{flex-wrap:nowrap;justify-content:flex-end;padding:0;border:0}
 [data-paimind-scheduler-icon-action]{display:inline-grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid var(--dsw-alias-border-l1,rgba(110,125,150,.16));border-radius:10px;color:var(--dsw-alias-label-secondary,#56627a);background:transparent;cursor:pointer}
 [data-paimind-scheduler-icon-action]:hover{color:var(--dsw-alias-state-business-primary,#326af5);background:color-mix(in srgb,currentColor 7%,transparent)}
@@ -477,8 +491,8 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = '@hansen/platform-scheduler'
-  style.textContent = STYLE
+  style.dataset.paimindPlugin = '@hansen/platform-scheduler'; markHarnessClientStyle(style, '@hansen/platform-scheduler')
+  style.textContent = `${PAIMIND_UI_FOUNDATION_CSS}\n${STYLE}`
   document.head.append(style)
   return () => { style.remove() }
 }
@@ -568,8 +582,8 @@ export function SchedulerTrigger(props: {
 }): React.JSX.Element {
   const snapshot = useSyncExternalStore(listener => props.controller.subscribe(listener), () => props.controller.getSnapshot())
   const zh = useZh(props.locale)
-  const label = zh ? '平台定时任务' : 'Platform Scheduler'
-  return <button type="button" data-paimind-scheduler-trigger data-wide={props.wide} aria-label={zh ? '打开平台定时任务' : 'Open Platform Scheduler'} title={label} aria-expanded={snapshot.open} onClick={() => { props.controller.toggle() }}>{props.wide ? <><PaimindSchedulerIcon aria-hidden="true" /><span>{label}</span></> : <span data-paimind-scheduler-compact-label>{zh ? '定时' : 'Timer'}</span>}</button>
+  const label = zh ? '定时任务' : 'Scheduled tasks'
+  return <button type="button" data-paimind-scheduler-trigger data-wide={props.wide} aria-label={zh ? '打开定时任务' : 'Open Scheduled tasks'} title={label} aria-expanded={snapshot.open} onClick={() => { props.controller.toggle() }}>{props.wide ? <><PaimindSchedulerIcon aria-hidden="true" /><span>{label}</span></> : <span data-paimind-scheduler-compact-label>{zh ? '定时' : 'Timer'}</span>}</button>
 }
 
 export function SchedulerSettingsEntry(props: {
@@ -582,8 +596,8 @@ export function SchedulerSettingsEntry(props: {
     props.controller.open()
     return () => { props.controller.close() }
   }, [props.controller])
-  return <section data-paimind-scheduler-settings aria-label={zh ? '平台定时任务' : 'Platform Scheduler'}>
-    <header data-paimind-scheduler-settings-header><h2>{zh ? '平台定时任务' : 'Platform Scheduler'}</h2></header>
+  return <section data-paimind-ui-scope="scheduler" data-paimind-scheduler-settings aria-label={zh ? '定时任务' : 'Scheduled tasks'}>
+    <header data-paimind-scheduler-settings-header><h2>{zh ? '定时任务' : 'Scheduled tasks'}</h2></header>
     <SchedulerWorkspace controller={props.controller} zh={zh} {...(props.close === undefined ? {} : { onLeave: props.close })} />
   </section>
 }
@@ -696,7 +710,7 @@ function TaskTable(props: {
   readonly onOpen: (definition: PaimindScheduleDefinition) => void
   readonly onEdit: (definition: PaimindScheduleDefinition) => void
 }): React.JSX.Element {
-  if (props.definitions.length === 0) return <div data-paimind-scheduler-empty>{props.zh ? '没有符合当前条件的平台定时任务。' : 'No platform scheduled tasks match the current filters.'}</div>
+  if (props.definitions.length === 0) return <div data-paimind-scheduler-empty role="status">{props.snapshot.definitions.length === 0 ? (props.zh ? '还没有定时任务。点击“新建任务”，安排需要定期完成的工作。' : 'No scheduled tasks yet. Choose New task to arrange recurring work.') : (props.zh ? '没有符合当前筛选条件的任务。试试其他状态或清空搜索。' : 'No matching tasks. Try another status or clear the search.')}</div>
   const actionById = new Map(props.snapshot.actions.map(action => [action.actionId, action]))
   const groupOrder: readonly ScheduleGroup[] = ['today', 'week', 'upcoming', 'paused', 'archived']
   return <div data-paimind-scheduler-task-groups>{groupOrder.map(group => {
@@ -772,7 +786,7 @@ function TaskDetail(props: {
 
 function RunTable(props: { readonly runs: readonly PaimindScheduleRun[]; readonly controller: SchedulerController; readonly zh: boolean }): React.JSX.Element {
   if (props.runs.length === 0) return <div data-paimind-scheduler-empty>{props.zh ? '暂无运行记录。定时触发或选择“立即运行”后会生成记录。' : 'No run records yet. Scheduled and manual runs both appear here.'}</div>
-  return <table data-paimind-scheduler-table><thead><tr><th>{props.zh ? '触发方式' : 'Trigger'}</th><th>{props.zh ? '触发时间' : 'Triggered at'}</th><th>{props.zh ? '实际开始' : 'Started'}</th><th>{props.zh ? '状态' : 'Status'}</th><th>{props.zh ? '结果说明' : 'Result'}</th><th>{props.zh ? '操作' : 'Action'}</th></tr></thead><tbody>{props.runs.map(run => <tr key={run.runId}><td data-label={props.zh ? '触发方式' : 'Trigger'}>{run.trigger === 'manual' ? (props.zh ? '手动触发' : 'Manual run') : (props.zh ? '定时触发' : 'Scheduled run')}</td><td data-label={props.zh ? '触发时间' : 'Triggered at'}>{new Date(run.scheduledFor).toLocaleString(props.zh ? 'zh-CN' : 'en-US')}</td><td data-label={props.zh ? '实际开始' : 'Started'}>{run.startedAt === undefined ? '—' : new Date(run.startedAt).toLocaleString(props.zh ? 'zh-CN' : 'en-US')}</td><td data-label={props.zh ? '状态' : 'Status'}><span data-paimind-scheduler-badge data-status={run.status}>{runStatus(run.status, props.zh)}{run.status === 'running' && run.progress !== undefined ? ` · ${Math.round(run.progress)}%` : ''}</span></td><td data-label={props.zh ? '结果说明' : 'Result'}>{run.message ?? '—'}</td><td data-label={props.zh ? '操作' : 'Action'}>{run.action === undefined ? '—' : <button type="button" data-paimind-scheduler-row-action onClick={() => { props.controller.openAction(run.action!) }}>{run.action.label}</button>}</td></tr>)}</tbody></table>
+  return <table data-paimind-scheduler-table><thead><tr><th>{props.zh ? '触发方式' : 'Trigger'}</th><th>{props.zh ? '触发时间' : 'Triggered at'}</th><th>{props.zh ? '实际开始' : 'Started'}</th><th>{props.zh ? '状态' : 'Status'}</th><th>{props.zh ? '结果说明' : 'Result'}</th><th>{props.zh ? '操作' : 'Action'}</th></tr></thead><tbody>{props.runs.map(run => <tr key={run.runId}><td data-label={props.zh ? '触发方式' : 'Trigger'}>{run.trigger === 'manual' ? (props.zh ? '手动触发' : 'Manual run') : (props.zh ? '定时触发' : 'Scheduled run')}</td><td data-label={props.zh ? '触发时间' : 'Triggered at'}>{new Date(run.scheduledFor).toLocaleString(props.zh ? 'zh-CN' : 'en-US')}</td><td data-label={props.zh ? '实际开始' : 'Started'}>{run.startedAt === undefined ? '—' : new Date(run.startedAt).toLocaleString(props.zh ? 'zh-CN' : 'en-US')}</td><td data-label={props.zh ? '状态' : 'Status'}><span data-paimind-scheduler-badge data-status={run.status}>{runStatus(run.status, props.zh)}{run.status === 'running' && run.progress !== undefined ? ` · ${Math.round(run.progress)}%` : ''}</span></td><td data-label={props.zh ? '结果说明' : 'Result'}>{run.message === undefined ? '—' : run.message.length <= 180 ? run.message : <details data-paimind-scheduler-run-result><summary>{props.zh ? '查看完整结果' : 'View full result'}</summary><p>{run.message}</p></details>}</td><td data-label={props.zh ? '操作' : 'Action'}>{run.action === undefined ? '—' : <button type="button" data-paimind-scheduler-row-action onClick={() => { props.controller.openAction(run.action!) }}>{run.action.label}</button>}</td></tr>)}</tbody></table>
 }
 
 type NewTaskType = Extract<PaimindScheduleActionCategory, 'ai' | 'workflow' | 'message'>
@@ -795,7 +809,7 @@ function NewTaskEditor(props: {
     <div data-paimind-scheduler-type-section>
       <span data-paimind-scheduler-type-label>{props.zh ? '工作类型' : 'Task type'}</span>
       <div role="radiogroup" aria-label={props.zh ? '工作类型' : 'Task type'} data-paimind-scheduler-task-types>
-        {NEW_TASK_TYPES.map(type => <button key={type} type="button" role="radio" aria-checked={taskType === type} data-paimind-scheduler-task-type onClick={() => { setTaskType(type) }}>{actionTypeLabel(type, props.zh)}</button>)}
+        {NEW_TASK_TYPES.map(type => <label key={type} data-paimind-scheduler-task-type data-checked={taskType === type}><input type="radio" name="paimind-schedule-task-type" checked={taskType === type} onChange={() => { setTaskType(type) }} />{actionTypeLabel(type, props.zh)}</label>)}
       </div>
     </div>
     {available.length === 0
@@ -832,8 +846,8 @@ function SchedulerWorkspace(props: {
     {(snapshot.loading || snapshot.error !== null || snapshot.notice !== null) && <div role="status" data-paimind-scheduler-status data-error={snapshot.error !== null}>{snapshot.error ?? (snapshot.loading ? (props.zh ? '正在刷新…' : 'Refreshing…') : noticeLabel(snapshot.notice!, props.zh))}</div>}
     {creating && <NewTaskEditor controller={props.controller} actions={snapshot.actions} saving={snapshot.saving} zh={props.zh} onCancel={() => { setCreating(false) }} onSave={saveCreate} {...(props.onLeave === undefined ? {} : { onLeave: props.onLeave })} />}
     {editing !== null && <section data-paimind-scheduler-editor><header data-paimind-scheduler-editor-header><button type="button" data-paimind-scheduler-secondary onClick={() => { setEditing(null) }}>{props.zh ? '返回' : 'Back'}</button><h3>{props.zh ? '编辑任务' : 'Edit task'}</h3></header><ScheduleForm key={editing.version} initial={editing} actions={snapshot.actions} saving={snapshot.saving} zh={props.zh} onCancel={() => { setEditing(null) }} onSave={saveEdit} /></section>}
-    {!creating && editing === null && selected === undefined && <><div data-paimind-scheduler-toolbar><label data-paimind-scheduler-search><PaimindSearchIcon aria-hidden="true" /><input aria-label={props.zh ? '搜索平台定时任务' : 'Search platform scheduled tasks'} placeholder={props.zh ? '搜索任务名称' : 'Search task names'} value={query} onChange={event => { setQuery(event.target.value) }} /></label><button type="button" data-paimind-scheduler-primary disabled={snapshot.saving} onClick={() => { props.controller.clearFeedback(); setCreating(true) }}><PaimindPlusIcon aria-hidden="true" />{props.zh ? '新建任务' : 'New task'}</button></div>
-    <div role="tablist" aria-label={props.zh ? '任务状态筛选' : 'Task status filters'} data-paimind-scheduler-filters>{(['all', 'enabled', 'paused', 'archived'] as const).map(value => <button key={value} role="tab" type="button" aria-selected={filter === value} onClick={() => { setFilter(value) }}>{value === 'all' ? (props.zh ? '全部' : 'All') : value === 'enabled' ? (props.zh ? '已启用' : 'Enabled') : value === 'paused' ? (props.zh ? '已暂停' : 'Paused') : (props.zh ? '已归档' : 'Archived')}</button>)}</div>
+    {!creating && editing === null && selected === undefined && <><div data-paimind-scheduler-toolbar><label data-paimind-scheduler-search><PaimindSearchIcon aria-hidden="true" /><input aria-label={props.zh ? '搜索定时任务' : 'Search scheduled tasks'} placeholder={props.zh ? '搜索任务名称' : 'Search task names'} value={query} onChange={event => { setQuery(event.target.value) }} /></label><button type="button" data-paimind-scheduler-primary disabled={snapshot.saving} onClick={() => { props.controller.clearFeedback(); setCreating(true) }}><PaimindPlusIcon aria-hidden="true" />{props.zh ? '新建任务' : 'New task'}</button></div>
+    <div role="tablist" aria-label={props.zh ? '任务状态筛选' : 'Task status filters'} data-paimind-scheduler-filters>{(['all', 'enabled', 'paused', 'archived'] as const).map(value => <button key={value} role="tab" type="button" aria-selected={filter === value} tabIndex={filter === value ? 0 : -1} onKeyDown={handlePaimindTabKey} onClick={() => { setFilter(value) }}>{value === 'all' ? (props.zh ? '全部' : 'All') : value === 'enabled' ? (props.zh ? '已启用' : 'Enabled') : value === 'paused' ? (props.zh ? '已暂停' : 'Paused') : (props.zh ? '已归档' : 'Archived')}</button>)}</div>
     <TaskTable definitions={definitions} snapshot={snapshot} controller={props.controller} zh={props.zh} onOpen={definition => { props.controller.clearFeedback(); setSelectedId(definition.scheduleId) }} onEdit={definition => { props.controller.clearFeedback(); setEditing(definition) }} /></>}
     {!creating && editing === null && selected !== undefined && <TaskDetail definition={selected} snapshot={snapshot} controller={props.controller} zh={props.zh} onBack={() => { setSelectedId(null); setEditing(null) }} onEdit={() => { props.controller.clearFeedback(); setEditing(selected) }} />}
   </div>
@@ -853,9 +867,9 @@ export function SchedulerOverlay(props: {
   }, [snapshot.open, props.controller])
   if (!snapshot.open) return null
   return createPortal(<div data-paimind-scheduler-overlay>
-    <button type="button" data-paimind-scheduler-mask aria-label={zh ? '关闭平台定时任务' : 'Close Platform Scheduler'} onClick={() => { props.controller.close() }} />
-    <section role="dialog" aria-modal="true" aria-label={zh ? '平台定时任务' : 'Platform Scheduler'} data-paimind-scheduler-panel>
-      <header data-paimind-scheduler-header><h2>{zh ? '平台定时任务' : 'Platform Scheduler'}</h2><button type="button" data-paimind-scheduler-close aria-label={zh ? '关闭平台定时任务' : 'Close Platform Scheduler'} onClick={() => { props.controller.close() }}>×</button></header>
+    <button type="button" data-paimind-scheduler-mask aria-label={zh ? '关闭定时任务' : 'Close Scheduled tasks'} onClick={() => { props.controller.close() }} />
+    <section role="dialog" aria-modal="true" aria-label={zh ? '定时任务' : 'Scheduled tasks'} data-paimind-scheduler-panel>
+      <header data-paimind-scheduler-header><h2>{zh ? '定时任务' : 'Scheduled tasks'}</h2><button type="button" data-paimind-scheduler-close aria-label={zh ? '关闭定时任务' : 'Close Scheduled tasks'} onClick={() => { props.controller.close() }}>×</button></header>
       <SchedulerWorkspace controller={props.controller} zh={zh} onLeave={() => { props.controller.close() }} />
     </section>
   </div>, document.body)
@@ -877,7 +891,7 @@ export async function apply(ctx: SchedulerClientContext): Promise<() => Promise<
     controller.activate()
     contributePaimindExtension(remoteCtx.slots, {
       id: 'paimind:platform-scheduler', packageName: '@hansen/platform-scheduler', category: 'automation',
-      nameZh: '平台定时任务', nameEn: 'Platform Scheduler',
+      nameZh: '定时任务', nameEn: 'Scheduled tasks',
       descriptionZh: '直接配置或通过 AI 辅助创建多类型任务，并管理计划和运行结果。',
       descriptionEn: 'Configure multiple task types directly or with AI assistance, then manage schedules and results.',
       surface: 'settings', maturity: 'available', order: 30,
@@ -899,7 +913,7 @@ export async function apply(ctx: SchedulerClientContext): Promise<() => Promise<
     const injectProps = (): { readonly controller: SchedulerController; readonly locale: PaimindLocaleSource } => ({ controller, locale: remoteCtx.locale })
     remoteCtx.slots.inject('settings.section', () => remoteCtx.slots.register({
       name: 'settings.section', id: 'paimind-platform-scheduler', order: 17.5,
-      label: () => remoteCtx.locale.getLocale().active.startsWith('zh') ? '平台定时任务' : 'Platform Scheduler',
+      label: () => remoteCtx.locale.getLocale().active.startsWith('zh') ? '定时任务' : 'Scheduled tasks',
       inject: injectProps,
     }, (slotProps: { readonly controller: SchedulerController; readonly locale: PaimindLocaleSource }) => <SchedulerBoundary><SchedulerSettingsEntry {...slotProps} /></SchedulerBoundary>))
   })

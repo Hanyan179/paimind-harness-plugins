@@ -1,7 +1,9 @@
+import { readPaimindMotion, subscribePaimindMotion } from '@hansen/ui-foundation'
 import { Component, useEffect, useState, useSyncExternalStore, type ErrorInfo, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { ThinkingOrb } from 'thinking-orbs'
 import {
+  markHarnessClientStyle,
   contributePaimindExtension,
   RUNTIME_ORB_STATES, locateRuntimeActivityIconSlots, locateRuntimeSidebarActivitySlots,
   locateRuntimeTurnStatus, runtimePresentation,
@@ -183,7 +185,7 @@ interface VisualPreferences {
 function readPreferences(): VisualPreferences {
   return {
     dark: document.body.hasAttribute('data-ds-dark-theme'),
-    reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
+    reducedMotion: !readPaimindMotion(),
   }
 }
 
@@ -195,7 +197,6 @@ function samePreferences(left: VisualPreferences, right: VisualPreferences): boo
 function useVisualPreferences(): VisualPreferences {
   const [preferences, setPreferences] = useState(readPreferences)
   useEffect(() => {
-    const media = window.matchMedia?.('(prefers-reduced-motion: reduce)')
     const refresh = (): void => {
       setPreferences(current => {
         const next = readPreferences()
@@ -204,10 +205,10 @@ function useVisualPreferences(): VisualPreferences {
     }
     const themeObserver = new MutationObserver(refresh)
     themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] })
-    media?.addEventListener?.('change', refresh)
+    const stopMotion = subscribePaimindMotion(refresh)
     return () => {
       themeObserver.disconnect()
-      media?.removeEventListener?.('change', refresh)
+      stopMotion()
     }
   }, [])
   return preferences
@@ -496,7 +497,7 @@ function installStyle(): () => void {
   const existing = document.head.querySelector(`style[data-paimind-plugin="${STYLE_ID}"]`)
   if (existing !== null) return () => {}
   const style = document.createElement('style')
-  style.dataset.paimindPlugin = STYLE_ID
+  style.dataset.paimindPlugin = STYLE_ID; markHarnessClientStyle(style, STYLE_ID)
   style.textContent = STYLE
   document.head.append(style)
   return () => { style.remove() }
@@ -508,9 +509,9 @@ export function apply(ctx: PaimindClientContext): void {
     id: 'paimind:runtime-orbs',
     packageName: '@hansen/runtime-orbs',
     category: 'experience',
-    nameZh: '运行状态球',
+    nameZh: '动态状态提示',
     nameEn: 'Runtime Orb',
-    descriptionZh: '在 Harness 原生对话中用单一动态球表达真实运行阶段。',
+    descriptionZh: '在对话中显示当前处理阶段，动画效果由你的界面设置控制。',
     descriptionEn: 'Uses one animated orb to express real runtime phases in the native Harness conversation.',
     surface: 'conversation',
     maturity: 'available',

@@ -29,6 +29,7 @@
     }
   },
   "dependencies": {
+    "@hansen/ui-foundation": "workspace:^",
     "@hansen/artifacts": "workspace:^",
     "@hansen/better-sidebar-adapter": "workspace:^",
     "@hansen/contracts": "workspace:^",

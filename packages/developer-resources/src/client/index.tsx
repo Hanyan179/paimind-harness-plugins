@@ -1,3 +1,4 @@
+import { PAIMIND_UI_FOUNDATION_CSS, handlePaimindTabKey } from '@hansen/ui-foundation'
 import {
   Component,
   useEffect,
@@ -9,6 +10,7 @@ import {
 } from 'react'
 import type { PaimindExtensionDescriptor } from '@hansen/contracts'
 import {
+  markHarnessClientStyle,
   contributePaimindExtension,
   type HarnessPluginInventorySnapshot,
   type HarnessSettingsSectionOwnerProps,
@@ -29,7 +31,7 @@ const STYLE_ID = '@hansen/developer-resources'
 const SELF: PaimindExtensionDescriptor = {
   id: 'paimind:developer-resources', packageName: '@hansen/developer-resources', category: 'developer',
   nameZh: '开发者资源', nameEn: 'Developer Resources',
-  descriptionZh: '原生 Plugin Inventory 实时诊断、当前扩展表面目录与随包发布的集成契约参考。',
+  descriptionZh: '原生 Plugin Inventory 实时诊断、当前扩展界面目录与随包发布的集成契约参考。',
   descriptionEn: 'Native Plugin Inventory diagnostics, current extension surfaces, and bundled integration contract reference.',
   surface: 'settings', maturity: 'available', order: 100,
 }
@@ -40,29 +42,29 @@ const STYLE = `
 [data-paimind-developer-header]{display:grid;gap:6px;margin-bottom:14px}
 [data-paimind-developer-header] h2{margin:0;font-size:22px;line-height:30px;font-weight:650}
 [data-paimind-developer-header] p{margin:0;max-width:760px;color:var(--dsw-alias-label-secondary,#626872);font-size:13px;line-height:20px}
-[data-paimind-developer-boundary]{margin:0 0 14px;padding:10px 12px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.17));border-radius:10px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.05));color:var(--dsw-alias-label-secondary,#626872);font-size:11px;line-height:18px}
+[data-paimind-developer-boundary]{margin:0 0 14px;padding:10px 12px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.17));border-radius:10px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.05));color:var(--dsw-alias-label-secondary,#626872);font-size:12px;line-height:18px}
 [data-paimind-developer-tabs]{display:flex;gap:6px;overflow:auto;margin:0 0 16px;padding:1px 0;scrollbar-width:thin}
 [data-paimind-developer-tab]{flex:none;min-height:32px;padding:6px 11px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.19));border-radius:999px;color:var(--dsw-alias-label-secondary,#626872);background:transparent;font:inherit;font-size:12px;cursor:pointer}
 [data-paimind-developer-tab][aria-selected='true']{border-color:var(--dsw-alias-state-business-primary,#4f7ff8);color:var(--dsw-alias-state-business-primary,#4f7ff8);background:color-mix(in srgb,currentColor 8%,transparent)}
 [data-paimind-developer-toolbar]{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
 [data-paimind-developer-toolbar] h3{margin:0;font-size:15px;line-height:22px}
-[data-paimind-developer-toolbar] p{margin:3px 0 0;max-width:680px;color:var(--dsw-alias-label-secondary,#626872);font-size:11px;line-height:17px}
-[data-paimind-developer-toolbar] button,[data-paimind-developer-retry]{min-height:30px;padding:5px 10px;border:0;border-radius:8px;color:#fff;background:var(--dsw-alias-state-business-primary,#4f7ff8);font:inherit;font-size:11px;cursor:pointer}
+[data-paimind-developer-toolbar] p{margin:3px 0 0;max-width:680px;color:var(--dsw-alias-label-secondary,#626872);font-size:12px;line-height:17px}
+[data-paimind-developer-toolbar] button,[data-paimind-developer-retry]{min-height:30px;padding:5px 10px;border:0;border-radius:8px;color:#fff;background:var(--dsw-alias-state-business-primary,#4f7ff8);font:inherit;font-size:12px;cursor:pointer}
 [data-paimind-developer-summary]{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:12px}
 [data-paimind-developer-metric]{display:grid;gap:2px;padding:10px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16));border-radius:10px;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.025))}
 [data-paimind-developer-metric] strong{font-size:19px;line-height:24px}
-[data-paimind-developer-metric] span{color:var(--dsw-alias-label-secondary,#626872);font-size:10px;line-height:15px}
+[data-paimind-developer-metric] span{color:var(--dsw-alias-label-secondary,#626872);font-size:12px;line-height:15px}
 [data-paimind-developer-list]{display:grid;gap:8px;margin:0;padding:0;list-style:none}
 [data-paimind-developer-row],[data-paimind-developer-card]{display:grid;gap:8px;min-width:0;padding:12px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.17));border-radius:11px;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.025))}
 [data-paimind-developer-row-header],[data-paimind-developer-card-header]{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-[data-paimind-developer-row] code,[data-paimind-developer-card] code{overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:17px}
+[data-paimind-developer-row] code,[data-paimind-developer-card] code{overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:17px}
 [data-paimind-developer-entry-id]{color:var(--dsw-alias-label-tertiary,#7c828b)}
 [data-paimind-developer-badges]{display:flex;flex-wrap:wrap;gap:5px}
-[data-paimind-developer-badge]{padding:2px 7px;border-radius:999px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.09));color:var(--dsw-alias-label-secondary,#626872);font-size:10px;line-height:16px}
+[data-paimind-developer-badge]{padding:2px 7px;border-radius:999px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.09));color:var(--dsw-alias-label-secondary,#626872);font-size:12px;line-height:16px}
 [data-paimind-developer-badge][data-state='active']{color:var(--dsw-alias-state-success-primary,#238c55);background:color-mix(in srgb,currentColor 10%,transparent)}
 [data-paimind-developer-badge][data-state='failed']{color:var(--dsw-alias-state-error-primary,#d04444);background:color-mix(in srgb,currentColor 10%,transparent)}
 [data-paimind-developer-card] h4{margin:0;font-size:13px;line-height:19px}
-[data-paimind-developer-card] p{margin:0;color:var(--dsw-alias-label-secondary,#626872);font-size:11px;line-height:17px}
+[data-paimind-developer-card] p{margin:0;color:var(--dsw-alias-label-secondary,#626872);font-size:12px;line-height:17px}
 [data-paimind-developer-state]{padding:28px 12px;color:var(--dsw-alias-label-secondary,#626872);font-size:12px;line-height:18px;text-align:center}
 [data-paimind-developer-state] p{margin:0 0 8px}
 @media(max-width:900px){[data-paimind-developer-summary]{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -74,8 +76,8 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = STYLE_ID
-  style.textContent = STYLE
+  style.dataset.paimindPlugin = STYLE_ID; markHarnessClientStyle(style, STYLE_ID)
+  style.textContent = `${PAIMIND_UI_FOUNDATION_CSS}\n${STYLE}`
   document.head.append(style)
   return () => { style.remove() }
 }
@@ -163,13 +165,13 @@ export function DeveloperResourcesSection(props: DeveloperResourcesProps): React
 
   const retry = (): void => { setRequest(value => value + 1) }
   const tabCopy: Readonly<Record<DeveloperTab, { readonly zh: string; readonly en: string }>> = {
-    diagnostics: { zh: '实时诊断', en: 'Live Diagnostics' }, surfaces: { zh: '表面目录', en: 'Surface Catalog' }, reference: { zh: '集成参考', en: 'Integration Reference' },
+    diagnostics: { zh: '实时诊断', en: 'Live Diagnostics' }, surfaces: { zh: '界面目录', en: 'Surface Catalog' }, reference: { zh: '集成参考', en: 'Integration Reference' },
   }
 
-  return <section data-paimind-developer-resources aria-label={zh ? '开发者资源' : 'Developer Resources'}>
-    <header data-paimind-developer-header><h2>{zh ? '开发者资源' : 'Developer Resources'}</h2><p>{zh ? '检查真实 Loader 状态、当前注册的产品表面和随当前包发布的稳定集成边界。' : 'Inspect real Loader state, currently registered product surfaces, and stable integration boundaries shipped with this package.'}</p></header>
+  return <section data-paimind-ui-scope="developer-resources" data-paimind-developer-resources aria-label={zh ? '开发者资源' : 'Developer Resources'}>
+    <header data-paimind-developer-header><h2>{zh ? '开发者资源' : 'Developer Resources'}</h2><p>{zh ? '查看插件运行状态、已注册界面和开发集成说明。' : 'Inspect real Loader state, currently registered product surfaces, and stable integration boundaries shipped with this package.'}</p></header>
     <p data-paimind-developer-boundary>{zh ? 'Harness Plugin Registry 仍独占技术加载、版本、依赖和启停。此页面只读；原生清单未提供版本、依赖图或失败堆栈，因此这里不会猜测。' : 'Harness Plugin Registry remains the sole owner of loading, versions, dependencies, and enablement. This page is read-only. The native inventory exposes no versions, dependency graph, or failure stack, so none are guessed here.'}</p>
-    <div data-paimind-developer-tabs role="tablist" aria-label={zh ? '开发者资源类别' : 'Developer resource categories'}>{(Object.keys(tabCopy) as DeveloperTab[]).map(id => <button key={id} type="button" role="tab" data-paimind-developer-tab aria-selected={tab === id} onClick={() => { setTab(id) }}>{tabCopy[id][zh ? 'zh' : 'en']}</button>)}</div>
+    <div data-paimind-developer-tabs role="tablist" aria-label={zh ? '开发者资源类别' : 'Developer resource categories'}>{(Object.keys(tabCopy) as DeveloperTab[]).map(id => <button key={id} type="button" role="tab" data-paimind-developer-tab aria-selected={tab === id} tabIndex={tab === id ? 0 : -1} onKeyDown={handlePaimindTabKey} onClick={() => { setTab(id) }}>{tabCopy[id][zh ? 'zh' : 'en']}</button>)}</div>
 
     {tab !== 'reference' && inventory.status === 'loading' && <div data-paimind-developer-state aria-busy="true">{zh ? '正在读取 Harness Plugin Inventory…' : 'Reading Harness Plugin Inventory…'}</div>}
     {tab !== 'reference' && inventory.status === 'error' && <div data-paimind-developer-state><p role="alert">{zh ? 'Harness Plugin Inventory 暂时不可用；没有展示缓存或猜测状态。' : 'Harness Plugin Inventory is unavailable. No cached or inferred state is shown.'}</p><button type="button" data-paimind-developer-retry onClick={retry}>{zh ? '重试' : 'Retry'}</button></div>}
@@ -184,7 +186,7 @@ export function DeveloperResourcesSection(props: DeveloperResourcesProps): React
     </div>}
 
     {tab === 'surfaces' && inventory.status === 'ready' && <div role="tabpanel">
-      <div data-paimind-developer-toolbar><div><h3>{zh ? '当前扩展表面' : 'Current extension surfaces'}</h3><p>{zh ? '来自正在运行的 paimind.extension Slot；这里只列真实注册表面，不渲染原型模拟状态。' : 'Read from the live paimind.extension Slot. Only registered surfaces are listed; prototype simulation states are not rendered.'}</p></div></div>
+      <div data-paimind-developer-toolbar><div><h3>{zh ? '当前扩展界面' : 'Current extension surfaces'}</h3><p>{zh ? '来自正在运行的 paimind.extension Slot；这里只列已注册界面，不渲染原型模拟状态。' : 'Read from the live paimind.extension Slot. Only registered surfaces are listed; prototype simulation states are not rendered.'}</p></div></div>
       <ul data-paimind-developer-list>{surfaces.map(({ descriptor, technicalState }) => <li key={descriptor.id} data-paimind-developer-card data-extension-id={descriptor.id}><div data-paimind-developer-card-header><h4>{zh ? descriptor.nameZh : descriptor.nameEn}</h4><span data-paimind-developer-badge data-state={technicalState}>{TECHNICAL_COPY[technicalState][zh ? 'zh' : 'en']}</span></div><p>{zh ? descriptor.descriptionZh : descriptor.descriptionEn}</p><div data-paimind-developer-badges><span data-paimind-developer-badge>{CATEGORY_COPY[descriptor.category]?.[zh ? 'zh' : 'en'] ?? descriptor.category}</span><span data-paimind-developer-badge>{descriptor.surface}</span><span data-paimind-developer-badge>{descriptor.maturity}</span></div><code>{descriptor.packageName}</code></li>)}</ul>
     </div>}
 

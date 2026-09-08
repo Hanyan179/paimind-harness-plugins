@@ -10,8 +10,13 @@ const packageModule = (name: string, module: string): string =>
 export default defineConfig({
   resolve: {
     alias: {
+      '@hansen/ui-foundation': packageSource('ui-foundation'),
       '@hansen/contracts': packageSource('contracts'),
       '@hansen/presentation-contracts': packageSource('presentation-contracts'),
+      '@hansen/harness-compat/native-mcp': packageModule('harness-compat', 'native-mcp'),
+      '@hansen/mcp-center/client': fileURLToPath(new URL('./packages/mcp-center/src/client/index.tsx', import.meta.url)),
+      '@hansen/mcp-center': packageSource('mcp-center'),
+      '@hansen/feishu-cli-mcp': packageSource('feishu-cli-mcp'),
       '@hansen/harness-compat/host': packageModule('harness-compat', 'host'),
       '@hansen/harness-compat/client-icons': packageModule('harness-compat', 'client-icons'),
       '@hansen/harness-compat/client-surface': packageModule('harness-compat', 'client-surface'),

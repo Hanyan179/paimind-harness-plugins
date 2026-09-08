@@ -19,6 +19,14 @@ function v2(overrides: Record<string, unknown> = {}) {
 }
 
 describe('FP08 presentation trace contract', () => {
+  it('accepts a narrative slide with no metrics while rejecting dangling data bindings', () => {
+    const narrative = { slideId: 'section-1', explanation: 'Next chapter', businessBlocks: [{ blockId: 'chapter', label: 'Chapter', description: 'Introduction' }], metrics: [], visualBindings: [] }
+    const result = normalizePresentationTrace(v2({ schemaVersion: TRACE_SCHEMA_V3, slides: [narrative] }))
+    expect(result.slides[0]?.metrics).toEqual([])
+    expect(result.slides[0]?.visualBindings).toEqual([])
+    expect(() => normalizePresentationTrace(v2({ schemaVersion: TRACE_SCHEMA_V3, slides: [{ ...narrative, visualBindings: [{ objectId: 'shape', factBindings: [{ factId: 'missing', selector: { kind: 'object' } }] }] }] }))).toThrow(/unknown fact missing/)
+  })
+
   it('normalizes a truthful v2 document and supplies only the documented block fallback', () => {
     const result = normalizePresentationTrace(v2())
     expect(result.schemaVersion).toBe(TRACE_SCHEMA_V2)

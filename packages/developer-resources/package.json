@@ -32,6 +32,7 @@
     }
   },
   "dependencies": {
+    "@hansen/ui-foundation": "workspace:^",
     "@hansen/contracts": "workspace:^",
     "@hansen/harness-compat": "workspace:^"
   },

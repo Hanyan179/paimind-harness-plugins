@@ -1,5 +1,8 @@
-import { useMemo, useState } from 'react'
+import { PAIMIND_UI_FOUNDATION_CSS } from '@hansen/ui-foundation'
+import { useMemo, useState, useSyncExternalStore } from 'react'
+import { proposalText } from './copy.js'
 import {
+  markHarnessClientStyle,
   answerHarnessQuestion,
   contributePaimindExtension,
   selectHarnessNamespacedQuestion,
@@ -7,6 +10,7 @@ import {
   type HarnessQuestionOption,
   type HarnessQuestionWait,
   type PaimindClientContext,
+  type PaimindLocaleSource,
 } from '@hansen/harness-compat'
 import { PaimindCheckIcon } from '@hansen/harness-compat/client-icons'
 import DOLLAR_GENERAL_MARK from '../../assets/dollar-general-mark.webp'
@@ -19,7 +23,7 @@ import PLAYFUL_STORYBOOK_STORYBOARD from '../../assets/playful-storybook-storybo
 import STRATEGY_CONSULTING_STORYBOARD from '../../assets/strategy-consulting-storyboard.webp'
 import { PROPOSAL_QUESTION_IDS, PROPOSAL_QUESTION_NAMESPACE } from '../index.js'
 
-export const inject = ['slots']
+export const inject = ['slots', 'locale']
 const STYLE_ID = '@hansen/proposal-experience'
 
 const STYLE = `
@@ -28,10 +32,10 @@ const STYLE = `
 [data-paimind-proposal-speaker]{display:flex;align-items:center;gap:12px;padding:0 3px}
 [data-paimind-proposal-avatar-seat]{position:relative;display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border:1px solid rgba(37,76,112,.16);border-radius:50%;background:#e8f0f7;overflow:hidden;box-shadow:0 7px 18px rgba(22,55,89,.16)}
 [data-paimind-proposal-avatar-seat]>img[data-paimind-agent-avatar]{display:block;width:100%;height:100%;border:0;border-radius:50%;object-fit:cover;box-shadow:none}
-[data-paimind-proposal-avatar-fallback]{display:grid;place-items:center;width:100%;height:100%;background:#174a76;color:#fff;font-size:11px;font-weight:780;letter-spacing:.04em}
+[data-paimind-proposal-avatar-fallback]{display:grid;place-items:center;width:100%;height:100%;background:#174a76;color:#fff;font-size:12px;font-weight:780;letter-spacing:.04em}
 [data-paimind-proposal-avatar-seat][data-paimind-agent-avatar-ready='true']>[data-paimind-proposal-avatar-fallback],[data-paimind-proposal-avatar-seat]:has(>img[data-paimind-agent-avatar])>[data-paimind-proposal-avatar-fallback]{display:none}
 [data-paimind-proposal-speaker] strong{display:block;font-size:14px;line-height:19px;font-weight:700}
-[data-paimind-proposal-speaker] small{display:block;color:var(--dsw-alias-label-tertiary,#7b8796);font-size:10px;line-height:15px}
+[data-paimind-proposal-speaker] small{display:block;color:var(--dsw-alias-label-tertiary,#7b8796);font-size:12px;line-height:15px}
 [data-paimind-proposal-card],[data-paimind-proposal-card] *{box-sizing:border-box}
 [data-paimind-proposal-card]{container-type:inline-size;width:calc(100% - 52px);margin-left:52px;overflow:hidden;border:1px solid var(--dsw-alias-border-l2,rgba(19,45,76,.18));border-radius:22px 22px 22px 8px;background:var(--dsw-alias-bg-base,#fff);color:var(--dsw-alias-label-primary,#142842);box-shadow:0 16px 40px rgba(4,10,18,.10)}
 [data-paimind-proposal-head]{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:23px 26px 18px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(19,45,76,.18));background:var(--dsw-alias-bg-layer-1,#f5f7fa)}
@@ -108,7 +112,7 @@ const STYLE = `
 [data-paimind-deck-preview] > p{margin:0;color:var(--dsw-alias-label-secondary,#5d6f83);font-size:12px;line-height:18px}
 [data-paimind-storyboard-frame]{position:relative;display:flex;align-items:center;justify-content:center;aspect-ratio:1672/941;min-height:0;margin-top:16px;padding:9px;border:1px solid var(--dsw-alias-border-l2,rgba(19,45,76,.18));border-radius:18px;background:var(--dsw-alias-bg-layer-1,#f5f7fa);box-shadow:0 18px 38px rgba(2,8,16,.3);overflow:hidden}
 [data-paimind-storyboard]{display:block;width:100%;height:100%;border-radius:11px;object-fit:contain}
-[data-paimind-storyboard-caption]{position:absolute;right:16px;bottom:15px;padding:4px 7px;border-radius:999px;background:rgba(7,20,35,.76);color:#fff;font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(8px)}
+[data-paimind-storyboard-caption]{position:absolute;right:16px;bottom:15px;padding:4px 7px;border-radius:999px;background:rgba(7,20,35,.76);color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(8px)}
 [data-paimind-preview-meta]{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px}
 [data-paimind-preview-meta] div{padding:10px 11px;border:1px solid var(--dsw-alias-border-l2,rgba(19,45,76,.18));border-radius:12px;background:var(--dsw-alias-bg-layer-1,#f5f7fa)}
 [data-paimind-preview-meta] span{display:block;color:var(--dsw-alias-label-secondary,#5d6f83);font-size:9px;font-weight:760;letter-spacing:.09em;text-transform:uppercase}
@@ -136,8 +140,8 @@ function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
   const style = document.createElement('style')
   style.id = STYLE_ID
-  style.dataset.paimindPlugin = STYLE_ID
-  style.textContent = STYLE
+  style.dataset.paimindPlugin = STYLE_ID; markHarnessClientStyle(style, STYLE_ID)
+  style.textContent = `${PAIMIND_UI_FOUNDATION_CSS}\n${STYLE}`
   document.head.append(style)
   return () => { style.remove() }
 }
@@ -266,16 +270,16 @@ function deckTypePreviewFor(option: HarnessQuestionOption | undefined): DeckType
   }
 }
 
-function DeckTypePreview({ option }: { readonly option: HarnessQuestionOption | undefined }): React.JSX.Element {
+function DeckTypePreview({ option, zh }: { readonly option: HarnessQuestionOption | undefined; readonly zh: boolean }): React.JSX.Element {
   const preview = deckTypePreviewFor(option)
   return <aside data-paimind-deck-type-preview aria-live="polite">
-    <small>Application preview</small>
-    <h3>{preview.title}</h3>
-    <p>{preview.description}</p>
+    <small>{proposalText("Application preview", zh)}</small>
+    <h3>{proposalText(preview.title, zh)}</h3>
+    <p>{proposalText(preview.description, zh)}</p>
     <div data-paimind-deck-type-application>
-      <div><span>Application</span><strong>{preview.application}</strong></div>
-      <div><span>Primary audience</span><strong>{preview.audience}</strong></div>
-      <div><span>Core story</span><strong>{preview.structure}</strong></div>
+      <div><span>{proposalText("Application", zh)}</span><strong>{proposalText(preview.application, zh)}</strong></div>
+      <div><span>{proposalText("Primary audience", zh)}</span><strong>{proposalText(preview.audience, zh)}</strong></div>
+      <div><span>{proposalText("Core story", zh)}</span><strong>{proposalText(preview.structure, zh)}</strong></div>
     </div>
     {preview.example ? <p data-paimind-deck-type-example>{preview.example}</p> : null}
     <p data-paimind-deck-type-next>Visual style is selected in the next AI-requested step.</p>
@@ -338,33 +342,33 @@ function deckPreviewFor(option: HarnessQuestionOption | undefined): DeckPreviewS
   return DECK_PREVIEWS[maintainedPreviewLabel(label)] ?? DECK_PREVIEWS['Paramont Signature']!
 }
 
-function DeckPreview({ option }: { readonly option: HarnessQuestionOption | undefined }): React.JSX.Element {
+function DeckPreview({ option, zh }: { readonly option: HarnessQuestionOption | undefined; readonly zh: boolean }): React.JSX.Element {
   const preview = deckPreviewFor(option)
   return <aside data-paimind-deck-preview data-tone={preview.tone} aria-live="polite">
-    <small>Deck style preview</small>
-    <h3>{preview.title}</h3>
-    <p>{preview.description}</p>
+    <small>{proposalText("Deck style preview", zh)}</small>
+    <h3>{proposalText(preview.title, zh)}</h3>
+    <p>{proposalText(preview.description, zh)}</p>
     <div data-paimind-storyboard-frame>
-      <img data-paimind-storyboard src={preview.image} alt={preview.imageAlt} />
-      <span data-paimind-storyboard-caption>3-slide style system</span>
+      <img data-paimind-storyboard src={preview.image} alt={proposalText(preview.imageAlt, zh)} />
+      <span data-paimind-storyboard-caption>{proposalText("3-slide style system", zh)}</span>
     </div>
     <div data-paimind-preview-meta>
-      <div><span>Best for</span><strong>{preview.bestFor}</strong></div>
-      <div><span>Story rhythm</span><strong>{preview.story}</strong></div>
+      <div><span>{proposalText("Best for", zh)}</span><strong>{proposalText(preview.bestFor, zh)}</strong></div>
+      <div><span>{proposalText("Story rhythm", zh)}</span><strong>{proposalText(preview.story, zh)}</strong></div>
     </div>
-    <p data-paimind-preview-hint>Preview by hover or focus. After style confirmation, the Agent matches capabilities and offers available content and data.</p>
+    <p data-paimind-preview-hint>{proposalText("Preview by hover or focus. After style confirmation, the Agent matches capabilities and offers available content and data.", zh)}</p>
   </aside>
 }
 
 const PROPOSAL_CANCEL_INTENT = 'PAIMIND_PROPOSAL_NAVIGATION:CANCEL'
 const PROPOSAL_BACK_INTENT = 'PAIMIND_PROPOSAL_NAVIGATION:BACK'
 
-function ProposalSpeaker(): React.JSX.Element {
+function ProposalSpeaker({ zh }: { readonly zh: boolean }): React.JSX.Element {
   return <div data-paimind-proposal-speaker>
     <span data-paimind-proposal-avatar-seat data-paimind-agent-avatar-seat="" data-paimind-agent-id="proposal-assistant" aria-hidden="true">
       <span data-paimind-proposal-avatar-fallback>PA</span>
     </span>
-    <span><strong>Proposal Assistant</strong><small>AI-requested decision · your answer returns to the agent</small></span>
+    <span><strong>{proposalText("Proposal Assistant", zh)}</strong><small>{proposalText("AI-requested decision \u00b7 your answer returns to the agent", zh)}</small></span>
   </div>
 }
 
@@ -389,10 +393,11 @@ function optionDetail(option: HarnessQuestionOption): string | undefined {
 
 interface ProposalQuestionComposerProps {
   readonly matched: HarnessQuestionWait
+  readonly zh: boolean
 }
 
 function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.Element {
-  const { matched } = props
+  const { matched, zh } = props
   const question = matched.payload.questions[0]!
   const options = question.options ?? []
   const [selected, setSelected] = useState<readonly string[]>([])
@@ -409,7 +414,7 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
   const focusedOption = useMemo(() => options.find(option => option.label === focused) ?? options[0], [focused, options])
 
   const answer = async (labels: readonly string[], customAnswer = '', action = 'Sending your answer to Proposal Assistant…'): Promise<void> => {
-    setBusy(true); setError(null); setPendingAction(action)
+    setBusy(true); setError(null); setPendingAction(proposalText(action, zh))
     try {
       await answerHarnessQuestion(matched, [{
         id: question.id,
@@ -447,19 +452,19 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
 
   const actionLabel = hasContentData ? 'Use selected content' : hasDeckStylePreview ? 'Use this deck style' : hasDeckTypePreview ? 'Use this deck type' : 'Continue'
   const actionStatus = hasContentData
-    ? selected.length === 0 ? 'Select the content and data to include' : `${selected.length} content area${selected.length === 1 ? '' : 's'} selected`
+    ? selected.length === 0 ? 'Select the content and data to include' : zh ? `已选择 ${selected.length} 项内容` : `${selected.length} content area${selected.length === 1 ? '' : 's'} selected`
     : hasDeckStylePreview
-    ? selected.length === 0 ? 'Preview and select one style' : `${optionPresentation(selected[0]!).label} selected`
+    ? selected.length === 0 ? 'Preview and select one style' : zh ? `已选择：${proposalText(optionPresentation(selected[0]!).label, zh)}` : `${optionPresentation(selected[0]!).label} selected`
     : hasDeckTypePreview
-      ? selected.length === 0 ? 'Preview and select one deck type' : `${optionPresentation(selected[0]!).label} selected`
-    : selected.length === 0 && custom.trim() === '' ? 'Select an option to continue' : `${selected.length || 1} selected`
+      ? selected.length === 0 ? 'Preview and select one deck type' : zh ? `已选择：${proposalText(optionPresentation(selected[0]!).label, zh)}` : `${optionPresentation(selected[0]!).label} selected`
+    : selected.length === 0 && custom.trim() === '' ? 'Select an option to continue' : zh ? `已选择 ${selected.length || 1} 项` : `${selected.length || 1} selected`
 
   const card = <section data-paimind-proposal-card data-stage={stage} aria-labelledby={`proposal-question-${matched.key}`}>
       <header data-paimind-proposal-head>
         <div data-paimind-proposal-heading>
           <div data-paimind-proposal-kicker-row>
-            <p data-paimind-proposal-kicker>Proposal setup · {questionStage(question)}</p>
-            <span data-paimind-proposal-step-count>AI-selected question</span>
+            <p data-paimind-proposal-kicker>{proposalText('Proposal setup', zh)} · {proposalText(questionStage(question), zh)}</p>
+            <span data-paimind-proposal-step-count>{proposalText("AI-selected question", zh)}</span>
           </div>
           <h2 data-paimind-proposal-title id={`proposal-question-${matched.key}`}>{question.question}</h2>
           {question.detail === undefined ? null : <p data-paimind-proposal-detail>{question.detail}</p>}
@@ -480,7 +485,7 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
               data-focused={hasPreview && focused === option.label}
               role={question.multiSelect === true ? 'checkbox' : 'radio'}
               aria-checked={active}
-              aria-label={display.label}
+              aria-label={proposalText(display.label, zh)}
               disabled={busy}
               onMouseEnter={() => { setFocused(option.label) }}
               onFocus={() => { setFocused(option.label) }}
@@ -498,9 +503,9 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
                   </span>
                 : <span data-paimind-proposal-indicator aria-hidden="true">{active ? <PaimindCheckIcon /> : index + 1}</span>)}
               <span data-paimind-proposal-option-copy>
-                {hasContentData ? <span data-paimind-content-data-kind>Available from matched capability</span> : null}
-                <span data-paimind-proposal-option-line><strong>{department?.name ?? display.label}</strong>{department === null ? null : <span data-paimind-department-meta>DG {department.code}</span>}{display.recommended ? <em data-paimind-proposal-recommended>Recommended</em> : null}</span>
-                {detail === undefined ? null : <small>{detail}</small>}
+                {hasContentData ? <span data-paimind-content-data-kind>{proposalText("Available from matched capability", zh)}</span> : null}
+                <span data-paimind-proposal-option-line><strong>{proposalText(department?.name ?? display.label, zh)}</strong>{department === null ? null : <span data-paimind-department-meta>DG {department.code}</span>}{display.recommended ? <em data-paimind-proposal-recommended>{proposalText("Recommended", zh)}</em> : null}</span>
+                {detail === undefined ? null : <small>{proposalText(detail, zh)}</small>}
               </span>
             </button>
           })}
@@ -509,7 +514,7 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
             <input
               type="text"
               value={custom}
-              placeholder="Enter another option"
+              placeholder={proposalText("Enter another option", zh)}
               disabled={busy}
               onChange={event => { setSelected([]); setCustom(event.currentTarget.value); setError(null) }}
               onKeyDown={event => { if (event.key === 'Enter' && custom.trim() !== '') { event.preventDefault(); void answer([], custom.trim()) } }}
@@ -517,32 +522,37 @@ function ProposalQuestionCard(props: ProposalQuestionComposerProps): React.JSX.E
           </label>
           <div data-paimind-proposal-actions data-kind={hasPreview ? 'deck' : question.multiSelect === true ? 'multi-select' : 'single-select'}>
             <div data-paimind-proposal-action-leading>
-              <button type="button" data-paimind-proposal-back data-navigation="ai-request" disabled={busy} onClick={navigateBack}>Back</button>
-              <span aria-live="polite">{pendingAction ?? actionStatus}</span>
+              <button type="button" data-paimind-proposal-back data-navigation="ai-request" disabled={busy} onClick={navigateBack}>{proposalText("Back", zh)}</button>
+              <span aria-live="polite">{pendingAction ?? proposalText(actionStatus, zh)}</span>
             </div>
-            <button type="button" data-paimind-proposal-submit disabled={busy || (selected.length === 0 && custom.trim() === '')} onClick={() => { void answer(selected, custom.trim()) }}>{actionLabel}</button>
+            <button type="button" data-paimind-proposal-submit disabled={busy || (selected.length === 0 && custom.trim() === '')} onClick={() => { void answer(selected, custom.trim()) }}>{proposalText(actionLabel, zh)}</button>
           </div>
           {error === null ? null : <p data-paimind-proposal-error role="status">{error}</p>}
         </div>
-        {hasDeckTypePreview ? <DeckTypePreview option={focusedOption} /> : hasDeckStylePreview ? <DeckPreview option={focusedOption} /> : null}
+        {hasDeckTypePreview ? <DeckTypePreview option={focusedOption} zh={zh} /> : hasDeckStylePreview ? <DeckPreview option={focusedOption} zh={zh} /> : null}
       </div>
-      <footer data-paimind-proposal-utility><button type="button" aria-label="Cancel proposal question" disabled={busy} onClick={cancel}>Cancel intake</button></footer>
+      <footer data-paimind-proposal-utility><button type="button" aria-label={proposalText("Cancel proposal question", zh)} disabled={busy} onClick={cancel}>{proposalText("Cancel intake", zh)}</button></footer>
     </section>
 
-  return <div data-paimind-proposal-frame data-question-key={matched.key}>
-    <div data-paimind-proposal-thread data-mode="ai-tool-question" data-trigger="ask-user-question"><ProposalSpeaker />{card}</div>
+  return <div data-paimind-ui-scope="proposal-experience" data-paimind-proposal-frame data-question-key={matched.key}>
+    <div data-paimind-proposal-thread data-mode="ai-tool-question" data-trigger="ask-user-question"><ProposalSpeaker zh={zh} />{card}</div>
   </div>
 }
 
-export function ProposalQuestionComposer({ matched }: { readonly matched: HarnessQuestionWait }): React.JSX.Element {
-  return <ProposalQuestionCard matched={matched} />
+export function ProposalQuestionComposer({ matched, locale = 'en-US' }: { readonly matched: HarnessQuestionWait; readonly locale?: string }): React.JSX.Element {
+  return <ProposalQuestionCard matched={matched} zh={locale.startsWith('zh')} />
+}
+
+function LocalizedProposalComposer({ matched, locale }: { readonly matched: HarnessQuestionWait; readonly locale: PaimindLocaleSource }): React.JSX.Element {
+  const active = useSyncExternalStore(locale.subscribe.bind(locale), () => locale.getLocale().active, () => locale.getLocale().active)
+  return <ProposalQuestionComposer matched={matched} locale={active} />
 }
 
 export function apply(ctx: PaimindClientContext): void {
   contributePaimindExtension(ctx.slots, {
     id: 'paimind:proposal-experience', packageName: '@hansen/proposal-experience', category: 'agents',
     nameZh: '提案助手交互', nameEn: 'Proposal Assistant Experience',
-    descriptionZh: '在 Harness 原生提问链路中提供客户品牌、Deck Type 与风格预览。',
+    descriptionZh: '通过提问确定客户、演示用途和视觉风格，并预览选择效果。',
     descriptionEn: 'Adds customer brands, deck types and style previews to native Harness proposal questions.',
     surface: 'conversation', maturity: 'technical-preview', order: 30,
   })
@@ -551,5 +561,5 @@ export function apply(ctx: PaimindClientContext): void {
     name: 'conversation.composer',
     priority: -20,
     select: selectProposalQuestion,
-  }, ProposalQuestionComposer))
+  }, (props: { readonly matched: HarnessQuestionWait }) => <LocalizedProposalComposer matched={props.matched} locale={ctx.locale} />))
 }

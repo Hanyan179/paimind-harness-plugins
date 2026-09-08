@@ -1,3 +1,4 @@
+import { PAIMIND_UI_FOUNDATION_CSS } from '@hansen/ui-foundation'
 import {
   Component,
   useEffect,
@@ -6,7 +7,8 @@ import {
   type ErrorInfo,
   type ReactNode,
 } from 'react'
-import { contributePaimindExtension, type HarnessSessionService, type PaimindClientContext } from '@hansen/harness-compat'
+import {
+  markHarnessClientStyle, contributePaimindExtension, type HarnessSessionService, type PaimindClientContext } from '@hansen/harness-compat'
 import { resolveArtifactPath, type PaimindArtifactService } from '@hansen/artifacts'
 import type { PaimindSidebarService, PaimindSidebarTabScope } from '@hansen/better-sidebar-adapter'
 import type { PaimindBentoPreviewService } from '@hansen/renderer-bento'
@@ -115,9 +117,9 @@ const STYLE = `
 [data-paimind-trace] h2,[data-paimind-trace] h3,[data-paimind-trace] h4,[data-paimind-trace] p { margin:0; }
 [data-paimind-trace] button:focus-visible { outline:2px solid color-mix(in srgb,var(--paimind-trace-accent) 72%,#fff); outline-offset:2px; }
 [data-paimind-trace-nav] { flex:0 0 auto; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; padding:10px 12px; border-bottom:1px solid var(--paimind-trace-border); background:var(--paimind-trace-surface); }
-[data-paimind-trace-nav] button { min-width:0; min-height:44px; display:flex; align-items:center; justify-content:center; gap:7px; padding:8px 7px; border:1px solid var(--paimind-trace-border); border-radius:11px; color:var(--paimind-trace-muted); background:var(--paimind-trace-surface-subtle); font:inherit; cursor:pointer; transition:border-color .16s ease,background .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease; }
+[data-paimind-trace-nav] button { min-width:0; min-height:44px; display:flex; align-items:center; justify-content:center; gap:7px; padding:8px 7px; border:1px solid var(--paimind-trace-border); border-radius:11px; color:var(--paimind-trace-muted); background:var(--paimind-trace-surface-subtle); font:inherit; cursor:pointer; transition:border-color var(--paimind-motion-fast) ease,background var(--paimind-motion-fast) ease,color var(--paimind-motion-fast) ease,transform var(--paimind-motion-fast) ease,box-shadow var(--paimind-motion-fast) ease; }
 [data-paimind-trace-nav] button span { width:20px; height:20px; display:grid; place-items:center; flex:0 0 auto; border-radius:99px; color:var(--paimind-trace-faint); background:var(--paimind-trace-surface-raised); font-size:8px; line-height:11px; font-weight:750; letter-spacing:.04em; }
-[data-paimind-trace-nav] button strong { overflow:hidden; font-size:11px; line-height:15px; text-overflow:ellipsis; white-space:nowrap; }
+[data-paimind-trace-nav] button strong { overflow:hidden; font-size:12px; line-height:15px; text-overflow:ellipsis; white-space:nowrap; }
 [data-paimind-trace-nav] button:hover:not(:disabled) { border-color:color-mix(in srgb,var(--paimind-trace-accent) 58%,var(--paimind-trace-border)); transform:translateY(-1px); }
 [data-paimind-trace-nav] button[aria-current='page'] { border-color:var(--paimind-trace-accent); color:var(--dsw-alias-label-primary-inverted,#fff); background:var(--paimind-trace-accent); box-shadow:0 8px 18px color-mix(in srgb,var(--paimind-trace-accent) 22%,transparent),inset 0 1px 0 color-mix(in srgb,#fff 28%,transparent); }
 [data-paimind-trace-nav] button[aria-current='page'] span { color:var(--paimind-trace-accent); background:var(--dsw-alias-label-primary-inverted,#fff); }
@@ -125,40 +127,40 @@ const STYLE = `
 [data-paimind-trace-page] { min-height:0; flex:1 1 auto; display:flex; flex-direction:column; padding:17px 16px 24px; overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
 [data-paimind-trace-section] { display:grid; gap:9px; padding:15px 0; }
 [data-paimind-trace-section] + [data-paimind-trace-section] { border-top:1px solid var(--paimind-trace-border); }
-[data-paimind-trace-section] h3 { color:var(--paimind-trace-muted); font-size:10px; line-height:15px; font-weight:750; text-transform:uppercase; letter-spacing:.11em; }
+[data-paimind-trace-section] h3 { color:var(--paimind-trace-muted); font-size:12px; line-height:15px; font-weight:750; text-transform:uppercase; letter-spacing:.11em; }
 [data-paimind-trace-section] > p { color:var(--paimind-trace-muted); font-size:12px; line-height:18px; }
 [data-paimind-trace-grid],[data-paimind-trace-list] { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; margin:0; padding:0; list-style:none; }
 [data-page='directory'] { gap:12px; }
 [data-page='directory'] [data-paimind-trace-section] { padding:0; }
-[data-paimind-trace-category] { min-width:0; min-height:108px; display:grid; align-content:start; gap:6px; padding:15px; border:1px solid var(--paimind-trace-border); border-radius:14px; color:var(--paimind-trace-ink); background:var(--paimind-trace-surface); box-shadow:0 8px 24px color-mix(in srgb,var(--paimind-trace-ink) 4%,transparent); font:inherit; text-align:left; cursor:pointer; transition:border-color .16s ease,background .16s ease,transform .16s ease,box-shadow .16s ease; }
+[data-paimind-trace-category] { min-width:0; min-height:108px; display:grid; align-content:start; gap:6px; padding:15px; border:1px solid var(--paimind-trace-border); border-radius:14px; color:var(--paimind-trace-ink); background:var(--paimind-trace-surface); box-shadow:0 8px 24px color-mix(in srgb,var(--paimind-trace-ink) 4%,transparent); font:inherit; text-align:left; cursor:pointer; transition:border-color var(--paimind-motion-fast) ease,background var(--paimind-motion-fast) ease,transform var(--paimind-motion-fast) ease,box-shadow var(--paimind-motion-fast) ease; }
 [data-paimind-trace-category]:hover { border-color:color-mix(in srgb,var(--paimind-trace-accent) 55%,var(--paimind-trace-border)); transform:translateY(-1px); box-shadow:0 11px 28px color-mix(in srgb,var(--paimind-trace-accent) 10%,transparent); }
 [data-paimind-trace-category] strong { font-size:14px; line-height:20px; letter-spacing:-.01em; }
-[data-paimind-trace-category] p { color:var(--paimind-trace-muted); font-size:11px; line-height:16px; }
-[data-paimind-trace-category] span { margin-top:auto; color:var(--paimind-trace-accent); font-size:10px; line-height:14px; font-weight:750; letter-spacing:.07em; text-transform:uppercase; }
+[data-paimind-trace-category] p { color:var(--paimind-trace-muted); font-size:12px; line-height:16px; }
+[data-paimind-trace-category] span { margin-top:auto; color:var(--paimind-trace-accent); font-size:12px; line-height:14px; font-weight:750; letter-spacing:.07em; text-transform:uppercase; }
 [data-paimind-trace-context] { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:12px 13px; border:1px solid color-mix(in srgb,var(--paimind-trace-accent) 38%,var(--paimind-trace-border)); border-radius:12px; background:color-mix(in srgb,var(--paimind-trace-accent) 8%,var(--paimind-trace-surface)); }
 [data-paimind-trace-context] div { min-width:0; display:grid; gap:2px; text-align:right; }
 [data-paimind-trace-context] strong { overflow:hidden; color:var(--paimind-trace-ink); font-size:12px; line-height:17px; text-overflow:ellipsis; white-space:nowrap; }
-[data-paimind-trace-context] span { color:var(--paimind-trace-faint); font-size:10px; line-height:14px; }
-[data-paimind-trace-button],[data-paimind-trace-row] { min-width:0; min-height:44px; padding:11px 12px; border:1px solid var(--paimind-trace-border); border-radius:11px; color:var(--paimind-trace-ink); background:var(--paimind-trace-surface); font:inherit; cursor:pointer; text-align:left; transition:border-color .16s ease,background .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease; }
+[data-paimind-trace-context] span { color:var(--paimind-trace-faint); font-size:12px; line-height:14px; }
+[data-paimind-trace-button],[data-paimind-trace-row] { min-width:0; min-height:44px; padding:11px 12px; border:1px solid var(--paimind-trace-border); border-radius:11px; color:var(--paimind-trace-ink); background:var(--paimind-trace-surface); font:inherit; cursor:pointer; text-align:left; transition:border-color var(--paimind-motion-fast) ease,background var(--paimind-motion-fast) ease,color var(--paimind-motion-fast) ease,transform var(--paimind-motion-fast) ease,box-shadow var(--paimind-motion-fast) ease; }
 [data-paimind-trace-button] { font-size:12px; line-height:18px; }
 [data-paimind-trace-button][aria-pressed='true'] { border-color:var(--paimind-trace-accent); background:color-mix(in srgb,var(--paimind-trace-accent) 10%,var(--paimind-trace-surface)); box-shadow:inset 3px 0 0 var(--paimind-trace-accent),0 6px 16px color-mix(in srgb,var(--paimind-trace-accent) 8%,transparent); }
 [data-paimind-trace-button]:hover,[data-paimind-trace-row]:hover { border-color:color-mix(in srgb,var(--paimind-trace-accent) 55%,var(--paimind-trace-border)); transform:translateY(-1px); }
 [data-paimind-trace-row] { display:grid; gap:4px; }
 button[data-paimind-trace-row] { width:100%; }
 [data-paimind-trace-row] strong { color:var(--paimind-trace-ink); font-size:12px; line-height:18px; }
-[data-paimind-trace-row] span,[data-paimind-trace-row] p { color:var(--paimind-trace-faint); font-size:11px; line-height:16px; overflow-wrap:anywhere; }
+[data-paimind-trace-row] span,[data-paimind-trace-row] p { color:var(--paimind-trace-faint); font-size:12px; line-height:16px; overflow-wrap:anywhere; }
 [data-paimind-trace-group] { display:grid; gap:7px; }
 [data-paimind-trace-group] + [data-paimind-trace-group] { margin-top:5px; }
-[data-paimind-trace-group-label] { color:var(--paimind-trace-faint); font-size:10px; line-height:14px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
-[data-paimind-trace-more] { min-height:42px; padding:9px 12px; border:1px dashed color-mix(in srgb,var(--paimind-trace-accent) 48%,var(--paimind-trace-border)); border-radius:11px; color:var(--paimind-trace-accent); background:color-mix(in srgb,var(--paimind-trace-accent) 5%,var(--paimind-trace-surface)); font:inherit; font-size:11px; line-height:16px; font-weight:700; cursor:pointer; }
+[data-paimind-trace-group-label] { color:var(--paimind-trace-faint); font-size:12px; line-height:14px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+[data-paimind-trace-more] { min-height:42px; padding:9px 12px; border:1px dashed color-mix(in srgb,var(--paimind-trace-accent) 48%,var(--paimind-trace-border)); border-radius:11px; color:var(--paimind-trace-accent); background:color-mix(in srgb,var(--paimind-trace-accent) 5%,var(--paimind-trace-surface)); font:inherit; font-size:12px; line-height:16px; font-weight:700; cursor:pointer; }
 [data-paimind-trace-sheet] { display:grid; gap:12px; align-content:start; }
 [data-paimind-trace-field] { min-width:0; display:grid; align-content:start; gap:5px; padding:12px 13px; border:1px solid var(--paimind-trace-border); border-radius:11px; background:var(--paimind-trace-surface); }
-[data-paimind-trace-field] dt { color:var(--paimind-trace-faint); font-size:10px; line-height:15px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+[data-paimind-trace-field] dt { color:var(--paimind-trace-faint); font-size:12px; line-height:15px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
 [data-paimind-trace-field] dd { margin:0; color:var(--paimind-trace-ink); font-size:12px; line-height:18px; overflow-wrap:anywhere; white-space:pre-line; }
 [data-paimind-trace-value] { min-height:90px; display:grid; align-content:center; gap:3px; padding:16px; border:1px solid color-mix(in srgb,var(--paimind-trace-accent) 48%,var(--paimind-trace-border)); border-radius:14px; color:var(--paimind-trace-ink); background:color-mix(in srgb,var(--paimind-trace-accent) 12%,var(--paimind-trace-surface)); font-size:28px; line-height:34px; font-weight:750; box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 8%,transparent); }
-[data-paimind-trace-value] span { color:var(--paimind-trace-accent); font-size:10px; line-height:14px; font-weight:750; letter-spacing:.1em; text-transform:uppercase; }
-[data-paimind-trace-back] { justify-self:start; min-height:36px; border:0; padding:6px 0; color:var(--paimind-trace-accent); background:transparent; font:inherit; font-size:11px; font-weight:700; line-height:16px; cursor:pointer; }
-[data-paimind-trace-cta] { width:100%; min-height:44px; border:0; border-radius:11px; color:var(--dsw-alias-label-primary-inverted,#fff); background:var(--paimind-trace-accent); box-shadow:0 8px 18px color-mix(in srgb,var(--paimind-trace-accent) 24%,transparent),inset 0 1px 0 color-mix(in srgb,#fff 25%,transparent); font:inherit; font-size:12px; font-weight:750; cursor:pointer; transition:background .16s ease,transform .16s ease; }
+[data-paimind-trace-value] span { color:var(--paimind-trace-accent); font-size:12px; line-height:14px; font-weight:750; letter-spacing:.1em; text-transform:uppercase; }
+[data-paimind-trace-back] { justify-self:start; min-height:36px; border:0; padding:6px 0; color:var(--paimind-trace-accent); background:transparent; font:inherit; font-size:12px; font-weight:700; line-height:16px; cursor:pointer; }
+[data-paimind-trace-cta] { width:100%; min-height:44px; border:0; border-radius:11px; color:var(--dsw-alias-label-primary-inverted,#fff); background:var(--paimind-trace-accent); box-shadow:0 8px 18px color-mix(in srgb,var(--paimind-trace-accent) 24%,transparent),inset 0 1px 0 color-mix(in srgb,#fff 25%,transparent); font:inherit; font-size:12px; font-weight:750; cursor:pointer; transition:background var(--paimind-motion-fast) ease,transform var(--paimind-motion-fast) ease; }
 [data-paimind-trace-cta]:hover { background:var(--dsw-alias-button-primary-hover,var(--paimind-trace-accent)); transform:translateY(-1px); }
 [data-paimind-trace-business-hero],[data-paimind-trace-business-fields],[data-paimind-trace-sheet][data-layout='technical'] [data-paimind-trace-list],[data-paimind-trace-sheet][data-layout='technical'] dl[data-paimind-trace-sheet] { display:grid; grid-template-columns:minmax(0,1fr); gap:9px; }
 [data-paimind-trace-sheet][data-layout='technical'] [data-paimind-trace-section] { gap:8px; padding:10px 0; }
@@ -167,12 +169,12 @@ button[data-paimind-trace-row] { width:100%; }
 [data-paimind-trace-error] { color:var(--dsw-alias-state-error-primary,#d04444); }
 @container paimind-trace-panel (min-width:720px){[data-paimind-trace-page]{padding:19px 18px 26px}[data-paimind-trace-business-hero]{grid-template-columns:minmax(148px,.72fr) minmax(0,1.28fr)}[data-paimind-trace-business-fields],[data-paimind-trace-sheet][data-layout='technical'] [data-paimind-trace-list],[data-paimind-trace-sheet][data-layout='technical'] dl[data-paimind-trace-sheet]{grid-template-columns:repeat(2,minmax(0,1fr))}[data-paimind-trace-business-fields] [data-paimind-trace-field]:last-child{grid-column:1/-1}[data-page='directory'] [data-paimind-trace-grid]{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @container paimind-trace-panel (max-width:430px){[data-paimind-trace-nav] button{gap:3px}[data-paimind-trace-nav] button span{display:none}[data-paimind-trace-page]{padding-inline:12px}[data-paimind-trace-context]{align-items:stretch;flex-direction:column}[data-paimind-trace-context] div{text-align:left}}
-@media(prefers-reduced-motion:reduce){[data-paimind-trace] *,[data-paimind-trace] *::before,[data-paimind-trace] *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
 `
 
 function installStyle(): () => void {
   if (document.getElementById(STYLE_ID) !== null) return () => {}
-  const style = document.createElement('style'); style.id = STYLE_ID; style.dataset.paimindPlugin = '@hansen/presentation-trace'; style.textContent = STYLE; document.head.append(style)
+  const style = document.createElement('style'); style.id = STYLE_ID; style.dataset.paimindPlugin = '@hansen/presentation-trace'; markHarnessClientStyle(style, '@hansen/presentation-trace'); style.textContent = `${PAIMIND_UI_FOUNDATION_CSS}\n${STYLE}`; document.head.append(style)
   return () => { style.remove() }
 }
 
@@ -282,8 +284,8 @@ export function PresentationTracePanel(props: { readonly service: PaimindPresent
       }
     }
   }, [bento.runtimeEvent, slideIndex, snapshot.selection, trace])
-  if (snapshot.selection === null) return <section data-paimind-trace aria-label={zh ? '演示追溯' : 'Presentation Trace'}><div data-paimind-trace-empty>{zh ? '请从 产物中选择“追溯”。' : 'Choose Trace from a artifact.'}</div></section>
-  if (trace === null) return <section data-paimind-trace aria-label={zh ? '演示追溯' : 'Presentation Trace'}><div role="alert" data-paimind-trace-error>{zh ? '关联的追溯记录不可用；原生预览与会话不受影响。' : 'The associated trace is unavailable; native preview and conversation remain available.'}</div></section>
+  if (snapshot.selection === null) return <section data-paimind-ui-scope="presentation-trace" data-paimind-trace aria-label={zh ? '演示追溯' : 'Presentation Trace'}><div data-paimind-trace-empty>{zh ? '请从 产物中选择“追溯”。' : 'Choose Trace from a artifact.'}</div></section>
+  if (trace === null) return <section data-paimind-ui-scope="presentation-trace" data-paimind-trace aria-label={zh ? '演示追溯' : 'Presentation Trace'}><div role="alert" data-paimind-trace-error>{zh ? '关联的追溯记录不可用；原生预览与会话不受影响。' : 'The associated trace is unavailable; native preview and conversation remain available.'}</div></section>
   const slide = trace.document.slides[Math.min(slideIndex, trace.document.slides.length - 1)] as PaimindTraceSlide
   const hasCategoryDirectory = slide.businessBlocks.length > 1
   const activeBlock = slide.businessBlocks.find(block => block.blockId === blockId)
@@ -305,16 +307,16 @@ export function PresentationTracePanel(props: { readonly service: PaimindPresent
   const selectFact = (targetMetric: PaimindTraceMetric, targetFact: PaimindTraceFact): void => {
     setBlockId(targetMetric.businessBlockId); setMetricId(targetMetric.metricId); setFactId(targetFact.factId); setPage('business'); focusFact(slide, targetFact.factId)
   }
-  return <section data-paimind-trace aria-label={zh ? '演示追溯' : 'Presentation Trace'}>
+  return <section data-paimind-ui-scope="presentation-trace" data-paimind-trace aria-label={zh ? '演示追溯' : 'Presentation Trace'}>
     <TracePageNav page={page} hasFact={fact !== undefined} zh={zh} onNavigate={setPage} />
     {page === 'directory' && <main data-paimind-trace-page data-page="directory">
-      {activeBlock === undefined ? <section data-paimind-trace-section><h3>{zh ? '证据分类' : 'Evidence Categories'}</h3><div data-paimind-trace-grid>{slide.businessBlocks.map(block => {
+      {slide.metrics.length === 0 ? <p data-paimind-trace-empty>{zh ? '本页为说明或章节页，没有需要追溯的数据。' : 'This narrative or section slide has no data to trace.'}</p> : activeBlock === undefined ? <section data-paimind-trace-section><h3>{zh ? '证据分类' : 'Evidence Categories'}</h3><div data-paimind-trace-grid>{slide.businessBlocks.map(block => {
         const blockMetrics = slide.metrics.filter(row => row.businessBlockId === block.blockId)
         const blockFactCount = blockMetrics.reduce((total, row) => total + row.facts.length, 0)
         return <button key={block.blockId} type="button" data-paimind-trace-category onClick={() => { setBlockId(block.blockId); setMetricId(''); setFactId(''); setShowAllFacts(false) }}><strong>{block.label}</strong><p>{block.description}</p><span>{zh ? `${blockMetrics.length} 个指标 · ${blockFactCount} 条事实` : `${blockMetrics.length} ${blockMetrics.length === 1 ? 'metric' : 'metrics'} · ${blockFactCount} ${blockFactCount === 1 ? 'fact' : 'facts'}`}</span></button>
       })}</div></section> : <>
         {hasCategoryDirectory && <div data-paimind-trace-context><button type="button" data-paimind-trace-back onClick={() => { setBlockId(''); setMetricId(''); setFactId(''); setShowAllFacts(false) }}>{zh ? '返回分类' : 'Back to categories'}</button><div><strong>{activeBlock.label}</strong><span>{zh ? `${metrics.length} 个指标 · ${allDirectoryFacts.length} 条事实` : `${metrics.length} ${metrics.length === 1 ? 'metric' : 'metrics'} · ${allDirectoryFacts.length} ${allDirectoryFacts.length === 1 ? 'fact' : 'facts'}`}</span></div></div>}
-        <section data-paimind-trace-section><h3>{zh ? '指标与事实' : 'Metrics & Facts'}</h3>{directoryFactGroups.map(group => <div key={group.label} data-paimind-trace-group><span data-paimind-trace-group-label>{group.label}</span><ul data-paimind-trace-list>{group.entries.map(entry => <li key={entry.fact.factId}><button type="button" data-paimind-trace-row onClick={() => { selectFact(entry.metric, entry.fact) }}><strong>{entry.fact.displayValue}</strong><span>{entry.fact.dimensions.map(dimension => dimension.value).join(' · ') || entry.fact.business.scope.period}</span></button></li>)}</ul></div>)}{allDirectoryFacts.length > 4 && <button type="button" data-paimind-trace-more aria-expanded={showAllFacts} onClick={() => { setShowAllFacts(value => !value) }}>{showAllFacts ? (zh ? '仅显示重点事实' : 'Show priority facts') : (zh ? `查看全部 ${allDirectoryFacts.length} 条事实` : `View all ${allDirectoryFacts.length} facts`)}</button>}</section>
+        <section data-paimind-trace-section><h3>{zh ? '指标与事实' : 'Metrics & Facts'}</h3>{directoryFactGroups.map(group => <div key={group.label} data-paimind-trace-group><span data-paimind-trace-group-label>{zh && group.label === 'Verified facts on this slide' ? '本页已验证事实' : group.label}</span><ul data-paimind-trace-list>{group.entries.map(entry => <li key={entry.fact.factId}><button type="button" data-paimind-trace-row onClick={() => { selectFact(entry.metric, entry.fact) }}><strong>{entry.fact.displayValue}</strong><span>{entry.fact.dimensions.map(dimension => dimension.value).join(' · ') || entry.fact.business.scope.period}</span></button></li>)}</ul></div>)}{allDirectoryFacts.length > 4 && <button type="button" data-paimind-trace-more aria-expanded={showAllFacts} onClick={() => { setShowAllFacts(value => !value) }}>{showAllFacts ? (zh ? '仅显示重点事实' : 'Show priority facts') : (zh ? `查看全部 ${allDirectoryFacts.length} 条事实` : `View all ${allDirectoryFacts.length} facts`)}</button>}</section>
       </>}
     </main>}
     {page === 'business' && fact !== undefined && <main data-paimind-trace-page data-page="business">

@@ -17,6 +17,24 @@ afterEach(() => {
 })
 
 describe('PAIMind product surface controller', () => {
+  it('shares avatar presentation across separately loaded feature copies and removes only the current owner revision', async () => {
+    const producer = await import('../src/client-surface.js')
+    vi.resetModules()
+    const consumer = await import('../src/client-surface.js')
+    expect(producer.replacePaimindAgentAvatarOverrides).not.toBe(consumer.replacePaimindAgentAvatarOverrides)
+    const changed = vi.fn()
+    const stop = consumer.subscribePaimindAgentAvatarOverrides(changed)
+    const old = producer.replacePaimindAgentAvatarOverrides('avatar-test', { writer: 'research-partner' })
+    expect(consumer.resolvePaimindAgentAvatarOverride('writer')).toBe('research-partner')
+    const latest = producer.replacePaimindAgentAvatarOverrides('avatar-test', { writer: 'finance-planner' })
+    old()
+    expect(consumer.resolvePaimindAgentAvatarOverride('writer')).toBe('finance-planner')
+    latest()
+    expect(consumer.resolvePaimindAgentAvatarOverride('writer')).toBe('writer')
+    expect(changed).toHaveBeenCalledTimes(3)
+    stop()
+  })
+
   it('keeps independently installed Agent and Skill surfaces mutually exclusive', () => {
     const agents = new PaimindProductSurfaceController('agent-center', window, document)
     const skills = new PaimindProductSurfaceController('skill-center', window, document)
@@ -303,6 +321,24 @@ describe('PAIMind product surface interaction', () => {
     controller.open(trigger)
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
     expect(controller.getSnapshot().open).toBe(true)
+    controller.dispose()
+  })
+
+  it('lets a nested dialog consume Escape without closing its Center', () => {
+    const root = document.createElement('main')
+    root.innerHTML = '<section role="dialog"><button>Close dialog</button></section>'
+    document.body.append(root)
+    const dialog = root.querySelector('section')!
+    const button = root.querySelector('button')!
+    const controller = new PaimindProductSurfaceController('skill-center', window, document)
+    controller.open()
+    const dispose = installPaimindProductSurfaceInteraction(root, controller, document)
+    const dismiss = vi.fn((event: KeyboardEvent) => { event.preventDefault(); event.stopPropagation() })
+    dialog.addEventListener('keydown', dismiss)
+    button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(dismiss).toHaveBeenCalledOnce()
+    expect(controller.getSnapshot().open).toBe(true)
+    dispose()
     controller.dispose()
   })
 

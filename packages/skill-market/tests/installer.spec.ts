@@ -326,6 +326,12 @@ describe('streaming Skill installer', () => {
         enabledBusinessSkillNames: ['independent-review'], directBusinessSkillNames: [],
       })).rejects.toThrow('不是可原子启停')
     }
+    const latest = await service.getUserSkillPolicy()
+    await service.replaceUserSkillPolicy({
+      ...latest, expectedRevision: latest.revision,
+      enabledOptionalSystemSkillNames: persisted ? ['genui'] : [],
+    })
+    expect((await service.getUserSkillPolicy()).enabledOptionalSystemSkillNames).toEqual(persisted ? ['genui'] : [])
     expect(update).not.toHaveBeenCalled()
     await harness.dispose()
   })
@@ -645,6 +651,21 @@ metadata:
     })
   })
 
+  it('projects a business title through save and reload without changing skill identity', async () => {
+    const { service } = await createInstaller()
+    const source = '---\nname: weekly-review\ndescription: Review supplied facts\n---\n\n# 周工作回顾\n\nUse only supplied facts.\n'
+    const saved = await service.saveSkillPackage({ changes: [{ operation: 'write', path: 'SKILL.md', content: source }] })
+    expect(saved.record).toMatchObject({ skillId: 'weekly-review', name: 'weekly-review', displayName: '周工作回顾' })
+    expect((await service.listInstalled()).items[0]).toMatchObject({ name: 'weekly-review', displayName: '周工作回顾' })
+    const current = await service.getSkillPackage({ skillId: 'weekly-review' })
+    const currentFile = await service.readSkillPackageFile({ skillId: 'weekly-review', path: 'SKILL.md' })
+    await service.saveSkillPackage({ skillId: 'weekly-review', expectedDigest: current.digest,
+      changes: [{ operation: 'write', path: 'SKILL.md', expectedDigest: currentFile.digest, content: source.replace('周工作回顾', '每周进展') }] })
+    expect((await service.listInstalled()).items[0]).toMatchObject({ skillId: 'weekly-review', displayName: '每周进展' })
+    expect(parseSkillMetadata(source.replace('# 周工作回顾', '```md\n# Code example\n```'))).not.toHaveProperty('displayName')
+    expect(parseSkillMetadata(source.replace('description:', 'display-name: 团队周报\ndescription:'))).toMatchObject({ displayName: '团队周报', name: 'weekly-review' })
+  })
+
   it('accepts community packages with ecosystem metadata outside the Skill root', async () => {
     const { service, root } = await createInstaller()
     const archive = zipSync({
@@ -690,14 +711,14 @@ metadata:
       { id: 'category-opportunity-analysis', category: 'data', tags: ['category-analysis', 'opportunity'] },
       { id: 'proposal-assistant-orchestration', category: 'product', tags: ['orchestration', 'proposal'] },
     ])
-    const preview = await service.inspectCatalog({ catalogId: 'openai-docs', version: '1.0.0' })
+    const preview = await service.inspectCatalog({ catalogId: 'openai-docs', version: catalog.items.find(item => item.id === 'openai-docs')!.version })
     expect(preview).toMatchObject({ name: 'openai-docs', kind: 'zip', fileCount: 3, operation: 'install' })
     const installed = await service.installUpload({ uploadId: preview.uploadId, digest: preview.digest })
     expect(installed.operation).toBe('installed')
     await expect(readFile(join(root, 'openai-docs', 'LICENSE.txt'), 'utf8')).resolves.toContain('Apache License')
     await expect(readFile(join(root, 'openai-docs', 'NOTICE.txt'), 'utf8')).resolves.toContain('Adapted for DeepSeek Harness')
-    const bento = await service.inspectCatalog({ catalogId: 'bento-ppt', version: '1.4.0' })
-    expect(bento).toMatchObject({ name: 'bento-ppt', kind: 'zip', fileCount: 3, operation: 'install' })
+    const bento = await service.inspectCatalog({ catalogId: 'bento-ppt', version: catalog.items.find(item => item.id === 'bento-ppt')!.version })
+    expect(bento).toMatchObject({ name: 'bento-ppt', displayName: '演示制作', kind: 'zip', fileCount: 3, operation: 'install' })
     await service.installUpload({ uploadId: bento.uploadId, digest: bento.digest })
     const bentoSkill = await readFile(join(root, 'bento-ppt', 'SKILL.md'), 'utf8')
     expect(bentoSkill).toContain('create_fact_bound_presentation_outline')
@@ -705,7 +726,7 @@ metadata:
     expect(bentoSkill).toContain('Bento Artifact as the single primary final deliverable')
     expect(bentoSkill).toContain('only when the current user explicitly requested an editable PPTX export')
     await expect(readFile(join(root, 'bento-ppt', 'LICENSE.txt'), 'utf8')).resolves.toContain('Internal Use Only')
-    const proposal = await service.inspectCatalog({ catalogId: 'proposal-assistant-orchestration', version: '1.0.0' })
+    const proposal = await service.inspectCatalog({ catalogId: 'proposal-assistant-orchestration', version: catalog.items.find(item => item.id === 'proposal-assistant-orchestration')!.version })
     await service.installUpload({ uploadId: proposal.uploadId, digest: proposal.digest })
     const proposalSkill = await readFile(join(root, 'proposal-assistant-orchestration', 'SKILL.md'), 'utf8')
     expect(proposalSkill).toContain('paimind.proposal.departments/v1')

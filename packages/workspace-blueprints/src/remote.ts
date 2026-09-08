@@ -26,6 +26,7 @@ const agentChoice = z.object({
   name: z.string().min(1).max(200),
 }).strict().readonly()
 const businessSkillChoice = z.object({
+  displayName: z.string().max(200).optional(),
   name: z.string().regex(/^[a-z0-9][a-z0-9-]*$/).max(100),
   description: z.string().max(2_000),
   digest,

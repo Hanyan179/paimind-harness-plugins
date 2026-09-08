@@ -30,6 +30,7 @@
   "dependencies": {
     "@hansen/contracts": "workspace:^",
     "@hansen/harness-compat": "workspace:^",
+    "@hansen/ui-foundation": "workspace:^",
     "zod": "^4.4.3"
   },
   "peerDependencies": {

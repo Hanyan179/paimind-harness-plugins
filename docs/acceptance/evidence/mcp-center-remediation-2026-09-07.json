@@ -1,0 +1,270 @@
+{
+  "date": "2026-09-07",
+  "branch": "codex/mcp-center-feishu",
+  "baseCommit": "d7078f53b75427f0344105bebccd4605c51e742f",
+  "runtime": {
+    "url": "http://127.0.0.1:3080/",
+    "originalHistoryFiles": 272,
+    "missingOriginalHistoryFiles": [],
+    "currentHistoryFileCount": 275
+  },
+  "findings": {
+    "R1": "Independent tokens retain the block until every pending disable ends. No CLI invocation in reproduction.",
+    "R2": "Compare full native wire schemas before native reassembly.",
+    "R3": "Generic Center has no vendor adapter dependency. Optional provider-owned templates support both transports.",
+    "R5": "Historical automatic migration submitted the same request twice. Fixed continuation only creates an unsent native composer draft."
+  },
+  "receipts": [
+    {
+      "at": "2026-09-07T05:40:53.581Z",
+      "server": "audit-stdio",
+      "tool": "echo_probe",
+      "nonce": "MCP_REMEDIATION_0907",
+      "mode": "echo"
+    },
+    {
+      "at": "2026-09-07T05:40:54.862Z",
+      "server": "audit-stdio",
+      "tool": "echo_probe",
+      "nonce": "MCP_REMEDIATION_0907",
+      "mode": "echo"
+    },
+    {
+      "at": "2026-09-07T05:48:14.869Z",
+      "server": "audit-stdio",
+      "tool": "echo_probe",
+      "nonce": "SINGLE_CALL_FIXED_0907",
+      "mode": "echo"
+    }
+  ],
+  "nativeSessions": [
+    {
+      "sessionId": "session-f492b034-b2ce-4747-8450-112e3b759a5c",
+      "configVersion": "v1-8d8717609b952fbc",
+      "headers": [
+        {
+          "seq": 12,
+          "managedTools": [
+            "mcp__paimind_82f30ee6b6eac8f447da__canary_write",
+            "mcp__paimind_82f30ee6b6eac8f447da__echo_probe",
+            "mcp__paimind_f0f0e87c7968270beb3e__canary_write",
+            "mcp__paimind_f0f0e87c7968270beb3e__echo_probe"
+          ]
+        },
+        {
+          "seq": 1551,
+          "managedTools": [
+            "mcp__paimind_82f30ee6b6eac8f447da__canary_write",
+            "mcp__paimind_82f30ee6b6eac8f447da__echo_probe"
+          ]
+        },
+        {
+          "seq": 5598,
+          "managedTools": [
+            "mcp__paimind_82f30ee6b6eac8f447da__canary_write",
+            "mcp__paimind_82f30ee6b6eac8f447da__echo_probe",
+            "mcp__paimind_f0f0e87c7968270beb3e__canary_write",
+            "mcp__paimind_f0f0e87c7968270beb3e__echo_probe"
+          ]
+        },
+        {
+          "seq": 5801,
+          "managedTools": []
+        }
+      ],
+      "calls": [],
+      "results": [],
+      "userMessageCount": 7,
+      "toolCallCount": 6
+    },
+    {
+      "sessionId": "session-c4e9e048-664e-4013-93fa-41413a50f16b",
+      "configVersion": "v2-6b4726761434a725",
+      "headers": [
+        {
+          "seq": 12,
+          "managedTools": []
+        },
+        {
+          "seq": 831,
+          "managedTools": [
+            "mcp__paimind_d085500fa6e22e05d7e4__canary_write",
+            "mcp__paimind_d085500fa6e22e05d7e4__echo_probe"
+          ]
+        }
+      ],
+      "calls": [
+        {
+          "type": "tool/call",
+          "seq": 1998,
+          "time": 1788759653558,
+          "data": {
+            "turn": 2,
+            "step": 1,
+            "callId": "call_00_E4DfqKs8tnxryLrx2gYw5296",
+            "name": "mcp__paimind_d085500fa6e22e05d7e4__echo_probe",
+            "arguments": "{\"nonce\": \"MCP_REMEDIATION_0907\", \"mode\": \"echo\"}"
+          }
+        }
+      ],
+      "results": [
+        {
+          "seq": 1999,
+          "blocks": [
+            {
+              "type": "tool-result",
+              "toolCallId": "call_00_E4DfqKs8tnxryLrx2gYw5296",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{\"at\":\"2026-09-07T05:40:53.581Z\",\"server\":\"audit-stdio\",\"tool\":\"echo_probe\",\"nonce\":\"MCP_REMEDIATION_0907\",\"mode\":\"echo\",\"ok\":true}"
+                }
+              ],
+              "isError": false
+            }
+          ]
+        }
+      ],
+      "userMessageCount": 4,
+      "toolCallCount": 1
+    },
+    {
+      "sessionId": "session-dc6e7141-ce46-4f0e-b77c-0a2a23523dd0",
+      "configVersion": "v3-fa5de575b6f5e05b",
+      "headers": [
+        {
+          "seq": 12,
+          "managedTools": [
+            "mcp__paimind_a74fc87d5d30500229d1__canary_write",
+            "mcp__paimind_a74fc87d5d30500229d1__echo_probe"
+          ]
+        },
+        {
+          "seq": 1520,
+          "managedTools": [
+            "mcp__paimind_a74fc87d5d30500229d1__canary_write",
+            "mcp__paimind_a74fc87d5d30500229d1__echo_probe"
+          ]
+        }
+      ],
+      "calls": [
+        {
+          "type": "tool/call",
+          "seq": 1062,
+          "time": 1788759654839,
+          "data": {
+            "turn": 1,
+            "step": 1,
+            "callId": "call_00_A67j8tsAB1lJno8FJJie4640",
+            "name": "mcp__paimind_a74fc87d5d30500229d1__echo_probe",
+            "arguments": "{\"nonce\": \"MCP_REMEDIATION_0907\", \"mode\": \"echo\"}"
+          }
+        },
+        {
+          "type": "tool/call",
+          "seq": 1706,
+          "time": 1788760094855,
+          "data": {
+            "turn": 2,
+            "step": 1,
+            "callId": "call_00_MRVySYo6WVS5aM2dPbzY1070",
+            "name": "mcp__paimind_a74fc87d5d30500229d1__echo_probe",
+            "arguments": "{\"mode\": \"echo\", \"nonce\": \"SINGLE_CALL_FIXED_0907\"}"
+          }
+        }
+      ],
+      "results": [
+        {
+          "seq": 1063,
+          "blocks": [
+            {
+              "type": "tool-result",
+              "toolCallId": "call_00_A67j8tsAB1lJno8FJJie4640",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{\"at\":\"2026-09-07T05:40:54.862Z\",\"server\":\"audit-stdio\",\"tool\":\"echo_probe\",\"nonce\":\"MCP_REMEDIATION_0907\",\"mode\":\"echo\",\"ok\":true}"
+                }
+              ],
+              "isError": false
+            }
+          ]
+        },
+        {
+          "seq": 1707,
+          "blocks": [
+            {
+              "type": "tool-result",
+              "toolCallId": "call_00_MRVySYo6WVS5aM2dPbzY1070",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{\"at\":\"2026-09-07T05:48:14.869Z\",\"server\":\"audit-stdio\",\"tool\":\"echo_probe\",\"nonce\":\"SINGLE_CALL_FIXED_0907\",\"mode\":\"echo\",\"ok\":true}"
+                }
+              ],
+              "isError": false
+            }
+          ]
+        }
+      ],
+      "userMessageCount": 4,
+      "toolCallCount": 2
+    },
+    {
+      "sessionId": "session-5e156d98-1d43-4aa0-bcbe-1cff6153511f",
+      "configVersion": "v4-4184242f26ae69a9",
+      "headers": [],
+      "calls": [],
+      "results": [],
+      "userMessageCount": 0,
+      "toolCallCount": 0
+    }
+  ],
+  "migrations": [
+    {
+      "sourceSessionId": "session-f492b034-b2ce-4747-8450-112e3b759a5c",
+      "targetSessionId": "session-c4e9e048-664e-4013-93fa-41413a50f16b",
+      "fromVersion": "v1-8d8717609b952fbc",
+      "toVersion": "v2-6b4726761434a725"
+    },
+    {
+      "sourceSessionId": "session-c4e9e048-664e-4013-93fa-41413a50f16b",
+      "targetSessionId": "session-dc6e7141-ce46-4f0e-b77c-0a2a23523dd0",
+      "fromVersion": "v2-6b4726761434a725",
+      "toVersion": "v3-fa5de575b6f5e05b"
+    },
+    {
+      "sourceSessionId": "session-dc6e7141-ce46-4f0e-b77c-0a2a23523dd0",
+      "targetSessionId": "session-5e156d98-1d43-4aa0-bcbe-1cff6153511f",
+      "fromVersion": "v3-fa5de575b6f5e05b",
+      "toVersion": "v4-4184242f26ae69a9"
+    }
+  ],
+  "finalState": {
+    "testAgentRevision": 5,
+    "testAgentBusinessFieldsRestored": true,
+    "writerBusinessFieldsRestored": true,
+    "writerRevisionBefore": 3,
+    "writerRevisionAfter": 6,
+    "writerNote": "During browser cleanup, the reordered list caused the wrong Agent purpose to be edited. Original text was restored through the UI. Business fields match revision 3; version metadata advanced. Original in-app unsaved draft was not saved by the test.",
+    "connections": [
+      {
+        "id": "cede7168ebd74ecbb51bc2a14b3c1e22",
+        "enabled": true
+      },
+      {
+        "id": "51bf6cb5f1f14566a49ffd46f557e700",
+        "enabled": false
+      },
+      {
+        "id": "92e1432425b14552ac9ca4f023f7553f",
+        "enabled": false
+      }
+    ]
+  },
+  "limitations": [
+    "Existing workspace-blueprints materializer empty-directory regression remains.",
+    "Single-user local acceptance, not enterprise multi-user isolation.",
+    "Actual Feishu CLI concurrency limit was not verified."
+  ]
+}

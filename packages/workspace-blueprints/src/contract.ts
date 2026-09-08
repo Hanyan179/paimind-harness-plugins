@@ -39,6 +39,7 @@ export interface WorkspaceBlueprintAgentChoice extends WorkspaceBlueprintAgentBi
 }
 
 export interface WorkspaceBlueprintBusinessSkillChoice extends WorkspaceBlueprintBusinessSkillBinding {
+  readonly displayName?: string
   readonly description: string
 }
 
