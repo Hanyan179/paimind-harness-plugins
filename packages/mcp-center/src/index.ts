@@ -6,7 +6,7 @@ import { mountPaimindNativeMcp, probePaimindNativeMcp, refreshPaimindNativeMcpAs
 import { FileMcpConnectionRepository } from './repository.js'
 import { McpConnectionManager, type McpAgentReferenceSource, type McpRuntimeProjection } from './manager.js'
 import { templateSchema } from './contract.js'
-import type { McpConnectionRepository, McpOwnerResolver, McpSaveInput, McpIdentityInput, McpToggleInput, McpRemoveInput, McpConnectionView, McpTemplate } from './contract.js'
+import type { McpConnectionRepository, McpOwnerResolver, McpSaveInput, McpIdentityInput, McpToggleInput, McpRemoveInput, McpConnectionView, McpTemplate, McpDraftProbeInput, McpProbeResult } from './contract.js'
 
 export * from './contract.js'
 export { McpConnectionManager, type McpRuntimeProjection, type McpAgentReferenceSource } from './manager.js'
@@ -51,7 +51,7 @@ export class PaimindMcpCenterService extends PaimindHostRemoteService {
         const source = ctx.get('paimindAgentProfiles') as Partial<McpAgentReferenceSource> | undefined
         return typeof source?.connectionIdsForPreset === 'function' && typeof source.listProfiles === 'function' ? source as McpAgentReferenceSource : undefined
       })
-    markPaimindHostRemoteMethods(this, ['list', 'save', 'probe', 'setEnabled', 'removeConnection', 'templates', 'summarizeSession'])
+    markPaimindHostRemoteMethods(this, ['list', 'save', 'probe', 'probeDraft', 'setEnabled', 'removeConnection', 'templates', 'summarizeSession'])
     ctx.effect(() => {
       const starts = (agent: PaimindMcpAgent): void => { void this.manager.reconcile(agent).catch(() => {}) }
       for (const agent of ctx.agents.list()) starts(agent)
@@ -77,6 +77,7 @@ export class PaimindMcpCenterService extends PaimindHostRemoteService {
   async summarizeSession(input: { sessionId: string }): ReturnType<McpConnectionManager['summarizeSession']> { return await this.manager.summarizeSession(input) }
   async save(input: McpSaveInput): Promise<McpConnectionView> { return await this.manager.save(input) }
   async probe(input: McpIdentityInput): Promise<McpConnectionView> { return await this.manager.probe(input) }
+  async probeDraft(input: McpDraftProbeInput): Promise<McpProbeResult> { return await this.manager.probeDraft(input) }
   async setEnabled(input: McpToggleInput): Promise<McpConnectionView> { return await this.manager.setEnabled(input) }
   async removeConnection(input: McpRemoveInput): Promise<{ removed: true }> { return await this.manager.remove(input) }
   async templates(): Promise<{ items: McpTemplate[] }> { return { items: [...this.templateContributions.values()].map(item => templateSchema.parse(item)) } }

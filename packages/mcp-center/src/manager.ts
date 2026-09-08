@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto'
 import type { PaimindMcpAgent, PaimindMcpToolSummary, PaimindNativeMcpConfig, PaimindNativeMcpHandle } from '@hansen/harness-compat/native-mcp'
-import { connectionSchema, connectionId, identityInputSchema, removeInputSchema, saveInputSchema, toggleInputSchema, sessionSummaryInputSchema,
+import { connectionSchema, connectionId, identityInputSchema, removeInputSchema, saveInputSchema, draftProbeInputSchema, toggleInputSchema, sessionSummaryInputSchema,
   type McpConfiguration, type McpConnection, type McpConnectionRepository, type McpConnectionView,
-  type McpEvidence, type McpIdentityInput, type McpOwnerResolver, type McpRemoveInput, type McpSaveInput, type McpToggleInput, type McpConnectionSummary } from './contract.js'
+  type McpEvidence, type McpIdentityInput, type McpOwnerResolver, type McpRemoveInput, type McpSaveInput, type McpToggleInput, type McpConnectionSummary, type McpDraftProbeInput, type McpProbeResult } from './contract.js'
 
 function connectionNamespace(id: string, agentId: string): string {
   return `paimind_${createHash('sha256').update(`${id}:${agentId}`).digest('hex').slice(0, 20)}`
@@ -159,11 +159,22 @@ export class McpConnectionManager {
     return await this.serialized(async () => { const row = this.get(input); if (!row.configuration.enabled) throw new Error('请先启用连接'); await this.probeRow(row); return await this.view(row) })
   }
   private async probeRow(row: McpConnection): Promise<void> {
+    this.probes.set(row.configuration.id, await this.testConfiguration(row.configuration))
+  }
+  /** Ephemeral handshake only: never change saved evidence, scopes or Agent references. */
+  async probeDraft(raw: McpDraftProbeInput): Promise<McpProbeResult> {
+    const input = draftProbeInputSchema.parse(raw)
+    await this.ready
+    if (!this.active) throw new Error('Connection Center is unloaded')
+    // A slow draft must not hold the reconciliation queue for existing Agents.
+    return await this.testConfiguration(input.configuration)
+  }
+  private async testConfiguration(configuration: McpConfiguration): Promise<McpProbeResult> {
     try {
-      const tools = await this.runtime.probe(await this.nativeConfiguration(row.configuration))
-      this.probes.set(row.configuration.id, { tools, evidence: { at: Date.now(), status: 'passed', message: `协议握手成功，发现 ${tools.length} 个工具；未执行工具调用，具体操作权限尚待核验。` } })
+      const tools = [...await this.runtime.probe(await this.nativeConfiguration(configuration))]
+      return { tools, evidence: { at: Date.now(), status: 'passed', message: `协议握手成功，发现 ${tools.length} 个工具；未执行工具调用，具体操作权限尚待核验。` } }
     } catch (error) {
-      this.probes.set(row.configuration.id, { tools: [], evidence: { at: Date.now(), status: 'failed', message: connectionFailure(error) } })
+      return { tools: [], evidence: { at: Date.now(), status: 'failed', message: connectionFailure(error) } }
     }
   }
   private async nativeConfiguration(config: McpConfiguration, agent?: PaimindMcpAgent): Promise<PaimindNativeMcpConfig> {

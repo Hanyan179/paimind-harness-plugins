@@ -13,7 +13,7 @@ describe('Brand identity settings', () => {
     expect(decodeBrandingSettings({})).toEqual(DEFAULT_BRANDING)
     expect(decodeBrandingSettings(null)).toBeUndefined()
     expect(decodeBrandingSettings({ brandName: '  ', logoUrl: 'javascript:alert(1)', welcomeZh: '', welcomeEn: 'x'.repeat(161) }))
-      .toEqual({ ...DEFAULT_BRANDING, welcomeZh: '' })
+      .toEqual({ ...DEFAULT_BRANDING, brandName: '', welcomeZh: '' })
   })
   it('rejects ephemeral, executable and credential-bearing image addresses', () => {
     for (const source of ['javascript:alert(1)', 'blob:https://example.com/1', 'file:///tmp/image', '//example.com/logo', 'https://user:password@example.com/logo', 'data:text/html;base64,PHNjcmlwdD4=', '/\\evil.com/x']) expect(isBrandImageUrl(source)).toBe(false)

@@ -1217,3 +1217,30 @@ export interface PaimindArtifactRuntimeHostContext {
     ) => Promise<PaimindToolExecutionResult>,
   ): () => void
 }
+
+/** Bootstrap-only native seat adaptation; never replaces loader status or error details. */
+export function createHarnessBootBrandScript(identity: { readonly name: string; readonly logo: string; readonly darkLogo: string }): string {
+  const data = JSON.stringify(identity).replace(/</gu, '\\u003c')
+  return `(() => {
+    const brand = ${data};
+    let seen = false;
+    const observer = new MutationObserver(() => {
+      const boot = document.querySelector('[data-dsh-boot]');
+      if (!boot) { if (seen) { observer.disconnect(); window.removeEventListener('pagehide', cleanup); } return; }
+      seen = true;
+      const mark = boot.firstElementChild?.firstElementChild;
+      if (!mark || mark.hasAttribute('data-hansen-boot-brand')) return;
+      mark.setAttribute('data-hansen-boot-brand', '');
+      mark.textContent = brand.name;
+      const source = (window.matchMedia?.('(prefers-color-scheme: dark)').matches && brand.darkLogo) || brand.logo;
+      if (source) {
+        const image = document.createElement('img'); image.src = source; image.alt = ''; image.referrerPolicy = 'no-referrer';
+        image.style.cssText = 'display:block;width:48px;height:48px;object-fit:contain;margin:0 auto 16px';
+        image.onerror = () => image.remove(); mark.prepend(image);
+      }
+    });
+    const cleanup = () => observer.disconnect();
+    window.addEventListener('pagehide', cleanup, { once: true });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  })();`
+}

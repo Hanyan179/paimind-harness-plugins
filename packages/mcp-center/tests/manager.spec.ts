@@ -34,6 +34,43 @@ function fixture() {
   return { manager, runtime, selected, names, disposers, rows: () => rows }
 }
 describe('connection configuration and native scope reconciliation', () => {
+  it('probes new and edited drafts without persisting, mounting or changing saved health and Agent bindings', async () => {
+    const f = fixture(), a = agent('a')
+    const draft = { ...config, id: 'b'.repeat(32), name: 'Unsaved' }
+    expect((await f.manager.probeDraft({ configuration: draft })).evidence.status).toBe('passed')
+    expect(f.rows()).toEqual([])
+    expect((await f.manager.list()).items).toEqual([])
+    expect(f.runtime.mount).not.toHaveBeenCalled()
+    await f.manager.save({ configuration: config, expectedRevision: 0 })
+    await f.manager.probe({ id, expectedRevision: 1 })
+    await f.manager.reconcile(a)
+    const before = await f.manager.list(), rows = JSON.stringify(f.rows())
+    vi.mocked(f.runtime.probe).mockRejectedValueOnce(new Error('401 secret=hidden'))
+    const result = await f.manager.probeDraft({ configuration: { id, name: 'Remote draft', category: 'data', enabled: true, timeoutMs: 5000, transport: 'streamable-http', url: 'https://example.invalid/mcp', headerRefs: { Authorization: 'MY_TOKEN' } } })
+    expect(result.evidence.status).toBe('failed')
+    expect(result.evidence.message).toContain('权限不足')
+    expect(JSON.stringify(result)).not.toContain('hidden')
+    expect(f.runtime.probe).toHaveBeenLastCalledWith(expect.objectContaining({ transport: 'streamable-http', headers: { Authorization: 'resolved-secret' } }))
+    expect(await f.manager.list()).toEqual(before)
+    expect(JSON.stringify(f.rows())).toBe(rows)
+    expect(f.runtime.mount).toHaveBeenCalledOnce()
+    expect(f.disposers[0]).not.toHaveBeenCalled()
+    expect(f.manager.guard(f.names.get('a')!, a)).toBeUndefined()
+    expect(f.selected.get('a')).toEqual([id])
+    await expect(f.manager.probeDraft({ configuration: { ...draft, timeoutMs: 0 } })).rejects.toThrow()
+    expect(f.runtime.probe).toHaveBeenCalledTimes(3)
+    await f.manager.dispose()
+  })
+  it('does not delay existing Agent reconciliation behind a slow draft probe', async () => {
+    const f = fixture()
+    await f.manager.save({ configuration: config, expectedRevision: 0 })
+    let finish!: () => void
+    vi.mocked(f.runtime.probe).mockImplementationOnce(async () => { await new Promise<void>(resolve => { finish = resolve }); return [] })
+    const probe = f.manager.probeDraft({ configuration: { ...config, id: 'c'.repeat(32) } })
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+    try { await f.manager.reconcile(agent('a')); expect(f.runtime.mount).toHaveBeenCalledOnce() }
+    finally { finish(); await probe; await f.manager.dispose() }
+  })
   it('projects source-owned display names without connecting or exposing configuration, including cold history and disabled scopes', async () => {
     const f = fixture(), a = agent('a')
     await f.manager.save({ configuration: { ...config, name: 'Generic documents' }, expectedRevision: 0 })

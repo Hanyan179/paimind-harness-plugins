@@ -354,11 +354,8 @@ describe('visual experience client', () => {
     }))
     expect(document.querySelector('style[data-paimind-plugin="@hansen/visual-experience"]')).not.toBeNull()
 
-    const shell = fixture.slots.find(entry => entry.injectedName === 'shell.overlay' && entry.options.id === 'paimind-visual-experience-hero')!
-    const Shell = shell.component as ComponentType<{ mode: PaimindExperienceModeController; locale: unknown }>
-    const shellView = render(<Shell {...shell.inject?.() as never} />)
-    expect(await screen.findByRole('heading', { name: '今天想完成什么？' })).toBeInTheDocument()
-    expect(screen.queryByText(/用 @ 选择 Agent/)).toBeNull()
+    expect(fixture.slots.some(entry => entry.options.id === 'paimind-visual-experience-hero')).toBe(false)
+    expect(screen.queryByRole('heading', { name: '今天想完成什么？' })).toBeNull()
 
     const dock = fixture.slots.find(entry => entry.injectedName === 'conversation.input.dock')!
     const Dock = dock.component as ComponentType
@@ -402,13 +399,12 @@ describe('visual experience client', () => {
     expect(document.body).not.toHaveAttribute('data-paimind-composer-overlay')
     expect(document.querySelector('#composer-overlay-anchor')).not.toHaveAttribute('data-paimind-composer-overlay-anchor')
 
-    seatView.unmount(); dockView.unmount(); shellView.unmount()
+    seatView.unmount(); dockView.unmount()
     fixture.disposeEffects()
     expect(document.body).not.toHaveAttribute('data-paimind-experience')
     expect(document.body).not.toHaveAttribute('data-paimind-composer-overlay')
     expect(document.querySelector('style[data-paimind-plugin="@hansen/visual-experience"]')).toBeNull()
     for (const id of [
-      'paimind-visual-experience-hero',
       'paimind-visual-experience',
       'paimind-quick-agents',
       'paimind-visual-agent-choice',

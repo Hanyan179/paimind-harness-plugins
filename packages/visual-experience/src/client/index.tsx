@@ -233,7 +233,6 @@ body[data-paimind-experience='paimind'] [data-phase='hero'] [data-composer-seat]
 body[data-paimind-experience='paimind'] [data-phase='hero'] [data-slot='conversation.composer.bar']{display:block!important;order:4;width:100%}
 body[data-paimind-experience='paimind'] [data-phase='hero'] [data-slot='conversation.input.dock']{display:block!important;order:5;width:100%;margin-top:8px}
 body[data-paimind-experience='paimind'] [data-phase='hero'] [data-paimind-hero-brand-seat]{display:flex!important;flex-direction:column;align-items:center;gap:7px;margin-bottom:12px;text-align:center;color:var(--paimind-ink)}
-body[data-paimind-experience='paimind'] [data-paimind-paramont-hero-headline],
 body[data-paimind-experience='paimind'] [data-paimind-native-hero-preview]{display:none!important}
 body[data-paimind-experience='paimind'] [data-paimind-paramont-hero-mark]{width:38px;height:25px;color:var(--paimind-navy-deep)}
 [data-paimind-experience-copy]{display:contents}
@@ -886,32 +885,6 @@ function useChinese(locale: PaimindClientContext['locale']): boolean {
     () => locale.getLocale().active.toLowerCase().startsWith('zh'),
     () => locale.getLocale().active.toLowerCase().startsWith('zh'),
   )
-}
-
-function usePortalTarget(selector: string): HTMLElement | null {
-  const [target, setTarget] = useState<HTMLElement | null>(() => document.querySelector<HTMLElement>(selector))
-  useEffect(() => {
-    const refresh = (): void => { setTarget(document.querySelector<HTMLElement>(selector)) }
-    refresh()
-    const observer = new MutationObserver(refresh)
-    observer.observe(document.body, { childList: true, subtree: true })
-    return () => { observer.disconnect() }
-  }, [selector])
-  return target
-}
-
-export function ExperienceHeroPortal({ mode, locale }: {
-  readonly mode: PaimindExperienceModeController
-  readonly locale: PaimindClientContext['locale']
-}): React.JSX.Element | null {
-  const state = useMode(mode)
-  const zh = useChinese(locale)
-  const target = usePortalTarget('[data-paimind-hero-brand-seat]')
-  if (state.mode !== 'paimind' || target === null) return null
-  return createPortal(<>
-    <span data-paimind-experience-eyebrow>{zh ? '你的工作空间' : 'Your workspace'}</span>
-    <span data-paimind-experience-title role="heading" aria-level={1}>{zh ? '今天想完成什么？' : 'What would you like to accomplish?'}</span>
-  </>, target)
 }
 
 interface ComposerContextLauncherProps {
@@ -1570,13 +1543,6 @@ export function apply(ctx: VisualExperienceClientContext): void {
     name: 'sidebar.footer.action', id: 'paimind-resource-navigation', order: -30,
     inject: () => ({ mode, locale: ctx.locale }),
   }, ResourceNavigationSlot))
-
-  ctx.slots.inject('shell.overlay', () => ctx.slots.register({
-    name: 'shell.overlay',
-    id: 'paimind-visual-experience-hero',
-    order: -90,
-    inject: () => ({ mode, locale: ctx.locale }),
-  }, ExperienceHeroPortal))
 
   ctx.slots.inject('paimind.personalization.appearance', () => ctx.slots.register({
     name: 'paimind.personalization.appearance', id: 'paimind-visual-preferences', order: 0,

@@ -5,6 +5,12 @@ export const MAX_LOGO_LENGTH = 350_000
 
 export interface BrandingSettings {
   readonly brandName: string
+  readonly browserTitle: string
+  readonly appShortName: string
+  readonly backgroundUrl: string
+  readonly darkBackgroundUrl: string
+  readonly primaryColor: string
+  readonly darkPrimaryColor: string
   readonly logoUrl: string
   readonly darkLogoUrl: string
   readonly faviconUrl: string
@@ -13,7 +19,7 @@ export interface BrandingSettings {
 }
 
 export const DEFAULT_BRANDING: BrandingSettings = Object.freeze({
-  brandName: 'Hansen', logoUrl: '', darkLogoUrl: '', faviconUrl: '',
+  brandName: 'Hansen', browserTitle: '', appShortName: '', backgroundUrl: '', darkBackgroundUrl: '', primaryColor: '', darkPrimaryColor: '', logoUrl: '', darkLogoUrl: '', faviconUrl: '',
   welcomeZh: '从一个想法开始', welcomeEn: 'Start with an idea',
 })
 
@@ -45,8 +51,9 @@ export function decodeBrandingSettings(value: unknown): BrandingSettings | undef
     if (typeof raw !== 'string') continue
     const text = raw.trim()
     if (field.endsWith('Url')) result[field] = isBrandImageUrl(text) ? text : ''
+    else if (field.endsWith('Color')) result[field] = /^#[0-9a-f]{6}$/iu.test(text) ? text : ''
     else if (!/[\u0000-\u001f\u007f]/u.test(text) && text.length <= (field === 'brandName' ? 80 : 160)) {
-      result[field] = field === 'brandName' && text === '' ? DEFAULT_BRANDING.brandName : text
+      result[field] = text
     }
   }
   return Object.freeze(result)

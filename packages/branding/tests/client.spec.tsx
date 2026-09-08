@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { ComponentType } from 'react'
 import { createClientContextFixture } from '@hansen/testkit'
@@ -47,9 +47,8 @@ describe('Configurable branding', () => {
     await screen.findByText('从一个想法开始', { selector: '[data-hansen-brand-hero-headline]' })
     expect(document.title).toBe('Planning — Hansen')
     expect(document.body.textContent).not.toMatch(/Paramont|PAIMind/)
-    const field = screen.getByLabelText('品牌名称').closest('form')!
     fireEvent.change(screen.getByLabelText('品牌名称'), { target: { value: '远山实验室' } })
-    fireEvent.click(within(field).getByRole('button', { name: '保存' }))
+    fireEvent.blur(screen.getByLabelText('品牌名称'))
     await waitFor(() => expect(document.title).toBe('Planning — 远山实验室'))
     expect(scope.snapshot.value?.brandName).toBe('远山实验室')
     expect(document.querySelector('[data-hansen-brand-name]')).toHaveTextContent('远山实验室')
@@ -58,7 +57,8 @@ describe('Configurable branding', () => {
     expect(JSON.parse(decodeURIComponent(manifest.split(',')[1]!)).name).toBe('远山实验室')
     document.title = 'Live session — DeepSeek Harness'
     await waitFor(() => expect(document.title).toBe('Live session — 远山实验室'))
-    fireEvent.click(within(field).getByRole('button', { name: '恢复默认' }))
+    fireEvent.change(screen.getByLabelText('品牌名称'), { target: { value: '' } })
+    fireEvent.blur(screen.getByLabelText('品牌名称'))
     await waitFor(() => expect(document.title).toBe('Live session — Hansen'))
     view.unmount(); fixture.disposeEffects()
     expect(scope.listeners.size).toBe(0)
@@ -94,13 +94,13 @@ describe('Configurable branding', () => {
     const { scope, fixture, view } = setup()
     const logo = screen.getByLabelText('品牌标志')
     fireEvent.change(logo, { target: { value: 'javascript:alert(1)' } })
-    fireEvent.click(within(logo.closest('form')!).getByRole('button', { name: '保存' }))
+    fireEvent.blur(logo)
     expect(await screen.findByRole('alert')).toHaveTextContent('有效的图片地址')
     expect(scope.snapshot.value?.logoUrl).toBe('')
     scope.fail = true
     const name = screen.getByLabelText('品牌名称')
     fireEvent.change(name, { target: { value: 'Unsaved' } })
-    fireEvent.click(within(name.closest('form')!).getByRole('button', { name: '保存' }))
+    fireEvent.blur(name)
     await screen.findByText('Connection lost')
     expect(document.title).toBe('Planning — Hansen')
     expect(scope.snapshot.value?.brandName).toBe('Hansen')
@@ -113,7 +113,6 @@ describe('Configurable branding', () => {
     fireEvent.change(screen.getByLabelText('上传品牌标志'), { target: { files: [file] } })
     await waitFor(() => expect(screen.getByLabelText('品牌标志')).toHaveAttribute('placeholder', '已选择上传的图片；输入地址可替换'))
     expect(screen.getByLabelText('品牌标志')).toHaveValue('')
-    fireEvent.click(within(screen.getByLabelText('品牌标志').closest('form')!).getByRole('button', { name: '保存' }))
     await waitFor(() => expect(scope.snapshot.value?.logoUrl).toBe('data:image/png;base64,iVBORw=='))
     expect(document.querySelector('link[rel=icon]')).not.toHaveAttribute('type', 'image/svg+xml')
     view.unmount(); fixture.disposeEffects()
@@ -124,7 +123,7 @@ describe('Configurable branding', () => {
     scope.recoverFailure = true
     const name = screen.getByLabelText('品牌名称')
     fireEvent.change(name, { target: { value: 'Not committed' } })
-    fireEvent.click(within(name.closest('form')!).getByRole('button', { name: '保存' }))
+    fireEvent.blur(name)
     await screen.findByText('未保存，请检查连接后重试。')
     expect(screen.queryByText('已保存')).toBeNull()
     expect(name).toHaveValue('Not committed')
@@ -140,4 +139,27 @@ describe('Configurable branding', () => {
     expect(screen.getByText('品牌设置当前不可写，请检查主机连接。')).toBeInTheDocument()
     view.unmount(); fixture.disposeEffects()
   })
+})
+
+it('applies optional browser identity, artwork and colors and removes appearance on unload', async () => {
+  const scope = new FakeScope()
+  scope.push({ ...DEFAULT_BRANDING, browserTitle: 'Work', appShortName: 'App', backgroundUrl: '/home.png', primaryColor: '#245B87' })
+  const { view, fixture } = setup(scope)
+  await waitFor(() => expect(document.title).toBe('Planning — Work'))
+  const manifest = JSON.parse(decodeURIComponent(document.querySelector<HTMLLinkElement>('link[rel=manifest]')!.href.split(',')[1]!))
+  expect(manifest.short_name).toBe('App')
+  expect(manifest.icons).toHaveLength(1)
+  expect(document.querySelector('[data-hansen-brand-appearance]')!.textContent).toContain('/home.png')
+  expect(document.querySelector('[data-hansen-brand-appearance]')!.textContent).toContain('#245B87')
+  view.unmount(); fixture.disposeEffects()
+  expect(document.querySelector('[data-hansen-brand-appearance]')).toBeNull()
+})
+
+it('flushes an edited empty tagline when settings closes without a blur event', async () => {
+  const { scope, view, fixture } = setup()
+  fireEvent.click(screen.getByRole('button', { name: '首页表达' }))
+  fireEvent.change(screen.getByLabelText('简体中文'), { target: { value: '' } })
+  view.unmount()
+  await waitFor(() => expect(scope.snapshot.value?.welcomeZh).toBe(''))
+  fixture.disposeEffects()
 })

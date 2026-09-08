@@ -122,6 +122,7 @@ export interface FeishuTemplateHostContext {
 }
 export function apply(ctx: FeishuTemplateHostContext): void {
   ctx.effect(() => ctx.paimindMcpConnections.registerTemplate({
+    locales: { en: { name: 'Feishu (local)', description: 'Access documents through a locally authorized Feishu CLI account.', setupHint: 'Replace default in the arguments with an explicit CLI profile and specify your installed lark-cli path. Each connection uses that profile without changing the global default account.' } },
     id: 'feishu-cli', name: '本地飞书', description: '通过本机已授权的飞书命令行账号操作文档。',
     setupHint: '将启动参数里的 default 改为明确的命令行账号配置名，并填写已安装的 lark-cli 路径；每条连接固定使用该配置，不切换全局默认账号。',
     configuration: { ...feishuMcpTemplate(), transport: 'stdio', category: 'documents', enabled: true, timeoutMs: 60_000, envRefs: {} },

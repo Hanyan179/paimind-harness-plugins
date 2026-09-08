@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { identityInputSchema, removeInputSchema, saveInputSchema, templateSchema, toggleInputSchema, viewSchema, sessionSummaryInputSchema, connectionSummarySchema } from './contract.js'
+import { identityInputSchema, removeInputSchema, saveInputSchema, draftProbeInputSchema, probeResultSchema, templateSchema, toggleInputSchema, viewSchema, sessionSummaryInputSchema, connectionSummarySchema } from './contract.js'
 
 function descriptor(method: string, input: z.ZodType | undefined, output: z.ZodType) {
   return Object.freeze({
@@ -14,6 +14,7 @@ function descriptor(method: string, input: z.ZodType | undefined, output: z.ZodT
 export const MCP_REMOTE_DESCRIPTORS = Object.freeze([
   descriptor('list', undefined, z.object({ items: z.array(viewSchema) }).strict()),
   descriptor('save', saveInputSchema, viewSchema), descriptor('probe', identityInputSchema, viewSchema),
+  descriptor('probeDraft', draftProbeInputSchema, probeResultSchema),
   descriptor('setEnabled', toggleInputSchema, viewSchema), descriptor('removeConnection', removeInputSchema, z.object({ removed: z.literal(true) }).strict()),
   descriptor('templates', undefined, z.object({ items: z.array(templateSchema) }).strict()),
   descriptor('summarizeSession', sessionSummaryInputSchema, z.object({ items: z.array(connectionSummarySchema) }).strict()),

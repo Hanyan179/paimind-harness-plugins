@@ -1,12 +1,13 @@
-import { registerPaimindHostSettings, type PaimindHostSettingsFacility } from '@hansen/harness-compat/host'
+import { createHarnessBootBrandScript, registerPaimindHostSettings, type PaimindHostSettingsFacility } from '@hansen/harness-compat/host'
 import { BRANDING_FIELDS, BRANDING_NAMESPACE, DEFAULT_BRANDING, brandFallbackIcon, decodeBrandingSettings, type BrandingSettings } from './settings.js'
 
 export const name = 'paimind-branding'
 
 /** Render the saved identity before client plugins start, without a browser cache. */
 export function createBrandingBootInjection(value: unknown) {
-  const brand = decodeBrandingSettings(value) ?? DEFAULT_BRANDING
-  const identity = JSON.stringify({ name: brand.brandName, icon: brand.faviconUrl || brand.logoUrl || brandFallbackIcon(brand.brandName) }).replace(/</gu, '\\u003c')
+  const decoded = decodeBrandingSettings(value) ?? DEFAULT_BRANDING
+  const brand = { ...decoded, brandName: decoded.brandName || DEFAULT_BRANDING.brandName }
+  const identity = JSON.stringify({ name: brand.browserTitle || brand.brandName, icon: brand.faviconUrl || brand.logoUrl || brandFallbackIcon(brand.brandName) }).replace(/</gu, '\\u003c')
   return { kind: 'script' as const, placement: 'head' as const, text: `(() => {
     const brand = ${identity};
     const apply = () => {
@@ -17,7 +18,7 @@ export function createBrandingBootInjection(value: unknown) {
     };
     apply();
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply, { once: true });
-  })();` }
+  })();${createHarnessBootBrandScript({ name: brand.brandName, logo: brand.logoUrl, darkLogo: brand.darkLogoUrl })}` }
 }
 
 /** Native Settings remains the only persisted brand source. */

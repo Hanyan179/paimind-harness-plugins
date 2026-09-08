@@ -1527,3 +1527,29 @@ export function installHarnessSettingsTriggerAccessibility(doc: Document): () =>
 export function markHarnessClientStyle(style: HTMLStyleElement, packageName: string): void {
   style.setAttribute('data-plugin', packageName)
 }
+
+/** Apply reversible brand appearance without exposing native selectors to the brand owner. */
+export function installHarnessBrandAppearance(doc: Document, appearance: { readonly background: string; readonly primaryColor: string }): () => void {
+  const style = doc.createElement('style')
+  style.dataset.hansenBrandAppearance = ''
+  // JSON string escaping protects quoted CSS URLs; callers validate persistent image URLs.
+  const image = appearance.background ? `url(${JSON.stringify(appearance.background).replace(/</gu, '\\3c ')})` : ''
+  const color = /^#[0-9a-f]{6}$/iu.test(appearance.primaryColor) ? appearance.primaryColor : ''
+  style.textContent = `${image ? `body [data-phase="hero"]{position:relative;isolation:isolate}body [data-phase="hero"]::before{content:"";position:absolute;z-index:-1;inset:0;pointer-events:none;background-image:${image}!important;background-size:cover;background-position:center bottom;opacity:.4}` : ''}
+${color ? `body{--paimind-accent:${color}!important;--dsw-alias-brand-primary:${color}!important;--dsw-alias-state-business-primary:${color}!important}` : ''}`
+  doc.head.append(style)
+  return () => style.remove()
+}
+
+/** Read the native explicit theme before falling back to the system preference. */
+export function readHarnessColorScheme(doc: Document): string | undefined {
+  return [doc.documentElement, doc.body].map(element => element.getAttribute('data-theme')
+    ?? (element.hasAttribute('data-ds-dark-theme') ? 'dark' : element.style.colorScheme))
+    .find(value => value === 'dark' || value === 'light')
+}
+/** Observe native theme switches with symmetric teardown. */
+export function observeHarnessColorScheme(doc: Document, refresh: () => void): () => void {
+  const observer = new MutationObserver(refresh)
+  for (const element of [doc.documentElement, doc.body]) observer.observe(element, { attributes: true, attributeFilter: ['data-theme', 'data-ds-dark-theme', 'style', 'class'] })
+  return () => observer.disconnect()
+}
