@@ -47,18 +47,28 @@ describe('FP07 Bento preview client store', () => {
     expect(screen.getByRole('status')).toHaveTextContent('facts and derived metrics are locked')
   })
 
-  it('expands the workbench without fullscreen support and Escape restores its panel', () => {
+  it('uses the browser top layer to escape sidebar clipping and Escape restores its panel', () => {
     const store = new BentoPreviewStore(sidebar())
     store.open({ sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', path: '/workspace/deck.html', title: 'Deck' })
     const scope: PaimindSidebarTabScope = { sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', visible: true, locale: { getLocale: () => ({ active: 'en' }), subscribe: () => () => {} } }
     render(createElement(BentoPreviewPanel, { store, scope }))
     const panel = screen.getByRole('region', { name: 'Isolated Bento preview' })
-    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen workbench' }))
+    const show = vi.fn(() => { panel.style.display = 'grid' })
+    const hide = vi.fn(() => { panel.style.removeProperty('display') })
+    Object.assign(panel, { showPopover: show, hidePopover: hide })
+    const expand = screen.getByRole('button', { name: 'Fullscreen workbench' })
+    expect(expand.textContent).toBe('')
+    expect(expand.querySelector('svg')).not.toBeNull()
+    fireEvent.click(expand)
+    expect(show).toHaveBeenCalledOnce()
+    expect(panel).toHaveAttribute('popover', 'manual')
     expect(panel).toHaveAttribute('data-expanded', 'true')
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
     expect(panel).toHaveAttribute('data-expanded', 'true')
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(panel).toHaveAttribute('data-expanded', 'false')
+    expect(hide).toHaveBeenCalledOnce()
+    expect(panel).not.toHaveAttribute('popover')
     expect(store.getSnapshot().mode).toBe('edit')
   })
 

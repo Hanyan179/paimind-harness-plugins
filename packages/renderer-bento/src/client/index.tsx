@@ -137,7 +137,7 @@ export class BentoPreviewStore implements PaimindBentoPreviewService {
 
 const STYLE_ID = '@hansen/renderer-bento'
 const STYLE = `
-[data-paimind-bento][data-expanded='true'] { position:fixed; inset:0; z-index:10000; width:100vw; height:100dvh; background:var(--dsw-alias-bg-layer-1,#fff); }
+[data-paimind-bento][data-expanded='true'] { position:fixed; inset:0; margin:0; border:0; padding:0; max-width:none; max-height:none; z-index:10000; width:100vw; height:100dvh; background:var(--dsw-alias-bg-layer-1,#fff); }
 [data-paimind-bento-actions] { display:flex; align-items:center; gap:8px; }
 [data-paimind-bento-actions] button { padding:7px 12px; border:1px solid var(--dsw-alias-border-l1,#ccd2db); border-radius:8px; color:inherit; background:var(--dsw-alias-bg-layer-2,#f5f7fa); cursor:pointer; font-size:12px; }
 [data-paimind-bento-actions] button:focus-visible { outline:2px solid var(--dsw-alias-state-business-primary,#4f7ff8); outline-offset:2px; }
@@ -190,7 +190,7 @@ const STYLE = `
 @container paimind-bento (max-width:1040px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr)}[data-paimind-bento-canvas][data-has-slide-rail='true']{grid-template-columns:104px minmax(0,1fr)}}
 @container paimind-bento (max-width:900px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(280px,58%) minmax(0,42%);overflow:hidden}[data-paimind-bento-inspector]{border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16));border-left:0}[data-paimind-bento-canvas][data-has-slide-rail='true']{grid-template-columns:76px minmax(0,1fr)}[data-paimind-bento-slide-rail]{padding-inline:5px}[data-paimind-bento-slide-item]{grid-template-columns:1fr}[data-paimind-bento-slide-number]{position:absolute;z-index:2;top:5px;left:5px;min-width:14px;padding:1px 3px;border-radius:4px;color:var(--dsw-alias-label-primary-inverted,#fff);background:color-mix(in srgb,var(--dsw-alias-bg-base,#071725) 86%,transparent)}}
 @container paimind-bento (max-width:620px){[data-paimind-bento-workbench][data-mode='trace']{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(240px,54%) minmax(0,46%)}[data-paimind-bento-canvas][data-has-slide-rail='true']{grid-template-columns:64px minmax(0,1fr)}[data-paimind-bento-slide-rail]{padding-inline:3px}[data-paimind-bento-workbench][data-mode='preview'] [data-paimind-bento-stage]{padding:8px}[data-paimind-bento-player-controls]{bottom:10px}}
-[data-paimind-bento][data-expanded='true'] { position:fixed; inset:0; z-index:10000; width:100vw; height:100dvh; background:var(--dsw-alias-bg-layer-1,#fff); }
+[data-paimind-bento][data-expanded='true'] { position:fixed; inset:0; margin:0; border:0; padding:0; max-width:none; max-height:none; z-index:10000; width:100vw; height:100dvh; background:var(--dsw-alias-bg-layer-1,#fff); }
 [data-paimind-bento]:fullscreen { width:100vw; height:100dvh; }
 [data-paimind-bento-expand] { display:grid; place-items:center; width:34px; height:34px; padding:0!important; }
 [data-paimind-bento-toolbar] { justify-content:space-between; gap:8px; flex-wrap:wrap; }
@@ -357,27 +357,23 @@ export function BentoPreviewPanel(props: { readonly store: BentoPreviewStore; re
   const [expanded, setExpanded] = useState(false)
   const [railVisible, setRailVisible] = useState(true)
   useEffect(() => {
-    const onFullscreenChange = (): void => { if (document.fullscreenElement == null) setExpanded(false) }
+    const panel = panelRef.current
+    if (!expanded || panel === null) return
+    // The browser top layer escapes transformed and clipped sidebar ancestors,
+    // while retaining the same iframe and its temporary edits/navigation state.
+    panel.setAttribute('popover', 'manual')
+    panel.showPopover?.()
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape' && document.fullscreenElement == null) setExpanded(false)
+      if (event.key === 'Escape') setExpanded(false)
     }
-    document.addEventListener('fullscreenchange', onFullscreenChange)
     document.addEventListener('keydown', onKeyDown)
     return () => {
-      document.removeEventListener('fullscreenchange', onFullscreenChange)
+      panel.hidePopover?.()
+      panel.removeAttribute('popover')
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [])
-  const toggleExpanded = (): void => {
-    if (expanded) {
-      setExpanded(false)
-      if (document.fullscreenElement === panelRef.current) void document.exitFullscreen().catch(() => {})
-    } else {
-      setExpanded(true)
-      // Keep the viewport expansion available when an embedded browser declines fullscreen.
-      void panelRef.current?.requestFullscreen?.().catch(() => {})
-    }
-  }
+  }, [expanded])
+  const toggleExpanded = (): void => { setExpanded(value => !value) }
   const stageRef = useRef<HTMLDivElement>(null)
   const [stageScale, setStageScale] = useState(0)
   useEffect(() => {

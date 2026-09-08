@@ -52,9 +52,9 @@
       "path": "packages/branding",
       "contractSha256": "506fc365550c1fcc7e6edc10776b429fa339f44015b1e6df1661a91ff86f2628",
       "runtimeExportCount": 4,
-      "runtimeExportSha256": "db0f75b6bb352a0aa5da97b00ac5be26124a57cb527ed787386e1b63703e9b10",
+      "runtimeExportSha256": "3428cf87f51da9556a24ffd802f07e9d055d722211e3923e73d687532b90c5c0",
       "declarationCount": 4,
-      "declarationSha256": "f341ff6e61014ae34dd058c71c32b9668175188f5b21b31197c50d8ab2137f22",
+      "declarationSha256": "855afb944f0f9afa0be46dbce3882c6934e2f771acc98492c82da8cf6e23c1b8",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@hansen/category-analysis-adapter": {
@@ -169,9 +169,9 @@
       "path": "packages/harness-compat",
       "contractSha256": "848dbe5e0f01c97b219a0572b60690e9f79cb98c06c3eace1d77a59589b45f63",
       "runtimeExportCount": 6,
-      "runtimeExportSha256": "e641089f92f1caab04063b9b44c10f1e66d2456c2a6c57c645a1760016b2e90c",
+      "runtimeExportSha256": "abaa8192a4c9adae507ef6fcc6f1dac47c2378aaae53bb49b433c970ec7da02d",
       "declarationCount": 7,
-      "declarationSha256": "54349a62190bc9a0753ccdb29aab0386029031b3c5b4d3e2f71dc11eb6344e27",
+      "declarationSha256": "1eb366bffcd44ac3c967ca22738c38037f065641826a282b4062de4281103b7d",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@hansen/mcp-center": {
@@ -241,7 +241,7 @@
       "path": "packages/renderer-bento",
       "contractSha256": "178c88835cb8fd43ed61002c3d1ea13a23d6e32b55c8f7ca5331bf2bc2c0d48e",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "3b570ed31113ca6c1d972a32186d4fa8e4f31794d5e4f9398d15bd19333ed9c3",
+      "runtimeExportSha256": "94820d0ade4d7afd3d8e8196e0b62d44340f73f1c627b8b1dd5c08b91ca83327",
       "declarationCount": 5,
       "declarationSha256": "f8970b3f9401bb9ae0ff92dca635bcf64e509a3562dabfcc2e8e601723a6d6d1",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -349,9 +349,9 @@
       "path": "packages/visual-experience",
       "contractSha256": "2a2ef2e3be1f55cd665aae207ec2e4c9bbb9e5bff14b4301ba5a9189c75bed26",
       "runtimeExportCount": 4,
-      "runtimeExportSha256": "3a80b44af81a15440485be693607aeb2469c939296eac23850c48144088b1968",
+      "runtimeExportSha256": "8ec9e9ecf5e225986e68894b0ac023724578d2802d88b4f8a62d07d5d8b5a816",
       "declarationCount": 7,
-      "declarationSha256": "cac358a271b99d807fa0cd1f3a6c0bb55ad1d0f2392e7fb04a637b6deb3ba450",
+      "declarationSha256": "ce011c75fa63626b2825dc991f5c5f22b951e50404adbdcd85554a4515bbf76f",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@hansen/walmart-proposal-adapter": {
