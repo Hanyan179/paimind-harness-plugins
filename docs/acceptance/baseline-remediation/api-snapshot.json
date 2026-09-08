@@ -16,7 +16,7 @@
       "path": "packages/agent-market",
       "contractSha256": "06a138cf8ebb5b1095f2c33e5f41654abcb77c0c613f3722e989daee911b1bea",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "fba337200d0058a2a2920dc11811b360c7fa7749c874de73c93166e4f1f2b7d7",
+      "runtimeExportSha256": "1b81fcec7bbe5c39f22fdf6c81bafe7c6d83971d5258786430e5a5453ce0f291",
       "declarationCount": 8,
       "declarationSha256": "f639c615d7df228d14285d12459c4848c16cb830d039339a8428127773eca15e",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -106,7 +106,7 @@
       "path": "packages/extension-center",
       "contractSha256": "b2cd9a9155d856bf0b14ee6c2c624f19c0f39a62571cee60bdf7dfca778e4c8c",
       "runtimeExportCount": 6,
-      "runtimeExportSha256": "d8c2a0512bde72d3fbd639927c0ba5df8f002102427c5f1161c5aab83cf7e263",
+      "runtimeExportSha256": "513756951605d625aa8bf323e78ad88b20b00f493eebfb14a74f7d0db268b113",
       "declarationCount": 7,
       "declarationSha256": "c0ea15ff6b0a297b8c6819491ae9b5675cbd3b7759137f6666ebdbb11bcc17f5",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -118,6 +118,15 @@
       "runtimeExportSha256": "967dd537b99197f739729a4995a016948f51dce4256c077f2df7542c691dbf48",
       "declarationCount": 2,
       "declarationSha256": "0a4487d13a45afe01166236c6ee50e609c473b56c87632869f38be081bcf0c96",
+      "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "@paimind/feishu-cli-mcp": {
+      "path": "packages/feishu-cli-mcp",
+      "contractSha256": "fe857c44169a2913d73397858b71cca2b760168cbe36b8f71dcb85ecaacf613d",
+      "runtimeExportCount": 3,
+      "runtimeExportSha256": "547935179e51a37bf739cb2cc16a0361bb0bd743ce37a7fe2fce2e602f2186ca",
+      "declarationCount": 3,
+      "declarationSha256": "19401173a19ff7f7edcadc08f3d736e9e7af27c537d7819ad7b5117911663d56",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@paimind/generator-bento": {
@@ -160,16 +169,25 @@
       "path": "packages/harness-compat",
       "contractSha256": "5cacb9eb34ea9b08c6ca1012854c087af54b2bea7c478ffb92b59d7719dcaaad",
       "runtimeExportCount": 6,
-      "runtimeExportSha256": "02cd1faaffd0a7c0a6ee01d2a2f3aae75158cd5abfd856113101256695f8c70d",
+      "runtimeExportSha256": "6d824713430037274817aad200080cdbe10bfc7d49b8940fce55509e486edf4f",
       "declarationCount": 7,
-      "declarationSha256": "7bf0ed4d55a586dcdd5e91a9028f7973128be0e6df60e3d04a0aa384e68db969",
+      "declarationSha256": "5352c6e773342cb564da3028dfc379f888516c2ce69aa3acdf8910dae6347aa4",
+      "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "@paimind/mcp-center": {
+      "path": "packages/mcp-center",
+      "contractSha256": "24e3059f445999f84ce933381a3d41b35eb569f8fcab535e27a667051cb376e7",
+      "runtimeExportCount": 6,
+      "runtimeExportSha256": "44dad48f6e67d803a13951e7d1b85d2ea7bc5436246bf6c5a8b3037ab033ec3d",
+      "declarationCount": 8,
+      "declarationSha256": "addad61df8a656583c1303a433eb0c0f61ea8c640ab1f7c9c1b17a51596d4083",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@paimind/notifications": {
       "path": "packages/notifications",
       "contractSha256": "faeebf43bec910911088eb0f36e4db6054f607f547d2c29a118c65fdd974a0f2",
       "runtimeExportCount": 5,
-      "runtimeExportSha256": "3da640af507751b0a0838b4b8b5be2c85f7d21ebebac1c3fb479d86c1477c2f4",
+      "runtimeExportSha256": "06a60c5ff30b2b157443aa1492552df6b809206fc1cef3458ad3452bdc464213",
       "declarationCount": 5,
       "declarationSha256": "3304e7fd237637b612741b15337076d3b287b24dbd55569da392572bea8deb11",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -214,7 +232,7 @@
       "path": "packages/proposal-experience",
       "contractSha256": "021d1b85a19d0ef3ec06b30f0b7288a28ade3deb617daa0afc1474f26a2eab3c",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "10e04536b169ef3fc1a4f7eff000f4fcc229b74091d37ea53768d422bc6620a5",
+      "runtimeExportSha256": "485c884c792cc9fd90f269af0d485deba07f47ad12bb8bd0cb57849d90c40cd7",
       "declarationCount": 4,
       "declarationSha256": "c9e384d5f5bb2a0d7d4d34ee73cf33731e2ef67e4f16ef76ee4375cd3d6e7bb8",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -223,7 +241,7 @@
       "path": "packages/renderer-bento",
       "contractSha256": "16a5e3547d10bc9a073dfbdbdda0e9f486b53c1f81e1a2d9638b687ac81970c4",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "cb9259741890b329c8b9d7e62af4992b8daab4017659b0f05e09b8798f8c2da0",
+      "runtimeExportSha256": "dc9f78f1e086e32ee1330fecafc6ee4b91d0b44b71c2060055df33b5ea4c19e4",
       "declarationCount": 5,
       "declarationSha256": "de2caa23da2d05ee3566e3f10d9731a6daad70a428c14d928a15430acf651938",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -232,7 +250,7 @@
       "path": "packages/renderer-pdf",
       "contractSha256": "16a5e3547d10bc9a073dfbdbdda0e9f486b53c1f81e1a2d9638b687ac81970c4",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "f4e27d0524b9440ee8f69356118f7feb9b34de9cc3365576fe90537c88023c65",
+      "runtimeExportSha256": "9c83395836478f8cbdc43db14139baaf2efcf224f5ddbd63aa670302d9f2c29e",
       "declarationCount": 3,
       "declarationSha256": "777bac3ba788b90a8811bde86debdb6c82e171d3c16236bd58a6c5c83a7f49bb",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -241,7 +259,7 @@
       "path": "packages/runtime-orbs",
       "contractSha256": "5aa1a1e7c37aa5ea42cdae984cdb8dc754095ca6ced69b95365efa997afb28fc",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "d2bae5fc135049d899415da356c4d421b094e3314c07a29bf96e495f09123e06",
+      "runtimeExportSha256": "5ef3e5ee7a5b065df8fde4cf428d95ef88493ab1031f6ddf386878400cccb6c7",
       "declarationCount": 3,
       "declarationSha256": "acd370b23a114c60cdfb6f48390e8c8ec212c9ba52e4ade49faf9f7f93ee50e2",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -250,7 +268,7 @@
       "path": "packages/scheduler",
       "contractSha256": "ec8ab0a7a3ec1adfbcbb22d99e050bba16a205bfbaaa5ec43fa9f8a80d8cceb7",
       "runtimeExportCount": 7,
-      "runtimeExportSha256": "0e9b76ffd26aae837728a378929a64e3c00bf5431a3d907cca2e20cb86313b90",
+      "runtimeExportSha256": "43462a30f717590f041c85580bb24c14b64ef1623a708c8a8555c0df16b9a189",
       "declarationCount": 8,
       "declarationSha256": "841d0da0d32eb669b204b349483d3a29b0643b9c7511120682faa3e992a5b30a",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -286,7 +304,7 @@
       "path": "packages/skill-market",
       "contractSha256": "da1db1016c1f79da6274ae21e3a03b946d3aa900cbc013756f3736e18250745f",
       "runtimeExportCount": 7,
-      "runtimeExportSha256": "83da92bd36acbe730a5f85d1c964e32d2bde56f4a4ca502a40f7b804bdd8bd51",
+      "runtimeExportSha256": "b2dc80a26ac2edde366e3190d0bda9a74cddf6299c71027a536f8c9dad8193c6",
       "declarationCount": 10,
       "declarationSha256": "f555222b891e3db341a5fd7f1ad1fa88c3f0835467fd989fb9ac5b74098ff5bd",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -295,7 +313,7 @@
       "path": "packages/task-monitor",
       "contractSha256": "46caf0f9166250a1dcad208ee900138ef2526d048a061cc257f8be80faaa66bc",
       "runtimeExportCount": 3,
-      "runtimeExportSha256": "dc5e837eab8105b9ace6972e02f4c608c59a049bbd3b7fd570cadc5e77608227",
+      "runtimeExportSha256": "d3586d3d10c0a7bfd152f406d43c5a1b6ee2d1bc6d56c1334fb7d9dd977f6567",
       "declarationCount": 4,
       "declarationSha256": "b3ca7b6a12f2b61c26535b3ecaecfe9d1729f4fdea1203324bb645ebc92a22aa",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -322,7 +340,7 @@
       "path": "packages/user-settings",
       "contractSha256": "81558bf00e5ef012518fe76f845819cb9f8eea172248b468fbc97baf3655599f",
       "runtimeExportCount": 5,
-      "runtimeExportSha256": "31eef18527b9beeb92cd5785a631bec57a39639e16851cfd34a3bec7d9535608",
+      "runtimeExportSha256": "a38c01e63736b469f25787a8afb5061065bd123b6fbfad9958614a261001a898",
       "declarationCount": 6,
       "declarationSha256": "4a724a9d07a64bdd56b3e7af62a488971e173a2ea5c1eb0c8c5cc6b0c23eeb12",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -331,7 +349,7 @@
       "path": "packages/visual-experience",
       "contractSha256": "8165bad6d7b11315c5b4ec5e09b96d71428127168aa69b16e4f7cd0acd3a0b26",
       "runtimeExportCount": 4,
-      "runtimeExportSha256": "d9c3022fa37f35f7f5b4fd91b79960fb0dd0b760a2b3073fb307031ec8309f61",
+      "runtimeExportSha256": "2b079208af7d853f040799a051c213818b33898c6794fba35dc361ca0e960453",
       "declarationCount": 7,
       "declarationSha256": "96eb3413eef2f8f9984b4806221945e87e53634cd81b21931009f630d3cba180",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -349,7 +367,7 @@
       "path": "packages/workspace-blueprints",
       "contractSha256": "c2326cb8c926d2a929f2a6644aeca2f5286f3c28c5fbf35c38e0dbb159635dd9",
       "runtimeExportCount": 7,
-      "runtimeExportSha256": "28e716ef3d4f2e33c3966214301cf2e7724590c8908f82d8a066e4d7047400f6",
+      "runtimeExportSha256": "a3c49b6c0d47886f27e1151a616b8976d640fb9fd827e1f858e6e5c319e41c3b",
       "declarationCount": 8,
       "declarationSha256": "58ac972ed945d7c16cd7b6d36ecf911148b8e23e0e9af1810c15dfb15bdff23b",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -361,24 +379,6 @@
       "runtimeExportSha256": "05606d566c1855a38d54d17809e4917980a565c600533aaad4e8e061abbaf026",
       "declarationCount": 3,
       "declarationSha256": "f75e44f1793cc3a0042528bc12949c4c6cdf1949db36b6977c54e2fa00444c4a",
-      "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    },
-    "@paimind/feishu-cli-mcp": {
-      "path": "packages/feishu-cli-mcp",
-      "contractSha256": "fe857c44169a2913d73397858b71cca2b760168cbe36b8f71dcb85ecaacf613d",
-      "runtimeExportCount": 3,
-      "runtimeExportSha256": "547935179e51a37bf739cb2cc16a0361bb0bd743ce37a7fe2fce2e602f2186ca",
-      "declarationCount": 3,
-      "declarationSha256": "19401173a19ff7f7edcadc08f3d736e9e7af27c537d7819ad7b5117911663d56",
-      "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    },
-    "@paimind/mcp-center": {
-      "path": "packages/mcp-center",
-      "contractSha256": "24e3059f445999f84ce933381a3d41b35eb569f8fcab535e27a667051cb376e7",
-      "runtimeExportCount": 6,
-      "runtimeExportSha256": "b9c7c4511a4b6b8a56f77e03dff637149a02f02d7fff8e89b2e87ea2210da721",
-      "declarationCount": 8,
-      "declarationSha256": "addad61df8a656583c1303a433eb0c0f61ea8c640ab1f7c9c1b17a51596d4083",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     }
   }

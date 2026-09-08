@@ -1,3 +1,5 @@
+export { Tooltip as PaimindTooltip } from '@deepseek-ai/dsh-client-ui-primitives'
+
 import type {
   HarnessAgentChoice,
   HarnessAgentChoiceBridge,

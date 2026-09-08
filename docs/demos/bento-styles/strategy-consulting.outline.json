@@ -1,0 +1,354 @@
+{
+  "schema": "paimind.presentation-outline/v1",
+  "title": "战略咨询风 · 家庭创意用品提案",
+  "design": {
+    "schema": "paimind.presentation-design/v1",
+    "templateId": "strategy-grid",
+    "stylePreset": "strategy-consulting",
+    "aspectRatio": "16:9",
+    "canvas": {
+      "width": 1280,
+      "height": 720
+    },
+    "density": "balanced"
+  },
+  "sources": [
+    {
+      "sourceId": "demo",
+      "name": "sample-data.json",
+      "path": "docs/demos/bento-styles/sample-data.json",
+      "sha256": "01c5126e7a52775f42173bc19965daf8243c385745c043909020df7e0077bdc8",
+      "format": "json",
+      "role": "Synthetic demo",
+      "period": "Demo season",
+      "summary": "Synthetic demonstration only; not customer results."
+    }
+  ],
+  "facts": [
+    {
+      "factId": "sales",
+      "sourceIds": [
+        "demo"
+      ],
+      "rawValue": 1200000,
+      "displayValue": "¥120 万",
+      "valueType": "source_value",
+      "fieldPath": "$.sales",
+      "method": "读取共同的合成演示数据",
+      "definition": "sales",
+      "period": "Demo season",
+      "filters": [],
+      "factValuesChanged": false
+    },
+    {
+      "factId": "growth",
+      "sourceIds": [
+        "demo"
+      ],
+      "rawValue": 18,
+      "displayValue": "+18%",
+      "valueType": "source_value",
+      "fieldPath": "$.growth",
+      "method": "读取共同的合成演示数据",
+      "definition": "growth",
+      "period": "Demo season",
+      "filters": [],
+      "factValuesChanged": false
+    },
+    {
+      "factId": "products",
+      "sourceIds": [
+        "demo"
+      ],
+      "rawValue": 24,
+      "displayValue": "24 款",
+      "valueType": "source_value",
+      "fieldPath": "$.products",
+      "method": "读取共同的合成演示数据",
+      "definition": "products",
+      "period": "Demo season",
+      "filters": [],
+      "factValuesChanged": false
+    },
+    {
+      "factId": "craft",
+      "sourceIds": [
+        "demo"
+      ],
+      "rawValue": 540000,
+      "displayValue": "¥54 万",
+      "valueType": "source_value",
+      "fieldPath": "$.craft",
+      "method": "读取共同的合成演示数据",
+      "definition": "craft",
+      "period": "Demo season",
+      "filters": [],
+      "factValuesChanged": false
+    },
+    {
+      "factId": "party",
+      "sourceIds": [
+        "demo"
+      ],
+      "rawValue": 420000,
+      "displayValue": "¥42 万",
+      "valueType": "source_value",
+      "fieldPath": "$.party",
+      "method": "读取共同的合成演示数据",
+      "definition": "party",
+      "period": "Demo season",
+      "filters": [],
+      "factValuesChanged": false
+    },
+    {
+      "factId": "learning",
+      "sourceIds": [
+        "demo"
+      ],
+      "rawValue": 240000,
+      "displayValue": "¥24 万",
+      "valueType": "source_value",
+      "fieldPath": "$.learning",
+      "method": "读取共同的合成演示数据",
+      "definition": "learning",
+      "period": "Demo season",
+      "filters": [],
+      "factValuesChanged": false
+    }
+  ],
+  "slides": [
+    {
+      "slideId": "cover",
+      "layout": "cover",
+      "eyebrow": "风格样稿 · 合成数据",
+      "title": "让下一季的创意，走进更多家庭",
+      "narrative": "家庭创意用品季节提案｜三套视觉，共用一份内容",
+      "elements": [
+        {
+          "objectId": "sales",
+          "type": "kpi",
+          "title": "演示销售额",
+          "displayValue": "¥120 万",
+          "factIds": [
+            "sales"
+          ],
+          "bindings": [
+            {
+              "factId": "sales",
+              "selector": {
+                "kind": "object"
+              }
+            }
+          ]
+        },
+        {
+          "objectId": "growth",
+          "type": "kpi",
+          "title": "演示增长率",
+          "displayValue": "+18%",
+          "factIds": [
+            "growth"
+          ],
+          "bindings": [
+            {
+              "factId": "growth",
+              "selector": {
+                "kind": "object"
+              }
+            }
+          ]
+        },
+        {
+          "objectId": "products",
+          "type": "kpi",
+          "title": "演示商品数",
+          "displayValue": "24 款",
+          "factIds": [
+            "products"
+          ],
+          "bindings": [
+            {
+              "factId": "products",
+              "selector": {
+                "kind": "object"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slideId": "summary",
+      "layout": "insight",
+      "eyebrow": "01 · 核心判断",
+      "title": "把商品组合围绕三种家庭活动展开",
+      "narrative": "用于比较排版与视觉风格的示例方案，不代表真实业务分析。",
+      "elements": [
+        {
+          "objectId": "a",
+          "type": "decoration",
+          "title": "一起动手",
+          "text": "以手工创作为主线，让家长与孩子共同完成一件作品。",
+          "factIds": [],
+          "bindings": []
+        },
+        {
+          "objectId": "b",
+          "type": "decoration",
+          "title": "一起庆祝",
+          "text": "通过派对装饰，把节日准备变成家庭参与的过程。",
+          "factIds": [],
+          "bindings": []
+        },
+        {
+          "objectId": "c",
+          "type": "decoration",
+          "title": "一起探索",
+          "text": "用轻量学习玩具，连接好奇心与日常陪伴。",
+          "factIds": [],
+          "bindings": []
+        }
+      ]
+    },
+    {
+      "slideId": "data",
+      "layout": "horizontal-bar",
+      "eyebrow": "02 · 示例数据",
+      "title": "手工创作占示例销售额的 45%",
+      "narrative": "总额 ¥120 万，三个品类使用相同单位；所有数值为合成演示数据。",
+      "elements": [
+        {
+          "objectId": "mix",
+          "type": "chart",
+          "title": "品类销售额（万元）",
+          "factIds": [
+            "craft",
+            "party",
+            "learning"
+          ],
+          "bindings": [
+            {
+              "factId": "craft",
+              "selector": {
+                "kind": "chart-point",
+                "seriesKey": "sales",
+                "categoryKey": "craft"
+              }
+            },
+            {
+              "factId": "party",
+              "selector": {
+                "kind": "chart-point",
+                "seriesKey": "sales",
+                "categoryKey": "party"
+              }
+            },
+            {
+              "factId": "learning",
+              "selector": {
+                "kind": "chart-point",
+                "seriesKey": "sales",
+                "categoryKey": "learning"
+              }
+            }
+          ],
+          "chart": {
+            "kind": "horizontal-bar",
+            "points": [
+              {
+                "seriesKey": "sales",
+                "categoryKey": "craft",
+                "label": "手工创作",
+                "value": 540000,
+                "displayValue": "¥54 万",
+                "factId": "craft"
+              },
+              {
+                "seriesKey": "sales",
+                "categoryKey": "party",
+                "label": "派对用品",
+                "value": 420000,
+                "displayValue": "¥42 万",
+                "factId": "party"
+              },
+              {
+                "seriesKey": "sales",
+                "categoryKey": "learning",
+                "label": "学习玩具",
+                "value": 240000,
+                "displayValue": "¥24 万",
+                "factId": "learning"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "slideId": "plan",
+      "layout": "comparison",
+      "eyebrow": "03 · 方案设计",
+      "title": "先把主推组合做清楚，再扩展陈列",
+      "narrative": "以三种使用场景组织商品，让消费者能快速理解“买回家怎么玩”。",
+      "elements": [
+        {
+          "objectId": "starter",
+          "type": "decoration",
+          "title": "入门组合",
+          "text": "基础材料 + 清晰步骤卡\n面向第一次体验的家庭",
+          "factIds": [],
+          "bindings": []
+        },
+        {
+          "objectId": "season",
+          "type": "decoration",
+          "title": "季节组合",
+          "text": "节日主题 + 可分享作品\n面向聚会与送礼场景",
+          "factIds": [],
+          "bindings": []
+        },
+        {
+          "objectId": "display",
+          "type": "decoration",
+          "title": "陈列设计",
+          "text": "以完成后的作品呈现效果\n让商品和使用场景同时被看见",
+          "factIds": [],
+          "bindings": []
+        }
+      ]
+    },
+    {
+      "slideId": "next",
+      "layout": "recommendation",
+      "eyebrow": "04 · 下一步",
+      "title": "用一轮小规模试点验证组合",
+      "narrative": "以下为演示行动计划，尚未获得真实业务授权。",
+      "elements": [
+        {
+          "objectId": "w1",
+          "type": "decoration",
+          "title": "第 1 周 · 明确范围",
+          "text": "选定试点商品与陈列位置，确认观察指标。",
+          "factIds": [],
+          "bindings": []
+        },
+        {
+          "objectId": "w2",
+          "type": "decoration",
+          "title": "第 2–3 周 · 观察表现",
+          "text": "记录销售、补货与消费者反馈，保留原始数据。",
+          "factIds": [],
+          "bindings": []
+        },
+        {
+          "objectId": "w4",
+          "type": "decoration",
+          "title": "第 4 周 · 决定调整",
+          "text": "比较目标与结果，决定扩展、调整或结束。",
+          "factIds": [],
+          "bindings": []
+        }
+      ]
+    }
+  ]
+}

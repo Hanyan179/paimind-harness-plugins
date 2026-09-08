@@ -47,6 +47,21 @@ describe('FP07 Bento preview client store', () => {
     expect(screen.getByRole('status')).toHaveTextContent('facts and derived metrics are locked')
   })
 
+  it('expands the workbench without fullscreen support and Escape restores its panel', () => {
+    const store = new BentoPreviewStore(sidebar())
+    store.open({ sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', path: '/workspace/deck.html', title: 'Deck' })
+    const scope: PaimindSidebarTabScope = { sessionId: 's1', workspaceId: 'w1', cwd: '/workspace', visible: true, locale: { getLocale: () => ({ active: 'en' }), subscribe: () => () => {} } }
+    render(createElement(BentoPreviewPanel, { store, scope }))
+    const panel = screen.getByRole('region', { name: 'Isolated Bento preview' })
+    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen workbench' }))
+    expect(panel).toHaveAttribute('data-expanded', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(panel).toHaveAttribute('data-expanded', 'true')
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(panel).toHaveAttribute('data-expanded', 'false')
+    expect(store.getSnapshot().mode).toBe('edit')
+  })
+
   it('renders Preview as a clean slide player and reserves thumbnails for workbench modes', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ origin: 'http://127.0.0.1:49152', token: 'a'.repeat(24) }), { status: 200 })))
     vi.stubGlobal('ResizeObserver', class { observe(): void {} disconnect(): void {} })
