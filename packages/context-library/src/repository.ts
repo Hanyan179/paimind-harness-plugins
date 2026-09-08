@@ -13,6 +13,7 @@ import {
   withPaimindFileLock,
 } from '@hansen/harness-compat/managed-files'
 import {
+  CONTEXT_FILE_MAX_BYTES,
   collectionSchema,
   inputSchema,
   mountSchema,
@@ -603,8 +604,8 @@ export class ContextLibraryRepository
           )
         } else
           bytes = Buffer.from(input.content ?? '', input.encoding ?? 'utf8')
-        if (bytes.length > 20 * 1024 * 1024)
-          throw new Error('文件超过 20 MB 限制')
+        if (bytes.length > CONTEXT_FILE_MAX_BYTES)
+          throw new Error('文件超过 64 MB 限制')
         if (
           input.expectedRevision !== null &&
           typeof input.expectedRevision !== 'string'

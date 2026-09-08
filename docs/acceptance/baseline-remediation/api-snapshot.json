@@ -169,9 +169,9 @@
       "path": "packages/harness-compat",
       "contractSha256": "f33aeee4380ccd2516e38c8ca248a92d16660bf303c24913b54a2263c0ec3253",
       "runtimeExportCount": 8,
-      "runtimeExportSha256": "f576ab3b8a48b11a730fd733ad42d3430cc285bc137e371010d1a75e3c63e44b",
+      "runtimeExportSha256": "4a3df140c0680e5b57c2a151e1062d69788e39aa2791229cbf3186f389452ae3",
       "declarationCount": 9,
-      "declarationSha256": "62d0f2e4d3bd71c6c04072c0760a8475cd193ca44afe0862b23dc1753bf9ec63",
+      "declarationSha256": "5a378068d94ef14552033f3fa730da2dd2f9ec8a59fdb83c1e6e0813d8b6fb9e",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@hansen/mcp-center": {
@@ -385,9 +385,9 @@
       "path": "packages/context-library",
       "contractSha256": "19ae57526502352c5f2188935086530b1159a6ad188d6fe1864488eefb257537",
       "runtimeExportCount": 6,
-      "runtimeExportSha256": "cb592d8fb07538033720c44d707f13e9fe638aa21aa910852e4c5051332b4b3d",
+      "runtimeExportSha256": "983209a8c6ba7cd8f0cfd8fd4b551b2bec1775a1676fc763b8baf5a5e53ad0d0",
       "declarationCount": 15,
-      "declarationSha256": "50eb1216e8610c737397692c92de81941ca46a15f55cc52f9863bb4623731519",
+      "declarationSha256": "e6591b1c54c9844c52d89edba824015ca84c7b81cdc02df63b76c66693cd9f8a",
       "bundleFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "@hansen/workspace-editors": {

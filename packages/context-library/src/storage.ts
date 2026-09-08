@@ -1,4 +1,5 @@
 import * as fs from 'node:fs/promises'
+import { CONTEXT_FILE_MAX_BYTES } from './contract.js'
 import {
   readPaimindManagedBytes,
   resolvePaimindManagedFile,
@@ -24,7 +25,9 @@ export const localContextStorage: ContextStorage = {
   rename: fs.rename,
   lstat: fs.lstat,
   rm: fs.rm,
-  read: readPaimindManagedBytes,
+  read: (root, path, maxBytes = CONTEXT_FILE_MAX_BYTES) =>
+    readPaimindManagedBytes(root, path, maxBytes),
   resolve: resolvePaimindManagedFile,
-  write: writePaimindManagedBytes,
+  write: (root, path, bytes, revision, beforeCommit, signal) =>
+    writePaimindManagedBytes(root, path, bytes, revision, beforeCommit, signal, CONTEXT_FILE_MAX_BYTES),
 }

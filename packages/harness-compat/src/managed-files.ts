@@ -103,9 +103,11 @@ export async function writePaimindManagedBytes(
   expectedRevision: string | null,
   beforeCommit: () => Promise<void> = async () => {},
   signal?: AbortSignal,
+  maxBytes = 20 * 1024 * 1024,
 ): Promise<string> {
+  if (bytes.length > maxBytes) throw new Error('文件超过写入限制')
   const target = await resolvePaimindManagedFile(root, path, true)
-  const current = await readPaimindManagedBytes(root, path).catch(
+  const current = await readPaimindManagedBytes(root, path, maxBytes).catch(
     (error: NodeJS.ErrnoException) => {
       if (error.code === 'ENOENT') return null
       throw error
@@ -126,7 +128,7 @@ export async function writePaimindManagedBytes(
     await beforeCommit()
     signal?.throwIfAborted()
     await resolvePaimindManagedFile(root, path)
-    const latest = await readPaimindManagedBytes(root, path).catch(
+    const latest = await readPaimindManagedBytes(root, path, maxBytes).catch(
       (error: NodeJS.ErrnoException) => {
         if (error.code === 'ENOENT') return null
         throw error

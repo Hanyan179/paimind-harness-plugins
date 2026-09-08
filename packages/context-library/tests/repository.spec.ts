@@ -427,3 +427,26 @@ it('rejects a collection root replaced with a symbolic link', async () => {
     }),
   ).rejects.toThrow('根目录')
 })
+
+it('round-trips a report larger than 20 MiB through versioned writes, partial reads and recycle', async () => {
+  const bytes = Buffer.alloc(24 * 1024 * 1024, 0x61)
+  bytes.write('%PDF-1.7\n')
+  const first = await req({ action: 'write', path: 'report.pdf', content: bytes.toString('base64'), encoding: 'base64', expectedRevision: null })
+  await mount()
+  const segment = (await req({ action: 'read', path: 'report.pdf', offset: bytes.length - 32, limit: 32 }, identity())).document!
+  expect(segment.entry.bytes).toBe(bytes.length)
+  expect(Buffer.from(segment.content, 'base64')).toEqual(bytes.subarray(-32))
+  expect(segment.nextOffset).toBeNull()
+  bytes[bytes.length - 1] = 0x62
+  const changed = await req({ action: 'write', path: 'report.pdf', content: bytes.toString('base64'), encoding: 'base64', expectedRevision: first.revision })
+  expect(changed.revision).not.toBe(first.revision)
+  await expect(req({ action: 'write', path: 'report.pdf', content: 'stale', expectedRevision: first.revision })).rejects.toThrow('VERSION_CONFLICT')
+  const recycled = await req({ action: 'trash', path: 'report.pdf', expectedRevision: changed.revision })
+  await req({ action: 'restore', path: recycled.recycledPath })
+  expect((await req({ action: 'read', path: 'report.pdf', limit: 32 })).document!.entry.revision).toBe(changed.revision)
+})
+
+it('rejects files beyond the bounded 64 MiB library limit without creating a file', async () => {
+  await expect(req({ action: 'write', path: 'oversize.txt', content: 'a'.repeat(64 * 1024 * 1024 + 1), expectedRevision: null })).rejects.toThrow('64 MB')
+  expect((await req({ action: 'list' })).entries!.some((entry) => entry.name === 'oversize.txt')).toBe(false)
+})

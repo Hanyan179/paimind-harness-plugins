@@ -1,4 +1,6 @@
 import { z } from 'zod'
+export const CONTEXT_FILE_MAX_BYTES = 64 * 1024 * 1024
+const CONTEXT_CONTENT_MAX_CHARS = Math.ceil(CONTEXT_FILE_MAX_BYTES / 3) * 4
 export const targetSchema = z
   .object({
     kind: z.enum(['agent', 'workspace', 'session']),
@@ -93,7 +95,7 @@ export const inputSchema = z
     sessionId: z.string().max(200).optional(),
     path: z.string().max(1000).optional(),
     toPath: z.string().max(1000).optional(),
-    content: z.string().max(28_000_000).optional(),
+    content: z.string().max(CONTEXT_CONTENT_MAX_CHARS).optional(),
     encoding: z.enum(['utf8', 'base64']).optional(),
     contentType: z.string().max(150).optional(),
     expectedRevision: z.union([z.string(), z.number()]).nullable().optional(),
