@@ -1,3 +1,26 @@
+# Unified navigation revision — 2026-09-09
+
+final result: passed
+
+Source: user-supplied screenshot `/var/folders/rm/83swjql96xg01d0jdshqkwkr0000gn/T/codex-clipboard-44601dfc-ed20-4e45-8f3b-bcd8529438a4.png` (1034 × 632), alongside the explicit request to integrate notifications/settings, remove pin selection, distinguish icons and restore hover labels. This is a scoped correction to the approved application, not a clone of the screenshot defects.
+
+Implementation evidence: inline browser screenshots in this task at http://127.0.0.1:3188/, desktop 1832 × 1220 and mobile 390 × 844 CSS/image dimensions. Browser screenshots returned inline; no filesystem screenshot paths are claimed. Comparison uses the toolbar/menu region rather than the differently sized surrounding page.
+
+- Unified toolbar has Agents, resource menu, search, Notifications and Settings. No separate bottom-row utility buttons remain.
+- Manual pin controls and pin instruction copy removed. Existing stored pin data is left untouched but no longer read or used. Newly available product contributions continue to appear automatically in the resource menu.
+- Resource menu uses the existing ellipsis icon, documents use the attachment icon, and utility icons copy their native SVG presentation. No duplicate adjacent resource icons.
+- Hover labels are enabled for all five controls in expanded and collapsed states. Real mouse movement verified Notifications and Settings tooltips; keyboard focus also displays labels.
+- Native Notifications and Settings open successfully. Closing each returns focus to its visible toolbar proxy. Notifications still own records, read state and actions; Settings remain host-owned.
+- Search for 连接 opens the real Connection Center. Mobile screenshot shows all five toolbar controls and the full resource list within the viewport.
+- Typography and semantic color tokens retained; removing the hint and pin column improves layout density. No image assets or fonts were introduced. Existing rounding, single input focus ring and adaptive width retained.
+- Focused comparison resolves the screenshot's repeated icons, detached utility row and manual-pin copy. No remaining P0/P1/P2 findings in this revision scope.
+
+Validation: 126 tests across Visual Experience, Notifications and Harness Compat passed; declaration build, package compliance, API comparison, bundle budget, external NodeNext consumer, framework and docs checks passed. Browser console checked again at handoff. No merge or release.
+
+Contract review: navigation projection adds optional utility/badge fields and an additive native icon mounting method; existing activation/disposal signatures and source ownership remain. Notification trigger exposes its existing open state through aria-expanded. Reviewed snapshots update only the affected runtime hashes plus the additive compat declaration hash.
+
+---
+
 # Morphing resource navigation — design QA
 
 final result: passed

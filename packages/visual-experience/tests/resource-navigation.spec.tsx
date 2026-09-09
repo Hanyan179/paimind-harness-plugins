@@ -21,6 +21,12 @@ function setup(wide = true) {
     button.textContent = `${label}中心`
     const action = vi.fn(); button.onclick = action; actions.set(id!, action); slot.append(button)
   }
+  const notification = document.createElement('button')
+  notification.dataset.paimindNotificationTrigger = ''
+  notification.setAttribute('aria-label', '打开通知中心')
+  notification.innerHTML = '<span data-paimind-notification-badge>3</span>'
+  const notificationAction = vi.fn(); notification.onclick = notificationAction; actions.set('notifications', notificationAction); slot.append(notification)
+  const settingsAction = vi.fn(); document.querySelector<HTMLButtonElement>('#settings button')!.onclick = settingsAction; actions.set('settings', settingsAction)
   const view = render(<ResourceNavigation wide={wide} locale={locale as never} />, { container: document.getElementById('navigation')! })
   return { ...view, slot, actions }
 }
@@ -31,7 +37,7 @@ describe('compact resource navigation', () => {
     vi.useFakeTimers()
     localStorage.setItem('paimind.visual-experience.navigation.pinned.v1', 'mcp-center')
     const view = setup(false)
-    for (const name of ['智能体', '连接', '资源库']) {
+    for (const name of ['智能体', '资源库', '通知', '设置']) {
       const button = screen.getByRole('button', { name, exact: true })
       fireEvent.mouseEnter(button)
       act(() => { vi.advanceTimersByTime(300) })
@@ -45,7 +51,7 @@ describe('compact resource navigation', () => {
     view.rerender(<ResourceNavigation wide locale={locale as never} />)
     fireEvent.mouseEnter(screen.getByRole('button', { name: '智能体', exact: true }))
     act(() => { vi.advanceTimersByTime(300) })
-    expect(screen.queryByRole('tooltip')).toBeNull()
+    expect(screen.getByRole('tooltip')).toHaveTextContent('智能体')
   })
 
   it('expands the search icon, keeps dismissed content inert and survives rapid reopen', () => {
@@ -66,6 +72,21 @@ describe('compact resource navigation', () => {
     expect(screen.getByRole('button', { name: '打开技能' })).toBeInTheDocument()
   })
 
+  it('integrates native utilities without duplicate visible triggers and preserves legacy preference data', async () => {
+    localStorage.setItem('paimind.visual-experience.navigation.pinned.v1', 'mcp-center')
+    const { actions, unmount } = setup()
+    expect(screen.queryByRole('button', { name: '连接', exact: true })).toBeNull()
+    expect(screen.queryByRole('button', { name: '打开通知中心', exact: true })).toBeNull()
+    expect(document.querySelector('[data-paimind-utility-badge]')).toHaveAttribute('aria-label', '3 条未读通知')
+    fireEvent.click(screen.getByRole('button', { name: '通知', exact: true }))
+    expect(actions.get('notifications')).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: '设置', exact: true }))
+    expect(actions.get('settings')).toHaveBeenCalledOnce()
+    unmount()
+    expect(screen.getByRole('button', { name: '打开通知中心', exact: true })).toBeInTheDocument()
+    expect(localStorage.getItem('paimind.visual-experience.navigation.pinned.v1')).toBe('mcp-center')
+  })
+
   it('compacts only the Settings trigger and preserves buttons in its nested native dialog', () => {
     const { unmount } = setup()
     const settings = document.getElementById('settings')!
@@ -80,14 +101,14 @@ describe('compact resource navigation', () => {
     document.head.prepend(nativeStyle)
     try {
       const trigger = settings.querySelector('button')!
-      expect(getComputedStyle(trigger).width).toBe('36px')
+      expect(getComputedStyle(trigger).display).toBe('none')
       expect(getComputedStyle(dialog.querySelector('.native-settings-tab')!).width).toBe('180px')
       for (const button of dialog.querySelectorAll('.native-settings-action')) {
         expect(getComputedStyle(button).width).toBe('120px')
         expect(getComputedStyle(button).height).toBe('32px')
       }
       unmount()
-      expect(getComputedStyle(trigger).width).not.toBe('36px')
+      expect(getComputedStyle(trigger).display).not.toBe('none')
       expect(getComputedStyle(dialog.querySelector('.native-settings-tab')!).width).toBe('180px')
     } finally { nativeStyle.remove() }
   })
@@ -101,30 +122,25 @@ describe('compact resource navigation', () => {
     const dispose = installPaimindProductSurfaceInteraction(page, controller)
     fireEvent.click(screen.getByRole('button', { name: '资源库', exact: true }))
     expect(screen.getByRole('dialog', { name: '资源库' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '固定技能到侧边栏' }))
     fireEvent.keyDown(screen.getByRole('searchbox'), { key: 'Escape' })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(controller.getSnapshot().open).toBe(true)
     release(); dispose(); controller.dispose()
   })
 
-  it('opens the original source action, searches and replaces one optional shortcut', async () => {
+  it('opens the original source action, searches without manual shortcut configuration', async () => {
     const { actions } = setup()
     expect(screen.getByRole('button', { name: '智能体', exact: true })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '技能', exact: true })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '资源库', exact: true }))
     const dialog = screen.getByRole('dialog', { name: '资源库' })
-    fireEvent.click(within(dialog).getByRole('button', { name: '固定技能到侧边栏' }))
-    expect(screen.getByRole('button', { name: '技能', exact: true })).toBeInTheDocument()
-    fireEvent.click(within(dialog).getByRole('button', { name: '固定连接到侧边栏' }))
-    expect(screen.queryByRole('button', { name: '技能', exact: true })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '连接', exact: true })).toBeInTheDocument()
+    expect(within(dialog).queryByRole('button', { name: /固定/ })).toBeNull()
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: '模板' } })
     expect(within(dialog).queryByRole('button', { name: '打开技能' })).not.toBeInTheDocument()
     fireEvent.click(within(dialog).getByRole('button', { name: '打开模板' }))
     expect(actions.get('workspace-blueprints')).toHaveBeenCalledOnce()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(localStorage.getItem('paimind.visual-experience.navigation.pinned.v1')).toBe('mcp-center')
+    expect(localStorage.getItem('paimind.visual-experience.navigation.pinned.v1')).toBeNull()
     await waitFor(() => expect(isPaimindProductSurfaceAvailable('skill-center')).toBe(true))
   })
 
@@ -136,8 +152,7 @@ describe('compact resource navigation', () => {
     button.dataset.paimindNavigationLabel = '未来工具'
     button.textContent = '未来工具'; const activate = vi.fn(); button.onclick = activate
     act(() => { slot.append(button) })
-    fireEvent.click(await screen.findByRole('button', { name: '固定未来工具到侧边栏' }))
-    fireEvent.click(screen.getByRole('button', { name: '未来工具', exact: true }))
+    fireEvent.click(await screen.findByRole('button', { name: '打开未来工具', exact: true }))
     expect(activate).toHaveBeenCalledOnce()
     act(() => { button.remove() })
     await waitFor(() => expect(screen.queryByRole('button', { name: '未来工具', exact: true })).not.toBeInTheDocument())
@@ -151,7 +166,7 @@ describe('compact resource navigation', () => {
     expect(screen.getByText('没有找到匹配的入口')).toBeInTheDocument()
     fireEvent.keyDown(screen.getByRole('searchbox'), { key: 'Escape' })
     expect(document.activeElement).toBe(screen.getByRole('button', { name: '资源库', exact: true }))
-    expect(document.querySelectorAll('[data-paimind-navigation-source]')).toHaveLength(4)
+    expect(document.querySelectorAll('[data-paimind-navigation-source]')).toHaveLength(6)
     unmount()
     expect(document.querySelector('[data-paimind-navigation-footer]')).toBeNull()
     expect(document.querySelector('[data-paimind-navigation-source]')).toBeNull()

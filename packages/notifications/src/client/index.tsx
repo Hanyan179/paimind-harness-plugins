@@ -320,7 +320,7 @@ export function NotificationTrigger(props: {
   const locale = useSyncExternalStore(props.locale.subscribe.bind(props.locale), () => props.locale.getLocale().active)
   const zh = locale.startsWith('zh')
   const unread = snapshot.items.filter(item => item.readAt === undefined).length
-  return <button type="button" data-paimind-notification-trigger data-wide={props.wide} aria-label={zh ? '打开通知中心' : 'Open Notification Center'} onClick={() => { props.controller.toggle() }}>
+  return <button type="button" data-paimind-notification-trigger data-wide={props.wide} aria-expanded={snapshot.open} aria-haspopup="dialog" aria-label={zh ? '打开通知中心' : 'Open Notification Center'} onClick={() => { props.controller.toggle() }}>
     <BellIcon />
     {props.wide && <span data-paimind-notification-trigger-label>{zh ? '通知' : 'Notifications'}</span>}
     {unread > 0 && <span data-paimind-notification-badge>{unread > 99 ? '99+' : unread}</span>}

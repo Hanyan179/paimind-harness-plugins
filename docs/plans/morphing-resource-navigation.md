@@ -26,3 +26,9 @@ The one changed runtime snapshot hash is the rebuilt Visual Experience client bu
 Validation records: project-root `design-qa.md`; local `.tmp/morph-tests.log`, `.tmp/morph-fast.log`, `.tmp/morph-retest.log`, `.tmp/morph-build.log`, `.tmp/morph-gates.log`.
 
 The full suite initially passed 772 of 773 tests with one existing Skill installer large-directory test timing out at five seconds. Retesting that file and navigation at two workers passed 36/36, including the new rapid-reopen test. No unrelated test or timeout setting was modified.
+
+## Approved revision: unified utilities and automatic resource menu
+
+The user's follow-up supersedes the original pin-selection scope. Notifications and native Settings are discovered and presented by the existing compat bridge inside the same toolbar. Utility sources remain mounted and are restored on disposal; records, settings state and panel ownership remain with their original plugins. No separate source registry, mounting configuration or user-selected persistent shortcut is introduced. The old pin preference is neither read nor deleted. All toolbar buttons expose hover/focus names, with distinct semantic icons.
+
+Validation and screenshots are recorded in the latest section of project-root design-qa.md.

@@ -8,6 +8,8 @@ export interface PaimindNavigationEntry {
   readonly group: string
   readonly active: boolean
   readonly disabled: boolean
+  readonly utility?: boolean
+  readonly badge?: string
 }
 
 const SOURCE = 'data-paimind-navigation-source'
@@ -19,26 +21,23 @@ const SETTINGS = 'data-paimind-navigation-settings'
 export function installPaimindCompactNavigation(
   mount: HTMLElement,
   publish: (entries: readonly PaimindNavigationEntry[]) => void,
-): { readonly activate: (id: string) => boolean; readonly dispose: () => void } {
+): { readonly activate: (id: string) => boolean; readonly mountIcon: (id: string, container: HTMLElement) => void; readonly dispose: () => void } {
   const doc = mount.ownerDocument
   const style = doc.createElement('style')
   style.textContent = `
-[data-paimind-navigation-footer]{display:grid!important;grid-template-columns:minmax(0,1fr) 36px;gap:4px!important;align-items:center!important}
+[data-paimind-navigation-footer]{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:0!important;align-items:center!important}
 [data-paimind-navigation-footer] [data-paimind-navigation-actions]{display:contents!important}
 [data-paimind-navigation-footer] [data-paimind-navigation-source]{display:none!important}
-[data-paimind-navigation-footer] [data-paimind-navigation-settings]{grid-column:2;grid-row:2;width:36px!important;padding:0!important;margin:0!important}
-/* Harness nests the Settings dialog here too; only compact its native trigger. */
-[data-paimind-navigation-settings] button:has(> [data-slot="settings.trigger"]){width:36px!important;height:36px!important;min-height:36px!important;padding:0!important;margin:0!important;display:flex;align-items:center;justify-content:center;border-radius:10px}
-[data-paimind-navigation-settings] [data-slot="settings.trigger"]>span{display:none!important}
-[data-paimind-navigation-footer] button[data-paimind-notification-trigger]{grid-column:1;grid-row:2;justify-self:start;width:36px!important;height:36px!important;min-height:36px!important;padding:0!important;margin:0!important;display:flex;justify-content:center;align-items:center;border-radius:10px!important}
-[data-paimind-navigation-footer] [data-paimind-notification-trigger-label]{display:none!important}
-[data-paimind-navigation-footer]:has([data-paimind-resource-navigation][data-wide="false"]){grid-template-columns:36px;justify-content:center}
-[data-paimind-navigation-footer]:has([data-paimind-resource-navigation][data-wide="false"]) [data-paimind-navigation-settings]{grid-column:1;grid-row:3}
+/* Keep the native settings dialog mounted; hide only its proxied trigger. */
+[data-paimind-navigation-footer] [data-paimind-navigation-settings]{display:contents!important}
+[data-paimind-navigation-footer]:has([data-paimind-resource-navigation][data-wide="false"]){grid-template-columns:36px!important;justify-content:center}
+
 `
   markHarnessClientStyle(style, '@hansen/visual-experience')
   doc.head.append(style)
   const marked = new Map<HTMLElement, Map<string, string | null>>()
   let sources = new Map<string, HTMLButtonElement>()
+  const utilityOpen = new Map<string, boolean>()
   let previous = ''
   let disposed = false
   const mark = (element: HTMLElement, name: string): void => {
@@ -81,6 +80,28 @@ export function installPaimindCompactNavigation(
         active: button.getAttribute('aria-current') === 'page', disabled: button.disabled })
       mark(button, SOURCE)
     }
+    const utilities: [string, HTMLButtonElement | null][] = [
+      ['notifications', slot.querySelector<HTMLButtonElement>('button[data-paimind-notification-trigger]')],
+      ['settings', settings?.querySelector<HTMLButtonElement>('button:has(> [data-slot="settings.trigger"])') ?? null],
+    ]
+    for (const [id, button] of utilities) {
+      if (!button) continue
+      const active = button.getAttribute('aria-expanded') === 'true'
+      if (utilityOpen.get(id) && !active) queueMicrotask(() => {
+        if (disposed) return
+        const focused = doc.activeElement
+        if (!focused || focused === doc.body || focused === button || !focused.isConnected) {
+          mount.querySelector<HTMLButtonElement>(`button[data-paimind-navigation-target="${id}"]`)?.focus()
+        }
+      })
+      utilityOpen.set(id, active)
+      next.set(id, button)
+      entries.push({ id, label: button.getAttribute('aria-label') ?? button.textContent?.trim() ?? id,
+        description: '', group: '', active: button.getAttribute('aria-expanded') === 'true',
+        disabled: button.disabled, utility: true,
+        badge: button.querySelector('[data-paimind-notification-badge]')?.textContent?.trim() ?? '' })
+      mark(button, SOURCE)
+    }
     for (const [element, attributes] of [...marked]) {
       if (attributes.has(SOURCE) && ![...next.values()].includes(element as HTMLButtonElement)) {
         const value = attributes.get(SOURCE)
@@ -95,7 +116,7 @@ export function installPaimindCompactNavigation(
   }
   const observer = new MutationObserver(update)
   observer.observe(doc.body, { childList: true, subtree: true, characterData: true,
-    attributes: true, attributeFilter: ['aria-current', 'disabled', 'data-paimind-product-trigger',
+    attributes: true, attributeFilter: ['aria-current', 'aria-expanded', 'aria-label', 'disabled', 'data-paimind-product-trigger',
       'data-paimind-navigation-label', 'data-paimind-navigation-description', 'data-paimind-navigation-group'] })
   update()
   return {
@@ -106,6 +127,10 @@ export function installPaimindCompactNavigation(
       source.click()
       return true
     },
-    dispose() { if (disposed) return; disposed = true; observer.disconnect(); restore(); style.remove(); sources.clear() },
+    mountIcon(id, container) {
+      const icon = sources.get(id)?.querySelector('svg')
+      container.replaceChildren(...(icon ? [icon.cloneNode(true)] : []))
+    },
+    dispose() { if (disposed) return; disposed = true; observer.disconnect(); restore(); style.remove(); sources.clear(); utilityOpen.clear() },
   }
 }

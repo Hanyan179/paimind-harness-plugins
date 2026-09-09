@@ -2,11 +2,9 @@ import { Component, useEffect, useRef, useState, useSyncExternalStore, type CSSP
 import { PaimindTooltip, installPaimindCompactNavigation, type PaimindNavigationEntry } from '@hansen/harness-compat/client-surface'
 import { markHarnessClientStyle, type PaimindLocaleSource } from '@hansen/harness-compat'
 import { PaimindAgentIcon, PaimindSkillIcon, PaimindConnectionIcon, PaimindTemplateIcon,
-  PaimindExtensionIcon, PaimindSearchIcon, PaimindCloseIcon,
-  PaimindPlusIcon, PaimindCheckIcon } from '@hansen/harness-compat/client-icons'
+  PaimindMoreIcon, PaimindAttachmentIcon, PaimindSearchIcon, PaimindCloseIcon } from '@hansen/harness-compat/client-icons'
 import type { PaimindExperienceModeController } from './index.js'
 
-const PIN_KEY = 'paimind.visual-experience.navigation.pinned.v1'
 const STYLE = `
 [data-paimind-resource-navigation]{grid-column:1/-1;grid-row:1;width:100%;min-width:0;position:relative;color:var(--dsw-alias-label-primary,#202124)}
 [data-paimind-resource-navigation] *{box-sizing:border-box}
@@ -21,10 +19,6 @@ const STYLE = `
 [data-paimind-resource-heading]{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 [data-paimind-resource-heading] h2{font-size:16px;margin:0;font-weight:650}
 [data-paimind-resource-heading] button{display:grid;place-items:center;width:26px;height:26px;border-radius:7px}
-[data-paimind-resource-search]{display:flex;align-items:center;gap:8px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.18));border-radius:10px;padding:9px 10px;margin-bottom:16px;color:var(--dsw-alias-label-secondary,#7c8797)}
-[data-paimind-resource-search] input{width:100%;min-width:0;border:0;background:transparent;color:var(--dsw-alias-label-primary,#202124);font:inherit;font-size:13px;outline:none}
-[data-paimind-resource-search]:focus-within{outline:2px solid var(--dsw-alias-state-business-primary,#447bf0);outline-offset:2px}
-[data-paimind-resource-navigation] [data-paimind-resource-search] input:focus-visible{outline:none}
 [data-paimind-resource-group]{margin:14px 0 6px;font-size:11px;font-weight:500;color:var(--dsw-alias-label-secondary,#7c8797)}
 [data-paimind-resource-item]{display:flex;align-items:center;border-radius:11px;gap:4px;margin:3px -6px;padding:2px 6px}
 [data-paimind-resource-item]:hover,[data-paimind-resource-item][data-active=true]{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.08))}
@@ -33,29 +27,25 @@ const STYLE = `
 [data-paimind-resource-copy]{display:flex;flex-direction:column;min-width:0;gap:4px}
 [data-paimind-resource-copy] strong{font-size:13px;font-weight:550}
 [data-paimind-resource-copy] small{font-size:11px;line-height:1.45;color:var(--dsw-alias-label-secondary,#7c8797)}
-[data-paimind-resource-pin]{display:grid;place-items:center;width:28px;height:28px;flex-shrink:0;border-radius:8px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.14))!important}
-[data-paimind-resource-pin][aria-pressed=true]{color:var(--dsw-alias-state-business-primary,#447bf0)!important;background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.08))!important}
-[data-paimind-resource-hint]{font-size:11px;line-height:1.6;color:var(--dsw-alias-label-secondary,#7c8797);margin:14px 0 0;padding-top:12px;border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.14))}
 [data-paimind-resource-empty]{padding:18px 0;color:var(--dsw-alias-label-secondary,#7c8797);font-size:13px}
 [data-paimind-resource-navigation]{height:54px;isolation:isolate;z-index:20}
 [data-paimind-resource-shell]{position:absolute;bottom:0;left:0;width:100%;max-width:calc(100vw - 24px);border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.18));border-radius:27px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#fff) 92%,transparent);box-shadow:0 4px 16px rgba(16,32,56,.07),inset 0 1px 0 rgba(255,255,255,.15);backdrop-filter:blur(24px) saturate(1.2);-webkit-backdrop-filter:blur(24px) saturate(1.2);display:flex;flex-direction:column-reverse;transition:width var(--paimind-motion-slow,280ms) cubic-bezier(.22,1,.36,1),left var(--paimind-motion-slow,280ms) ease,box-shadow var(--paimind-motion-slow,280ms) ease}
 [data-paimind-resource-navigation][data-open=true] [data-paimind-resource-shell]{position:fixed;bottom:var(--resource-bottom,48px);left:var(--resource-left,12px);width:var(--resource-width,360px);box-shadow:0 18px 56px rgba(16,32,56,.18)}
 [data-paimind-morph-rail]{display:flex;align-items:center;gap:3px;padding:6px;min-height:50px}
-[data-paimind-resource-navigation] [data-paimind-navigation-row]{display:flex;justify-content:center;gap:0;flex:1 1 36px;width:auto;min-width:32px;height:36px;margin:0;padding:0 9px;border-radius:20px;font-size:12px!important;transition:background var(--paimind-motion-fast,160ms) ease,flex var(--paimind-motion-slow,280ms) ease}
+[data-paimind-resource-navigation] [data-paimind-navigation-row]{display:flex;justify-content:center;gap:0;flex:1 1 36px;width:auto;min-width:30px;height:36px;margin:0;padding:0 7px;border-radius:20px;font-size:12px!important;transition:background var(--paimind-motion-fast,160ms) ease,flex var(--paimind-motion-slow,280ms) ease}
 [data-paimind-navigation-row] svg{flex-shrink:0}
 [data-paimind-resource-navigation] [data-paimind-navigation-row]>[data-paimind-morph-label]{flex:0 1 auto;max-width:0;opacity:0;white-space:nowrap;overflow:hidden;transition:max-width var(--paimind-motion-slow,280ms) cubic-bezier(.22,1,.36,1),opacity var(--paimind-motion-fast,160ms) ease,margin var(--paimind-motion-slow,280ms) ease}
 [data-paimind-resource-navigation][data-wide=true] [data-paimind-navigation-row][data-morph-selected=true]{flex-grow:2;background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.10))}
-[data-paimind-resource-navigation][data-wide=true] [data-morph-selected=true]>[data-paimind-morph-label]{max-width:72px;opacity:1;margin-left:6px}
+[data-paimind-resource-navigation][data-wide=true] [data-morph-selected=true]>[data-paimind-morph-label]{max-width:48px;opacity:1;margin-left:6px}
 [data-paimind-morph-search-trigger]{display:grid;place-items:center;flex:0 0 34px;width:34px;height:36px;border-radius:20px}
 [data-paimind-morph-search-trigger]:hover,[data-paimind-morph-search-trigger][aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.10))}
 [data-paimind-morph-reveal]{display:grid;grid-template-rows:0fr;opacity:0;visibility:hidden;transition:grid-template-rows var(--paimind-motion-slow,280ms) cubic-bezier(.22,1,.36,1),opacity var(--paimind-motion-enter,180ms) ease,visibility var(--paimind-motion-slow,280ms)}
 [data-paimind-resource-navigation][data-open=true] [data-paimind-morph-reveal]{grid-template-rows:1fr;opacity:1;visibility:visible}
 [data-paimind-morph-clip]{min-height:0;overflow:hidden}
 [data-paimind-resource-navigation] [data-paimind-resource-popover]{position:static;width:100%;max-width:none;max-height:min(560px,var(--resource-height,60vh));padding:20px 18px 10px;background:transparent;border:0;border-radius:25px 25px 0 0;box-shadow:none;overflow:auto}
-[data-paimind-resource-search]{border-radius:16px;padding:11px 12px;background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.06));border-color:transparent}
 [data-paimind-resource-heading]{margin-bottom:16px}
 [data-paimind-resource-item]{transition:background var(--paimind-motion-fast,160ms) ease}
-[data-paimind-resource-navigation][data-wide=false]{height:156px;width:36px}
+[data-paimind-resource-navigation][data-wide=false]{height:210px;width:36px}
 [data-paimind-resource-navigation][data-wide=false]:not([data-open=true]) [data-paimind-resource-shell]{width:48px;left:-6px}
 [data-paimind-resource-navigation][data-wide=false] [data-paimind-morph-rail]{flex-direction:column}
 [data-paimind-resource-navigation][data-wide=false][data-open=true] [data-paimind-resource-shell]{width:var(--resource-width,360px)}
@@ -73,17 +63,19 @@ const STYLE = `
 [data-paimind-resource-navigation][data-open=true] [data-paimind-navigation-row]>[data-paimind-morph-label]{max-width:0;opacity:0;margin-left:0}
 [data-paimind-resource-navigation][data-open=true] [data-paimind-morph-rail]{border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.10));margin:0 8px;padding:10px 0}
 
+[data-paimind-utility]{position:relative;flex:0 0 34px!important}
+[data-paimind-resource-navigation] [data-paimind-navigation-row]>[data-paimind-utility-icon]{display:grid;place-items:center;flex:none;overflow:visible}
+[data-paimind-utility-icon] svg{width:17px;height:17px}
+[data-paimind-utility-badge]{position:absolute;right:6px;top:5px;width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-state-business-primary,#447bf0)}
+
 `
 
 function ResourceIcon({ id }: { readonly id: string }): React.JSX.Element {
   const Icon = id === 'agent-center' ? PaimindAgentIcon : id === 'skill-center' ? PaimindSkillIcon
-    : id === 'mcp-center' ? PaimindConnectionIcon : id === 'workspace-blueprints' ? PaimindTemplateIcon : PaimindExtensionIcon
+    : id === 'mcp-center' ? PaimindConnectionIcon : id === 'workspace-blueprints' ? PaimindTemplateIcon : PaimindAttachmentIcon
   return <Icon size={17} />
 }
 
-function readPin(): string | null {
-  try { return window.localStorage.getItem(PIN_KEY) } catch { return null }
-}
 
 export function ResourceNavigation({ wide, locale }: {
   readonly wide: boolean; readonly locale: PaimindLocaleSource
@@ -91,7 +83,6 @@ export function ResourceNavigation({ wide, locale }: {
   const language = useSyncExternalStore(locale.subscribe.bind(locale), () => locale.getLocale().active)
   const zh = language.startsWith('zh')
   const [entries, setEntries] = useState<readonly PaimindNavigationEntry[]>([])
-  const [pin, setPin] = useState(readPin)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [hovered, setHovered] = useState<string | null>(null)
@@ -106,9 +97,7 @@ export function ResourceNavigation({ wide, locale }: {
     const installed = installPaimindCompactNavigation(root.current, setEntries)
     bridge.current = installed
     const style = document.createElement('style'); style.textContent = STYLE; markHarnessClientStyle(style, '@hansen/visual-experience'); document.head.append(style)
-    const syncPin = (event: StorageEvent): void => { if (event.key === PIN_KEY || event.key === null) setPin(readPin()) }
-    window.addEventListener('storage', syncPin)
-    return () => { installed.dispose(); bridge.current = null; style.remove(); window.removeEventListener('storage', syncPin) }
+    return () => { installed.dispose(); bridge.current = null; style.remove() }
   }, [])
   const close = (): void => { setOpen(false); library.current?.focus() }
   useEffect(() => {
@@ -136,14 +125,9 @@ export function ResourceNavigation({ wide, locale }: {
   const activate = (entry: PaimindNavigationEntry): void => {
     if (bridge.current?.activate(entry.id)) { setOpen(false); library.current?.focus() }
   }
-  const togglePin = (id: string): void => {
-    const next = pin === id ? null : id
-    setPin(next)
-    try { if (next === null) window.localStorage.removeItem(PIN_KEY); else window.localStorage.setItem(PIN_KEY, next) } catch { /* Current-tab preference still works. */ }
-  }
-  const shortcuts = entries.filter(entry => entry.id === 'agent-center' || entry.id === pin)
-    .sort((a, b) => Number(b.id === 'agent-center') - Number(a.id === 'agent-center')).slice(0, 2)
-  const visible = entries.filter(entry => `${entry.label} ${entry.description} ${entry.id}`.toLowerCase().includes(query.trim().toLowerCase()))
+  const shortcuts = entries.filter(entry => entry.id === 'agent-center')
+  const utilities = entries.filter(entry => entry.utility)
+  const visible = entries.filter(entry => !entry.utility && `${entry.label} ${entry.description} ${entry.id}`.toLowerCase().includes(query.trim().toLowerCase()))
   const groups = [...new Set(visible.map(entry => entry.group || (zh ? '更多功能' : 'More')))]
   return <div ref={root} data-paimind-resource-navigation data-paimind-motion-scope data-wide={wide} data-open={open}>
     <div ref={panel} data-paimind-resource-shell style={position} id="paimind-resource-library" role={open ? "dialog" : undefined} aria-label={open ? (zh ? "资源库" : "Library") : undefined}
@@ -158,25 +142,33 @@ export function ResourceNavigation({ wide, locale }: {
         }
       }}>
     <div data-paimind-morph-rail onMouseLeave={() => { setHovered(null) }}>
-    {shortcuts.map(entry => <PaimindTooltip key={entry.id} label={entry.label} side="right" delayMs={300} disabled={wide}><button type="button" data-paimind-navigation-row data-paimind-navigation-target={entry.id}
+    {shortcuts.map(entry => <PaimindTooltip key={entry.id} label={entry.label} side={wide ? "top" : "right"} delayMs={180} disabled={false}><button type="button" data-paimind-navigation-row data-paimind-navigation-target={entry.id}
       data-morph-selected={hovered === entry.id || (hovered === null && entry.active)}
       onMouseEnter={() => { setHovered(entry.id) }} onFocus={() => { setHovered(entry.id) }} onBlur={() => { setHovered(null) }}
       aria-label={entry.label} aria-current={entry.active ? 'page' : undefined} disabled={entry.disabled} onClick={() => { activate(entry) }}>
       <ResourceIcon id={entry.id} /><span data-paimind-morph-label>{entry.label}</span>
     </button></PaimindTooltip>)}
-    <PaimindTooltip label={zh ? '资源库' : 'Library'} side="right" delayMs={300} disabled={wide || open}><button ref={library} type="button" data-paimind-navigation-row data-paimind-resource-library-trigger aria-label={zh ? '资源库' : 'Library'}
+    <PaimindTooltip label={zh ? '资源库' : 'Library'} side={wide ? "top" : "right"} delayMs={180} disabled={false}><button ref={library} type="button" data-paimind-navigation-row data-paimind-resource-library-trigger aria-label={zh ? '资源库' : 'Library'}
       data-morph-selected={open || hovered === 'library' || (hovered === null && !entries.some(entry => entry.active))}
       onMouseEnter={() => { setHovered('library') }} onFocus={() => { setHovered('library') }} onBlur={() => { setHovered(null) }}
       aria-expanded={open} aria-haspopup="dialog" aria-controls={open ? 'paimind-resource-library' : undefined}
       aria-current={entries.some(entry => entry.active && !shortcuts.includes(entry)) ? 'page' : undefined}
       onClick={() => { setQuery(''); setOpen(!open) }}>
-      <PaimindExtensionIcon size={17} /><span data-paimind-morph-label>{zh ? '资源库' : 'Library'}</span>
+      <PaimindMoreIcon size={17} /><span data-paimind-morph-label>{zh ? '资源库' : 'Library'}</span>
     </button></PaimindTooltip>
     <div data-paimind-morph-search data-expanded={open}>
-    <button type="button" data-paimind-morph-search-trigger aria-label={zh ? '搜索资源入口' : 'Search resources'} aria-expanded={open}
-      onClick={() => { setOpen(true); search.current?.focus() }}><PaimindSearchIcon size={17} /></button>
+    <PaimindTooltip label={zh ? "搜索" : "Search"} side={wide ? "top" : "right"} delayMs={180}><button type="button" data-paimind-morph-search-trigger aria-label={zh ? '搜索资源入口' : 'Search resources'} aria-expanded={open}
+      onClick={() => { setOpen(true); search.current?.focus() }}><PaimindSearchIcon size={17} /></button></PaimindTooltip>
     <span data-paimind-morph-input aria-hidden={!open}><input ref={search} type="search" tabIndex={open ? 0 : -1} disabled={!open} aria-label={zh ? '搜索资源入口' : 'Search resources'} placeholder={zh ? '搜索技能、连接、模板…' : 'Search skills, connections, templates…'} value={query} onChange={event => { setQuery(event.target.value) }} /></span>
     </div>
+    {utilities.map(entry => <PaimindTooltip key={entry.id} label={entry.id === 'settings' ? (zh ? '设置' : 'Settings') : (zh ? '通知' : 'Notifications')} side={wide ? 'top' : 'right'} delayMs={180}>
+      <button type="button" data-paimind-navigation-row data-paimind-navigation-target={entry.id} data-paimind-utility={entry.id}
+        aria-label={entry.id === 'settings' ? (zh ? '设置' : 'Settings') : (zh ? '通知' : 'Notifications')}
+        disabled={entry.disabled} onClick={() => { setOpen(false); bridge.current?.activate(entry.id) }}>
+        <span data-paimind-utility-icon ref={element => { if (element) bridge.current?.mountIcon(entry.id, element) }} />
+        {entry.badge && <i data-paimind-utility-badge aria-label={zh ? `${entry.badge} 条未读通知` : `${entry.badge} unread notifications`} />}
+      </button>
+    </PaimindTooltip>)}
     </div>
     <div data-paimind-morph-reveal aria-hidden={!open} {...(!open ? { inert: '' } as Record<string, string> : {})}>
     <div data-paimind-morph-clip>
@@ -187,11 +179,9 @@ export function ResourceNavigation({ wide, locale }: {
           <button type="button" data-paimind-resource-open disabled={entry.disabled} aria-label={`${zh ? '打开' : 'Open '}${entry.label}`} onClick={() => { activate(entry) }}>
             <span data-paimind-resource-icon><ResourceIcon id={entry.id} /></span><span data-paimind-resource-copy><strong>{entry.label}</strong><small>{entry.description}</small></span>
           </button>
-          {entry.id !== 'agent-center' && <button type="button" data-paimind-resource-pin aria-pressed={pin === entry.id} aria-label={pin === entry.id ? (zh ? `取消固定${entry.label}` : `Unpin ${entry.label}`) : (zh ? `固定${entry.label}到侧边栏` : `Pin ${entry.label} to sidebar`)} title={pin === entry.id ? (zh ? '取消固定' : 'Unpin') : (zh ? '固定为常用入口' : 'Pin shortcut')} onClick={() => { togglePin(entry.id) }}>{pin === entry.id ? <PaimindCheckIcon size={13} /> : <PaimindPlusIcon size={13} />}</button>}
         </div>)}
       </section>)}
       {visible.length === 0 && <p data-paimind-resource-empty>{zh ? '没有找到匹配的入口' : 'No matching resources'}</p>}
-      <p data-paimind-resource-hint>{zh ? '智能体常驻侧边栏，还可以固定一个常用入口。' : 'Agents stay in the sidebar. Pin one more shortcut here.'}</p>
     </div>
     </div>
     </div>
