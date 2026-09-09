@@ -48,6 +48,24 @@ describe('compact resource navigation', () => {
     expect(screen.queryByRole('tooltip')).toBeNull()
   })
 
+  it('expands the search icon, keeps dismissed content inert and survives rapid reopen', () => {
+    setup()
+    expect(screen.queryByRole('searchbox')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '搜索资源入口', exact: true }))
+    expect(screen.getByRole('searchbox')).toBeEnabled()
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: '模板' } })
+    expect(screen.getByRole('button', { name: '打开模板' })).toBeInTheDocument()
+    fireEvent.keyDown(screen.getByRole('searchbox'), { key: 'Escape' })
+    expect(screen.queryByRole('searchbox')).toBeNull()
+    expect(document.querySelector('[data-paimind-morph-reveal]')).toHaveAttribute('inert')
+    const trigger = screen.getByRole('button', { name: '资源库', exact: true })
+    for (let i = 0; i < 4; i++) fireEvent.click(trigger)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    fireEvent.click(trigger)
+    expect(screen.getByRole('searchbox')).toHaveValue('')
+    expect(screen.getByRole('button', { name: '打开技能' })).toBeInTheDocument()
+  })
+
   it('compacts only the Settings trigger and preserves buttons in its nested native dialog', () => {
     const { unmount } = setup()
     const settings = document.getElementById('settings')!

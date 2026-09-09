@@ -2,7 +2,7 @@ import { Component, useEffect, useRef, useState, useSyncExternalStore, type CSSP
 import { PaimindTooltip, installPaimindCompactNavigation, type PaimindNavigationEntry } from '@hansen/harness-compat/client-surface'
 import { markHarnessClientStyle, type PaimindLocaleSource } from '@hansen/harness-compat'
 import { PaimindAgentIcon, PaimindSkillIcon, PaimindConnectionIcon, PaimindTemplateIcon,
-  PaimindExtensionIcon, PaimindSearchIcon, PaimindCloseIcon, PaimindChevronRightIcon,
+  PaimindExtensionIcon, PaimindSearchIcon, PaimindCloseIcon,
   PaimindPlusIcon, PaimindCheckIcon } from '@hansen/harness-compat/client-icons'
 import type { PaimindExperienceModeController } from './index.js'
 
@@ -37,6 +37,42 @@ const STYLE = `
 [data-paimind-resource-pin][aria-pressed=true]{color:var(--dsw-alias-state-business-primary,#447bf0)!important;background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.08))!important}
 [data-paimind-resource-hint]{font-size:11px;line-height:1.6;color:var(--dsw-alias-label-secondary,#7c8797);margin:14px 0 0;padding-top:12px;border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.14))}
 [data-paimind-resource-empty]{padding:18px 0;color:var(--dsw-alias-label-secondary,#7c8797);font-size:13px}
+[data-paimind-resource-navigation]{height:54px;isolation:isolate;z-index:20}
+[data-paimind-resource-shell]{position:absolute;bottom:0;left:0;width:100%;max-width:calc(100vw - 24px);border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.18));border-radius:27px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#fff) 92%,transparent);box-shadow:0 4px 16px rgba(16,32,56,.07),inset 0 1px 0 rgba(255,255,255,.15);backdrop-filter:blur(24px) saturate(1.2);-webkit-backdrop-filter:blur(24px) saturate(1.2);display:flex;flex-direction:column-reverse;transition:width var(--paimind-motion-slow,280ms) cubic-bezier(.22,1,.36,1),left var(--paimind-motion-slow,280ms) ease,box-shadow var(--paimind-motion-slow,280ms) ease}
+[data-paimind-resource-navigation][data-open=true] [data-paimind-resource-shell]{position:fixed;bottom:var(--resource-bottom,48px);left:var(--resource-left,12px);width:var(--resource-width,360px);box-shadow:0 18px 56px rgba(16,32,56,.18)}
+[data-paimind-morph-rail]{display:flex;align-items:center;gap:3px;padding:6px;min-height:50px}
+[data-paimind-resource-navigation] [data-paimind-navigation-row]{display:flex;justify-content:center;gap:0;flex:1 1 36px;width:auto;min-width:32px;height:36px;margin:0;padding:0 9px;border-radius:20px;font-size:12px!important;transition:background var(--paimind-motion-fast,160ms) ease,flex var(--paimind-motion-slow,280ms) ease}
+[data-paimind-navigation-row] svg{flex-shrink:0}
+[data-paimind-resource-navigation] [data-paimind-navigation-row]>[data-paimind-morph-label]{flex:0 1 auto;max-width:0;opacity:0;white-space:nowrap;overflow:hidden;transition:max-width var(--paimind-motion-slow,280ms) cubic-bezier(.22,1,.36,1),opacity var(--paimind-motion-fast,160ms) ease,margin var(--paimind-motion-slow,280ms) ease}
+[data-paimind-resource-navigation][data-wide=true] [data-paimind-navigation-row][data-morph-selected=true]{flex-grow:2;background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.10))}
+[data-paimind-resource-navigation][data-wide=true] [data-morph-selected=true]>[data-paimind-morph-label]{max-width:72px;opacity:1;margin-left:6px}
+[data-paimind-morph-search-trigger]{display:grid;place-items:center;flex:0 0 34px;width:34px;height:36px;border-radius:20px}
+[data-paimind-morph-search-trigger]:hover,[data-paimind-morph-search-trigger][aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.10))}
+[data-paimind-morph-reveal]{display:grid;grid-template-rows:0fr;opacity:0;visibility:hidden;transition:grid-template-rows var(--paimind-motion-slow,280ms) cubic-bezier(.22,1,.36,1),opacity var(--paimind-motion-enter,180ms) ease,visibility var(--paimind-motion-slow,280ms)}
+[data-paimind-resource-navigation][data-open=true] [data-paimind-morph-reveal]{grid-template-rows:1fr;opacity:1;visibility:visible}
+[data-paimind-morph-clip]{min-height:0;overflow:hidden}
+[data-paimind-resource-navigation] [data-paimind-resource-popover]{position:static;width:100%;max-width:none;max-height:min(560px,var(--resource-height,60vh));padding:20px 18px 10px;background:transparent;border:0;border-radius:25px 25px 0 0;box-shadow:none;overflow:auto}
+[data-paimind-resource-search]{border-radius:16px;padding:11px 12px;background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.06));border-color:transparent}
+[data-paimind-resource-heading]{margin-bottom:16px}
+[data-paimind-resource-item]{transition:background var(--paimind-motion-fast,160ms) ease}
+[data-paimind-resource-navigation][data-wide=false]{height:156px;width:36px}
+[data-paimind-resource-navigation][data-wide=false]:not([data-open=true]) [data-paimind-resource-shell]{width:48px;left:-6px}
+[data-paimind-resource-navigation][data-wide=false] [data-paimind-morph-rail]{flex-direction:column}
+[data-paimind-resource-navigation][data-wide=false][data-open=true] [data-paimind-resource-shell]{width:var(--resource-width,360px)}
+[data-paimind-resource-navigation][data-wide=false][data-open=true] [data-paimind-morph-rail]{flex-direction:row}
+
+
+[data-paimind-morph-search]{display:flex;align-items:center;flex:0 0 34px;min-width:34px;border-radius:20px;transition:flex var(--paimind-motion-slow,240ms) cubic-bezier(.22,1,.36,1),background var(--paimind-motion-enter,180ms) ease}
+[data-paimind-morph-search][data-expanded=true]{flex:1 1 160px;background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.08))}
+[data-paimind-morph-input]{display:grid;grid-template-columns:0fr;min-width:0;width:0;opacity:0;visibility:hidden;transition:opacity var(--paimind-motion-enter,180ms) ease}
+[data-paimind-morph-search][data-expanded=true] [data-paimind-morph-input]{display:block;flex:1;width:auto;opacity:1;visibility:visible}
+[data-paimind-morph-input] input{display:block;min-width:0;width:100%;height:36px;padding:0 10px 0 0;background:transparent;border:0;outline:none;color:inherit;font:inherit;font-size:12px}
+[data-paimind-resource-navigation] [data-paimind-morph-input] input:focus-visible{outline:none}
+[data-paimind-morph-search]:focus-within{outline:2px solid var(--dsw-alias-state-business-primary,#447bf0);outline-offset:2px}
+[data-paimind-resource-navigation][data-open=true] [data-paimind-navigation-row][data-morph-selected]{flex:0 0 36px}
+[data-paimind-resource-navigation][data-open=true] [data-paimind-navigation-row]>[data-paimind-morph-label]{max-width:0;opacity:0;margin-left:0}
+[data-paimind-resource-navigation][data-open=true] [data-paimind-morph-rail]{border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.10));margin:0 8px;padding:10px 0}
+
 `
 
 function ResourceIcon({ id }: { readonly id: string }): React.JSX.Element {
@@ -58,7 +94,8 @@ export function ResourceNavigation({ wide, locale }: {
   const [pin, setPin] = useState(readPin)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [position, setPosition] = useState<CSSProperties>({ left: 12, bottom: 60 })
+  const [hovered, setHovered] = useState<string | null>(null)
+  const [position, setPosition] = useState<CSSProperties>({})
   const root = useRef<HTMLDivElement>(null)
   const library = useRef<HTMLButtonElement>(null)
   const panel = useRef<HTMLDivElement>(null)
@@ -75,20 +112,26 @@ export function ResourceNavigation({ wide, locale }: {
   }, [])
   const close = (): void => { setOpen(false); library.current?.focus() }
   useEffect(() => {
-    if (!open) return
     const place = (): void => {
-      const rect = library.current?.getBoundingClientRect()
+      const rect = root.current?.getBoundingClientRect()
       if (!rect) return
-      const width = Math.min(340, window.innerWidth - 24)
-      const beside = rect.right + 12 + width <= window.innerWidth - 12
-      const bottom = Math.max(12, window.innerHeight - (beside ? rect.bottom : rect.top - 8))
-      setPosition({ left: beside ? rect.right + 12 : Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)),
-        bottom, maxHeight: Math.max(80, window.innerHeight - bottom - 12) })
+      const width = Math.min(360, window.innerWidth - 24)
+      const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12))
+      setPosition({ '--resource-width': `${width}px`, '--resource-left': `${open ? left : rect.left}px`, '--resource-bottom': `${window.innerHeight - rect.bottom}px`,
+        '--resource-height': `${Math.max(100, rect.bottom - 80)}px` } as CSSProperties)
     }
-    place(); search.current?.focus()
+    place()
+    let frame = 0
+    let focusFrame = 0
+    if (open) {
+      search.current?.focus({ preventScroll: true })
+      frame = requestAnimationFrame(() => { focusFrame = requestAnimationFrame(() => { search.current?.focus({ preventScroll: true }) }) })
+    }
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(place)
+    if (root.current) observer?.observe(root.current)
     const outside = (event: PointerEvent): void => { if (event.target instanceof Node && !root.current?.contains(event.target)) setOpen(false) }
     window.addEventListener('resize', place); document.addEventListener('pointerdown', outside)
-    return () => { window.removeEventListener('resize', place); document.removeEventListener('pointerdown', outside) }
+    return () => { cancelAnimationFrame(frame); cancelAnimationFrame(focusFrame); observer?.disconnect(); window.removeEventListener('resize', place); document.removeEventListener('pointerdown', outside) }
   }, [open, wide])
   const activate = (entry: PaimindNavigationEntry): void => {
     if (bridge.current?.activate(entry.id)) { setOpen(false); library.current?.focus() }
@@ -102,19 +145,10 @@ export function ResourceNavigation({ wide, locale }: {
     .sort((a, b) => Number(b.id === 'agent-center') - Number(a.id === 'agent-center')).slice(0, 2)
   const visible = entries.filter(entry => `${entry.label} ${entry.description} ${entry.id}`.toLowerCase().includes(query.trim().toLowerCase()))
   const groups = [...new Set(visible.map(entry => entry.group || (zh ? '更多功能' : 'More')))]
-  return <div ref={root} data-paimind-resource-navigation data-wide={wide}>
-    {shortcuts.map(entry => <PaimindTooltip key={entry.id} label={entry.label} side="right" delayMs={300} disabled={wide}><button type="button" data-paimind-navigation-row data-paimind-navigation-target={entry.id}
-      aria-label={entry.label} aria-current={entry.active ? 'page' : undefined} disabled={entry.disabled} onClick={() => { activate(entry) }}>
-      <ResourceIcon id={entry.id} />{wide && <span>{entry.label}</span>}
-    </button></PaimindTooltip>)}
-    <PaimindTooltip label={zh ? '资源库' : 'Library'} side="right" delayMs={300} disabled={wide || open}><button ref={library} type="button" data-paimind-navigation-row data-paimind-resource-library-trigger aria-label={zh ? '资源库' : 'Library'}
-      aria-expanded={open} aria-haspopup="dialog" aria-controls={open ? 'paimind-resource-library' : undefined}
-      aria-current={entries.some(entry => entry.active && !shortcuts.includes(entry)) ? 'page' : undefined}
-      onClick={() => { setQuery(''); setOpen(!open) }}>
-      <PaimindExtensionIcon size={17} />{wide && <><span>{zh ? '资源库' : 'Library'}</span><PaimindChevronRightIcon size={12} /></>}
-    </button></PaimindTooltip>
-    {open && <div ref={panel} id="paimind-resource-library" role="dialog" aria-label={zh ? '资源库' : 'Library'} data-paimind-resource-popover style={position}
+  return <div ref={root} data-paimind-resource-navigation data-paimind-motion-scope data-wide={wide} data-open={open}>
+    <div ref={panel} data-paimind-resource-shell style={position} id="paimind-resource-library" role={open ? "dialog" : undefined} aria-label={open ? (zh ? "资源库" : "Library") : undefined}
       onKeyDown={event => {
+        if (!open) return
         if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close() }
         if (event.key === 'Tab') {
           const controls = [...(panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input') ?? [])]
@@ -123,8 +157,31 @@ export function ResourceNavigation({ wide, locale }: {
           else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
         }
       }}>
+    <div data-paimind-morph-rail onMouseLeave={() => { setHovered(null) }}>
+    {shortcuts.map(entry => <PaimindTooltip key={entry.id} label={entry.label} side="right" delayMs={300} disabled={wide}><button type="button" data-paimind-navigation-row data-paimind-navigation-target={entry.id}
+      data-morph-selected={hovered === entry.id || (hovered === null && entry.active)}
+      onMouseEnter={() => { setHovered(entry.id) }} onFocus={() => { setHovered(entry.id) }} onBlur={() => { setHovered(null) }}
+      aria-label={entry.label} aria-current={entry.active ? 'page' : undefined} disabled={entry.disabled} onClick={() => { activate(entry) }}>
+      <ResourceIcon id={entry.id} /><span data-paimind-morph-label>{entry.label}</span>
+    </button></PaimindTooltip>)}
+    <PaimindTooltip label={zh ? '资源库' : 'Library'} side="right" delayMs={300} disabled={wide || open}><button ref={library} type="button" data-paimind-navigation-row data-paimind-resource-library-trigger aria-label={zh ? '资源库' : 'Library'}
+      data-morph-selected={open || hovered === 'library' || (hovered === null && !entries.some(entry => entry.active))}
+      onMouseEnter={() => { setHovered('library') }} onFocus={() => { setHovered('library') }} onBlur={() => { setHovered(null) }}
+      aria-expanded={open} aria-haspopup="dialog" aria-controls={open ? 'paimind-resource-library' : undefined}
+      aria-current={entries.some(entry => entry.active && !shortcuts.includes(entry)) ? 'page' : undefined}
+      onClick={() => { setQuery(''); setOpen(!open) }}>
+      <PaimindExtensionIcon size={17} /><span data-paimind-morph-label>{zh ? '资源库' : 'Library'}</span>
+    </button></PaimindTooltip>
+    <div data-paimind-morph-search data-expanded={open}>
+    <button type="button" data-paimind-morph-search-trigger aria-label={zh ? '搜索资源入口' : 'Search resources'} aria-expanded={open}
+      onClick={() => { setOpen(true); search.current?.focus() }}><PaimindSearchIcon size={17} /></button>
+    <span data-paimind-morph-input aria-hidden={!open}><input ref={search} type="search" tabIndex={open ? 0 : -1} disabled={!open} aria-label={zh ? '搜索资源入口' : 'Search resources'} placeholder={zh ? '搜索技能、连接、模板…' : 'Search skills, connections, templates…'} value={query} onChange={event => { setQuery(event.target.value) }} /></span>
+    </div>
+    </div>
+    <div data-paimind-morph-reveal aria-hidden={!open} {...(!open ? { inert: '' } as Record<string, string> : {})}>
+    <div data-paimind-morph-clip>
+    <div data-paimind-resource-popover>
       <header data-paimind-resource-heading><h2>{zh ? '资源库' : 'Library'}</h2><button type="button" aria-label={zh ? '关闭资源库' : 'Close library'} onClick={close}><PaimindCloseIcon size={14} /></button></header>
-      <label data-paimind-resource-search><PaimindSearchIcon size={15} /><input ref={search} type="search" aria-label={zh ? '搜索资源入口' : 'Search resources'} placeholder={zh ? '搜索技能、连接、模板…' : 'Search skills, connections, templates…'} value={query} onChange={event => { setQuery(event.target.value) }} /></label>
       {groups.map(group => <section key={group} aria-label={group}><h3 data-paimind-resource-group>{group}</h3>
         {visible.filter(entry => (entry.group || (zh ? '更多功能' : 'More')) === group).map(entry => <div key={entry.id} data-paimind-resource-item data-active={entry.active}>
           <button type="button" data-paimind-resource-open disabled={entry.disabled} aria-label={`${zh ? '打开' : 'Open '}${entry.label}`} onClick={() => { activate(entry) }}>
@@ -135,7 +192,10 @@ export function ResourceNavigation({ wide, locale }: {
       </section>)}
       {visible.length === 0 && <p data-paimind-resource-empty>{zh ? '没有找到匹配的入口' : 'No matching resources'}</p>}
       <p data-paimind-resource-hint>{zh ? '智能体常驻侧边栏，还可以固定一个常用入口。' : 'Agents stay in the sidebar. Pin one more shortcut here.'}</p>
-    </div>}
+    </div>
+    </div>
+    </div>
+    </div>
   </div>
 }
 

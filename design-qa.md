@@ -1,3 +1,63 @@
+# Morphing resource navigation — design QA
+
+final result: passed
+
+## Scope and source
+
+Source visual truth: https://x.com/renzobianchi_/status/2097400239162351924
+
+The reference video and its compact/search states were captured and inspected in this task before implementation. This is the approved adaptation to the existing resource navigation, not a pixel clone of the video backdrop or an implementation of its notification domain.
+
+Implementation: http://127.0.0.1:3188/ — real selected Harness 0.1.1-rc.2, isolated home, current feature worktree.
+
+Screenshot evidence: the inline browser captures in this task titled “验证原位搜索的最终形态”, “验证390像素展开面板不溢出”, “验证深色主题与搜索焦点”, “验证连续收放后界面与状态一致”, and “确认窄栏胶囊对齐修复”. The browser returned inline image bytes rather than filesystem paths; no local image path is claimed and screenshots are not committed.
+
+## Comparison
+
+- Source capture: 2320 × 1203 image, video region approximately 568 × 406; compact horizontal capsule roughly 280 × 50, expanded search capsule roughly 430 × 50. Embedded video scale is not treated as original CSS geometry.
+- Implementation capture: 1832 × 1220 desktop image at the corresponding 1832 × 1220 CSS viewport, and 390 × 844 image/CSS viewport for responsive testing. Images are inspected at their returned 1:1 dimensions; no device-frame or density resizing is inferred.
+- Full-view comparison: compare the reference's compact/search state with the implementation's compact/search state. Both maintain a rounded shared surface, icon continuity and expanding search. The application keeps its existing left sidebar placement, upward panel expansion and real resource content. The reference's decorative background, five-item navigation and downward notification drawer are outside this slice.
+- Focused comparison: reference capsule and input against the implementation capsule/input at their own readable scale. Application toolbar uses existing icons, selected pills, one continuous shell and a search field that expands within the rail. Open panel width is 360px. Narrow sidebar uses a 48px vertical capsule centered within the 55px sidebar (measured left 3.5px, right 51.5px).
+
+## Required fidelity surfaces
+
+| Surface | Result |
+| --- | --- |
+| Typography | Existing app font retained; 12px rail text, clear resource names and secondary descriptions. Chinese and English remain supported. |
+| Spacing/layout | Shared 27px shell radius, compact icons, connected upward panel. At 390px, panel bounds x=12..372, y=173.18..758, with no horizontal document overflow. |
+| Colors/tokens | Existing semantic background, border and text tokens; light and dark verified. Glass opacity deliberately favors readable app content over the video's stronger transparency. |
+| Assets | Existing product icon components reused; no generated backdrop, copied author assets or custom icon drawings. |
+| Copy/content | Real resource contributions and source actions; no fake notifications, task counts or data. Existing pin preference preserved. |
+
+## Findings and repair history
+
+1. P1: Initial absolute expanded shell was clipped by the sidebar. Fixed expanded positioning against the viewport; post-fix screenshot shows complete panel and close/pin controls outside sidebar bounds.
+2. P2: Initial search focus ran before the reveal became focusable. Search now expands in the toolbar, with cancellable next-frame focus. Browser confirms active Search resources input after opening; Escape returns to Library.
+3. P2: Input had two focus outlines and selected Library consumed excessive search width. Scoped input outline and open-state flex rules fixed both; desktop/dark/mobile post-fix captures show one rounded focus ring and readable input.
+4. P2: Fixed closed capsule retained stale coordinates during sidebar collapse. Closed shell now follows its local anchor; open shell uses viewport geometry. Narrow capture confirms centering at x=3.5..51.5.
+
+No remaining actionable P0/P1/P2 findings in this preview scope. P3 follow-up: user review of timing and opacity in their normal working layout.
+
+## Browser interaction evidence
+
+- Search “模板”, pin Templates, open real Workspace Blueprint Center; six real bundled templates displayed. No template was materialized.
+- Search nonmatching text shows the existing empty-result message.
+- Escape closes immediately and returns focus to Library.
+- Four consecutive Library clicks finish with exactly one open dialog and search focus; no duplicated panels.
+- Narrow sidebar and 390px viewport checked; temporary viewport override reset.
+- Light/dark themes checked; restored system theme and Chinese language for preview.
+- UI animation Off yields computed transition durations `0s, 0s, 0s`; restored System preference.
+- Switching to Basic appearance unmounts the capsule and leaves zero hidden source markers. Restoring Standard appearance restores navigation and source functionality.
+- Browser console error/warning query returned an empty list after these flows.
+
+## Limits
+
+This is branch preview acceptance. No main merge, remote push, production release or model-generation test. The preview has its own empty runtime home and no model credentials; reloading may show the host's “configure later” dialog. Full package removal/reinstall release matrix has not been rerun; component disposal and real appearance unmount/restore were checked.
+
+---
+
+# Prior design acceptance records
+
 # FP01 Design QA
 
 ## Comparison input
