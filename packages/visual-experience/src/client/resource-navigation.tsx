@@ -123,7 +123,7 @@ const STYLE = `
 [data-paimind-resource-navigation][data-wide=true][data-open=false] [data-paimind-resource-library-trigger]>svg,
 [data-paimind-resource-navigation][data-wide=true][data-open=false] [data-paimind-resource-library-trigger]>[data-paimind-morph-label]{display:none}
 [data-paimind-resource-navigation][data-wide=true][data-open=false] [data-paimind-launcher-identity]{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
-[data-paimind-launcher-avatar]{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:#cb620e;color:white;font-size:10px;font-weight:500}
+[data-paimind-launcher-avatar]{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.08));color:inherit;font-size:10px;font-weight:500}
 [data-paimind-launcher-name]{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:500}
 [data-paimind-resource-navigation][data-wide=true][data-open=false] [data-paimind-launcher-chevron]{display:block;flex:0 0 20px;color:var(--dsw-alias-label-secondary,#687b90);font-size:18px;text-align:center}
 

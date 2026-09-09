@@ -111,13 +111,16 @@ export function installPaimindCompactNavigation(
       }
     }
     sources = next
-    const signature = JSON.stringify(entries)
+    const sidebar = mount.closest('[data-slot="sidebar"]')
+    const signature = JSON.stringify([entries,
+      sidebar?.querySelector('[data-slot="sidebar.brand.mark"]')?.innerHTML,
+      sidebar?.querySelector('[data-slot="sidebar.brand.name"]')?.textContent])
     if (signature !== previous) { previous = signature; publish(entries) }
   }
   const observer = new MutationObserver(update)
   observer.observe(doc.body, { childList: true, subtree: true, characterData: true,
     attributes: true, attributeFilter: ['aria-current', 'aria-expanded', 'aria-label', 'disabled', 'data-paimind-product-trigger',
-      'data-paimind-navigation-label', 'data-paimind-navigation-description', 'data-paimind-navigation-group'] })
+      'data-paimind-navigation-label', 'data-paimind-navigation-description', 'data-paimind-navigation-group', 'src'] })
   update()
   return {
     activate(id) {
@@ -132,7 +135,9 @@ export function installPaimindCompactNavigation(
       const name = sidebar?.querySelector('[data-slot="sidebar.brand.name"]')?.textContent?.trim() || 'PAIMind'
       const avatar = doc.createElement('span')
       avatar.setAttribute('data-paimind-launcher-avatar', '')
-      avatar.textContent = Array.from(name).slice(0, 2).join('').toUpperCase()
+      const mark = sidebar?.querySelector('[data-slot="sidebar.brand.mark"]')?.firstElementChild
+      if (mark) avatar.append(mark.cloneNode(true))
+      else avatar.textContent = Array.from(name).slice(0, 2).join('').toUpperCase()
       const label = doc.createElement('span')
       label.setAttribute('data-paimind-launcher-name', '')
       label.textContent = name
