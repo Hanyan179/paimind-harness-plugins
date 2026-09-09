@@ -81,6 +81,19 @@ const STYLE = `
 [data-paimind-library-search] input{width:100%;min-width:0;height:38px;border:0;background:transparent;color:inherit;font:inherit;font-size:12px;outline:none}
 [data-paimind-resource-navigation] [data-paimind-library-search] input:focus-visible{outline:none}
 [data-paimind-library-search]:focus-within{outline:2px solid var(--dsw-alias-state-business-primary,#447bf0);outline-offset:2px}
+/* Resting navigation shares the sidebar surface; only the expanded library floats. */
+[data-paimind-resource-navigation][data-open=false]{height:46px}
+[data-paimind-resource-navigation][data-open=false] [data-paimind-resource-shell]{background:transparent;border:0;border-radius:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+[data-paimind-resource-navigation][data-open=false] [data-paimind-morph-rail]{padding:4px 0;gap:8px;min-height:44px}
+[data-paimind-resource-navigation][data-open=false] [data-paimind-navigation-row]{height:36px;border-radius:9px;color:var(--dsw-alias-label-secondary,#687b90);flex:1 1 0!important}
+[data-paimind-resource-navigation][data-open=false] [data-paimind-navigation-row]>[data-paimind-morph-label]{max-width:0;opacity:0;margin:0}
+[data-paimind-resource-navigation][data-open=false] [data-paimind-navigation-row]:hover{color:var(--dsw-alias-label-primary,#202124)}
+[data-paimind-resource-navigation][data-open=false] [data-paimind-navigation-row] svg{width:19px;height:19px}
+[data-paimind-resource-navigation][data-wide=false][data-open=false]{height:174px}
+[data-paimind-resource-navigation][data-wide=false][data-open=false] [data-paimind-resource-shell]{width:36px;left:0}
+[data-paimind-resource-navigation][data-wide=false][data-open=false] [data-paimind-navigation-row]{flex:0 0 36px!important}
+[data-paimind-resource-navigation][data-open=true] [data-paimind-resource-shell]{border-radius:18px;background:var(--dsw-alias-bg-layer-1,#fff);box-shadow:0 8px 30px rgba(16,32,56,.12)}
+
 `
 
 function ResourceIcon({ id }: { readonly id: string }): React.JSX.Element {
