@@ -19,6 +19,8 @@ import {
   type PaimindScheduledHarnessAgentRegistry,
   type PaimindScheduledHarnessPresetRegistry,
   type PaimindScheduledHarnessTitleService,
+  type PaimindScheduledHarnessWorkspaceRegistry,
+  type PaimindScheduledHarnessPermissionPresets,
 } from '@hansen/harness-compat/host'
 import type {
   PaimindScheduleExecutionReceipt,
@@ -58,6 +60,8 @@ export interface PaimindHarnessScheduleAdapterContext {
   readonly agentPresets: PaimindScheduledHarnessPresetRegistry
   readonly jobs: PaimindNativeJobRegistry
   readonly sessionTitle: PaimindScheduledHarnessTitleService
+  readonly workspaceRegistry?: PaimindScheduledHarnessWorkspaceRegistry
+  readonly permissionPresets?: PaimindScheduledHarnessPermissionPresets
   readonly paimindNotifications: {
     registerProducer(source: PaimindNotificationSource): {
       publish(input: PaimindNotificationPublishInput): Promise<unknown>
@@ -72,6 +76,7 @@ function sessionIdForRun(runId: string): string {
 }
 
 interface DefinitionAgentPromptInput extends PaimindScheduleActionInput {
+  readonly permissionPreset?: 'read-only' | 'workspace-write' | 'danger-full-access'
   readonly kind: 'agent-prompt'
   readonly version: 1
   readonly prompt: string
@@ -120,7 +125,12 @@ function definitionAgentPromptInput(input: PaimindScheduleActionInput | undefine
   if (agentPreset !== undefined && (typeof agentPreset !== 'string' || agentPreset.trim() === '' || agentPreset.length > 160)) {
     throw new Error('Personal scheduled task Agent Preset is invalid')
   }
+  const permissionPreset = input.permissionPreset
+  if (permissionPreset !== undefined && permissionPreset !== 'read-only' && permissionPreset !== 'workspace-write' && permissionPreset !== 'danger-full-access') {
+    throw new Error('Personal scheduled task permission preset is invalid')
+  }
   return Object.freeze({
+    ...(permissionPreset === undefined ? {} : { permissionPreset }),
     kind: 'agent-prompt', version: 1, prompt,
     ...(cwd === undefined ? {} : { cwd: cwd.trim() }),
     ...(agentPreset === undefined ? {} : { agentPreset: agentPreset.trim() }),
@@ -130,7 +140,7 @@ function definitionAgentPromptInput(input: PaimindScheduleActionInput | undefine
 function executionInput(
   input: PaimindHarnessScheduleActionRegistration,
   request: PaimindScheduleTriggerRequest,
-): { readonly prompt: string; readonly cwd?: string; readonly agentPreset?: string } {
+): { readonly prompt: string; readonly cwd?: string; readonly agentPreset?: string; readonly permissionPreset?: 'read-only' | 'workspace-write' | 'danger-full-access' } {
   if (input.prompt !== undefined) {
     const context = request.actionInput === undefined
       ? undefined
@@ -168,7 +178,7 @@ function scheduledPrompt(input: PaimindHarnessScheduleActionRegistration, reques
 export class PaimindHarnessScheduleAdapterService
   extends PaimindHostService
   implements PaimindHarnessScheduleAdapter {
-  static inject = ['paimindScheduler', 'agentDefaultModel', 'agents', 'agentPresets', 'jobs', 'sessionTitle', 'paimindNotifications']
+  static inject = ['paimindScheduler', 'agentDefaultModel', 'agents', 'agentPresets', 'jobs', 'sessionTitle', 'paimindNotifications', 'workspaceRegistry', 'permissionPresets']
   private readonly handles = new Map<string, PaimindScheduledHarnessAgentHandle>()
   private readonly notificationProducer
 
@@ -236,9 +246,12 @@ export class PaimindHarnessScheduleAdapterService
         sessionId,
         ...(resolved.cwd === undefined ? {} : { cwd: resolved.cwd }),
         ...(resolved.agentPreset === undefined ? {} : { agentPreset: resolved.agentPreset }),
+        ...(resolved.permissionPreset === undefined ? {} : { permissionPreset: resolved.permissionPreset }),
+        ...(this.adapterCtx.permissionPresets === undefined ? {} : { permissionPresets: this.adapterCtx.permissionPresets }),
         provider: route.provider,
         model: route.model,
         signal,
+        ...(this.adapterCtx.workspaceRegistry === undefined ? {} : { workspaceRegistry: this.adapterCtx.workspaceRegistry }),
       },
     )
     this.adapterCtx.sessionTitle.rename(handle.agent.session, request.scheduleName)

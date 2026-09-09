@@ -11,6 +11,9 @@
   "references": [
     {
       "path": "../mcp-center"
+    },
+    {
+      "path": "../harness-compat"
     }
   ]
 }

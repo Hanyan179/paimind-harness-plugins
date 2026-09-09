@@ -7,7 +7,26 @@ export interface FeishuCliConfiguration {
   readonly profile: string
   readonly cwd: string
   readonly timeoutMs?: number
+  readonly exportRoot?: string
+  readonly baseToken?: string
+  readonly tableIds?: readonly string[]
+  readonly readOnly?: boolean
 }
+
+export const feishuBaseRecordsInput = z.object({
+  baseToken: z.string().regex(/^[A-Za-z0-9]{10,100}$/),
+  tableId: z.string().regex(/^tbl[A-Za-z0-9]{8,100}$/),
+  fields: z.array(z.string().min(1).max(200)).min(1).max(40),
+  offset: z.number().int().min(0).max(100_000).default(0),
+}).strict()
+export const feishuBaseDownloadInput = z.object({
+  baseToken: z.string().regex(/^[A-Za-z0-9]{10,100}$/),
+  tableId: z.string().regex(/^tbl[A-Za-z0-9]{8,100}$/),
+  recordId: z.string().regex(/^rec[A-Za-z0-9]{5,100}$/),
+  fileToken: z.string().regex(/^[A-Za-z0-9_-]{10,200}$/),
+  output: z.string().min(1).max(1000),
+}).strict()
+export type FeishuOperation = 'identity' | 'read' | 'create' | 'update' | 'base-records' | 'base-download'
 
 export const feishuReadInput = z.object({
   document: z.string().min(1).max(2048),
@@ -32,10 +51,21 @@ export const feishuUpdateInput = z.object({
 })
 
 /** No command-string parsing, profile switching, credential transport, or automatic retry. */
-export function feishuCommand(operation: 'identity' | 'read' | 'create' | 'update', value: unknown, profile: string): { args: string[]; stdin?: string } {
+export function feishuCommand(operation: FeishuOperation, value: unknown, profile: string): { args: string[]; stdin?: string } {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,99}$/.test(profile)) throw new Error('Invalid CLI profile')
   const fixed = ['--profile', profile, '--as', 'user']
   if (operation === 'identity') return { args: ['auth', 'status', '--profile', profile] }
+  if (operation === 'base-records') {
+    const input = feishuBaseRecordsInput.parse(value)
+    return { args: ['base', '+record-list', '--base-token', input.baseToken, '--table-id', input.tableId,
+      ...input.fields.flatMap(field => ['--field-id', field]), '--offset', String(input.offset), '--limit', '200', '--format', 'json', ...fixed] }
+  }
+  if (operation === 'base-download') {
+    const input = feishuBaseDownloadInput.parse(value)
+    if (!/^\.transfer-[a-f0-9-]+\/attachment\.bin$/.test(input.output)) throw new Error('Download target must be an adapter-owned transfer file')
+    return { args: ['base', '+record-download-attachment', '--base-token', input.baseToken, '--table-id', input.tableId,
+      '--record-id', input.recordId, '--file-token', input.fileToken, '--output', './' + input.output, '--format', 'json', ...fixed] }
+  }
   if (operation === 'read') {
     const input = feishuReadInput.parse(value)
     return { args: ['docs', '+fetch', '--api-version', 'v2', '--doc', input.document, '--doc-format', input.format, '--detail', 'full', ...fixed] }
@@ -62,7 +92,7 @@ export interface FeishuCliResult {
 }
 
 /** Execute the installed CLI as the local user; an uncertain write is surfaced, never replayed. */
-export async function runFeishuCli(configuration: FeishuCliConfiguration, operation: 'identity' | 'read' | 'create' | 'update', input: unknown, signal?: AbortSignal): Promise<FeishuCliResult> {
+export async function runFeishuCli(configuration: FeishuCliConfiguration, operation: FeishuOperation, input: unknown, signal?: AbortSignal): Promise<FeishuCliResult> {
   const command = feishuCommand(operation, input, configuration.profile)
   const write = operation === 'create' || operation === 'update'
   return await new Promise(resolve => {
