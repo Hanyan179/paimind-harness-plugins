@@ -95,6 +95,23 @@ const STYLE = `
 [data-paimind-resource-navigation][data-wide=false][data-open=false] [data-paimind-navigation-row]{flex:0 0 36px!important}
 [data-paimind-resource-navigation][data-open=true] [data-paimind-resource-shell]{border-radius:18px;background:var(--dsw-alias-bg-layer-1,#fff);box-shadow:0 8px 30px rgba(16,32,56,.12)}
 
+/* A single wide launcher opens the menu; compact mode exposes the vertical rail. */
+[data-paimind-resource-navigation]{transition:height var(--paimind-motion-slow,280ms) ease,width var(--paimind-motion-slow,280ms) ease}
+[data-paimind-resource-navigation][data-wide=true][data-open=false] [data-paimind-navigation-target]{display:none}
+[data-paimind-resource-navigation][data-wide=true][data-open=false] [data-paimind-resource-library-trigger]{justify-content:flex-start;padding:0 12px!important;gap:10px}
+[data-paimind-resource-navigation][data-wide=true][data-open=false] [data-paimind-resource-library-trigger]>[data-paimind-morph-label]{max-width:180px;opacity:1;margin:0;font-size:13px}
+[data-paimind-resource-navigation][data-open=true] [data-paimind-morph-rail]{flex-direction:column;align-items:stretch;gap:2px;padding:8px 0;margin:0 14px}
+[data-paimind-resource-navigation][data-open=true] [data-paimind-morph-rail] [data-paimind-resource-library-trigger],
+[data-paimind-resource-navigation][data-open=true] [data-paimind-morph-rail] [data-paimind-navigation-target=agent-center]{display:none}
+[data-paimind-resource-navigation][data-open=true] [data-paimind-navigation-row]{flex:0 0 38px!important;width:100%;justify-content:flex-start;padding:0 10px!important;border-radius:9px;gap:8px}
+[data-paimind-resource-navigation][data-open=true] [data-paimind-resource-popover]{max-height:min(510px,calc(var(--resource-height,60vh) - 50px))}
+
+[data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-copy] small{display:none}
+[data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-icon]{width:24px;height:24px;border:0;background:transparent}
+[data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-open]{padding:4px 2px}
+[data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-group]{margin:8px 0 4px}
+[data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-popover]{padding:16px 18px 8px}
+
 `
 
 function ResourceIcon({ id }: { readonly id: string }): React.JSX.Element {
@@ -133,12 +150,13 @@ export function ResourceNavigation({ wide, locale }: {
     shell.showPopover()
     return () => { shell.hidePopover(); shell.removeAttribute('popover') }
   }, [open])
+  useEffect(() => { setOpen(false) }, [wide])
   const close = (): void => { setOpen(false); library.current?.focus() }
   useEffect(() => {
     const place = (): void => {
       const rect = root.current?.getBoundingClientRect()
       if (!rect) return
-      const width = Math.min(360, window.innerWidth - 24)
+      const width = Math.min(wide ? 400 : 360, window.innerWidth - 24)
       const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12))
       setPosition({ '--resource-width': `${width}px`, '--resource-left': `${open ? left : rect.left}px`, '--resource-bottom': `${window.innerHeight - rect.bottom}px`,
         '--resource-height': `${Math.max(100, rect.bottom - 80)}px` } as CSSProperties)
@@ -170,7 +188,8 @@ export function ResourceNavigation({ wide, locale }: {
         if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close() }
         if (event.key === 'Tab') {
           const controls = [...(panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input') ?? [])]
-          const first = controls[0]; const last = controls.at(-1)
+          const visibleControls = controls.filter(control => control.getClientRects().length > 0)
+          const first = visibleControls[0]; const last = visibleControls.at(-1)
           if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
           else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
         }
@@ -188,7 +207,7 @@ export function ResourceNavigation({ wide, locale }: {
       aria-expanded={open} aria-haspopup="dialog" aria-controls={open ? 'paimind-resource-library' : undefined}
       aria-current={entries.some(entry => entry.active && !shortcuts.includes(entry)) ? 'page' : undefined}
       onClick={() => { setQuery(''); setOpen(!open) }}>
-      <PaimindMoreIcon size={17} /><span data-paimind-morph-label>{zh ? '资源' : 'Library'}</span>
+      <PaimindMoreIcon size={17} /><span data-paimind-morph-label>{zh ? (wide && !open ? '功能与设置' : '资源') : (wide && !open ? 'Features & settings' : 'Library')}</span>
     </button></PaimindTooltip>
     {utilities.map(entry => <PaimindTooltip key={entry.id} label={entry.id === 'settings' ? (zh ? '设置' : 'Settings') : (zh ? '通知' : 'Notifications')} side={wide ? 'top' : 'right'} delayMs={180}>
       <button type="button" data-paimind-navigation-row data-paimind-navigation-target={entry.id} data-paimind-utility={entry.id}
@@ -203,7 +222,7 @@ export function ResourceNavigation({ wide, locale }: {
     <div data-paimind-morph-reveal aria-hidden={!open} {...(!open ? { inert: '' } as Record<string, string> : {})}>
     <div data-paimind-morph-clip>
     <div data-paimind-resource-popover>
-      <header data-paimind-resource-heading><h2>{zh ? '资源库' : 'Library'}</h2><button type="button" aria-label={zh ? '关闭资源库' : 'Close library'} onClick={close}><PaimindCloseIcon size={14} /></button></header>
+      <header data-paimind-resource-heading><h2>{zh ? '功能与设置' : 'Features & settings'}</h2><button type="button" aria-label={zh ? '关闭资源库' : 'Close library'} onClick={close}><PaimindCloseIcon size={14} /></button></header>
       <label data-paimind-library-search><PaimindSearchIcon size={17} /><input ref={search} type="search" tabIndex={open ? 0 : -1} disabled={!open} aria-label={zh ? '搜索资源入口' : 'Search resources'} placeholder={zh ? '搜索技能、连接、模板…' : 'Search skills, connections, templates…'} value={query} onChange={event => { setQuery(event.target.value) }} /></label>
       {groups.map(group => <section key={group} aria-label={group}><h3 data-paimind-resource-group>{group}</h3>
         {visible.filter(entry => (entry.group || (zh ? '更多功能' : 'More')) === group).map(entry => <div key={entry.id} data-paimind-resource-item data-active={entry.active}>

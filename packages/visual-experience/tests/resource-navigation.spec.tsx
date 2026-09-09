@@ -49,9 +49,9 @@ describe('compact resource navigation', () => {
       fireEvent.blur(button)
     }
     view.rerender(<ResourceNavigation wide locale={locale as never} />)
-    fireEvent.mouseEnter(screen.getByRole('button', { name: '智能体', exact: true }))
+    fireEvent.mouseEnter(screen.getByRole('button', { name: '资源库', exact: true }))
     act(() => { vi.advanceTimersByTime(300) })
-    expect(screen.getByRole('tooltip')).toHaveTextContent('智能体')
+    expect(screen.getByRole('tooltip')).toHaveTextContent('资源库')
   })
 
   it('expands the search icon, keeps dismissed content inert and survives rapid reopen', () => {
@@ -79,8 +79,10 @@ describe('compact resource navigation', () => {
     expect(screen.queryByRole('button', { name: '连接', exact: true })).toBeNull()
     expect(screen.queryByRole('button', { name: '打开通知中心', exact: true })).toBeNull()
     expect(document.querySelector('[data-paimind-utility-badge]')).toHaveAttribute('aria-label', '3 条未读通知')
+    fireEvent.click(screen.getByRole('button', { name: '资源库', exact: true }))
     fireEvent.click(screen.getByRole('button', { name: '通知', exact: true }))
     expect(actions.get('notifications')).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: '资源库', exact: true }))
     fireEvent.click(screen.getByRole('button', { name: '设置', exact: true }))
     expect(actions.get('settings')).toHaveBeenCalledOnce()
     unmount()
@@ -131,7 +133,7 @@ describe('compact resource navigation', () => {
 
   it('opens the original source action, searches without manual shortcut configuration', async () => {
     const { actions } = setup()
-    expect(screen.getByRole('button', { name: '智能体', exact: true })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '智能体', exact: true })).toBeNull()
     expect(screen.queryByRole('button', { name: '技能', exact: true })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '资源库', exact: true }))
     const dialog = screen.getByRole('dialog', { name: '资源库' })
