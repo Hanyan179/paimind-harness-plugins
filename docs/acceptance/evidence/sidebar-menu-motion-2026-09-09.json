@@ -1,0 +1,112 @@
+{
+  "date": "2026-09-09",
+  "url": "http://127.0.0.1:3080/",
+  "implementationCommit": "a0a08c7",
+  "before": {
+    "viewport": [
+      1301,
+      1220
+    ],
+    "firstWidth": 1277,
+    "settledWidth": 320,
+    "settledMs": 251
+  },
+  "after": {
+    "wide": {
+      "frames": 25,
+      "widthRange": [
+        320,
+        320
+      ],
+      "leftRange": [
+        12,
+        12
+      ],
+      "rootHeight": 52,
+      "animationMs": 180,
+      "translateYRange": [
+        4,
+        0
+      ]
+    },
+    "closed": {
+      "frames": 25,
+      "widthRange": [
+        256,
+        256
+      ],
+      "heightRange": [
+        48,
+        48
+      ]
+    },
+    "compact": {
+      "frames": 25,
+      "widthRange": [
+        360,
+        360
+      ],
+      "rootHeight": 174
+    },
+    "reducedMotion": {
+      "frames": 25,
+      "widthRange": [
+        360,
+        360
+      ],
+      "animationMs": 0,
+      "initialOpacity": 1
+    },
+    "smallViewport": {
+      "viewport": [
+        900,
+        480
+      ],
+      "frames": 25,
+      "widthRange": [
+        360,
+        360
+      ],
+      "bounds": {
+        "left": 12,
+        "top": 75,
+        "width": 360,
+        "height": 399,
+        "bottom": 474
+      },
+      "contentHeight": 344,
+      "contentScrollHeight": 536
+    }
+  },
+  "interactionChecks": [
+    "search-filter",
+    "reopen-clears-search",
+    "close-button-focus-return",
+    "escape-focus-return",
+    "three-rapid-open-close-cycles",
+    "outside-dismiss",
+    "open-original-context-library",
+    "restore-original-page"
+  ],
+  "restored": {
+    "viewport": [
+      1301,
+      1220
+    ],
+    "sidebar": "wide",
+    "motionPreference": "system",
+    "menu": "closed",
+    "temporaryInstrumentationRemoved": true
+  },
+  "checks": {
+    "targetedTests": 11,
+    "fullTestFiles": 141,
+    "fullTests": 786,
+    "checkFast": "passed",
+    "realHarnessComposition": "passed",
+    "mainBuild": "passed",
+    "sessionsBefore": 306,
+    "sessionsAfter": 306
+  },
+  "scope": "local menu animation defect; no production release"
+}
