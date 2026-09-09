@@ -106,11 +106,17 @@ const STYLE = `
 [data-paimind-resource-navigation][data-open=true] [data-paimind-navigation-row]{flex:0 0 38px!important;width:100%;justify-content:flex-start;padding:0 10px!important;border-radius:9px;gap:8px}
 [data-paimind-resource-navigation][data-open=true] [data-paimind-resource-popover]{max-height:min(510px,calc(var(--resource-height,60vh) - 50px))}
 
-[data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-copy] small{display:none}
+[data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-copy] small{display:block;font-size:11px;line-height:1.3}
 [data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-icon]{width:24px;height:24px;border:0;background:transparent}
-[data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-open]{padding:4px 2px}
+[data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-open]{padding:6px 2px}
 [data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-group]{margin:8px 0 4px}
 [data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-popover]{padding:16px 18px 8px}
+
+[data-paimind-resource-navigation][data-open=true] [data-paimind-morph-rail]{flex-direction:row;gap:8px}
+[data-paimind-resource-navigation][data-open=true] [data-paimind-morph-rail] [data-paimind-utility]{flex:1 1 0!important;justify-content:center;background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.06))}
+[data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-heading]{margin-bottom:12px}
+[data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-copy]{gap:2px}
+[data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-group]{margin:6px 0 2px;font-size:10px}
 
 `
 
@@ -156,7 +162,7 @@ export function ResourceNavigation({ wide, locale }: {
     const place = (): void => {
       const rect = root.current?.getBoundingClientRect()
       if (!rect) return
-      const width = Math.min(wide ? 400 : 360, window.innerWidth - 24)
+      const width = Math.min(wide ? 320 : 360, window.innerWidth - 24)
       const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12))
       setPosition({ '--resource-width': `${width}px`, '--resource-left': `${open ? left : rect.left}px`, '--resource-bottom': `${window.innerHeight - rect.bottom}px`,
         '--resource-height': `${Math.max(100, rect.bottom - 80)}px` } as CSSProperties)
