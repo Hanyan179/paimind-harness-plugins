@@ -118,6 +118,15 @@ const STYLE = `
 [data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-copy]{gap:2px}
 [data-paimind-resource-navigation][data-wide=true] [data-paimind-resource-group]{margin:6px 0 2px;font-size:10px}
 
+[data-paimind-launcher-identity],[data-paimind-launcher-chevron]{display:none}
+[data-paimind-resource-navigation][data-wide=true][data-open=false] [data-paimind-resource-library-trigger]{padding:0 6px!important;color:var(--dsw-alias-label-primary,#202124)}
+[data-paimind-resource-navigation][data-wide=true][data-open=false] [data-paimind-resource-library-trigger]>svg,
+[data-paimind-resource-navigation][data-wide=true][data-open=false] [data-paimind-resource-library-trigger]>[data-paimind-morph-label]{display:none}
+[data-paimind-resource-navigation][data-wide=true][data-open=false] [data-paimind-launcher-identity]{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+[data-paimind-launcher-avatar]{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:#cb620e;color:white;font-size:10px;font-weight:500}
+[data-paimind-launcher-name]{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:500}
+[data-paimind-resource-navigation][data-wide=true][data-open=false] [data-paimind-launcher-chevron]{display:block;flex:0 0 20px;color:var(--dsw-alias-label-secondary,#687b90);font-size:18px;text-align:center}
+
 `
 
 function ResourceIcon({ id }: { readonly id: string }): React.JSX.Element {
@@ -213,7 +222,7 @@ export function ResourceNavigation({ wide, locale }: {
       aria-expanded={open} aria-haspopup="dialog" aria-controls={open ? 'paimind-resource-library' : undefined}
       aria-current={entries.some(entry => entry.active && !shortcuts.includes(entry)) ? 'page' : undefined}
       onClick={() => { setQuery(''); setOpen(!open) }}>
-      <PaimindMoreIcon size={17} /><span data-paimind-morph-label>{zh ? (wide && !open ? '功能与设置' : '资源') : (wide && !open ? 'Features & settings' : 'Library')}</span>
+      <span data-paimind-launcher-identity ref={element => { if (element) bridge.current?.mountIdentity(element) }} /><span data-paimind-launcher-chevron aria-hidden="true">⌃</span><PaimindMoreIcon size={17} /><span data-paimind-morph-label>{zh ? (wide && !open ? '功能与设置' : '资源') : (wide && !open ? 'Features & settings' : 'Library')}</span>
     </button></PaimindTooltip>
     {utilities.map(entry => <PaimindTooltip key={entry.id} label={entry.id === 'settings' ? (zh ? '设置' : 'Settings') : (zh ? '通知' : 'Notifications')} side={wide ? 'top' : 'right'} delayMs={180}>
       <button type="button" data-paimind-navigation-row data-paimind-navigation-target={entry.id} data-paimind-utility={entry.id}

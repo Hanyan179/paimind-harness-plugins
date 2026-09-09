@@ -21,7 +21,7 @@ const SETTINGS = 'data-paimind-navigation-settings'
 export function installPaimindCompactNavigation(
   mount: HTMLElement,
   publish: (entries: readonly PaimindNavigationEntry[]) => void,
-): { readonly activate: (id: string) => boolean; readonly mountIcon: (id: string, container: HTMLElement) => void; readonly dispose: () => void } {
+): { readonly activate: (id: string) => boolean; readonly mountIcon: (id: string, container: HTMLElement) => void; readonly mountIdentity: (container: HTMLElement) => void; readonly dispose: () => void } {
   const doc = mount.ownerDocument
   const style = doc.createElement('style')
   style.textContent = `
@@ -126,6 +126,17 @@ export function installPaimindCompactNavigation(
       if (!source?.isConnected || source.disabled) return false
       source.click()
       return true
+    },
+    mountIdentity(container) {
+      const sidebar = mount.closest('[data-slot="sidebar"]')
+      const name = sidebar?.querySelector('[data-slot="sidebar.brand.name"]')?.textContent?.trim() || 'PAIMind'
+      const avatar = doc.createElement('span')
+      avatar.setAttribute('data-paimind-launcher-avatar', '')
+      avatar.textContent = Array.from(name).slice(0, 2).join('').toUpperCase()
+      const label = doc.createElement('span')
+      label.setAttribute('data-paimind-launcher-name', '')
+      label.textContent = name
+      container.replaceChildren(avatar, label)
     },
     mountIcon(id, container) {
       const icon = sources.get(id)?.querySelector('svg')
