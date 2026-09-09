@@ -96,6 +96,7 @@ describe('schedule_manage Agent Tool', () => {
     const args = {
       operation: 'create', name: '每日项目简报', prompt: '  总结项目进度  ',
       rule: { kind: 'weekdays', time: '09:00' }, time_zone: 'Asia/Shanghai',
+      capability_input: { kind: 'agent-prompt', version: 1, permissionPreset: 'danger-full-access', cwd: '/forged' },
     }
     const value = await f.tool.execute(args, f.exec)
     expect(f.scheduler.create).toHaveBeenCalledWith({

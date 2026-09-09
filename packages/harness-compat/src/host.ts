@@ -1063,6 +1063,16 @@ export interface PaimindScheduledHarnessAgentRegistry {
   }): Promise<PaimindScheduledHarnessAgentHandle>
 }
 
+/** Native workspace ownership; scheduled sessions must attach before their first turn. */
+export interface PaimindScheduledHarnessWorkspaceRegistry {
+  list(): readonly { readonly path: string; attachSession(sessionId: string): Promise<void> }[]
+}
+
+/** Native permission owner; selected only from user-managed task configuration. */
+export interface PaimindScheduledHarnessPermissionPresets {
+  set(session: PaimindScheduledHarnessAgent['session'], name: 'read-only' | 'workspace-write' | 'danger-full-access'): void
+}
+
 /** Structural preset face used only while creating an independent scheduled Session. */
 export interface PaimindScheduledHarnessPresetRegistry {
   resolve(id?: string): Promise<{ readonly id: string }>
@@ -1095,33 +1105,48 @@ export async function createPaimindScheduledHarnessAgent(
     readonly provider?: string
     readonly model?: string
     readonly signal?: AbortSignal
+    readonly workspaceRegistry?: PaimindScheduledHarnessWorkspaceRegistry
+    readonly permissionPresets?: PaimindScheduledHarnessPermissionPresets
+    readonly permissionPreset?: 'read-only' | 'workspace-write' | 'danger-full-access'
   },
 ): Promise<PaimindScheduledHarnessAgentHandle> {
   if ((options.provider === undefined) !== (options.model === undefined)) {
     throw new Error('scheduled Harness Agent requires provider and model together')
   }
+  if (options.permissionPreset !== undefined && options.permissionPresets === undefined) {
+    throw new Error('Native permission service is required for the scheduled task permission selection')
+  }
   const modelOptions = options.provider === undefined || options.model === undefined
     ? {}
     : { agentOptions: { provider: options.provider, model: options.model } }
-  if (presets === undefined) {
-    return await agents.create({
-      sessionId: options.sessionId,
-      ...(options.cwd === undefined ? {} : { meta: { cwd: options.cwd } }),
-      ...modelOptions,
-      ...(options.signal === undefined ? {} : { signal: options.signal }),
-    })
-  }
-  const preset = await presets.resolve(options.agentPreset)
-  return await agents.create({
+  const preset = await presets?.resolve(options.agentPreset)
+  const handle = await agents.create({
     sessionId: options.sessionId,
     meta: {
       ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
-      agentPreset: preset.id,
+      ...(preset === undefined ? {} : { agentPreset: preset.id }),
     },
     ...modelOptions,
     ...(options.signal === undefined ? {} : { signal: options.signal }),
-    setup: async agentCtx => { await presets.mount(agentCtx, preset.id) },
+    ...(presets === undefined || preset === undefined ? {} : {
+      setup: async (agentCtx: object) => { await presets.mount(agentCtx, preset.id) },
+    }),
   })
+  try {
+    if (options.permissionPreset !== undefined) {
+      options.permissionPresets!.set(handle.agent.session, options.permissionPreset)
+    }
+    const cwd = handle.agent.session.header.cwd
+    if (cwd !== undefined && options.workspaceRegistry !== undefined) {
+      const matches = options.workspaceRegistry.list().filter(workspace => workspace.path === cwd)
+      if (matches.length > 1) throw new Error('Ambiguous native workspace ownership for scheduled session')
+      if (matches[0]) await matches[0].attachSession(handle.agent.session.id)
+    }
+    return handle
+  } catch (error) {
+    await handle.dispose()
+    throw error
+  }
 }
 
 /** Create a user-owned scheduled turn so native conversation title/index services can surface it. */

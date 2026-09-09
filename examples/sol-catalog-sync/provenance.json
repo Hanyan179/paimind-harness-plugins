@@ -1,0 +1,27 @@
+{
+  "source": "User-provided product-ppt-generator.zip",
+  "version": "v10-imu-threshold-colors",
+  "archiveSha256": "2201a7df05ef454ea086a704f1a74357f19fc3d59bd3166b03405db572b9a1a3",
+  "license": "No redistribution license supplied; user-authorized internal adaptation only. Do not publish this reference code without permission.",
+  "files": [
+    {
+      "source": "scripts/catalog_fields.mjs",
+      "destination": "reference/catalog_fields.mjs",
+      "sha256": "9d5ab70fcc9a98b91621c7b763dbb861137c7cfe00a59a6a5391f6f48cea3c9d",
+      "modifications": "none"
+    },
+    {
+      "source": "scripts/composition_renderer.mjs",
+      "destination": "reference/composition_renderer.mjs",
+      "sha256": "54e7e295eb1f8ec1e72a44726291edc482c557122bd6de97fca0318ba03aa6f9",
+      "modifications": "none"
+    },
+    {
+      "source": "scripts/layout_engine.mjs",
+      "destination": "reference/layout_engine.mjs",
+      "sha256": "de5ee812c427b0109da72b094e004865aec953255d24b79306920202bd509814",
+      "modifications": "none"
+    }
+  ],
+  "adaptation": "Reuses field formatting and deterministic count-based image geometry. New orchestration preserves missing fields and missing images, uses stable SOL record IDs, compares the unrounded IMU to 60, and renders HTML with local preview derivatives. No PPTX output or copied business data."
+}

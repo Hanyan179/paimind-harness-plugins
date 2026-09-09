@@ -672,6 +672,7 @@ function ScheduleForm(props: ScheduleFormProps): React.JSX.Element {
     {kind !== 'once' && <label>{props.zh ? '执行时间' : 'Run time'}<input type="time" required value={time} onInput={event => { setTime(event.currentTarget.value) }} /></label>}
     <label>{props.zh ? '时区' : 'Time zone'}<input list="paimind-scheduler-timezones" required value={timeZone} onChange={event => { setTimeZone(event.target.value) }} /><datalist id="paimind-scheduler-timezones">{timeZoneOptions(timeZone).map(value => <option key={value} value={value} />)}</datalist></label>
     {isGenericPrompt && <label data-wide="true">{props.zh ? '任务说明' : 'Task instructions'}<textarea required maxLength={16_000} value={prompt} placeholder={props.zh ? '说明任务要做什么、使用哪些信息，以及希望得到什么结果。' : 'Describe the work, available information, and expected result.'} onChange={event => { setPrompt(event.target.value) }} /></label>}
+    {initial?.actionInput?.permissionPreset !== undefined && <label data-wide="true">{props.zh ? '此任务的文件访问' : 'File access for this task'}<input disabled value={taskPermission(initial, props.zh)} /></label>}
     <label data-paimind-scheduler-check><input type="checkbox" checked={enabled} onChange={event => { setEnabled(event.currentTarget.checked) }} /><span>{props.zh ? '保存后启用自动执行' : 'Enable automatic runs after saving'}</span></label>
     <div data-paimind-scheduler-form-actions><button type="button" data-paimind-scheduler-secondary onClick={props.onCancel}>{props.zh ? '取消' : 'Cancel'}</button><button type="submit" data-paimind-scheduler-primary disabled={props.saving || selectedAction === undefined}>{props.saving ? (props.zh ? '保存中…' : 'Saving…') : (props.zh ? '保存' : 'Save')}</button></div>
   </form>
@@ -740,6 +741,14 @@ function TaskTable(props: {
   })}</div>
 }
 
+function taskPermission(definition: PaimindScheduleDefinition, zh: boolean): string {
+  const value = definition.actionInput?.permissionPreset
+  if (value === 'danger-full-access') return zh ? '完整文件访问（仅此任务创建的会话）' : 'Full file access (sessions created by this task only)'
+  if (value === 'read-only') return zh ? '只读文件访问' : 'Read-only file access'
+  if (value === 'workspace-write') return zh ? '工作区文件访问' : 'Workspace file access'
+  return zh ? '沿用宿主默认设置' : 'Use host defaults'
+}
+
 function taskPrompt(definition: PaimindScheduleDefinition): string | undefined {
   const value = definition.actionInput?.prompt
   return typeof value === 'string' ? value : undefined
@@ -767,6 +776,7 @@ function TaskDetail(props: {
       <div><span>{props.zh ? '类型与能力' : 'Type and capability'}</span><strong>{action === undefined ? '—' : `${actionTypeLabel(action.category, props.zh)} · ${props.zh ? action.nameZh : action.nameEn}`}</strong></div>
       <div><span>{props.zh ? '状态' : 'Status'}</span><strong>{scheduleStatus(definition, runs[0], props.zh)}</strong></div>
       <div><span>{props.zh ? '下次执行' : 'Next run'}</span><strong>{definition.nextRunAt === undefined ? '—' : new Date(definition.nextRunAt).toLocaleString(props.zh ? 'zh-CN' : 'en-US')}</strong></div>
+      {definition.actionInput?.permissionPreset !== undefined && <div><span>{props.zh ? '文件访问' : 'File access'}</span><strong>{taskPermission(definition, props.zh)}</strong></div>}
     </div>
     {prompt !== undefined && <div data-paimind-scheduler-instruction><span>{props.zh ? '任务说明' : 'Task instructions'}</span><p>{prompt}</p></div>}
     <div data-paimind-scheduler-row-actions>
