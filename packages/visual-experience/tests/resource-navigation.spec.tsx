@@ -57,7 +57,8 @@ describe('compact resource navigation', () => {
   it('expands the search icon, keeps dismissed content inert and survives rapid reopen', () => {
     setup()
     expect(screen.queryByRole('searchbox')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: '搜索资源入口', exact: true }))
+    expect(screen.queryByRole('button', { name: '搜索资源入口', exact: true })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '资源库', exact: true }))
     expect(screen.getByRole('searchbox')).toBeEnabled()
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: '模板' } })
     expect(screen.getByRole('button', { name: '打开模板' })).toBeInTheDocument()

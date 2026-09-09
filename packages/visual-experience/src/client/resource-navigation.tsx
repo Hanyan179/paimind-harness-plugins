@@ -1,4 +1,4 @@
-import { Component, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
+import { Component, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
 import { PaimindTooltip, installPaimindCompactNavigation, type PaimindNavigationEntry } from '@hansen/harness-compat/client-surface'
 import { markHarnessClientStyle, type PaimindLocaleSource } from '@hansen/harness-compat'
 import { PaimindAgentIcon, PaimindSkillIcon, PaimindConnectionIcon, PaimindTemplateIcon,
@@ -68,6 +68,19 @@ const STYLE = `
 [data-paimind-utility-icon] svg{width:17px;height:17px}
 [data-paimind-utility-badge]{position:absolute;right:6px;top:5px;width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-state-business-primary,#447bf0)}
 
+[data-paimind-resource-shell]{margin:0;padding:0;overflow:visible;top:auto;right:auto;color:inherit}
+[data-paimind-resource-shell]::backdrop{background:transparent;pointer-events:none}
+[data-paimind-resource-navigation][data-wide=true] [data-paimind-navigation-row],
+[data-paimind-resource-navigation][data-open=true] [data-paimind-navigation-row]{flex:1 0 auto!important;padding:0 2px;min-width:0}
+[data-paimind-resource-navigation][data-wide=true] [data-paimind-navigation-row]>[data-paimind-morph-label],
+[data-paimind-resource-navigation][data-open=true] [data-paimind-navigation-row]>[data-paimind-morph-label]{max-width:60px;opacity:1;margin-left:4px}
+[data-paimind-resource-navigation][data-wide=true] [data-paimind-navigation-row][data-morph-selected=true]{background:transparent}
+[data-paimind-resource-navigation][data-wide=false]{height:174px}
+[data-paimind-utility-icon]{order:-1}
+[data-paimind-library-search]{display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:12px;background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.08))}
+[data-paimind-library-search] input{width:100%;min-width:0;height:38px;border:0;background:transparent;color:inherit;font:inherit;font-size:12px;outline:none}
+[data-paimind-resource-navigation] [data-paimind-library-search] input:focus-visible{outline:none}
+[data-paimind-library-search]:focus-within{outline:2px solid var(--dsw-alias-state-business-primary,#447bf0);outline-offset:2px}
 `
 
 function ResourceIcon({ id }: { readonly id: string }): React.JSX.Element {
@@ -99,6 +112,13 @@ export function ResourceNavigation({ wide, locale }: {
     const style = document.createElement('style'); style.textContent = STYLE; markHarnessClientStyle(style, '@hansen/visual-experience'); document.head.append(style)
     return () => { installed.dispose(); bridge.current = null; style.remove() }
   }, [])
+  useLayoutEffect(() => {
+    const shell = panel.current
+    if (!shell || !open || typeof shell.showPopover !== 'function') return
+    shell.setAttribute('popover', 'manual')
+    shell.showPopover()
+    return () => { shell.hidePopover(); shell.removeAttribute('popover') }
+  }, [open])
   const close = (): void => { setOpen(false); library.current?.focus() }
   useEffect(() => {
     const place = (): void => {
@@ -154,17 +174,13 @@ export function ResourceNavigation({ wide, locale }: {
       aria-expanded={open} aria-haspopup="dialog" aria-controls={open ? 'paimind-resource-library' : undefined}
       aria-current={entries.some(entry => entry.active && !shortcuts.includes(entry)) ? 'page' : undefined}
       onClick={() => { setQuery(''); setOpen(!open) }}>
-      <PaimindMoreIcon size={17} /><span data-paimind-morph-label>{zh ? '资源库' : 'Library'}</span>
+      <PaimindMoreIcon size={17} /><span data-paimind-morph-label>{zh ? '资源' : 'Library'}</span>
     </button></PaimindTooltip>
-    <div data-paimind-morph-search data-expanded={open}>
-    <PaimindTooltip label={zh ? "搜索" : "Search"} side={wide ? "top" : "right"} delayMs={180}><button type="button" data-paimind-morph-search-trigger aria-label={zh ? '搜索资源入口' : 'Search resources'} aria-expanded={open}
-      onClick={() => { setOpen(true); search.current?.focus() }}><PaimindSearchIcon size={17} /></button></PaimindTooltip>
-    <span data-paimind-morph-input aria-hidden={!open}><input ref={search} type="search" tabIndex={open ? 0 : -1} disabled={!open} aria-label={zh ? '搜索资源入口' : 'Search resources'} placeholder={zh ? '搜索技能、连接、模板…' : 'Search skills, connections, templates…'} value={query} onChange={event => { setQuery(event.target.value) }} /></span>
-    </div>
     {utilities.map(entry => <PaimindTooltip key={entry.id} label={entry.id === 'settings' ? (zh ? '设置' : 'Settings') : (zh ? '通知' : 'Notifications')} side={wide ? 'top' : 'right'} delayMs={180}>
       <button type="button" data-paimind-navigation-row data-paimind-navigation-target={entry.id} data-paimind-utility={entry.id}
         aria-label={entry.id === 'settings' ? (zh ? '设置' : 'Settings') : (zh ? '通知' : 'Notifications')}
         disabled={entry.disabled} onClick={() => { setOpen(false); bridge.current?.activate(entry.id) }}>
+        <span data-paimind-morph-label>{entry.id === 'settings' ? (zh ? '设置' : 'Settings') : (zh ? '通知' : 'Notifications')}</span>
         <span data-paimind-utility-icon ref={element => { if (element) bridge.current?.mountIcon(entry.id, element) }} />
         {entry.badge && <i data-paimind-utility-badge aria-label={zh ? `${entry.badge} 条未读通知` : `${entry.badge} unread notifications`} />}
       </button>
@@ -174,6 +190,7 @@ export function ResourceNavigation({ wide, locale }: {
     <div data-paimind-morph-clip>
     <div data-paimind-resource-popover>
       <header data-paimind-resource-heading><h2>{zh ? '资源库' : 'Library'}</h2><button type="button" aria-label={zh ? '关闭资源库' : 'Close library'} onClick={close}><PaimindCloseIcon size={14} /></button></header>
+      <label data-paimind-library-search><PaimindSearchIcon size={17} /><input ref={search} type="search" tabIndex={open ? 0 : -1} disabled={!open} aria-label={zh ? '搜索资源入口' : 'Search resources'} placeholder={zh ? '搜索技能、连接、模板…' : 'Search skills, connections, templates…'} value={query} onChange={event => { setQuery(event.target.value) }} /></label>
       {groups.map(group => <section key={group} aria-label={group}><h3 data-paimind-resource-group>{group}</h3>
         {visible.filter(entry => (entry.group || (zh ? '更多功能' : 'More')) === group).map(entry => <div key={entry.id} data-paimind-resource-item data-active={entry.active}>
           <button type="button" data-paimind-resource-open disabled={entry.disabled} aria-label={`${zh ? '打开' : 'Open '}${entry.label}`} onClick={() => { activate(entry) }}>
