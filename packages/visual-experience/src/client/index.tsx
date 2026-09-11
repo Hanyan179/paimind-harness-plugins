@@ -48,6 +48,9 @@ import {
   PaimindChevronDownIcon,
   PaimindChevronRightIcon,
   PaimindDeveloperIcon,
+  PaimindConnectionIcon,
+  PaimindTemplateIcon,
+  PaimindMarketplaceIcon,
   PaimindExtensionIcon,
   PaimindNewConversationIcon,
   PaimindPersonalizationIcon,
@@ -1529,6 +1532,9 @@ export function apply(ctx: VisualExperienceClientContext): void {
   ctx.effect(() => installHarnessSettingsTriggerAccessibility(document), 'paimind-visual-experience: Settings trigger accessibility')
   ctx.effect(() => installHarnessSettingsSectionScrollReset(document), 'paimind-visual-experience: Settings section scroll position')
   ctx.effect(() => installHarnessSettingsNavigationIcons(ctx.slots, [
+    { id: 'paimind-mcp-center', mount(container) { const root = createRoot(container); root.render(<PaimindConnectionIcon size={16} />); return () => { root.unmount() } } },
+    { id: 'paimind-context-library', mount(container) { const root = createRoot(container); root.render(<PaimindTemplateIcon size={16} />); return () => { root.unmount() } } },
+    { id: 'market', mount(container) { const root = createRoot(container); root.render(<PaimindMarketplaceIcon size={16} />); return () => { root.unmount() } } },
     { id: 'paimind-extensions', mount(container) { const root = createRoot(container); root.render(<PaimindExtensionIcon />); return () => { root.unmount() } } },
     { id: 'paimind-model-services', mount(container) { const root = createRoot(container); root.render(<PaimindNewConversationIcon />); return () => { root.unmount() } } },
     { id: 'paimind-platform-scheduler', mount(container) { const root = createRoot(container); root.render(<PaimindSchedulerIcon />); return () => { root.unmount() } } },

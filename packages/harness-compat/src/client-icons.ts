@@ -29,6 +29,7 @@ export {
   IconSettingsOutline16 as PaimindSettingsIcon,
   IconSkillOutline16 as PaimindSkillIcon,
   IconLinkOutline16 as PaimindConnectionIcon,
+  IconDownloadOutline16 as PaimindMarketplaceIcon,
   IconFolderOpenOutline16 as PaimindTemplateIcon,
   IconTrashOutline16 as PaimindTrashIcon,
   IconRightUpOutline16 as PaimindUploadIcon,
