@@ -238,15 +238,152 @@ def run(parts: list[str]) -> None:
     subprocess.run(parts, check=True, cwd=WORKSPACE, env={"PATH": str(Path(sys.executable).parent) + ":/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"})
 
 
+def source_projection(item: dict[str, Any]) -> dict[str, Any]:
+    """Project a verified frozen-manifest source into the v2 Source contract."""
+    return {
+        "sourceId": item["sourceId"],
+        "name": Path(str(item["path"])).name,
+        "path": item["path"],
+        "sha256": item["sha256"],
+        "format": item["format"],
+        "role": item["purpose"],
+        "period": item["period"],
+        "summary": item["summary"],
+        "redaction": item["redaction"],
+    }
+
+
+def fmt_money(value: float) -> str:
+    return f"${value:,.2f}"
+
+
+def fmt_pct(value: float) -> str:
+    return f"{value * 100:.1f}%"
+
+
+def fact(
+    fact_id: str,
+    raw_value: Any,
+    display_value: str,
+    field_path: str,
+    method: str,
+    definition: str,
+    *,
+    source_id: str,
+    period: str,
+    filters: list[str],
+    value_type: str = "source_value",
+    business_explanation: str | None = None,
+    dimensions: list[dict[str, str]] | None = None,
+    measures: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    return {
+        "factId": fact_id,
+        "sourceIds": [source_id],
+        "rawValue": raw_value,
+        "displayValue": display_value,
+        "valueType": value_type,
+        "fieldPath": field_path,
+        "method": method,
+        "definition": definition,
+        "period": period,
+        "filters": filters,
+        "factValuesChanged": False,
+        **({} if business_explanation is None else {"businessExplanation": business_explanation}),
+        "dimensions": dimensions or [],
+        "measures": measures or [],
+    }
+
+
+def fineline_facts(payload: dict[str, Any], source_id: str, period: str, filters: list[str]) -> list[dict[str, Any]]:
+    """Promote every Fineline decision metric in the payload into a source-bound Fact."""
+    out: list[dict[str, Any]] = []
+    for row in payload.get("finelines") or []:
+        name = str(row["final_fineline"])
+        key = re.sub(r"[^A-Za-z0-9._:-]+", "-", name).strip("-").lower()
+        base = f"fineline.{key}"
+        dims = [
+            {"key": "fineline", "label": "Fineline", "value": name},
+            {"key": "category", "label": "Category", "value": str(row.get("category") or payload.get("summary", {}).get("category") or "")},
+        ]
+        field = f"finelines[final_fineline={name}]"
+        common: dict[str, Any] = dict(source_id=source_id, period=period, filters=filters, dimensions=dims)
+        out.append(fact(f"{base}.current-sales", row["current_sales_value"], fmt_money(row["current_sales_value"]), f"{field}.current_sales_value", "Read the current-window Fineline sales value from the frozen analysis output.", f"{name} current-period sales value", **common, measures=[{"key": "currentSales", "label": "Current sales", "value": row["current_sales_value"], "displayValue": fmt_money(row["current_sales_value"])}]))
+        out.append(fact(f"{base}.prior-sales", row["prior_sales_value"], fmt_money(row["prior_sales_value"]), f"{field}.prior_sales_value", "Read the prior-window Fineline sales value from the frozen analysis output.", f"{name} prior-period sales value", **common, measures=[{"key": "priorSales", "label": "Prior sales", "value": row["prior_sales_value"], "displayValue": fmt_money(row["prior_sales_value"])}]))
+        out.append(fact(f"{base}.yoy-growth", row["yoy_growth_pct"], fmt_pct(row["yoy_growth_pct"]), f"{field}.yoy_growth_pct", "Read the launch-week-aligned YoY growth computed by the packaged Fineline analysis.", f"{name} year-over-year growth", **common, value_type="derived_metric", business_explanation=f"{name} changed {fmt_pct(row['yoy_growth_pct'])} versus the comparable prior window.", measures=[{"key": "yoyGrowth", "label": "YoY growth", "value": row["yoy_growth_pct"], "displayValue": fmt_pct(row["yoy_growth_pct"])}]))
+        out.append(fact(f"{base}.category-share", row["category_share"], fmt_pct(row["category_share"]), f"{field}.category_share", "Read the Fineline share of category sales from the frozen analysis output.", f"{name} share of category sales", **common, value_type="derived_metric", measures=[{"key": "categoryShare", "label": "Category share", "value": row["category_share"], "displayValue": fmt_pct(row["category_share"])}]))
+        out.append(fact(f"{base}.current-units", row["primary_current_sales_units"], f"{row['primary_current_sales_units']:,.0f}", f"{field}.primary_current_sales_units", "Read current-period units from the frozen analysis output.", f"{name} current-period units", **common, measures=[{"key": "currentUnits", "label": "Current units", "value": row["primary_current_sales_units"], "displayValue": f"{row['primary_current_sales_units']:,.0f}"}]))
+        out.append(fact(f"{base}.current-asp", row["primary_current_asp"], fmt_money(row["primary_current_asp"]), f"{field}.primary_current_asp", "Read the current average selling price from the frozen analysis output.", f"{name} current average selling price", **common, value_type="derived_metric", measures=[{"key": "currentAsp", "label": "Current ASP", "value": row["primary_current_asp"], "displayValue": fmt_money(row["primary_current_asp"])}]))
+        out.append(fact(f"{base}.sales-per-sku", row["primary_current_sales_per_active_sku"], fmt_money(row["primary_current_sales_per_active_sku"]), f"{field}.primary_current_sales_per_active_sku", "Read sales per active SKU from the frozen analysis output.", f"{name} sales per active SKU", **common, value_type="derived_metric", measures=[{"key": "salesPerSku", "label": "Sales per SKU", "value": row["primary_current_sales_per_active_sku"], "displayValue": fmt_money(row["primary_current_sales_per_active_sku"])}]))
+        out.append(fact(f"{base}.top3-share", row["top3_sku_share"], fmt_pct(row["top3_sku_share"]), f"{field}.top3_sku_share", "Read Top-3 SKU concentration from the frozen analysis output.", f"{name} Top-3 SKU share", **common, value_type="derived_metric", measures=[{"key": "top3Share", "label": "Top-3 share", "value": row["top3_sku_share"], "displayValue": fmt_pct(row["top3_sku_share"])}]))
+        out.append(fact(f"{base}.quadrant", row["quadrant"], str(row["quadrant"]), f"{field}.quadrant", "Read the deterministic scale-by-growth quadrant classification.", f"{name} quadrant classification", **common, value_type="narrative", business_explanation=str(row.get("recommendation") or row["quadrant"])))
+        out.append(fact(f"{base}.opportunity-type", row["opportunity_type"], str(row["opportunity_type"]), f"{field}.opportunity_type", "Read the deterministic opportunity classification.", f"{name} opportunity type", **common, value_type="narrative", business_explanation=str(row.get("opportunity_rationale") or row["opportunity_type"])))
+    return out
+
+
+def white_space_facts(payload: dict[str, Any], source_id: str, period: str) -> list[dict[str, Any]]:
+    """Promote every white-space attribute and UPC opportunity into a source-bound Fact."""
+    out: list[dict[str, Any]] = []
+    for row in payload.get("facts") or []:
+        level = str(row.get("analysis_level"))
+        if level == "single_attribute":
+            name = str(row["final_fineline"])
+            attr = str(row["attribute_combination"])
+            key = re.sub(r"[^A-Za-z0-9._:-]+", "-", f"{name}-{attr}").strip("-").lower()
+            base = f"whitespace.{key}"
+            dims = [
+                {"key": "fineline", "label": "Fineline", "value": name},
+                {"key": "attribute", "label": "Attribute", "value": attr},
+            ]
+            field = f"facts[opportunity_id={row['opportunity_id']}]"
+            common: dict[str, Any] = dict(source_id=source_id, period=period, filters=[f"fineline={name}", f"attribute={attr}"], dimensions=dims)
+            out.append(fact(f"{base}.market-sales", row["current_sales_value"], fmt_money(row["current_sales_value"]), f"{field}.current_sales_value", "Read the market attribute sales value from the frozen white-space output.", f"{name} {attr} market sales value", **common, measures=[{"key": "marketSales", "label": "Market sales", "value": row["current_sales_value"], "displayValue": fmt_money(row["current_sales_value"])}]))
+            out.append(fact(f"{base}.our-sku-count", row["our_sku_count"], str(int(row["our_sku_count"])), f"{field}.our_sku_count", "Read our SKU count within the attribute space.", f"{name} {attr} own SKU count", **common, value_type="derived_metric", measures=[{"key": "ourSkuCount", "label": "Our SKUs", "value": row["our_sku_count"], "displayValue": str(int(row["our_sku_count"]))}]))
+            out.append(fact(f"{base}.yoy-growth", row["sales_yoy_growth"], fmt_pct(row["sales_yoy_growth"]), f"{field}.sales_yoy_growth", "Read the attribute YoY growth from the frozen white-space output.", f"{name} {attr} year-over-year growth", **common, value_type="derived_metric", measures=[{"key": "yoyGrowth", "label": "YoY growth", "value": row["sales_yoy_growth"], "displayValue": fmt_pct(row["sales_yoy_growth"])}]))
+            out.append(fact(f"{base}.strategy", row["strategy_code"], str(row["strategy_code"]), f"{field}.strategy_code", "Read the deterministic white-space strategy classification.", f"{name} {attr} strategy code", **common, value_type="narrative", business_explanation=str(row.get("why_this_action") or row["strategy_code"])))
+        elif level == "upc":
+            upc = str(row["upc"])
+            name = str(row["final_fineline"])
+            base = f"whitespace.upc-{upc}"
+            dims = [
+                {"key": "fineline", "label": "Fineline", "value": name},
+                {"key": "upc", "label": "UPC", "value": upc},
+                {"key": "occasion", "label": "Occasion", "value": str(row.get("attribute_value") or "")},
+            ]
+            field = f"facts[opportunity_id={row['opportunity_id']}]"
+            common = dict(source_id=source_id, period=period, filters=[f"fineline={name}", f"upc={upc}"], dimensions=dims)
+            out.append(fact(f"{base}.current-sales", row["current_sales_value"], fmt_money(row["current_sales_value"]), f"{field}.current_sales_value", "Read the current UPC sales value from the frozen white-space output.", f"{name} UPC {upc} current sales value", **common, measures=[{"key": "currentSales", "label": "Current sales", "value": row["current_sales_value"], "displayValue": fmt_money(row["current_sales_value"])}]))
+            out.append(fact(f"{base}.stores-selling", row["current_stores_selling"], f"{row['current_stores_selling']:,.0f}", f"{field}.current_stores_selling", "Read the current store count from the frozen white-space output.", f"{name} UPC {upc} stores selling", **common, value_type="derived_metric", measures=[{"key": "storesSelling", "label": "Stores selling", "value": row["current_stores_selling"], "displayValue": f"{row['current_stores_selling']:,.0f}"}]))
+            out.append(fact(f"{base}.suggested-stores", row["suggested_incremental_stores"], f"{row['suggested_incremental_stores']:,.0f}", f"{field}.suggested_incremental_stores", "Read the suggested incremental store count from the frozen white-space output.", f"{name} UPC {upc} suggested incremental stores", **common, value_type="derived_metric", measures=[{"key": "suggestedStores", "label": "Suggested stores", "value": row["suggested_incremental_stores"], "displayValue": f"{row['suggested_incremental_stores']:,.0f}"}]))
+            out.append(fact(f"{base}.strategy", row["strategy_code"], str(row["strategy_code"]), f"{field}.strategy_code", "Read the deterministic white-space strategy classification.", f"{name} UPC {upc} strategy code", **common, value_type="narrative", business_explanation=str(row.get("why_this_action") or row["strategy_code"])))
+    return out
+
+
 def data_result(kind: str, manifest_path: Path, sources: dict[str, dict[str, Any]], upstream_path: Path, output: Path) -> None:
     payload = json.loads(upstream_path.read_text(encoding="utf-8"))
     payload_text = canonical(payload)
+    source_rows = [source_projection(item) for item in sources.values()]
+    source_ids = {row["sourceId"] for row in source_rows}
+    period = str(next(iter(sources.values()))["period"]) if sources else "unspecified"
+    filters = [f"category={payload.get('summary', {}).get('category') or payload.get('analysis_context', {}).get('category') or 'unspecified'}"]
+    if kind == "fineline-investment-analysis":
+        facts = fineline_facts(payload, "fineline-source", period, filters)
+    elif kind == "white-space-analysis":
+        facts = white_space_facts(payload, "white-space-performance", period)
+    else:
+        raise ValueError(f"unsupported data result kind {kind}")
+    if not facts:
+        raise ValueError(f"{kind} produced no Facts")
+    for entry in facts:
+        if entry["sourceIds"][0] not in source_ids:
+            raise ValueError(f"Fact {entry['factId']} references an unprojected source")
     document = {
-        "schema": "paimind.data-result/v1",
+        "schema": "paimind.data-result/v2",
         "analysisKind": kind,
         "sourceManifest": str(manifest_path.relative_to(WORKSPACE)),
         "sourceManifestSha256": sha(manifest_path),
-        "sources": [{key: value for key, value in item.items() if key != "absolutePath"} for item in sources.values()],
+        "sources": source_rows,
+        "facts": facts,
         "payloadSha256": hashlib.sha256(payload_text.encode("utf-8")).hexdigest(),
         "payload": payload,
     }
@@ -297,12 +434,21 @@ def display(value: Any, unit: Any = None) -> str:
     return str(value)
 
 
-def convert_outline(legacy: dict[str, Any], fineline_path: Path, white_path: Path, fineline_artifact_id: str, white_artifact_id: str) -> dict[str, Any]:
+def convert_outline(legacy: dict[str, Any], fineline_path: Path, white_path: Path, fineline_artifact_id: str, white_artifact_id: str, fact_set: dict[str, Any] | None = None, fact_set_artifact_id: str | None = None) -> dict[str, Any]:
     legacy_sources = {str(row.get("sourceId")): row for row in legacy.get("sources") or []}
     sources = [
         {"sourceId": "fineline-result", "name": fineline_path.name, "path": str(fineline_path.relative_to(WORKSPACE)), "sha256": sha(fineline_path), "format": "json", "role": "Fineline data_result Artifact", "period": "Historical frozen snapshot", "summary": "Deterministic Fineline investment analysis", "artifactId": fineline_artifact_id},
         {"sourceId": "white-space-result", "name": white_path.name, "path": str(white_path.relative_to(WORKSPACE)), "sha256": sha(white_path), "format": "json", "role": "White-space data_result Artifact", "period": "Historical frozen snapshot", "summary": "Deterministic White-space analysis", "artifactId": white_artifact_id},
     ]
+    # When a verified Fact Set is supplied, it is the truth boundary: the outline
+    # inherits its canonical Facts and Sources verbatim and records its hash, so
+    # the renderer can prove no value was rewritten in transit.
+    binding: dict[str, Any] = {}
+    if fact_set is not None and fact_set_artifact_id is not None:
+        binding = {"factSetArtifactId": fact_set_artifact_id, "factSetFactsSha256": fact_set["factsSha256"]}
+        sources = [dict(row) for row in fact_set["sources"]]
+        sources.append({"sourceId": "fineline-result", "name": fineline_path.name, "path": str(fineline_path.relative_to(WORKSPACE)), "sha256": sha(fineline_path), "format": "json", "role": "Fineline data_result Artifact", "period": str(next(iter(fact_set["sources"]))["period"] if fact_set["sources"] else "Historical frozen snapshot"), "summary": "Deterministic Fineline investment analysis", "artifactId": fineline_artifact_id})
+        sources.append({"sourceId": "white-space-result", "name": white_path.name, "path": str(white_path.relative_to(WORKSPACE)), "sha256": sha(white_path), "format": "json", "role": "White-space data_result Artifact", "period": str(next(iter(fact_set["sources"]))["period"] if fact_set["sources"] else "Historical frozen snapshot"), "summary": "Deterministic White-space analysis", "artifactId": white_artifact_id})
     evidence: dict[str, dict[str, Any]] = {}
     for index, row in enumerate(legacy.get("evidence") or []):
         evidence_id = safe_id(row.get("evidenceId"), f"evidence-{index + 1}")
@@ -364,6 +510,7 @@ def convert_outline(legacy: dict[str, Any], fineline_path: Path, white_path: Pat
         "schema": "paimind.presentation-outline/v1",
         "title": title,
         "subtitle": "Traceable proposal generated from verified analysis Artifacts",
+        **binding,
         "design": {
             "schema": "paimind.presentation-design/v1",
             "templateId": "wmt-kids-mod",
@@ -381,14 +528,35 @@ def convert_outline(legacy: dict[str, Any], fineline_path: Path, white_path: Pat
 def build_outline(args: argparse.Namespace) -> None:
     if not ID.fullmatch(args.fineline_artifact_id) or not ID.fullmatch(args.white_space_artifact_id):
         raise ValueError("analysis Artifact IDs are invalid")
+    fact_set_artifact_id = getattr(args, "fact_set_artifact_id", None)
+    if fact_set_artifact_id is not None and not ID.fullmatch(fact_set_artifact_id):
+        raise ValueError("Fact Set Artifact ID is invalid")
     fineline = workspace_file(args.fineline)
     white = workspace_file(args.white_space)
     fineline_doc = json.loads(fineline.read_text(encoding="utf-8"))
     white_doc = json.loads(white.read_text(encoding="utf-8"))
-    if fineline_doc.get("schema") != "paimind.data-result/v1" or fineline_doc.get("analysisKind") != "fineline-investment-analysis":
+    if fineline_doc.get("schema") != "paimind.data-result/v2" or fineline_doc.get("analysisKind") != "fineline-investment-analysis":
         raise ValueError("fineline Artifact content is invalid")
-    if white_doc.get("schema") != "paimind.data-result/v1" or white_doc.get("analysisKind") != "white-space-analysis":
+    if white_doc.get("schema") != "paimind.data-result/v2" or white_doc.get("analysisKind") != "white-space-analysis":
         raise ValueError("white-space Artifact content is invalid")
+    fact_set = None
+    if fact_set_artifact_id is not None:
+        fact_set_path = workspace_file(args.fact_set)
+        fact_set = json.loads(fact_set_path.read_text(encoding="utf-8"))
+        if fact_set.get("schema") != "paimind.fact-set/v1" or not SHA256.fullmatch(str(fact_set.get("factsSha256") or "")):
+            raise ValueError("Fact Set content is invalid")
+        bound_ids = {str(value) for value in (fact_set.get("analysisArtifactIds") or [])}
+        if not {args.fineline_artifact_id, args.white_space_artifact_id}.issubset(bound_ids):
+            raise ValueError("Fact Set does not bind this outline's analyses")
+        # Proves the Fact Set was built from these exact frozen sources: every
+        # Fact Set source that matches a manifest path must keep its hash.
+        manifest_hashes = set()
+        for document in (fineline_doc, white_doc):
+            for row in document["sources"]:
+                manifest_hashes.add((str(row["path"]), str(row["sha256"])))
+        for row in fact_set["sources"]:
+            if (str(row["path"]), str(row["sha256"])) not in manifest_hashes:
+                raise ValueError(f"Fact Set source {row['sourceId']} does not match a verified analysis source")
     # Keep the source's explicit demo classification visible in the deliverable.
     # The classification comes from the exact frozen manifest, never from a
     # model guess, file name, or business value in the analysis payload.
@@ -411,7 +579,7 @@ def build_outline(args: argparse.Namespace) -> None:
         # The former default of ten Finelines produced a padded 40-slide deck.
         run([sys.executable, str(ROOT / "outline" / "scripts" / "build_outline.py"), "--fineline-json", str(fineline_payload), "--white-space-json", str(white_payload), "--top-n", "5", "--trend-mode", "pending", "--narrative-mode", "draft", "--path-mode", "relative", "--output-dir", str(legacy_dir)])
         legacy = json.loads((legacy_dir / "proposal_presentation_outline.json").read_text(encoding="utf-8"))
-        outline = convert_outline(legacy, fineline, white, args.fineline_artifact_id, args.white_space_artifact_id)
+        outline = convert_outline(legacy, fineline, white, args.fineline_artifact_id, args.white_space_artifact_id, fact_set, fact_set_artifact_id)
         templates = {
             "wmt-retail": "wmt-kids-mod",
             "strategy-consulting": "strategy-grid",
@@ -447,6 +615,8 @@ def parser() -> argparse.ArgumentParser:
     outline.add_argument("--white-space", required=True)
     outline.add_argument("--fineline-artifact-id", required=True)
     outline.add_argument("--white-space-artifact-id", required=True)
+    outline.add_argument("--fact-set-artifact-id")
+    outline.add_argument("--fact-set")
     outline.add_argument("--output", required=True)
     outline.add_argument("--title")
     outline.add_argument("--style-preset", choices=("wmt-retail", "strategy-consulting", "paramont-signature", "playful-storybook"), default="wmt-retail")

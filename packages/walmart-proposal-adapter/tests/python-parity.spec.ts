@@ -29,8 +29,17 @@ describe('frozen PAIMind Python parity baseline', () => {
       const outline = JSON.parse(await readFile(resolve(temp, 'deck/walmart-demo.outline.json'), 'utf8'))
       expect(manifest).toMatchObject({ schema: 'paimind.analysis-source-manifest/v1', synthetic: true })
       expect(manifest.sources).toHaveLength(5)
-      expect(fineline).toMatchObject({ schema: 'paimind.data-result/v1', analysisKind: 'fineline-investment-analysis' })
-      expect(whiteSpace).toMatchObject({ schema: 'paimind.data-result/v1', analysisKind: 'white-space-analysis' })
+      expect(fineline).toMatchObject({ schema: 'paimind.data-result/v2', analysisKind: 'fineline-investment-analysis' })
+      expect(whiteSpace).toMatchObject({ schema: 'paimind.data-result/v2', analysisKind: 'white-space-analysis' })
+      // v2 requires canonical source-bound Facts at the top level so the
+      // immutable Fact Set layer can validate and merge this Artifact.
+      expect(fineline.facts.length).toBeGreaterThan(0)
+      expect(whiteSpace.facts.length).toBeGreaterThan(0)
+      for (const fact of [...fineline.facts, ...whiteSpace.facts]) {
+        expect(fact.factValuesChanged).toBe(false)
+        expect(fact.sourceIds.length).toBeGreaterThan(0)
+        expect(['source_value', 'derived_metric', 'narrative']).toContain(fact.valueType)
+      }
       expect(outline).toMatchObject({ schema: 'paimind.presentation-outline/v1' })
       expect(outline.slides).toHaveLength(25)
       expect(outline.facts.length).toBeGreaterThan(0)

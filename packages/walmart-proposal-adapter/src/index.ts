@@ -24,6 +24,9 @@ export const PREPARE_WALMART_DEMO_DATA_TOOL = 'prepare_walmart_demo_data'
 export const FINELINE_TOOL = 'analyze_fineline_investment'
 export const WHITE_SPACE_TOOL = 'analyze_white_space'
 export const WALMART_OUTLINE_TOOL = 'build_walmart_buyer_proposal_outline'
+// The immutable truth boundary the outline may bind to; literal keeps this
+// adapter free of a build-time dependency on the fact-layer package.
+export const FACT_LAYER_PROVIDER_ID = 'paimind.fact-layer'
 
 type JsonRecord = Record<string, unknown>
 function runtimeDir(): string {
@@ -101,7 +104,7 @@ function analysisProvider(kind: 'fineline' | 'white-space'): PaimindGeneratorPro
 export const finelineProvider = analysisProvider('fineline')
 export const whiteSpaceProvider = analysisProvider('white-space')
 
-interface OutlineArgs { readonly outputPath: string; readonly finelinePath: string; readonly whiteSpacePath: string; readonly finelineArtifactId: string; readonly whiteSpaceArtifactId: string; readonly title?: string; readonly stylePreset: string }
+interface OutlineArgs { readonly outputPath: string; readonly finelinePath: string; readonly whiteSpacePath: string; readonly finelineArtifactId: string; readonly whiteSpaceArtifactId: string; readonly title?: string; readonly stylePreset: string; readonly factSetArtifactId?: string; readonly factSetPath?: string }
 function outlineArgs(input: Readonly<JsonRecord>): OutlineArgs {
   const stylePreset = input.style_preset === undefined ? 'wmt-retail' : text(input.style_preset, 'style_preset')
   if (!['wmt-retail', 'strategy-consulting', 'paramont-signature', 'playful-storybook'].includes(stylePreset)) throw new Error('Unsupported presentation style_preset')
@@ -109,6 +112,8 @@ function outlineArgs(input: Readonly<JsonRecord>): OutlineArgs {
     stylePreset,
     outputPath: relativeJsonPath(input.output_path, 'output_path', '.outline.json'),
     ...(input.title === undefined ? {} : { title: text(input.title, 'title') }),
+    ...(input.__fact_set_artifact_id === undefined ? {} : { factSetArtifactId: text(input.__fact_set_artifact_id, 'resolved Fact Set Artifact ID') }),
+    ...(input.__fact_set_path === undefined ? {} : { factSetPath: text(input.__fact_set_path, 'resolved Fact Set path') }),
     finelinePath: text(input.__fineline_path, 'resolved fineline Artifact path'), whiteSpacePath: text(input.__white_space_path, 'resolved white-space Artifact path'),
     finelineArtifactId: text(input.fineline_artifact_id, 'fineline_artifact_id'), whiteSpaceArtifactId: text(input.white_space_artifact_id, 'white_space_artifact_id'),
   }
@@ -120,7 +125,7 @@ export const walmartOutlineProvider: PaimindGeneratorProvider = {
   async generate(input, context) {
     const value = outlineArgs(input)
     await context.runWorkspaceCommand({
-      command: uvRunnerCommand(['outline', '--fineline', value.finelinePath, '--white-space', value.whiteSpacePath, '--fineline-artifact-id', value.finelineArtifactId, '--white-space-artifact-id', value.whiteSpaceArtifactId, '--output', value.outputPath, '--style-preset', value.stylePreset, ...(value.title === undefined ? [] : ['--title', value.title])]),
+      command: uvRunnerCommand(['outline', '--fineline', value.finelinePath, '--white-space', value.whiteSpacePath, '--fineline-artifact-id', value.finelineArtifactId, '--white-space-artifact-id', value.whiteSpaceArtifactId, ...(value.factSetArtifactId === undefined || value.factSetPath === undefined ? [] : ['--fact-set-artifact-id', value.factSetArtifactId, '--fact-set', value.factSetPath]), '--output', value.outputPath, '--style-preset', value.stylePreset, ...(value.title === undefined ? [] : ['--title', value.title])]),
       description: 'Build deterministic Walmart buyer proposal outline', timeoutMs: 10 * 60_000,
     })
     await context.runWorkspaceCommand({ command: command([process.execPath, `${runtimeDir()}/validate-outline.mjs`, value.outputPath, '18', '30']), description: 'Validate focused 18-30 slide Walmart presentation outline', timeoutMs: 30_000 })
@@ -156,6 +161,15 @@ function resolveDemoManifest(ctx: WalmartProposalHostContext, exec: PaimindToolR
   return { ...args, __manifest_path: artifactWorkspaceRelativePath(manifest.path, exec, { label: 'resolved Walmart demo manifest Artifact path' }) }
 }
 
+function resolveFactSet(ctx: WalmartProposalHostContext, exec: PaimindToolRunContext, artifactId: string): string {
+  if (exec.agent === undefined) throw new Error('Walmart outline generation requires a live Harness Agent')
+  const factSet = requireCurrentSessionArtifact(
+    ctx.sessionProjections.snapshot(exec.agent.session).values['paimind.artifacts'], exec, artifactId,
+    { description: 'an available current-Session immutable presentation Fact Set', kind: 'json', producerIds: [FACT_LAYER_PROVIDER_ID] },
+  )
+  return artifactWorkspaceRelativePath(factSet.path, exec, { label: 'resolved Fact Set Artifact path' })
+}
+
 function commonOutput(label: string) {
   return { schema: TOOL_OUTPUT, render(_args: JsonRecord, value: JsonRecord) { return render(value, label) }, presentationMeta(_args: JsonRecord, value: JsonRecord) { return artifactToolMeta(artifactFromValue(value)) } }
 }
@@ -170,5 +184,5 @@ export function apply(ctx: WalmartProposalHostContext): void {
   const analysisParameters = { manifest_artifact_id: { type: 'string' }, manifest_path: { type: 'string' }, output_path: { type: 'string', required: true }, category: { type: 'string' } } as const
   ctx.tools.register(definePaimindHarnessTool({ name: FINELINE_TOOL, description: 'Run the packaged Python 3.12 Fineline CLI using either the exact current-Session synthetic manifest Artifact ID or an approved Workspace manifest path, then publish a SHA-256 data_result Artifact.', parameters: { ...analysisParameters, output_path: { type: 'string', required: true, description: 'Workspace-relative path ending in .fineline.data-result.json, for example deliverables/retail.fineline.data-result.json.' } }, output: commonOutput('Generated Fineline data_result'), async execute(args, exec) { return await ctx.paimindArtifactGenerators.execute(FINELINE_PROVIDER_ID, resolveDemoManifest(ctx, exec, args), exec) }, presentCall: args => ({ card: 'generic', title: 'Analyze Fineline investment', kind: 'edit', rawInput: args.manifest_artifact_id ?? args.manifest_path }), presentResult(_args, result) { return presentArtifactToolResult(result) } }))
   ctx.tools.register(definePaimindHarnessTool({ name: WHITE_SPACE_TOOL, description: 'Run the packaged Python 3.12 White-space CLI using either the exact current-Session synthetic manifest Artifact ID or an approved Workspace manifest path, then publish a SHA-256 data_result Artifact.', parameters: { ...analysisParameters, output_path: { type: 'string', required: true, description: 'Workspace-relative path ending in .white-space.data-result.json, for example deliverables/retail.white-space.data-result.json.' } }, output: commonOutput('Generated White-space data_result'), async execute(args, exec) { return await ctx.paimindArtifactGenerators.execute(WHITE_SPACE_PROVIDER_ID, resolveDemoManifest(ctx, exec, args), exec) }, presentCall: args => ({ card: 'generic', title: 'Analyze White space', kind: 'edit', rawInput: args.manifest_artifact_id ?? args.manifest_path }), presentResult(_args, result) { return presentArtifactToolResult(result) } }))
-  ctx.tools.register(definePaimindHarnessTool({ name: WALMART_OUTLINE_TOOL, description: 'Build a validated focused 18-30 slide paimind.presentation-outline/v1 from exactly one current-Session Fineline and one White-space data_result Artifact ID.', parameters: { style_preset: { type: 'string', description: 'Selected visual style: strategy-consulting, paramont-signature, playful-storybook, or wmt-retail. Pass the confirmed user choice; omission retains the legacy retail default.' }, fineline_artifact_id: { type: 'string', required: true }, white_space_artifact_id: { type: 'string', required: true }, output_path: { type: 'string', required: true }, title: { type: 'string', description: 'Optional user-facing presentation title. Source-proven demo labels are always retained.' } }, output: commonOutput('Generated Walmart proposal outline'), async execute(args, exec) { const finelineId = text(args.fineline_artifact_id, 'fineline_artifact_id'); const whiteSpaceId = text(args.white_space_artifact_id, 'white_space_artifact_id'); const fineline = resolveAnalysisArtifact(ctx, exec, finelineId, FINELINE_PROVIDER_ID); const whiteSpace = resolveAnalysisArtifact(ctx, exec, whiteSpaceId, WHITE_SPACE_PROVIDER_ID); return await ctx.paimindArtifactGenerators.execute(WALMART_OUTLINE_PROVIDER_ID, { ...args, __fineline_path: fineline.path, __white_space_path: whiteSpace.path }, exec) }, presentCall: args => ({ card: 'generic', title: 'Build Walmart buyer proposal outline', kind: 'edit', rawInput: args.output_path }), presentResult(_args, result) { return presentArtifactToolResult(result) } }))
+  ctx.tools.register(definePaimindHarnessTool({ name: WALMART_OUTLINE_TOOL, description: 'Build a validated focused 18-30 slide paimind.presentation-outline/v1 from exactly one current-Session Fineline and one White-space data_result Artifact ID. Pass fact_set_artifact_id to bind the outline and every Fact to a verified immutable Fact Set so the rendered Bento deck stays traceable.', parameters: { style_preset: { type: 'string', description: 'Selected visual style: strategy-consulting, paramont-signature, playful-storybook, or wmt-retail. Pass the confirmed user choice; omission retains the legacy retail default.' }, fineline_artifact_id: { type: 'string', required: true }, white_space_artifact_id: { type: 'string', required: true }, fact_set_artifact_id: { type: 'string', description: 'Exact current-Session paimind.fact-set/v1 Artifact ID built from the same two analyses. When supplied, the outline is bound to it and inherits its canonical Facts, Sources and hash.' }, output_path: { type: 'string', required: true }, title: { type: 'string', description: 'Optional user-facing presentation title. Source-proven demo labels are always retained.' } }, output: commonOutput('Generated Walmart proposal outline'), async execute(args, exec) { const finelineId = text(args.fineline_artifact_id, 'fineline_artifact_id'); const whiteSpaceId = text(args.white_space_artifact_id, 'white_space_artifact_id'); const fineline = resolveAnalysisArtifact(ctx, exec, finelineId, FINELINE_PROVIDER_ID); const whiteSpace = resolveAnalysisArtifact(ctx, exec, whiteSpaceId, WHITE_SPACE_PROVIDER_ID); const factSetArtifactId = args.fact_set_artifact_id === undefined ? undefined : text(args.fact_set_artifact_id, 'fact_set_artifact_id'); const factSetPath = factSetArtifactId === undefined ? undefined : resolveFactSet(ctx, exec, factSetArtifactId); return await ctx.paimindArtifactGenerators.execute(WALMART_OUTLINE_PROVIDER_ID, { ...args, __fineline_path: fineline.path, __white_space_path: whiteSpace.path, ...(factSetArtifactId === undefined || factSetPath === undefined ? {} : { __fact_set_artifact_id: factSetArtifactId, __fact_set_path: factSetPath }) }, exec) }, presentCall: args => ({ card: 'generic', title: 'Build Walmart buyer proposal outline', kind: 'edit', rawInput: args.output_path }), presentResult(_args, result) { return presentArtifactToolResult(result) } }))
 }
