@@ -22,6 +22,7 @@
     "lib/**/*.js.map",
     "lib/**/*.d.ts",
     "lib/**/*.d.ts.map",
+    "!lib/types/client/styles.d.ts*",
     "templates/**/*"
   ],
   "dsh": {

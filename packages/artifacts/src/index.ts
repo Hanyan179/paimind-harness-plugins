@@ -514,6 +514,48 @@ function artifactFromEnvelope(envelope: Readonly<ArtifactProducedEnvelopeV1>): R
   })
 }
 
+export interface PaimindSessionArtifactReadInput {
+  readonly sessionId: string
+  readonly workspaceId: string
+  readonly cwd: string
+  readonly produced: readonly { readonly path: string; readonly seq: number; readonly time: number }[]
+  readonly projection: unknown
+}
+
+/** Detached, non-persistent presentation of existing native facts and the
+ * source-owned projection. File bytes/existence remain with the filesystem;
+ * this is neither a new registry nor permission to open any returned path. */
+export function projectSessionArtifactRead(input: PaimindSessionArtifactReadInput): Readonly<{
+  items: readonly PaimindArtifact[]; productProjection: 'ready' | 'unavailable'
+}> {
+  if (![input.sessionId, input.workspaceId].every(value => typeof value === 'string' && value.length > 0 && value.length <= 200 && !CONTROL.test(value))
+    || input.produced.length > 10000) throw Error('Invalid session artifact selection')
+  const byPath = new Map<string, PaimindArtifact>()
+  for (const fact of input.produced) {
+    if (typeof fact.path !== 'string' || !Number.isSafeInteger(fact.seq) || fact.seq < 0 || !Number.isFinite(fact.time)) throw Error('Invalid native artifact fact')
+    if (kindForArtifactPath(fact.path) === null) continue
+    const resolved = resolveArtifactPath(input.cwd, fact.path)
+    if (resolved.state !== 'safe') throw Error('Native artifact is outside its Workspace')
+    const slash = fact.path.replace(/\\/g, '/')
+    byPath.set(fact.path, Object.freeze({ id: `harness:${input.sessionId}:${fact.path}`, origin: 'harness-deliverable',
+      kind: resolved.kind, state: 'available', title: slash.slice(slash.lastIndexOf('/') + 1), path: fact.path,
+      sessionId: input.sessionId, workspaceId: input.workspaceId, updatedAt: fact.time, revision: String(fact.seq),
+      ...(resolved.kind === 'html' ? { previewKind: 'html-document' as const } : {}),
+      ...(resolved.kind === 'xlsx' ? { previewKind: 'spreadsheet' as const } : {}) }))
+  }
+  const items = [...byPath.values()]
+  if (input.projection !== undefined) {
+    const value = defineArtifactProjection(input.projection as PaimindArtifactProjectionV1)
+    if (value.artifacts.length > 10000 || new Set(value.artifacts.map(item => item.artifactId)).size !== value.artifacts.length) throw Error('Invalid artifact projection identities')
+    for (const envelope of value.artifacts) {
+      if (envelope.sessionId !== input.sessionId || envelope.workspaceId !== input.workspaceId
+        || resolveArtifactPath(input.cwd, envelope.path).state !== 'safe') throw Error('Artifact projection scope mismatch')
+      items.push(artifactFromEnvelope(envelope))
+    }
+  }
+  return Object.freeze({ items: Object.freeze(items), productProjection: input.projection === undefined ? 'unavailable' : 'ready' })
+}
+
 /** Durable PAIMind source: native Host projection is the only state and replay owner. */
 export class HarnessProjectedArtifactSource implements PaimindArtifactSource {
   readonly id = 'paimind:artifact-projection'

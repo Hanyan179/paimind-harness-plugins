@@ -310,6 +310,31 @@ describe('PAIMind visual experience client', () => {
     expect(trigger).not.toHaveAttribute('data-paimind-settings-trigger-label')
   })
 
+  it.each([true, false])('tracks Agent Center late mount and unload without a preset change (initially mounted: %s)', async mounted => {
+    const { fixture, nativeSelect } = setup()
+    let view: ReturnType<typeof render> | undefined
+    try {
+      const entry = document.querySelector<HTMLButtonElement>('[data-paimind-product-trigger="agent-center"]')!
+      if (!mounted) entry.remove()
+      await waitFor(() => expect(fixture.slots.some(slot => slot.injectedName === 'conversation.input.dock')).toBe(true))
+      const dock = fixture.slots.find(slot => slot.injectedName === 'conversation.input.dock')!
+      const Dock = dock.component as ComponentType
+      view = render(<Dock {...dock.inject?.() as never} />)
+      const button = await screen.findByRole('button', { name: '全部智能体' })
+      if (mounted) expect(button).toBeEnabled(); else expect(button).toBeDisabled()
+      if (mounted) entry.remove(); else document.body.append(entry)
+      await waitFor(() => { if (mounted) expect(button).toBeDisabled(); else expect(button).toBeEnabled() })
+      entry.dataset.paimindProductTrigger = 'skill-center'
+      await waitFor(() => expect(button).toBeDisabled())
+      entry.dataset.paimindProductTrigger = 'agent-center'
+      if (!entry.isConnected) document.body.append(entry)
+      await waitFor(() => expect(button).toBeEnabled())
+      expect(nativeSelect).not.toHaveBeenCalled()
+      view.unmount(); fixture.disposeEffects()
+      expect(entry.isConnected).toBe(true)
+    } finally { view?.unmount(); fixture.disposeEffects() }
+  })
+
   it('enables the reversible experience, renders the welcome entry and restores native mode', async () => {
     const { fixture, scope, theme, removeTheme, nativeSelect } = setup()
     await waitFor(() => expect(fixture.slots.filter(entry => entry.injectedName === 'conversation.hero.agentPreset' && !entry.disposed())).toHaveLength(2))

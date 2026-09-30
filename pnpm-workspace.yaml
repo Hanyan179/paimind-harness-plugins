@@ -1,5 +1,6 @@
 packages:
   - packages/*
+  - apps/*
 allowBuilds:
   '@deepseek-ai/dsh-subprocess-local': true
   '@google/genai': false

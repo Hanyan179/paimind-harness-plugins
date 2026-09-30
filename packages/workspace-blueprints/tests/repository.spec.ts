@@ -56,6 +56,7 @@ describe('Workspace Blueprint user repository', () => {
     const { catalog, userTemplatesRoot, workspace, target } = await fixture()
     await mkdir(join(workspace, '.paimind'), { recursive: true })
     await writeFile(join(workspace, '.paimind', 'workspace-blueprint.json'), '{"systemOwned":true}\n')
+    await writeFile(join(workspace, '.gitkeep'), 'User-owned content is not a builtin packaging marker.\n')
 
     const manifest = await catalog.publishBlueprint({
       workspaceId: 'workspace-1', blueprintId: 'team-space', version: '1.0.0',
@@ -99,6 +100,7 @@ describe('Workspace Blueprint user repository', () => {
     })
     expect(JSON.parse(await readFile(join(target, '.paimind', 'workspace-blueprint.json'), 'utf8')))
       .toMatchObject({ packageDigest: manifest.digest, source: 'user', composition })
+    expect(await readFile(join(target, '.gitkeep'), 'utf8')).toBe('User-owned content is not a builtin packaging marker.\n')
   })
 
   it('creates immutable patch versions for incremental file changes and enforces optimistic locking', async () => {

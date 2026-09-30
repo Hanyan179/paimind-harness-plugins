@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { agentPublicationSnapshotSchema } from './publication.js'
 
 const id = z.string().regex(/^[a-z0-9][a-z0-9-_]*$/)
 const sessionId = z.string().min(1).max(200)
@@ -65,6 +66,7 @@ const input = (schema: unknown, symbol: string) => [{ name: 'input', wire: 'inpu
 
 export const PAIMIND_AGENT_PROFILE_REMOTE_DESCRIPTORS = Object.freeze([
   direct('listProfiles', [], z.object({ profiles: z.array(profile).readonly() }).readonly(), 246),
+  direct('getPublicationSnapshot', input(z.object({ presetId: id, expectedVersion: z.string().min(1).max(160) }).strict(), '@paimind/agent-builder#AgentPublicationInput'), agentPublicationSnapshotSchema, 1175),
   direct('saveProfile', input(profileInput, '@paimind/agent-builder#AgentBusinessProfileInput'), profile, 260),
   direct('setDefault', input(z.object({ presetId: id }).readonly(), '@paimind/agent-builder#AgentDefaultInput'), z.object({ presetId: id }).readonly(), 300),
   direct('removeProfile', input(z.object({ presetId: id }).readonly(), '@paimind/agent-builder#AgentRemoveInput'), removedProfile, 301),

@@ -907,7 +907,7 @@ describe('headless Agent profile workflow', () => {
     await expect(readFile(join(source, '.paimind-agent.json'), 'utf8')).resolves.toContain('"productKind": "business"')
   })
 
-  it('binds a native Session, plans a version migration, and records a verified real first turn', async () => {
+  it('binds a Session, plans a version migration, and verifies a native-shaped completed first turn', async () => {
     const base = await mkdtemp(join(tmpdir(), 'paimind-agent-lifecycle-'))
     roots.push(base)
     const presetRoot = join(base, '.agent-presets')
@@ -915,7 +915,7 @@ describe('headless Agent profile workflow', () => {
     await mkdir(source, { recursive: true })
     await writeFile(join(source, 'agent.cordis.yml'), "- id: persona\n  name: '@deepseek-ai/dsh-persona'\n  config:\n    text: old\n\n- id: skill-filesystem\n  name: '@deepseek-ai/dsh-skill-filesystem'\n")
     await writeFile(join(source, 'preset.yml'), 'name: Delivery Agent\n')
-    const sessions = new Map<string, { header?: { agentPreset?: string }; events?: readonly unknown[] }>()
+    const sessions = new Map<string, { header?: { id?: string; agentPreset?: string }; events?: readonly unknown[] }>()
     let clock = 100
     const context = {
       ...authoringPolicyStubs,
@@ -930,13 +930,14 @@ describe('headless Agent profile workflow', () => {
       basePresetId: 'standard', role: 'Delivery owner', goal: 'Ship a verified result', behavior: 'Use real evidence',
       preferredSkillNames: [], instructions: '',
     })
+    sessions.set('session-source', { header: { id: 'session-source', agentPreset: first.presetId }, events: [] })
     await service.bindSession({
       sessionId: 'session-source', agentId: first.agentId, presetId: first.presetId, configVersion: first.configVersion, purpose: 'builder-test',
     })
     await expect(service.listSessionBindings()).resolves.toEqual({ bindings: [expect.objectContaining({
       sessionId: 'session-source', purpose: 'builder-test',
     })] })
-    sessions.set('session-source', { events: [
+    sessions.set('session-source', { header: { id: 'session-source', agentPreset: first.presetId }, events: [
       { type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Finish the delivery' }] } },
       { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: 'I will verify it.' }] } } },
     ] })
@@ -952,15 +953,22 @@ describe('headless Agent profile workflow', () => {
       fromVersion: first.configVersion, toVersion: second.configVersion,
     })
     expect(plan?.summary).toContain('Finish the delivery')
-    await service.recordMigration({ ...plan!, targetSessionId: 'session-target' })
     sessions.set('session-target', {
-      header: { agentPreset: 'minimal' },
+      header: { id: 'session-target', agentPreset: 'minimal' },
       events: [
         { type: 'agent-preset/selected', data: { agentPreset: 'delivery-agent' } },
-        { type: 'user/message', seq: 20, data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Continue' }] } },
-        { type: 'assistant/message', seq: 21, data: { message: { content: [{ type: 'text', text: 'Verified delivery complete.' }] } } },
+        { type: 'turn/start', seq: 18, data: { turn: 1 } },
+        { type: 'step/start', seq: 19, data: { turn: 1, step: 1 } },
+        { type: 'user/message', seq: 20, surfaceOp: 'append', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Continue' }] } },
+        { type: 'assistant/message', seq: 21, surfaceOp: 'append', data: { turn: 1, step: 1, message: {
+          role: 'assistant', source: { kind: 'model', provider: 'fixture-provider', model: 'fixture-model' },
+          content: [{ type: 'text', text: 'Synthetic delivery complete.' }],
+        } } },
+        { type: 'step/end', seq: 22, data: { turn: 1, step: 1 } },
+        { type: 'turn/end', seq: 23, data: { turn: 1, reason: { kind: 'completed' } } },
       ],
     })
+    await service.recordMigration({ ...plan!, targetSessionId: 'session-target' })
     const verification = await service.verifySession({ sessionId: 'session-target' })
     expect(verification).toMatchObject({ result: 'passed', firstTurnId: 'event:21', configVersion: second.configVersion })
     await expect(service.listAudit()).resolves.toMatchObject({
@@ -977,7 +985,8 @@ describe('headless Agent profile workflow', () => {
     const context = {
       ...authoringPolicyStubs,
       reflect: { provide: () => {} }, effect(install: () => void) { install() }, get: () => undefined,
-      sessions: { get: () => undefined },
+      sessions: { get: (id: string) => id === 'session-kept'
+        ? { id, header: { id, agentPreset: 'referenced-agent' }, events: [] } : undefined },
       agentPresets: { composedPreset: () => undefined, remove },
     }
     const service = new PaimindAgentProfileService(context as never, {

@@ -22,7 +22,7 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map","!lib/types/document-identity.d.ts*"],
   "dsh": {
     "client": {
       "inject": [

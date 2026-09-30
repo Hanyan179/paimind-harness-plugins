@@ -20,6 +20,7 @@ import {
   type HarnessSettingsSectionOwnerProps,
   type PaimindExtensionCenterClientContext,
   projectHarnessPluginTechnicalState,
+  readPaimindClientAudience,
 } from '@paimind/harness-compat'
 import {
   PaimindAgentIcon,
@@ -44,6 +45,8 @@ import type {
   PaimindFeatureToggleMutationRequest,
 } from '../feature-packs.js'
 import TYPERT_REMOTE from '../remote.js'
+import { FeatureManagementContributionRegistry, type FeatureManagementContributions } from './contributions.js'
+export type { FeatureManagementContributions, FeatureManagementContribution, FeatureManagementSnapshot } from './contributions.js'
 
 export const inject = ['slots', 'locale', 'remote', 'remote.pluginInventory']
 
@@ -307,6 +310,13 @@ interface ExtensionCenterInjected {
 }
 
 type ExtensionCenterProps = HarnessSettingsSectionOwnerProps & ExtensionCenterInjected
+
+export function ExtensionCenterSurface(props: ExtensionCenterProps & { governance: FeatureManagementContributions }): React.JSX.Element {
+  const snapshot = useSyncExternalStore(props.governance.subscribe, props.governance.getSnapshot)
+  if (snapshot.contribution) { const Panel = snapshot.contribution.Panel; return <section data-paimind-extension-center><header data-paimind-extension-header><h2>扩展中心</h2></header><Panel /></section> }
+  if (snapshot.required) return <section data-paimind-extension-center><h2>扩展中心</h2><p role="alert">企业管理连接已断开，请恢复企业插件后重试。未开放直接原生开关。</p></section>
+  return <ExtensionCenterSection {...props} />
+}
 
 type InventoryState =
   | { readonly status: 'loading' }
@@ -585,11 +595,46 @@ interface ExtensionCenterClientContext extends Omit<PaimindExtensionCenterClient
 
 /** Register one product Feature Pack control surface plus read-only technical diagnostics. */
 export async function apply(ctx: ExtensionCenterClientContext): Promise<() => Promise<void>> {
+  const audience = readPaimindClientAudience()
+  if (audience !== 'default') {
+    // Keep this package's root discovery slot alive, but do not mount or call
+    // any management Remote. The native gateway still authorizes every RPC.
+    const mounted = ctx.inject(['slots', 'locale'], scopeCtx => {
+      scopeCtx.effect(installStyle, 'paimind-extension-center: restricted presentation style')
+      scopeCtx.slots.inject('settings.section', () => scopeCtx.slots.register({
+        name: 'settings.section', id: 'paimind-extensions', order: 17,
+        label: () => scopeCtx.locale.getLocale().active.startsWith('zh') ? '扩展中心' : 'Extension Center',
+        children: { [SLOT]: { kind: 'list', scope: 'root' } },
+      }, () => <div data-paimind-extension-center role={audience === 'member' ? 'status' : 'alert'}>
+        {scopeCtx.locale.getLocale().active.startsWith('zh')
+          ? audience === 'member' ? '企业扩展由管理员管理。请在智能体中心或会话中使用已分配能力。' : '无法确认扩展管理界面配置，请刷新页面。'
+          : audience === 'member' ? 'Enterprise extensions are managed by your administrator. Use assigned capabilities in Agent Center or a conversation.' : 'Extension management presentation could not be verified. Reload this page.'}
+      </div>))
+      scopeCtx.effect(() => {
+        const element = document.documentElement
+        const before = element.getAttribute(BOOT_CONSISTENCY_ATTRIBUTE)
+        const state = audience === 'member' ? 'not-applicable' : 'invalid-presentation'
+        element.setAttribute(BOOT_CONSISTENCY_ATTRIBUTE, state)
+        return () => {
+          if (element.getAttribute(BOOT_CONSISTENCY_ATTRIBUTE) !== state) return
+          if (before === null) element.removeAttribute(BOOT_CONSISTENCY_ATTRIBUTE)
+          else element.setAttribute(BOOT_CONSISTENCY_ATTRIBUTE, before)
+        }
+      }, 'paimind-extension-center: member extension presentation, not management readiness')
+    })
+    await mounted
+    return async () => { await mounted.dispose() }
+  }
   const disposeRemote = await ctx.remote.$mount(TYPERT_REMOTE)
   const mounted = ctx.inject([...inject, 'remote.paimindFeaturePacks'], scopeCtx => {
     const featurePackRemote = scopeCtx.remote.paimindFeaturePacks
     if (featurePackRemote === undefined) throw new Error('PAIMind Feature Pack Remote did not mount')
     scopeCtx.effect(installStyle, 'paimind-extension-center: style')
+    const governance = new FeatureManagementContributionRegistry()
+    scopeCtx.effect(() => {
+      const remove = scopeCtx.reflect.provide('paimindFeatureManagementContributions', governance)
+      return () => { governance.dispose(); void remove() }
+    }, 'paimind-extension-center: optional enterprise management contribution')
     contributePaimindExtension(scopeCtx.slots, SELF)
 
     let cachedVersion = -1
@@ -643,7 +688,10 @@ export async function apply(ctx: ExtensionCenterClientContext): Promise<() => Pr
           document.documentElement.setAttribute(BOOT_CONSISTENCY_ATTRIBUTE, 'ready')
           return
         }
-        if (!unsettled && gaps.length > 0) {
+        // Host fibers can already be active while their client dependencies are
+        // still mounting. Give client contributions the same bounded settling
+        // window as the host before spending the one-shot recovery attempt.
+        if (!unsettled && gaps.length > 0 && bootCheckAttempt >= 19) {
           if (window.sessionStorage.getItem(BOOT_RECOVERY_SESSION_KEY) !== 'attempted') {
             window.sessionStorage.setItem(BOOT_RECOVERY_SESSION_KEY, 'attempted')
             document.documentElement.setAttribute(BOOT_CONSISTENCY_ATTRIBUTE, 'reloading')
@@ -692,7 +740,7 @@ export async function apply(ctx: ExtensionCenterClientContext): Promise<() => Pr
       label,
       inject: injectSection,
       children: { [SLOT]: { kind: 'list', scope: 'root' } },
-    }, props => <ExtensionCenterBoundary fallback={<div data-paimind-extension-boundary role="alert">{scopeCtx.locale.getLocale().active.startsWith('zh') ? '扩展中心遇到错误，其他 Harness 插件仍可继续工作。' : 'Extension Center encountered an error. Other Harness plugins can continue working.'}</div>}><ExtensionCenterSection {...props as ExtensionCenterProps} /></ExtensionCenterBoundary>))
+    }, props => <ExtensionCenterBoundary fallback={<div data-paimind-extension-boundary role="alert">{scopeCtx.locale.getLocale().active.startsWith('zh') ? '扩展中心遇到错误，其他 Harness 插件仍可继续工作。' : 'Extension Center encountered an error. Other Harness plugins can continue working.'}</div>}><ExtensionCenterSurface {...props as ExtensionCenterProps} governance={governance} /></ExtensionCenterBoundary>))
   })
   try { await mounted } catch (error) { await disposeRemote(); throw error }
   return async () => { await mounted.dispose(); await disposeRemote() }

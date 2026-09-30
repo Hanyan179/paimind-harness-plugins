@@ -8,6 +8,15 @@ Package rules: [Plugin Authoring Standard](../../docs/standards/plugin-authoring
 
 Role: **Client plugin**. It owns the Artifact registry, projection and path/deep-link routers. It deliberately registers no fixed sidebar overview; exact Artifact links open the matching file viewer or hidden Bento workbench. Harness remains the canonical runtime and domain owner.
 
+`projectSessionArtifactRead` is a stateless Node-safe view over original native
+produced-file facts and the existing `paimind.artifacts` projection. It validates
+explicit Session/Workspace association, preserves source identities/revisions
+and failed states, and returns no trace document or file bytes. Missing product
+projection is explicitly `unavailable`, not a ready empty list. Listed
+`available` means recorded by the producer, not a fresh filesystem existence
+check or authorization to open the file. There is no additional registry,
+directory discovery, persistent cache or runtime service.
+
 ## Public entry points
 
 | Export | Target | Contract |

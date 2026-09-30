@@ -7,6 +7,21 @@ import {
 } from '../src/index.js'
 
 describe('Harness branding compatibility boundary', () => {
+  it('includes credentials only for explicit same-origin paths and restores original attributes', () => {
+    document.head.innerHTML = '<link rel="manifest" href="/manifest.webmanifest" crossorigin="anonymous">'
+    const dispose = installHarnessDocumentBranding(document, { productName: 'Paramont Harness',
+      faviconHref: '/icon.svg', manifestHref: '/plugins/@paimind/branding/manifest.webmanifest' })
+    expect(document.querySelector('link[rel="manifest"]')).toHaveAttribute('crossorigin', 'use-credentials')
+    dispose()
+    expect(document.querySelector('link[rel="manifest"]')).toHaveAttribute('crossorigin', 'anonymous')
+    expect(document.querySelector('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest')
+    for (const manifestHref of ['//remote.example/manifest', '/\\remote.example/manifest', '/\n/remote.example/manifest', 'https://remote.example/manifest', 'data:application/manifest+json,{}']) {
+      document.head.innerHTML = '<link rel="manifest" href="/manifest.webmanifest">'
+      const stop = installHarnessDocumentBranding(document, { productName: 'Paramont Harness', faviconHref: '/icon.svg', manifestHref })
+      expect(document.querySelector('link[rel="manifest"]')).not.toHaveAttribute('crossorigin')
+      stop()
+    }
+  })
   it('locates legacy expanded and compact native brand seats under jsdom 30', () => {
     document.body.innerHTML = `
       <button id="expanded"><svg viewBox="0 0 182 24"></svg></button>

@@ -1,6 +1,6 @@
 import {
   Component,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -139,10 +139,13 @@ export class NotificationCenterController {
     }
   }
 
-  async follow(item: Readonly<NotificationRecord>): Promise<void> {
+  async follow(item: Readonly<NotificationRecord>, beforeNavigate?: () => void): Promise<void> {
     if (!await this.markRead(item)) return
     const target = item.target
     if (target === undefined) return
+    // Release the modal before the destination takes focus. A rejected read
+    // must keep the current dialog and its error feedback visible.
+    beforeNavigate?.()
     if (target.kind === 'session') {
       this.sessions.open(target.sessionId)
     } else if (target.kind === 'artifact') {
@@ -254,7 +257,9 @@ const STYLE = `${PAIMIND_UI_FOUNDATION_CSS}
   color: #fff; background: var(--dsw-alias-state-error-primary, #d04444); font-size: 9px; line-height: 1; font-weight: 700;
 }
 [data-paimind-notification-trigger][data-wide='false'] [data-paimind-notification-badge] { position: absolute; top: -2px; right: -3px; }
-[data-paimind-notification-overlay] { position: fixed; inset: 0; z-index: 2147483000; display: flex; align-items: flex-start; justify-content: flex-end; padding: 16px; pointer-events: auto; }
+[data-paimind-notification-overlay] { position: fixed; inset: 0; z-index: 2147483000; margin: 0; border: 0; width: 100%; height: 100%; max-width: none; max-height: none; box-sizing: border-box; background: transparent; color: inherit; padding: 16px; pointer-events: auto; }
+[data-paimind-notification-overlay][open] { display: flex; align-items: flex-start; justify-content: flex-end; }
+[data-paimind-notification-overlay]::backdrop { background: transparent; }
 [data-paimind-notification-mask] { position: absolute; inset: 0; background: var(--dsw-alias-bg-mask-1, rgba(15,24,40,.18)); backdrop-filter: blur(2px); }
 [data-paimind-notification-panel] {
   position: relative; z-index: 1; width: min(460px, calc(100vw - 32px)); height: min(760px, calc(100vh - 32px)); box-sizing: border-box; display: grid; overflow: hidden;
@@ -319,7 +324,7 @@ export function NotificationTrigger(props: {
   const locale = useSyncExternalStore(props.locale.subscribe.bind(props.locale), () => props.locale.getLocale().active)
   const zh = locale.startsWith('zh')
   const unread = snapshot.items.filter(item => item.readAt === undefined).length
-  return <button type="button" data-paimind-notification-trigger data-wide={props.wide} aria-label={zh ? '打开通知中心' : 'Open Notification Center'} onClick={() => { props.controller.toggle() }}>
+  return <button type="button" data-paimind-notification-trigger data-wide={props.wide} aria-label={zh ? '打开通知中心' : 'Open Notification Center'} onClick={event => { event.currentTarget.focus(); props.controller.toggle() }}>
     <BellIcon />
     {props.wide && <span data-paimind-notification-trigger-label>{zh ? '通知' : 'Notifications'}</span>}
     {unread > 0 && <span data-paimind-notification-badge>{unread > 99 ? '99+' : unread}</span>}
@@ -399,6 +404,9 @@ export function NotificationOverlay(props: {
   const [filter, setFilter] = useState<'all' | 'unread' | 'attention'>('all')
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set())
   const close = useRef<HTMLButtonElement>(null)
+  const dialog = useRef<HTMLDialogElement>(null)
+  const navigating = useRef(false)
+  const retryRequested = useRef(false)
   const rows = useMemo(() => filter === 'all'
     ? snapshot.items
     : filter === 'unread'
@@ -410,20 +418,63 @@ export function NotificationOverlay(props: {
   })).filter(entry => entry.rows.length > 0), [rows])
   const unread = snapshot.items.filter(item => item.readAt === undefined).length
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!snapshot.open) return
+    const modal = dialog.current
+    if (!modal) return
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    navigating.current = false
+    modal.showModal()
     close.current?.focus()
-    const onKey = (event: KeyboardEvent): void => { if (event.key === 'Escape') props.controller.close() }
-    document.addEventListener('keydown', onKey)
-    return () => { document.removeEventListener('keydown', onKey) }
+    return () => {
+      if (modal.open) modal.close()
+      // React can detach a portal before the browser's implicit restoration.
+      // Do not steal focus from a destination or a later native modal.
+      if (!navigating.current && opener?.isConnected && !document.querySelector('dialog[open]')) opener.focus()
+    }
   }, [props.controller, snapshot.open])
 
+  useLayoutEffect(() => {
+    if (!snapshot.open) { retryRequested.current = false; return }
+    if (!retryRequested.current || snapshot.loading) return
+    retryRequested.current = false
+    // Refresh temporarily removes the error/retry row. Restore focus only if
+    // it fell out with that row, not after a user chose another control.
+    if (document.activeElement === document.body || document.activeElement === dialog.current) {
+      const retry = dialog.current?.querySelector<HTMLButtonElement>('[data-paimind-notification-retry]')
+      ;(retry ?? close.current)?.focus()
+    }
+  }, [snapshot.open, snapshot.loading, snapshot.error])
+
+  const follow = async (item: Readonly<NotificationRecord>): Promise<void> => {
+    const modal = dialog.current
+    try { await props.controller.follow(item, () => { navigating.current = true; modal?.close() }) }
+    finally {
+      // An unavailable artifact keeps the original error surface. Successful
+      // navigation closes state and leaves destination focus untouched.
+      if (modal?.isConnected && props.controller.getSnapshot().open && !modal.open) {
+        navigating.current = false; modal.showModal(); close.current?.focus()
+      }
+    }
+  }
+
   if (!snapshot.open) return null
-  return createPortal(<div data-paimind-notification-overlay data-paimind-ui-scope>
+  return createPortal(<dialog ref={dialog} aria-label={zh ? '通知中心' : 'Notification Center'} data-paimind-notification-overlay data-paimind-ui-scope
+    onCancel={event => { event.preventDefault(); props.controller.close() }}
+    onKeyDown={event => {
+      if (event.key !== 'Tab') return
+      const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]
+      const first = buttons[0], last = buttons.at(-1)
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+    }}>
     <div data-paimind-notification-mask onMouseDown={() => { props.controller.close() }} />
-    <section role="dialog" aria-modal="true" aria-label={zh ? '通知中心' : 'Notification Center'} data-paimind-notification-panel data-paimind-ui-panel>
+    <section data-paimind-notification-panel data-paimind-ui-panel>
       <header data-paimind-notification-header>
-        <div data-paimind-notification-heading><h2>{zh ? '通知中心' : 'Notification Center'}</h2><p aria-live="polite">{unread > 0 ? (zh ? `${unread} 条未读 · 共 ${snapshot.items.length} 条消息` : `${unread} unread · ${snapshot.items.length} messages`) : (zh ? `没有未读消息 · 共 ${snapshot.items.length} 条历史消息` : `No unread messages · ${snapshot.items.length} in history`)}</p></div>
+        <div data-paimind-notification-heading><h2>{zh ? '通知中心' : 'Notification Center'}</h2><p aria-live="polite">{snapshot.error !== null ? (zh ? '通知操作未完成，请重试。' : 'The notification request did not complete. Please retry.')
+          : snapshot.loading ? (zh ? '正在加载通知…' : 'Loading notifications…')
+            : unread > 0 ? (zh ? `${unread} 条未读 · 共 ${snapshot.items.length} 条消息` : `${unread} unread · ${snapshot.items.length} messages`)
+              : (zh ? `没有未读消息 · 共 ${snapshot.items.length} 条历史消息` : `No unread messages · ${snapshot.items.length} in history`)}</p></div>
         <button ref={close} type="button" data-paimind-notification-close data-paimind-ui-button data-variant="quiet" aria-label={zh ? '关闭通知中心' : 'Close Notification Center'} onClick={() => { props.controller.close() }}>×</button>
       </header>
       <div data-paimind-notification-toolbar>
@@ -433,9 +484,10 @@ export function NotificationOverlay(props: {
         <button type="button" data-paimind-notification-mark-all disabled={unread === 0} onClick={() => { void props.controller.markAllRead() }}>{zh ? '全部已读' : 'Mark all read'}</button>
       </div>
       <div data-paimind-notification-body>
-        {snapshot.error !== null && <div role="alert" data-paimind-notification-error>{snapshot.error}</div>}
+        {snapshot.error !== null && <div data-paimind-notification-error><div role="alert">{snapshot.error}</div>
+          <button type="button" data-paimind-notification-retry data-paimind-ui-button data-variant="quiet" disabled={snapshot.loading} onClick={() => { retryRequested.current = true; void props.controller.refresh() }}>{zh ? '重新加载通知' : 'Retry notifications'}</button></div>}
         {snapshot.loading && snapshot.items.length === 0 ? <div data-paimind-notification-empty>{zh ? '正在加载…' : 'Loading…'}</div>
-          : rows.length === 0 ? <div data-paimind-notification-empty>{zh ? '这里暂时没有通知。' : 'No notifications here yet.'}</div>
+          : rows.length === 0 ? (snapshot.error === null ? <div data-paimind-notification-empty>{zh ? '这里暂时没有通知。' : 'No notifications here yet.'}</div> : null)
             : <>{groups.map(group => <section key={group.group} data-paimind-notification-group aria-label={groupCopy(group.group, zh)}><h3>{groupCopy(group.group, zh)}</h3><ul data-paimind-notification-list>{group.rows.map(item => {
               const detailOpen = expanded.has(item.id)
               const detailId = `paimind-notification-detail-${item.id.replace(/[^a-z0-9_-]/gi, '-')}`
@@ -447,12 +499,12 @@ export function NotificationOverlay(props: {
               <div data-paimind-notification-actions>
                 {item.body !== undefined && <button type="button" data-paimind-notification-action data-paimind-ui-button data-variant="quiet" aria-expanded={detailOpen} aria-controls={detailId} onClick={() => { setExpanded(current => { const next = new Set(current); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next }) }}>{detailOpen ? (zh ? '收起消息' : 'Collapse message') : (zh ? '展开消息' : 'Expand message')}</button>}
                 {item.readAt === undefined && <button type="button" data-paimind-notification-action data-paimind-ui-button data-variant="quiet" onClick={() => { void props.controller.markRead(item) }}>{zh ? '标为已读' : 'Mark read'}</button>}
-                {item.target !== undefined && <button type="button" data-paimind-notification-action data-paimind-ui-button data-variant="quiet" onClick={() => { void props.controller.follow(item) }}>{actionCopy(item, zh)}</button>}
+                {item.target !== undefined && <button type="button" data-paimind-notification-action data-paimind-ui-button data-variant="quiet" onClick={() => { void follow(item) }}>{actionCopy(item, zh)}</button>}
               </div>
             </li>})}</ul></section>)}</>}
       </div>
     </section>
-  </div>, document.body)
+  </dialog>, document.body)
 }
 
 class NotificationBoundary extends Component<{ readonly children: ReactNode }, { readonly failed: boolean }> {

@@ -19,6 +19,7 @@ import {
 } from '@paimind/contracts'
 import {
   contributePaimindExtension,
+  readPaimindClientAudience,
   type HarnessRemoteMountService,
   type HarnessRemoteResult,
   type HarnessConversationDraftService,
@@ -869,6 +870,10 @@ class SchedulerBoundary extends Component<{ readonly children: ReactNode }, { re
 }
 
 export async function apply(ctx: SchedulerClientContext): Promise<() => Promise<void>> {
+  // Platform scheduling is administrator-owned. A member presentation must
+  // not mount management RPCs or start the controller's background polling.
+  // This is not authorization: the gateway independently rejects those RPCs.
+  if (readPaimindClientAudience() !== 'default') return async () => {}
   const disposeRemote = await ctx.remote.$mount(TYPERT_REMOTE)
   const mounted = ctx.inject([...BASE_INJECT, 'remote.paimindScheduler'], remoteCtx => {
     const remote = remoteCtx.remote.paimindScheduler

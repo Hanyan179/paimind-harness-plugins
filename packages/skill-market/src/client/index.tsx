@@ -1,5 +1,6 @@
 import {
   Component,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -12,6 +13,7 @@ import {
   type ReactNode,
 } from 'react'
 import { createPortal } from 'react-dom'
+import type { SkillAdoptedPreferenceInput, SkillAdoptedPreferenceResult } from '../adopted-preference.js'
 import { zip } from 'fflate'
 import type {
   PaimindSessionBusinessSkillSelectionReplaceInput,
@@ -23,6 +25,7 @@ import type {
 } from '@paimind/contracts'
 import {
   contributePaimindExtension,
+  readPaimindClientAudience,
   type HarnessRemoteMountService,
   type HarnessRemoteResult,
   type HarnessSessionService,
@@ -74,6 +77,10 @@ import type {
 import type { SkillCatalogItem, SkillCatalogSnapshot } from '../recommended.js'
 import TYPERT_REMOTE from '../remote.js'
 import { SKILL_CENTER_STYLE } from './styles.js'
+import { EMPTY_SKILL_CENTER_CONTRIBUTION, SkillCenterContributionRegistry, type SkillCenterContributions, type AdoptedSkillSelection, type SkillPublicationSourceSelection } from './contributions.js'
+import { InstalledSkillContent, readCurrentAdoptedContent } from './installed-content.js'
+import type { SkillAdoptedContent, SkillAdoptedContentInput } from '../adopted-content.js'
+export type { SkillCenterContributions, SkillCenterContribution, SkillCenterContributionSnapshot, SkillCenterPanelProps, AdoptedSkillSelection, SkillCenterSourceActionProps, SkillPublicationSourceSelection } from './contributions.js'
 
 const BASE_INJECT = ['slots', 'locale', 'remote', 'sessions'] as const
 export const inject = [...BASE_INJECT]
@@ -125,6 +132,7 @@ interface SkillInstallerRemoteNamespace {
   getSkillPackage(input: { readonly skillId: string }): Promise<HarnessRemoteResult<Readonly<SkillPackageDocument>>>
   listSkillPackageDirectory(input: { readonly skillId: string; readonly path?: string; readonly cursor?: string; readonly limit?: number }): Promise<HarnessRemoteResult<Readonly<SkillPackageDirectoryPage>>>
   readSkillPackageFile(input: { readonly skillId: string; readonly path: string }): Promise<HarnessRemoteResult<Readonly<SkillPackageFile>>>
+  readAdoptedSkillContent(input: SkillAdoptedContentInput): Promise<HarnessRemoteResult<Readonly<SkillAdoptedContent>>>
   saveSkillPackage(input: SkillPackageSaveInput): Promise<HarnessRemoteResult<Readonly<SkillInstallResult>>>
   getAuthoringDraft(input: { readonly sessionId: string }): Promise<HarnessRemoteResult<Readonly<SkillAuthoringDraft> | null>>
   dismissAuthoringDraft(input: { readonly sessionId: string; readonly draftId: string }): Promise<HarnessRemoteResult<Readonly<{ readonly dismissed: boolean }>>>
@@ -133,6 +141,7 @@ interface SkillInstallerRemoteNamespace {
   replaceSessionBusinessSkillSelection?(input: PaimindSessionBusinessSkillSelectionReplaceInput): Promise<HarnessRemoteResult<Readonly<PaimindSessionBusinessSkillSelectionV1>>>
   getUserSkillPolicy?(): Promise<HarnessRemoteResult<Readonly<PaimindUserSkillPolicyV1>>>
   replaceUserSkillPolicy?(input: PaimindUserSkillPolicyReplaceInput): Promise<HarnessRemoteResult<Readonly<PaimindUserSkillPolicyV1>>>
+  setAdoptedSkillPreference?(input: SkillAdoptedPreferenceInput): Promise<HarnessRemoteResult<Readonly<SkillAdoptedPreferenceResult>>>
   uninstall(input: { readonly skillId: string; readonly version?: string }): Promise<HarnessRemoteResult<Readonly<SkillRemovalRecord>>>
 }
 
@@ -151,6 +160,10 @@ interface SkillMarketClientContext extends PaimindClientContext {
 }
 
 export interface SkillMarketSectionProps {
+  /** Presentation only; the gateway and original owners still authorize every request. */
+  readonly audience?: 'default' | 'member'
+  readonly contributions?: SkillCenterContributions
+  readonly registerCloseGuard?: (guard: () => boolean) => () => void
   readonly close: () => void
   readonly installer: SkillInstallerRemoteNamespace
   readonly sessions: HarnessSessionService
@@ -173,7 +186,7 @@ type SessionSelectionState = { readonly status: 'no-session' | 'loading' | 'unav
   | { readonly status: 'ready'; readonly value: Readonly<PaimindSessionBusinessSkillSelectionV1>; readonly error: null }
   | { readonly status: 'error'; readonly value: null; readonly error: string }
 
-type SkillCenterView = 'market' | 'builtin' | 'installed'
+type SkillCenterView = 'market' | 'builtin' | 'installed' | 'contribution'
 
 interface SkillEditorDraft {
   readonly skillId?: string
@@ -273,11 +286,21 @@ function remoteValue<Value>(result: HarnessRemoteResult<Value>): Value {
   return result.value
 }
 
+async function readForSkillEntry<T>(read: () => Promise<T>, signal: AbortSignal): Promise<T> {
+  signal.throwIfAborted()
+  return await new Promise<T>((resolve, reject) => {
+    const abort = () => { signal.removeEventListener('abort', abort); reject(signal.reason) }
+    signal.addEventListener('abort', abort, { once: true })
+    Promise.resolve().then(() => { signal.throwIfAborted(); return read() }).then(resolve, reject)
+      .finally(() => signal.removeEventListener('abort', abort))
+  })
+}
+
 function messageOf(error: unknown): string { return error instanceof Error ? error.message : String(error) }
 
 function handleScopeKey(event: ReactKeyboardEvent<HTMLButtonElement>): void {
   if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return
-  const tabs = [...(event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ?? [])]
+  const tabs = [...(event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]:not(:disabled)') ?? [])]
   const current = tabs.indexOf(event.currentTarget)
   if (current < 0 || tabs.length === 0) return
   event.preventDefault()
@@ -319,16 +342,32 @@ async function uploadSkill(file: File, signal: AbortSignal): Promise<{ readonly 
 }
 
 export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.Element {
+  // A replacement native owner gets fresh local UI state. Old drafts, reads
+  // and preference continuations must never be reused across that boundary.
+  const ownerKey = useMemo(() => crypto.randomUUID(), [props.installer, props.audience])
+  return <SkillMarketOwnerSection key={ownerKey} {...props} />
+}
+
+function SkillMarketOwnerSection(props: SkillMarketSectionProps): React.JSX.Element {
+  const hasManagementPresentation = props.audience !== 'member'
+  const contributionSnapshot = useSyncExternalStore(props.contributions?.subscribe ?? (() => () => {}),
+    props.contributions?.getSnapshot ?? (() => EMPTY_SKILL_CENTER_CONTRIBUTION))
+  const contribution = contributionSnapshot.contribution
+  const [contributionEditing, setContributionEditing] = useState(false)
+  const entryLifetime = useRef<AbortController>()
+  useEffect(() => { const abort = new AbortController(); entryLifetime.current = abort; return () => abort.abort() }, [])
+  const preferencePending = useRef(false)
   const locale = useSyncExternalStore(props.locale.subscribe.bind(props.locale), () => props.locale.getLocale().active, () => props.locale.getLocale().active)
   const sessionSnapshot = useSyncExternalStore(props.sessions.list.subscribe.bind(props.sessions.list), props.sessions.list.getSnapshot.bind(props.sessions.list), props.sessions.list.getSnapshot.bind(props.sessions.list))
   const zh = locale.startsWith('zh')
   const sessionId = sessionSnapshot.current
-  const [tab, setTab] = useState<SkillCenterView>('market')
+  const [tab, setTab] = useState<SkillCenterView>(hasManagementPresentation ? 'market' : 'installed')
   const [catalog, setCatalog] = useState<CatalogState>({ status: 'loading', items: [], error: null })
   const [systemSkills, setSystemSkills] = useState<SystemSkillState>({ status: 'unavailable', items: [], error: null })
   const [userPolicy, setUserPolicy] = useState<UserPolicyState>({ status: 'unavailable', value: null, error: null })
   const [sessionSelection, setSessionSelection] = useState<SessionSelectionState>({ status: 'no-session', value: null, error: null })
   const [installed, setInstalled] = useState<readonly SkillInstallRecord[]>([])
+  const [installedRead, setInstalledRead] = useState<{ status: 'loading' | 'ready' | 'error'; error: string | null }>({ status: 'loading', error: null })
   const [query, setQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<SkillProductCategoryFilter>('all')
   const [sourceFilter, setSourceFilter] = useState('all')
@@ -338,7 +377,8 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
   const [preview, setPreview] = useState<SkillUploadPreview | null>(null)
   const [uploadGuideOpen, setUploadGuideOpen] = useState(false)
   const [uninstallTarget, setUninstallTarget] = useState<SkillInstallRecord | null>(null)
-  const [busy, setBusy] = useState(false)
+  const [nativeBusy, setBusy] = useState(false)
+  const busy = nativeBusy || contributionEditing
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -355,19 +395,92 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
   const previewPrimary = useRef<HTMLButtonElement>(null)
   const uploadGuidePrimary = useRef<HTMLButtonElement>(null)
   const uninstallPrimary = useRef<HTMLButtonElement>(null)
+  const nativeEditing = useRef(false); nativeEditing.current = nativeBusy || editor !== null
+
+  useEffect(() => { setContributionEditing(false); setTab(value => value === 'contribution' ? 'installed' : value) }, [contributionSnapshot.revision])
+  const readAdoptedContent = useCallback((input: SkillAdoptedContentInput) => props.installer.readAdoptedSkillContent(input), [props.installer])
+  const readPublicationSource = useCallback(async (skillId: string, caller: AbortSignal): Promise<SkillPublicationSourceSelection> => {
+    const owner = entryLifetime.current
+    if (!owner) throw new Error('技能中心尚未就绪')
+    const signal = AbortSignal.any([caller, owner.signal, AbortSignal.timeout(15_000)])
+    const current = () => {
+      signal.throwIfAborted()
+      if (nativeEditing.current || props.contributions?.getSnapshot().revision !== contributionSnapshot.revision) {
+        throw new Error('原技能来源正在编辑或提交入口已变化，请重新读取')
+      }
+    }
+    current()
+    if (!/^[a-z0-9][a-z0-9-]{0,254}$/u.test(skillId)) throw new Error('技能来源编号无效')
+    const installed = remoteValue(await readForSkillEntry(() => props.installer.listInstalled(), signal)).items
+    current()
+    const row = installed.find(item => item.skillId === skillId && item.name === skillId)
+    if (!row?.managed || row.publication !== undefined) throw new Error('只可提交当前技能中心管理的个人来源')
+    const document = remoteValue(await readForSkillEntry(() => props.installer.getSkillPackage({ skillId }), signal))
+    current()
+    if (document.skillId !== skillId || document.name !== skillId || !document.managed || !/^sha256:[a-f0-9]{64}$/u.test(document.digest)) {
+      throw new Error('原技能完整目录版本未确认，不能提交')
+    }
+    return Object.freeze({ skillId, name: document.name, digest: document.digest })
+  }, [props.installer, props.contributions, contributionSnapshot.revision])
+  const showAdoptedSkill = useCallback(async (selection: AdoptedSkillSelection, caller: AbortSignal): Promise<void> => {
+    const owner = entryLifetime.current
+    if (!owner) throw new Error('技能中心尚未就绪')
+    const signal = AbortSignal.any([caller, owner.signal, AbortSignal.timeout(15_000)])
+    signal.throwIfAborted()
+    if (nativeEditing.current) throw new Error('技能中心已有编辑或保存操作，请先处理当前草稿')
+    if (!/^[a-z0-9][a-z0-9-]{0,254}$/u.test(selection.name)
+      || !/^[a-f0-9-]{36}$/u.test(selection.publicationId)
+      || ![selection.packageDigest, selection.archiveDigest].every(value => /^sha256:[a-f0-9]{64}$/u.test(value))) throw new Error('技能采用引用无效')
+    const installed = remoteValue(await readForSkillEntry(() => props.installer.listInstalled(), signal)).items
+    signal.throwIfAborted()
+    const row = installed.find(item => item.skillId === selection.name && item.name === selection.name)
+    if (!row?.publication || row.publication.publicationId !== selection.publicationId
+      || row.publication.packageDigest !== selection.packageDigest || row.publication.archiveDigest !== selection.archiveDigest
+      || row.publicationEligible !== true) throw new Error('原生技能采用或当前分配未确认，请重新读取企业目录')
+    // InstallRecord.digest is the archive digest, not the live directory
+    // version. Only the original package owner computes the latter.
+    const { schema: _schema, adoptedAt: _at, ...reference } = row.publication
+    const document = await readCurrentAdoptedContent(readAdoptedContent, { reference, kind: 'directory', path: '' }, signal)
+    signal.throwIfAborted()
+    if (document.reference.name !== selection.name || document.reference.packageDigest !== selection.packageDigest) {
+      throw new Error('原生技能目录版本与采用记录不一致；保留原文件')
+    }
+    if (nativeEditing.current) throw new Error('技能中心已有编辑或保存操作，请先处理当前草稿')
+    setInstalled(installed); setSelectedInstalled(row.skillId); setQuery(''); setTab('installed'); setMobileDetailOpen(true)
+    setNotice(zh ? '已回读准确企业技能版本。采用不等于启用；请明确选择允许使用和使用范围。' : 'The exact enterprise Skill was read back. Adoption does not enable it; explicitly choose eligibility and usage scopes.')
+    setRevision(value => value + 1)
+  }, [props.installer, zh, readAdoptedContent])
 
   useEffect(() => () => { uploadAbort.current?.abort() }, [])
 
   useEffect(() => {
+    if (!hasManagementPresentation) return
     let current = true
     setCatalog({ status: 'loading', items: [], error: null })
-    void Promise.all([props.installer.listCatalog(), props.installer.listInstalled()]).then(([catalogResult, installedResult]) => {
-      if (!current) return
-      const items = remoteValue(catalogResult).items
-      setCatalog({ status: 'ready', items, error: null })
-      setInstalled(remoteValue(installedResult).items)
-      setSelected(value => items.some(item => item.id === value) ? value : (items[0]?.id ?? null))
-    }, reason => { if (current) setCatalog({ status: 'error', items: [], error: messageOf(reason) }) })
+    void (async () => {
+      try {
+        const items = remoteValue(await props.installer.listCatalog()).items
+        if (!current) return
+        setCatalog({ status: 'ready', items, error: null })
+        setSelected(value => items.some(item => item.id === value) ? value : (items[0]?.id ?? null))
+      } catch (reason) { if (current) setCatalog({ status: 'error', items: [], error: messageOf(reason) }) }
+    })()
+    return () => { current = false }
+  }, [props.installer, revision, hasManagementPresentation])
+
+  useEffect(() => {
+    let current = true
+    setInstalledRead({ status: 'loading', error: null })
+    void (async () => {
+      try {
+        const items = remoteValue(await props.installer.listInstalled()).items
+        if (!current) return
+        setInstalled(items)
+        setInstalledRead({ status: 'ready', error: null })
+      } catch (reason) {
+        if (current) { setInstalled([]); setInstalledRead({ status: 'error', error: messageOf(reason) }) }
+      }
+    })()
     return () => { current = false }
   }, [props.installer, revision])
 
@@ -430,7 +543,7 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
   }, [props.installer, revision, sessionId])
 
   useEffect(() => {
-    if (sessionId === undefined) return
+    if (!hasManagementPresentation || sessionId === undefined) return
     let current = true
     void props.installer.getAuthoringDraft({ sessionId }).then(result => {
       if (!current) return
@@ -445,9 +558,9 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
           sourceSessionId: draft.sessionId, authoringDraftId: draft.draftId,
         })
       }
-    }, () => undefined)
+    }).catch(reason => { if (current) setError(messageOf(reason)) })
     return () => { current = false }
-  }, [props.installer, sessionId])
+  }, [props.installer, sessionId, hasManagementPresentation])
 
   useEffect(() => { if (preview !== null) previewPrimary.current?.focus() }, [preview])
   useEffect(() => { if (uploadGuideOpen) uploadGuidePrimary.current?.focus() }, [uploadGuideOpen])
@@ -491,6 +604,10 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
   const selectedEditorFile = editor?.files.find(file => file.path === editor.selectedPath && file.state !== 'deleted')
 
   const inspectRecommended = async (item: SkillCatalogItem): Promise<void> => {
+    if (installedByName.get(item.name)?.publication !== undefined) {
+      setError(zh ? '企业固定版本只读，不能通过市场更新覆盖。' : 'An enterprise fixed version is read-only and cannot be replaced by a market update.')
+      return
+    }
     setBusy(true); setError(null); setPreview(null)
     try { setPreview(remoteValue(await props.installer.inspectCatalog({ catalogId: item.id, version: item.version }))) }
     catch (reason) { setError(messageOf(reason)) } finally { setBusy(false) }
@@ -548,7 +665,7 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
     } catch (reason) { setError(messageOf(reason)) } finally { setBusy(false) }
   }
   const uninstall = async (): Promise<void> => {
-    if (uninstallTarget === null || !uninstallTarget.managed) return
+    if (uninstallTarget === null || !uninstallTarget.managed || uninstallTarget.publication !== undefined) return
     const item = uninstallTarget
     setBusy(true); setError(null); setNotice(null)
     try {
@@ -559,6 +676,37 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
   }
 
   const replaceBusinessPolicy = async (name: string, field: 'enabled' | 'direct', checked: boolean): Promise<void> => {
+    const installed = installedByName.get(name)
+    if (checked && installed?.publication !== undefined && installed.publicationEligible !== true) {
+      setError(zh ? '企业技能当前不可用，请刷新分配资格；采用回执不能作为使用许可。' : 'This enterprise Skill is not currently eligible. Refresh its assignment; an adoption receipt is not permission to use it.')
+      return
+    }
+    if (installed?.publication) {
+      const owner = entryLifetime.current, method = props.installer.setAdoptedSkillPreference, preference = installed.publicationPreference
+      if (preferencePending.current || busy) return
+      if (!owner || owner.signal.aborted || !method || !preference) {
+        setError(zh ? '企业技能使用意愿接口尚未接通，未改用通用策略写入。' : 'The restricted preference API is unavailable; no general policy write was attempted.'); return
+      }
+      const signal = AbortSignal.any([owner.signal, AbortSignal.timeout(35_000)])
+      const { schema: _schema, adoptedAt: _at, ...reference } = installed.publication
+      preferencePending.current = true; setBusy(true); setError(null); setNotice(null)
+      try {
+        const value = remoteValue(await readForSkillEntry(() => method.call(props.installer, { reference, expectedRevision: preference.revision, field, value: checked }), signal))
+        signal.throwIfAborted()
+        if (!value || value.runtimeGrant !== false || value.revision !== preference.revision + 1
+          || !value.reference || Object.keys(value.reference).length !== Object.keys(reference).length
+          || !Object.entries(reference).every(([key, expected]) => value.reference[key as keyof typeof reference] === expected)
+          || typeof value.enabled !== 'boolean' || typeof value.direct !== 'boolean' || value[field] !== checked || !value.enabled && value.direct) {
+          throw new Error(zh ? '使用意愿回执不一致，请重新读取' : 'The preference receipt does not match; read it again')
+        }
+        setNotice(zh ? '使用意愿已保存。当前分配和实际运行权限仍会重新检查。' : 'Preference saved. Current assignment and runtime permission are still checked separately.')
+        setRevision(value => value + 1)
+      } catch (reason) {
+        if (!owner.signal.aborted) { setError(messageOf(reason)); setRevision(value => value + 1) }
+      } finally { preferencePending.current = false; if (!owner.signal.aborted) setBusy(false) }
+      return
+    }
+    if (!hasManagementPresentation) return
     if (userPolicy.status !== 'ready' || props.installer.replaceUserSkillPolicy === undefined) {
       setError(zh ? '用户技能策略服务尚未接通，未更改任何运行范围。' : 'User Skill Policy is not connected; no runtime scope was changed.')
       return
@@ -586,7 +734,7 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
   }
 
   const replaceSystemPolicy = async (skill: Readonly<PaimindSystemSkillReference>, checked: boolean): Promise<void> => {
-    if (skill.availability !== 'optional' || skill.userControl !== 'atomic') return
+    if (!hasManagementPresentation || skill.availability !== 'optional' || skill.userControl !== 'atomic') return
     if (userPolicy.status !== 'ready' || props.installer.replaceUserSkillPolicy === undefined) {
       setError(zh ? '用户技能策略服务尚未接通，未更改系统技能。' : 'User Skill Policy is not connected; no System Skill was changed.')
       return
@@ -615,6 +763,11 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
   }
 
   const replaceSessionPolicy = async (name: string, checked: boolean): Promise<void> => {
+    const installed = installedByName.get(name)
+    if (checked && installed?.publication !== undefined && installed.publicationEligible !== true) {
+      setError(zh ? '企业技能当前不可用，不能加入当前对话。' : 'This enterprise Skill is not currently eligible for the conversation.')
+      return
+    }
     if (sessionId === undefined || sessionSelection.status !== 'ready' || props.installer.replaceSessionBusinessSkillSelection === undefined) {
       setError(zh ? '当前对话临时范围尚未就绪，未更改任何 Skill。' : 'The current conversation scope is not ready; no Skill was changed.')
       return
@@ -669,6 +822,7 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
     setBusy(true); setError(null); setNotice(null)
     try {
       const source = remoteValue(await props.installer.getSkillPackage({ skillId }))
+      if (installed.find(item => item.skillId === skillId)?.publication !== undefined) throw new Error(zh ? '企业固定版本只读，不能修改。' : 'An enterprise fixed version is read-only and cannot be edited.')
       if (!source.managed) throw new Error(zh ? '这个 Skill 由外部来源管理，不能在技能中心直接修改。' : 'This Skill is externally managed and cannot be edited here.')
       const skillFile = remoteValue(await props.installer.readSkillPackageFile({ skillId, path: 'SKILL.md' }))
       const rootEntries = source.root.entries.some(entry => entry.path === 'SKILL.md')
@@ -859,9 +1013,15 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
   const detailCurrent = detail !== undefined && detailInstall?.digest === detail.digest
   const installedRecommended = installedDetail === undefined ? undefined : recommendedByName.get(installedDetail.name)
   const installedCurrent = installedDetail !== undefined && installedRecommended?.digest === installedDetail.digest
-  const policyConnected = userPolicy.status === 'ready' && props.installer.replaceUserSkillPolicy !== undefined
-  const installedUserEnabled = installedDetail !== undefined && userPolicy.status === 'ready' && userPolicy.value.enabledBusinessSkillNames.includes(installedDetail.name)
-  const installedDirectDefault = installedDetail !== undefined && userPolicy.status === 'ready' && userPolicy.value.directBusinessSkillNames.includes(installedDetail.name)
+  const installedPublication = installedDetail?.publication
+  const policyConnected = installedPublication ? props.installer.setAdoptedSkillPreference !== undefined && installedDetail?.publicationPreference !== undefined
+    : userPolicy.status === 'ready' && props.installer.replaceUserSkillPolicy !== undefined
+  const policyManagedElsewhere = !hasManagementPresentation && installedPublication === undefined
+  const installedPublicationUnavailable = installedPublication !== undefined && installedDetail?.publicationEligible !== true
+  const installedUserEnabled = installedDetail !== undefined && !installedPublicationUnavailable && userPolicy.status === 'ready' && userPolicy.value.enabledBusinessSkillNames.includes(installedDetail.name)
+  const installedDirectDefault = installedUserEnabled && userPolicy.status === 'ready' && userPolicy.value.directBusinessSkillNames.includes(installedDetail!.name)
+  const installedPreferenceEnabled = installedPublication ? installedDetail?.publicationPreference?.enabled === true : installedUserEnabled
+  const installedDirectPreference = installedPublication ? installedDetail?.publicationPreference?.direct === true : installedDirectDefault
   const installedSessionSelected = installedDetail !== undefined && sessionSelection.status === 'ready' && sessionSelection.value.skillNames.includes(installedDetail.name)
   const sessionPolicyConnected = sessionId !== undefined && sessionSelection.status === 'ready' && props.installer.replaceSessionBusinessSkillSelection !== undefined
   const sessionToggleDisabled = !sessionPolicyConnected || busy || (!installedSessionSelected && !installedUserEnabled)
@@ -897,11 +1057,11 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
 
   return <section data-paimind-skill-market aria-label={zh ? '技能中心' : 'Skill Center'}>
     <header data-paimind-skill-hero>
-      <div><p data-paimind-skill-eyebrow><PaimindSkillIcon size={16} />{zh ? '技能与能力' : 'Skills and capabilities'}</p><h1 id="paimind-skill-center-title">{editor === null ? (zh ? '技能中心' : 'Skill Center') : (editor.expectedDigest === undefined ? (zh ? '创建 Skill' : 'Create Skill') : (zh ? '编辑 Skill' : 'Edit Skill'))}</h1><p data-paimind-skill-intro>{zh ? '发现、添加并管理技能，按需要用于普通对话或智能体。' : 'Discover, add, and manage Skills for direct chats or Agents.'}</p></div>
-      <div data-paimind-skill-head-actions>{editor === null && <div data-paimind-skill-add><button type="button" data-paimind-skill-button data-primary="true" aria-haspopup="menu" aria-expanded={addMenuOpen} onClick={() => { setAddMenuOpen(value => !value) }} disabled={busy}><PaimindPlusIcon size={15} />{zh ? '添加 Skill' : 'Add Skill'}</button>{addMenuOpen && <div role="menu" data-paimind-skill-add-menu><button role="menuitem" type="button" onClick={createSkill}><PaimindEditIcon size={15} /><span><strong>{zh ? '手动创建' : 'Create manually'}</strong><small>{zh ? '打开文件树与内容编辑器' : 'Open the file tree and content editor'}</small></span></button><button role="menuitem" type="button" onClick={chooseUpload}><PaimindUploadIcon size={15} /><span><strong>{zh ? '从本地导入' : 'Import from device'}</strong><small>{zh ? '文件夹 / ZIP / SKILL.md' : 'Folder / ZIP / SKILL.md'}</small></span></button><button role="menuitem" type="button" disabled title={zh ? '请在普通对话中说“创建一个 Skill”' : 'Ask to create a Skill in a regular conversation'}><PaimindSkillIcon size={15} /><span><strong>{zh ? '用 AI 创建' : 'Create with AI'}</strong><small>{zh ? '从普通对话触发，未保存前不会入库' : 'Starts in chat and stays unsaved until review'}</small></span></button><button role="menuitem" type="button" disabled title={zh ? 'GitHub 安装服务尚未接通' : 'GitHub installer is not connected'}><PaimindPlusIcon size={15} /><span><strong>{zh ? '从 GitHub 安装' : 'Install from GitHub'}</strong><small>{zh ? '待安装服务接入' : 'Installer contract required'}</small></span></button></div>}</div>}<button type="button" data-paimind-skill-center-close aria-label={zh ? '关闭技能中心' : 'Close Skill Center'} onClick={props.close}><PaimindCloseIcon size={18} /></button></div>
+      <div><p data-paimind-skill-eyebrow><PaimindSkillIcon size={16} />{zh ? '技能与能力' : 'Skills and capabilities'}</p><h1 id="paimind-skill-center-title">{editor === null ? (zh ? '技能中心' : 'Skill Center') : (editor.expectedDigest === undefined ? (zh ? '创建 Skill' : 'Create Skill') : (zh ? '编辑 Skill' : 'Edit Skill'))}</h1><p data-paimind-skill-intro>{hasManagementPresentation ? (zh ? '发现、添加并管理技能，按需要用于普通对话或智能体。' : 'Discover, add, and manage Skills for direct chats or Agents.') : (zh ? '查看企业提供的技能，按需要用于普通对话或智能体。安装、编辑和平台启停由管理员负责。' : 'Use enterprise-provided Skills in chats or Agents. Your administrator manages installation, editing and platform availability.')}</p></div>
+      <div data-paimind-skill-head-actions>{hasManagementPresentation && editor === null && <div data-paimind-skill-add><button type="button" data-paimind-skill-button data-primary="true" aria-haspopup="menu" aria-expanded={addMenuOpen} onClick={() => { setAddMenuOpen(value => !value) }} disabled={busy}><PaimindPlusIcon size={15} />{zh ? '添加 Skill' : 'Add Skill'}</button>{addMenuOpen && <div role="menu" data-paimind-skill-add-menu><button role="menuitem" type="button" onClick={createSkill}><PaimindEditIcon size={15} /><span><strong>{zh ? '手动创建' : 'Create manually'}</strong><small>{zh ? '打开文件树与内容编辑器' : 'Open the file tree and content editor'}</small></span></button><button role="menuitem" type="button" onClick={chooseUpload}><PaimindUploadIcon size={15} /><span><strong>{zh ? '从本地导入' : 'Import from device'}</strong><small>{zh ? '文件夹 / ZIP / SKILL.md' : 'Folder / ZIP / SKILL.md'}</small></span></button><button role="menuitem" type="button" disabled title={zh ? '请在普通对话中说“创建一个 Skill”' : 'Ask to create a Skill in a regular conversation'}><PaimindSkillIcon size={15} /><span><strong>{zh ? '用 AI 创建' : 'Create with AI'}</strong><small>{zh ? '从普通对话触发，未保存前不会入库' : 'Starts in chat and stays unsaved until review'}</small></span></button><button role="menuitem" type="button" disabled title={zh ? 'GitHub 安装服务尚未接通' : 'GitHub installer is not connected'}><PaimindPlusIcon size={15} /><span><strong>{zh ? '从 GitHub 安装' : 'Install from GitHub'}</strong><small>{zh ? '待安装服务接入' : 'Installer contract required'}</small></span></button></div>}</div>}<button type="button" data-paimind-skill-center-close aria-label={zh ? '关闭技能中心' : 'Close Skill Center'} onClick={props.close}><PaimindCloseIcon size={18} /></button></div>
     </header>
-    <input ref={uploadRef} hidden type="file" accept=".zip,.md" aria-label={zh ? '选择技能包' : 'Choose Skill package'} onChange={event => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file !== undefined) void inspectFile(file) }} />
-    <input ref={folderUploadRef} hidden type="file" multiple aria-label={zh ? '选择技能文件夹' : 'Choose Skill folder'} {...({ webkitdirectory: '', directory: '' } as Record<string, string>)} onChange={event => { const files = event.currentTarget.files; event.currentTarget.value = ''; if (files !== null) void inspectFolder(files) }} />
+    {hasManagementPresentation && <input ref={uploadRef} hidden type="file" accept=".zip,.md" aria-label={zh ? '选择技能包' : 'Choose Skill package'} onChange={event => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file !== undefined) void inspectFile(file) }} />}
+    {hasManagementPresentation && <input ref={folderUploadRef} hidden type="file" multiple aria-label={zh ? '选择技能文件夹' : 'Choose Skill folder'} {...({ webkitdirectory: '', directory: '' } as Record<string, string>)} onChange={event => { const files = event.currentTarget.files; event.currentTarget.value = ''; if (files !== null) void inspectFolder(files) }} />}
     <div data-paimind-skill-feedback aria-live="polite" aria-atomic="true">
       {uploading && <div role="status" data-paimind-skill-notice><span>{zh ? '正在安全读取并检查本地 Skill…' : 'Securely reading and inspecting the local Skill…'}</span><button type="button" data-paimind-skill-inline-action onClick={() => { uploadAbort.current?.abort() }}>{zh ? '取消' : 'Cancel'}</button></div>}
       {notice !== null && <div role="status" data-paimind-skill-notice data-success="true"><PaimindCheckIcon size={15} /><span>{notice}</span><button type="button" data-paimind-skill-inline-action onClick={() => { setNotice(null) }}>{zh ? '关闭' : 'Dismiss'}</button></div>}
@@ -931,14 +1091,19 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
       <div data-paimind-skill-editor-actions><button type="button" data-paimind-skill-button onClick={() => { void closeEditor() }} disabled={busy}>{zh ? '取消' : 'Cancel'}</button><button type="button" data-paimind-skill-button data-primary="true" onClick={() => { void saveEditor() }} disabled={busy || !editor.files.some(file => file.path === 'SKILL.md' && file.kind === 'text')}><PaimindCheckIcon size={14} />{busy ? (zh ? '正在保存整个文件夹…' : 'Saving folder…') : (zh ? '保存整个 Skill 文件夹' : 'Save Skill folder')}</button></div>
     </section> : <div data-paimind-skill-workspace>
       <div role="tablist" aria-label={zh ? '技能中心主视图' : 'Skill Center views'} data-paimind-skill-primary-tabs>
-        <button role="tab" type="button" aria-label={zh ? '市场' : 'Market'} aria-selected={tab === 'market'} tabIndex={tab === 'market' ? 0 : -1} onKeyDown={handleScopeKey} onClick={activateAll}>{zh ? '市场' : 'Market'}<span>{catalog.status === 'ready' ? catalog.items.length : 0}</span></button>
-        <button role="tab" type="button" aria-label={zh ? '内置' : 'Built-in'} aria-selected={tab === 'builtin'} tabIndex={tab === 'builtin' ? 0 : -1} onKeyDown={handleScopeKey} onClick={activateBuiltIn}>{zh ? '内置' : 'Built-in'}<span>{systemSkills.status === 'ready' ? systemSkills.items.length : 0}</span></button>
-        <button role="tab" type="button" aria-label={zh ? '已安装' : 'Installed'} aria-selected={tab === 'installed'} tabIndex={tab === 'installed' ? 0 : -1} onKeyDown={handleScopeKey} onClick={activateInstalled}>{zh ? '已安装' : 'Installed'}<span>{installed.length}</span></button>
+        {hasManagementPresentation && <button role="tab" type="button" disabled={contributionEditing} aria-label={zh ? '市场' : 'Market'} aria-selected={tab === 'market'} tabIndex={tab === 'market' ? 0 : -1} onKeyDown={handleScopeKey} onClick={activateAll}>{zh ? '市场' : 'Market'}<span>{catalog.status === 'ready' ? catalog.items.length : 0}</span></button>}
+        <button role="tab" type="button" disabled={contributionEditing} aria-label={zh ? '内置' : 'Built-in'} aria-selected={tab === 'builtin'} tabIndex={tab === 'builtin' ? 0 : -1} onKeyDown={handleScopeKey} onClick={activateBuiltIn}>{zh ? '内置' : 'Built-in'}<span>{systemSkills.status === 'ready' ? systemSkills.items.length : 0}</span></button>
+        <button role="tab" type="button" disabled={contributionEditing} aria-label={zh ? '已安装' : 'Installed'} aria-selected={tab === 'installed'} tabIndex={tab === 'installed' ? 0 : -1} onKeyDown={handleScopeKey} onClick={activateInstalled}>{zh ? '已安装' : 'Installed'}<span>{installed.length}</span></button>
+        {contribution && <button role="tab" type="button" disabled={busy} aria-selected={tab === 'contribution'} tabIndex={tab === 'contribution' ? 0 : -1}
+          onKeyDown={handleScopeKey} onClick={() => { setTab('contribution'); setAddMenuOpen(false) }}>{zh ? contribution.zh : contribution.en}</button>}
       </div>
 
-      <section data-paimind-skill-catalog aria-label={zh ? '技能目录' : 'Skill catalog'}>
+      {tab === 'contribution' && contribution ? <SkillContributionBoundary key={contributionSnapshot.revision}><contribution.Panel
+        showAdoptedSkill={showAdoptedSkill} onEditing={setContributionEditing}
+        {...(props.registerCloseGuard ? { registerCloseGuard: props.registerCloseGuard } : {})} /></SkillContributionBoundary>
+        : <section data-paimind-skill-catalog aria-label={zh ? '技能目录' : 'Skill catalog'}>
         <div data-paimind-skill-toolbar>
-          <div data-paimind-skill-search-wrap><span data-paimind-skill-search-icon><PaimindSearchIcon size={17} /></span><input type="search" aria-label={zh ? '搜索技能' : 'Search Skills'} value={query} onChange={event => { setQuery(event.currentTarget.value) }} placeholder={zh ? '搜索名称、说明、来源或标签' : 'Search name, description, source, or tag'} /></div>
+          <div data-paimind-skill-search-wrap><span data-paimind-skill-search-icon><PaimindSearchIcon size={17} /></span><input type="search" disabled={contributionEditing} aria-label={zh ? '搜索技能' : 'Search Skills'} value={query} onChange={event => { setQuery(event.currentTarget.value) }} placeholder={zh ? '搜索名称、说明、来源或标签' : 'Search name, description, source, or tag'} /></div>
           <span data-paimind-skill-result-count>{tab === 'market' && visibleRows.length < rows.length
             ? (zh ? `显示 ${visibleRows.length} / ${rows.length} 个结果` : `Showing ${visibleRows.length} of ${rows.length} results`)
             : (zh ? `${tab === 'market' ? rows.length : tab === 'builtin' ? systemRows.length : installedRows.length} 个结果` : `${tab === 'market' ? rows.length : tab === 'builtin' ? systemRows.length : installedRows.length} results`)}</span>
@@ -951,39 +1116,49 @@ export function SkillMarketSection(props: SkillMarketSectionProps): React.JSX.El
             </select>
             <select data-paimind-skill-select-filter aria-label={zh ? '按来源筛选' : 'Filter by source'} value={sourceFilter} onChange={event => { setSourceFilter(event.currentTarget.value) }}><option value="all">{zh ? '全部来源' : 'All sources'}</option>{sources.map(source => <option key={source} value={source}>{source}</option>)}</select>
             <select data-paimind-skill-select-filter aria-label={zh ? '按安装状态筛选' : 'Filter by install status'} value={statusFilter} onChange={event => { setStatusFilter(event.currentTarget.value as typeof statusFilter) }}><option value="all">{zh ? '全部状态' : 'All statuses'}</option><option value="installed">{zh ? '已安装' : 'Installed'}</option><option value="available">{zh ? '可安装' : 'Available'}</option></select>
-          </div> : <span data-paimind-skill-result-count>{tab === 'builtin' ? (zh ? '平台提供' : 'Provided by the platform') : (zh ? '个人技能' : 'Personal Skills')}</span>}
-          {filtersActive && <button type="button" data-paimind-skill-inline-action onClick={resetFilters}>{zh ? '清除筛选' : 'Clear filters'}</button>}
+          </div> : <span data-paimind-skill-result-count>{tab === 'builtin' ? (zh ? '平台提供' : 'Provided by the platform') : (zh ? '已安装技能' : 'Installed Skills')}</span>}
+          {filtersActive && <button type="button" data-paimind-skill-inline-action disabled={contributionEditing} onClick={resetFilters}>{zh ? '清除筛选' : 'Clear filters'}</button>}
         </div>
 
         {tab === 'market' ? <div data-paimind-skill-grid>
           <section data-paimind-skill-panel aria-label={zh ? '技能目录列表' : 'Catalog Skill list'}>{catalog.status === 'loading' ? <div data-paimind-skill-state aria-busy="true"><span data-paimind-skill-loading-dot />{zh ? '正在读取真实目录…' : 'Reading the live catalog…'}</div> : catalog.status === 'error' ? <div data-paimind-skill-state data-error="true" role="alert"><p>{catalog.error}</p><button type="button" data-paimind-skill-button onClick={() => { setRevision(value => value + 1) }}>{zh ? '重试' : 'Retry'}</button></div> : rows.length === 0 ? <div data-paimind-skill-state><p>{zh ? '没有匹配的 Skill。调整筛选或清除搜索即可继续。' : 'No matching Skills. Adjust filters or clear search to continue.'}</p><button type="button" data-paimind-skill-button onClick={resetFilters}>{zh ? '清除筛选' : 'Clear filters'}</button></div> : <ul data-paimind-skill-list>{visibleRows.map(row => <li key={row.item.id} data-paimind-skill-row data-selected={detail?.id === row.item.id}><button type="button" data-paimind-skill-select onClick={() => { setSelected(row.item.id); setMobileDetailOpen(true) }} aria-label={`${zh ? '查看' : 'View'}: ${row.item.name}`}><span data-paimind-skill-row-icon><PaimindSkillIcon size={20} /></span><span data-paimind-skill-row-copy><span data-paimind-skill-name>{row.item.name}</span><span data-paimind-skill-description>{row.item.description}</span></span><span data-paimind-skill-row-badges><span data-paimind-skill-category>{categoryLabel(row.metadata.category, zh)}</span><span data-paimind-skill-policy>{installedNames.has(row.item.name) ? (zh ? '已安装' : 'Installed') : (zh ? '可安装' : 'Available')}</span></span></button></li>)}{visibleRows.length < rows.length && <li data-paimind-skill-load-more><button type="button" data-paimind-skill-button onClick={() => { setVisibleMarketCount(value => value + MARKET_PAGE_SIZE) }}>{zh ? `加载更多（剩余 ${rows.length - visibleRows.length} 个）` : `Load more (${rows.length - visibleRows.length} remaining)`}</button></li>}</ul>}</section>
-          <aside data-paimind-skill-panel data-paimind-skill-detail data-mobile-open={mobileDetailOpen} aria-label={zh ? '技能详情' : 'Skill details'}><button type="button" data-paimind-skill-mobile-close aria-label={zh ? '返回技能列表' : 'Back to Skill list'} onClick={() => { setMobileDetailOpen(false) }}><PaimindCloseIcon size={17} /></button>{detail === undefined ? <p>{zh ? '选择一个 Skill 查看详情。' : 'Select a Skill.'}</p> : <><span data-paimind-skill-detail-icon><PaimindSkillIcon size={25} /></span><div><h2>{detail.name}</h2><p data-paimind-skill-detail-subtitle>{detail.description}</p></div><div data-paimind-skill-statuses>{detailRow !== undefined && <span data-paimind-skill-category>{categoryLabel(detailRow.metadata.category, zh)}</span>}{detailInstall !== undefined && <span data-paimind-skill-policy>{zh ? '已安装' : 'Installed'}</span>}{detailInstall?.runtimeRequirements.length ? <span data-paimind-skill-policy data-warning="true">{zh ? '运行环境待确认' : 'Runtime setup to verify'}</span> : null}</div><details data-paimind-skill-disclosure><summary>{zh ? '来源与包信息' : 'Source and package details'}</summary><dl data-paimind-skill-meta><div data-paimind-skill-meta-row><dt>{zh ? '版本' : 'Version'}</dt><dd>{detail.version}</dd></div><div data-paimind-skill-meta-row><dt>{zh ? '来源' : 'Source'}</dt><dd>{detail.source}</dd></div><div data-paimind-skill-meta-row><dt>{zh ? '许可' : 'License'}</dt><dd>{detail.license}</dd></div></dl></details><div data-paimind-skill-actions>{detailInstall === undefined ? <button type="button" data-paimind-skill-button data-primary="true" disabled={busy} onClick={() => { void inspectRecommended(detail) }}><PaimindCheckIcon size={14} />{zh ? '检查并安装' : 'Review and install'}</button> : !detailCurrent ? <button type="button" data-paimind-skill-button data-primary="true" disabled={busy} onClick={() => { void inspectRecommended(detail) }}><PaimindCheckIcon size={14} />{zh ? '更新' : 'Update'}</button> : null}</div></>}</aside>
+          <aside data-paimind-skill-panel data-paimind-skill-detail data-mobile-open={mobileDetailOpen} aria-label={zh ? '技能详情' : 'Skill details'}><button type="button" data-paimind-skill-mobile-close aria-label={zh ? '返回技能列表' : 'Back to Skill list'} onClick={() => { setMobileDetailOpen(false) }}><PaimindCloseIcon size={17} /></button>{detail === undefined ? <p>{zh ? '选择一个 Skill 查看详情。' : 'Select a Skill.'}</p> : <><span data-paimind-skill-detail-icon><PaimindSkillIcon size={25} /></span><div><h2>{detail.name}</h2><p data-paimind-skill-detail-subtitle>{detail.description}</p></div><div data-paimind-skill-statuses>{detailRow !== undefined && <span data-paimind-skill-category>{categoryLabel(detailRow.metadata.category, zh)}</span>}{detailInstall !== undefined && <span data-paimind-skill-policy>{zh ? '已安装' : 'Installed'}</span>}{detailInstall?.runtimeRequirements.length ? <span data-paimind-skill-policy data-warning="true">{zh ? '运行环境待确认' : 'Runtime setup to verify'}</span> : null}</div><details data-paimind-skill-disclosure><summary>{zh ? '来源与包信息' : 'Source and package details'}</summary><dl data-paimind-skill-meta><div data-paimind-skill-meta-row><dt>{zh ? '版本' : 'Version'}</dt><dd>{detail.version}</dd></div><div data-paimind-skill-meta-row><dt>{zh ? '来源' : 'Source'}</dt><dd>{detail.source}</dd></div><div data-paimind-skill-meta-row><dt>{zh ? '许可' : 'License'}</dt><dd>{detail.license}</dd></div></dl></details><div data-paimind-skill-actions>{detailInstall === undefined ? <button type="button" data-paimind-skill-button data-primary="true" disabled={busy} onClick={() => { void inspectRecommended(detail) }}><PaimindCheckIcon size={14} />{zh ? '检查并安装' : 'Review and install'}</button> : detailInstall.publication !== undefined ? <span data-paimind-skill-policy>{zh ? '企业固定版本 · 不可覆盖' : 'Enterprise fixed version · cannot replace'}</span> : !detailCurrent ? <button type="button" data-paimind-skill-button data-primary="true" disabled={busy} onClick={() => { void inspectRecommended(detail) }}><PaimindCheckIcon size={14} />{zh ? '更新' : 'Update'}</button> : null}</div></>}</aside>
         </div> : tab === 'builtin' ? systemSkills.status === 'loading' ? <div data-paimind-skill-state aria-busy="true"><span data-paimind-skill-loading-dot />{zh ? '正在读取内置技能…' : 'Reading built-in Skills…'}</div> : systemSkills.status === 'error' ? <div data-paimind-skill-state data-error="true" role="alert"><p>{systemSkills.error}</p><button type="button" data-paimind-skill-button onClick={() => { setRevision(value => value + 1) }}>{zh ? '重试' : 'Retry'}</button></div> : systemSkills.status === 'unavailable' ? <div data-paimind-skill-state data-paimind-skill-contract-state><span data-paimind-skill-policy>{zh ? '未连接' : 'Not connected'}</span><h2>{zh ? '内置技能来源尚未接通' : 'Built-in Skill descriptors are not connected'}</h2><p>{zh ? '当前版本没有提供可验证的系统技能定义。这里不会按名称猜测，也不会提供只修改界面的虚假开关。' : 'This version does not expose verified System Skill descriptors. This view does not guess by name or expose UI-only switches.'}</p><small>{zh ? '接入来源插件的定义与生命周期契约后，内置技能会自动显示在这里。' : 'Built-in Skills appear here after Source Plugins expose their descriptor and lifecycle contract.'}</small></div> : systemRows.length === 0 ? <div data-paimind-skill-state><p>{zh ? '没有匹配的内置 Skill。' : 'No matching built-in Skills.'}</p>{query.trim() !== '' && <button type="button" data-paimind-skill-button onClick={resetFilters}>{zh ? '清除搜索' : 'Clear search'}</button>}</div> : <ul data-paimind-system-list>{systemRows.map(skill => {
           const mandatory = skill.availability === 'mandatory'
           const checked = mandatory || (userPolicy.status === 'ready' && userPolicy.value.enabledOptionalSystemSkillNames.includes(skill.name))
-          return <li key={skill.canonicalId} data-paimind-system-row><span data-paimind-skill-row-icon><PaimindSkillIcon size={20} /></span><span data-paimind-skill-row-copy><span data-paimind-skill-name>{skill.name}</span><span data-paimind-skill-description>{skill.description}</span></span>{mandatory ? <span data-paimind-skill-policy>{zh ? '必需 · 锁定' : 'Mandatory · locked'}</span> : <label data-paimind-system-control><span>{checked ? (zh ? '已开启' : 'On') : (zh ? '已关闭' : 'Off')}</span><input type="checkbox" role="switch" aria-label={zh ? `启用 ${skill.name}` : `Enable ${skill.name}`} checked={checked} disabled={!policyConnected || busy} onChange={event => { void replaceSystemPolicy(skill, event.currentTarget.checked) }} /></label>}</li>
-        })}</ul> : installedRows.length === 0 ? <div data-paimind-skill-state><p>{zh ? '还没有已安装的个人 Skill。可从市场安装，或导入本地 SKILL.md / ZIP。' : 'No personal Skills installed. Install from the market or import a local SKILL.md / ZIP.'}</p><div data-paimind-skill-actions><button type="button" data-paimind-skill-button data-primary="true" onClick={activateAll}>{zh ? '浏览市场' : 'Browse market'}</button><button type="button" data-paimind-skill-button onClick={chooseUpload}>{zh ? '本地导入' : 'Import local'}</button></div></div> : <div data-paimind-skill-grid>
-          <section data-paimind-skill-panel aria-label={zh ? '已安装技能列表' : 'Installed Skill list'}><ul data-paimind-skill-list>{installedRows.map(item => <li key={item.skillId} data-paimind-skill-row data-selected={installedDetail?.skillId === item.skillId}><button type="button" data-paimind-skill-select onClick={() => { setSelectedInstalled(item.skillId); setMobileDetailOpen(true) }} aria-label={`${zh ? '查看已安装' : 'View installed'}: ${item.name}`}><span data-paimind-skill-row-icon><PaimindSkillIcon size={20} /></span><span data-paimind-skill-row-copy><span data-paimind-skill-name>{item.name}</span><span data-paimind-skill-description>{item.description}</span></span><span data-paimind-skill-policy>{item.managed ? (zh ? '可编辑' : 'Editable') : (zh ? '外部管理' : 'External')}</span></button></li>)}</ul></section>
+          return <li key={skill.canonicalId} data-paimind-system-row><span data-paimind-skill-row-icon><PaimindSkillIcon size={20} /></span><span data-paimind-skill-row-copy><span data-paimind-skill-name>{skill.name}</span><span data-paimind-skill-description>{skill.description}</span></span>{mandatory ? <span data-paimind-skill-policy>{zh ? '必需 · 锁定' : 'Mandatory · locked'}</span> : <label data-paimind-system-control><span>{checked ? (zh ? '已开启' : 'On') : (zh ? '已关闭' : 'Off')}</span><input type="checkbox" role="switch" aria-label={zh ? `启用 ${skill.name}` : `Enable ${skill.name}`} checked={checked} disabled={!hasManagementPresentation || userPolicy.status !== 'ready' || props.installer.replaceUserSkillPolicy === undefined || busy} title={!hasManagementPresentation ? (zh ? '由管理员配置' : 'Configured by your administrator') : undefined} onChange={event => { void replaceSystemPolicy(skill, event.currentTarget.checked) }} /></label>}</li>
+        })}</ul> : installedRead.status === 'loading' ? <div data-paimind-skill-state aria-busy="true">{zh ? '正在读取已安装技能…' : 'Reading installed Skills…'}</div> : installedRead.status === 'error' ? <div data-paimind-skill-state data-error="true" role="alert"><p>{installedRead.error}</p><button type="button" data-paimind-skill-button onClick={() => { setRevision(value => value + 1) }}>{zh ? '重试' : 'Retry'}</button></div> : installedRows.length === 0 ? <div data-paimind-skill-state><p>{query.trim() !== '' ? (zh ? '没有匹配的已安装技能，请清除搜索。' : 'No installed Skills match. Clear the search to continue.') : hasManagementPresentation ? (zh ? '还没有已安装的个人 Skill。可从市场安装，或导入本地 SKILL.md / ZIP。' : 'No personal Skills installed. Install from the market or import a local SKILL.md / ZIP.') : (zh ? '尚未采用技能，请查看企业分配或联系管理员。' : 'No Skills have been adopted here. Check enterprise assignments or contact your administrator.')}</p>{hasManagementPresentation && <div data-paimind-skill-actions><button type="button" data-paimind-skill-button data-primary="true" onClick={activateAll}>{zh ? '浏览市场' : 'Browse market'}</button><button type="button" data-paimind-skill-button onClick={chooseUpload}>{zh ? '本地导入' : 'Import local'}</button></div>}</div> : <div data-paimind-skill-grid>
+          <section data-paimind-skill-panel aria-label={zh ? '已安装技能列表' : 'Installed Skill list'}><ul data-paimind-skill-list>{installedRows.map(item => <li key={item.skillId} data-paimind-skill-row data-selected={installedDetail?.skillId === item.skillId}><button type="button" data-paimind-skill-select disabled={contributionEditing} onClick={() => { setSelectedInstalled(item.skillId); setMobileDetailOpen(true) }} aria-label={`${zh ? '查看已安装' : 'View installed'}: ${item.name}`}><span data-paimind-skill-row-icon><PaimindSkillIcon size={20} /></span><span data-paimind-skill-row-copy><span data-paimind-skill-name>{item.name}</span><span data-paimind-skill-description>{item.description}</span></span><span data-paimind-skill-policy>{item.publication !== undefined ? (zh ? '企业分配 · 只读' : 'Enterprise assigned · read-only') : item.managed && hasManagementPresentation ? (zh ? '可编辑' : 'Editable') : !hasManagementPresentation ? (zh ? '管理员管理' : 'Administrator managed') : (zh ? '外部管理' : 'External')}</span></button></li>)}</ul></section>
           <aside data-paimind-skill-panel data-paimind-skill-detail data-mobile-open={mobileDetailOpen} aria-label={zh ? '已安装技能详情' : 'Installed Skill details'}>
-            <button type="button" data-paimind-skill-mobile-close aria-label={zh ? '返回已安装列表' : 'Back to installed list'} onClick={() => { setMobileDetailOpen(false) }}><PaimindCloseIcon size={17} /></button>
+            <button type="button" data-paimind-skill-mobile-close disabled={contributionEditing} aria-label={zh ? '返回已安装列表' : 'Back to installed list'} onClick={() => { setMobileDetailOpen(false) }}><PaimindCloseIcon size={17} /></button>
             {installedDetail !== undefined && <>
+              {installedPublication !== undefined && installedDetail.publicationEligible === true && <InstalledSkillContent
+                key={JSON.stringify(installedPublication)} read={readAdoptedContent} reference={{ tenantId: installedPublication.tenantId,
+                  publicationId: installedPublication.publicationId, sourceUserId: installedPublication.sourceUserId, name: installedPublication.name,
+                  packageDigest: installedPublication.packageDigest, archiveDigest: installedPublication.archiveDigest, archiveBytes: installedPublication.archiveBytes,
+                  expandedBytes: installedPublication.expandedBytes, entryCount: installedPublication.entryCount }} />}
+              {hasManagementPresentation && installedDetail.managed && installedPublication === undefined && contribution?.SourceAction && <SkillContributionBoundary key={`source:${contributionSnapshot.revision}:${installedDetail.skillId}`}>
+                <contribution.SourceAction selection={{ skillId: installedDetail.skillId, name: installedDetail.name }}
+                  readSource={readPublicationSource} disabled={nativeBusy} onEditing={setContributionEditing}
+                  {...(props.registerCloseGuard ? { registerCloseGuard: props.registerCloseGuard } : {})} />
+              </SkillContributionBoundary>}
               <span data-paimind-skill-detail-icon><PaimindSkillIcon size={25} /></span>
               <div><h2>{installedDetail.name}</h2><p data-paimind-skill-detail-subtitle>{installedDetail.description}</p></div>
-              <div data-paimind-skill-statuses><span data-paimind-skill-policy>{installedDetail.managed ? (zh ? '技能中心管理' : 'Managed here') : (zh ? '外部管理' : 'Externally managed')}</span>{installedDetail.runtimeRequirements.length > 0 && <span data-paimind-skill-policy data-warning="true">{zh ? '运行环境待确认' : 'Runtime setup to verify'}</span>}</div>
+              <div data-paimind-skill-statuses><span data-paimind-skill-policy>{installedPublication !== undefined ? (zh ? '企业固定版本 · 只读' : 'Enterprise fixed version · read-only') : installedDetail.managed ? (zh ? '技能中心管理' : 'Managed here') : (zh ? '外部管理' : 'Externally managed')}</span>{installedDetail.runtimeRequirements.length > 0 && <span data-paimind-skill-policy data-warning="true">{zh ? '运行环境待确认' : 'Runtime setup to verify'}</span>}</div>
               <section data-paimind-skill-usage aria-label={zh ? '使用范围' : 'Usage scopes'}>
-                <div data-paimind-skill-usage-head><div><strong>{zh ? '使用范围' : 'Usage scopes'}</strong><small>{zh ? '安装后先启用，再决定用在哪里。' : 'Enable an installed Skill, then choose where to use it.'}</small></div>{!policyConnected && <span data-paimind-skill-policy data-warning="true">{zh ? '服务未就绪' : 'Service unavailable'}</span>}</div>
-                <label data-paimind-skill-usage-row><span><strong>{zh ? '允许使用' : 'Eligible for use'}</strong><small>{zh ? '启用后，才能把这个 Skill 加入普通对话、当前对话或智能体。' : 'Enable this Skill before adding it to direct chats, the current conversation, or an Agent.'}</small></span><input type="checkbox" role="switch" aria-label={zh ? `允许使用 ${installedDetail.name}` : `Enable ${installedDetail.name}`} checked={installedUserEnabled} disabled={!policyConnected || busy} onChange={event => { void replaceBusinessPolicy(installedDetail.name, 'enabled', event.currentTarget.checked) }} /></label>
-                <label data-paimind-skill-usage-row><span><strong>{zh ? '普通对话默认使用' : 'Use by default in direct chats'}</strong><small>{zh ? '只进入普通对话，不自动进入智能体会话。' : 'Applies to direct chats only, never Agent Sessions automatically.'}</small></span><input type="checkbox" role="switch" aria-label={zh ? `普通对话默认使用 ${installedDetail.name}` : `Use ${installedDetail.name} by default in direct chats`} checked={installedDirectDefault} disabled={!policyConnected || !installedUserEnabled || busy} onChange={event => { void replaceBusinessPolicy(installedDetail.name, 'direct', event.currentTarget.checked) }} /></label>
+                <div data-paimind-skill-usage-head><div><strong>{zh ? '使用范围' : 'Usage scopes'}</strong><small>{installedPublication !== undefined ? installedPublicationUnavailable ? (zh ? '固定版本已保存；当前企业分配不可用或资格服务未接通，暂不可用于对话或智能体。' : 'The fixed version is saved. Its current assignment is unavailable or eligibility is not connected; it cannot be used in chats or Agents.') : (zh ? '当前企业分配有效；选择只决定使用范围，实际运行仍检查登录、版本和当前权限。' : 'The current enterprise assignment is available. Selection sets the scope; execution still checks login, version and current permission.') : (zh ? '安装后先启用，再决定用在哪里。' : 'Enable an installed Skill, then choose where to use it.')}</small></div>{policyManagedElsewhere ? <span data-paimind-skill-policy>{zh ? '由管理员配置' : 'Configured by your administrator'}</span> : !policyConnected && <span data-paimind-skill-policy data-warning="true">{zh ? '服务未就绪' : 'Service unavailable'}</span>}</div>
+                <label data-paimind-skill-usage-row><span><strong>{zh ? '允许使用' : 'Eligible for use'}</strong><small>{zh ? '启用后，才能把这个 Skill 加入普通对话、当前对话或智能体。' : 'Enable this Skill before adding it to direct chats, the current conversation, or an Agent.'}</small></span><input type="checkbox" role="switch" aria-label={zh ? `允许使用 ${installedDetail.name}` : `Enable ${installedDetail.name}`} checked={installedPreferenceEnabled} disabled={policyManagedElsewhere || !policyConnected || busy || installedPublicationUnavailable && !installedPreferenceEnabled} onChange={event => { void replaceBusinessPolicy(installedDetail.name, 'enabled', event.currentTarget.checked) }} /></label>
+                <label data-paimind-skill-usage-row><span><strong>{zh ? '普通对话默认使用' : 'Use by default in direct chats'}</strong><small>{zh ? '只进入普通对话，不自动进入智能体会话。' : 'Applies to direct chats only, never Agent Sessions automatically.'}</small></span><input type="checkbox" role="switch" aria-label={zh ? `普通对话默认使用 ${installedDetail.name}` : `Use ${installedDetail.name} by default in direct chats`} checked={installedDirectPreference} disabled={policyManagedElsewhere || !policyConnected || busy || !installedPreferenceEnabled || installedPublicationUnavailable && !installedDirectPreference} onChange={event => { void replaceBusinessPolicy(installedDetail.name, 'direct', event.currentTarget.checked) }} /></label>
                 <label data-paimind-skill-usage-row data-paimind-skill-session-scope><span><strong>{zh ? '用于当前对话' : 'Use in current conversation'}</strong><small data-paimind-skill-session-state>{sessionScopeCopy}</small></span><input type="checkbox" role="switch" aria-label={zh ? `用于当前对话 ${installedDetail.name}` : `Use ${installedDetail.name} in current conversation`} checked={installedSessionSelected} disabled={sessionToggleDisabled} onChange={event => { void replaceSessionPolicy(installedDetail.name, event.currentTarget.checked) }} /></label>
-                <div data-paimind-skill-usage-row><span><strong>{zh ? '用于智能体' : 'Use with an Agent'}</strong><small>{zh ? '前往智能体中心选择目标智能体；只有保存并回读成功后才算挂载。' : 'Choose the target in Agent Center. Attachment is complete only after save and read-back succeed.'}</small></span><button type="button" data-paimind-skill-button disabled={!agentCenterAvailable} title={agentCenterAvailable ? undefined : (zh ? '智能体中心未安装或当前不可用' : 'Agent Center is not installed or is currently unavailable')} onClick={openAgentCenterForAttachment}>{zh ? '从智能体中心挂载' : 'Attach in Agent Center'}</button></div>
-                {!policyConnected && <p data-paimind-skill-contract-note role={userPolicy.status === 'error' ? 'alert' : 'status'}><PaimindWarningIcon size={14} />{userPolicy.status === 'error' ? userPolicy.error : (zh ? '用户技能策略接口缺失，开关保持锁定且不会伪造成功。' : 'User Skill Policy API is unavailable; controls stay locked and never fake success.')}</p>}
+                <div data-paimind-skill-usage-row><span><strong>{zh ? '用于智能体' : 'Use with an Agent'}</strong><small>{zh ? '前往智能体中心选择目标智能体；只有保存并回读成功后才算挂载。' : 'Choose the target in Agent Center. Attachment is complete only after save and read-back succeed.'}</small></span><button type="button" data-paimind-skill-button disabled={busy || !agentCenterAvailable || installedPublicationUnavailable} title={agentCenterAvailable ? undefined : (zh ? '智能体中心未安装或当前不可用' : 'Agent Center is not installed or is currently unavailable')} onClick={openAgentCenterForAttachment}>{zh ? '从智能体中心挂载' : 'Attach in Agent Center'}</button></div>
+                {!policyManagedElsewhere && !policyConnected && <p data-paimind-skill-contract-note role={userPolicy.status === 'error' ? 'alert' : 'status'}><PaimindWarningIcon size={14} />{userPolicy.status === 'error' ? userPolicy.error : (zh ? '用户技能策略接口缺失，开关保持锁定且不会伪造成功。' : 'User Skill Policy API is unavailable; controls stay locked and never fake success.')}</p>}
               </section>
-              <details data-paimind-skill-disclosure><summary>{zh ? '来源信息' : 'Source details'}</summary><dl data-paimind-skill-meta><div data-paimind-skill-meta-row><dt>{zh ? '来源' : 'Source'}</dt><dd>{installedRecommended?.source ?? (zh ? '用户创建或导入' : 'Created or imported by user')}</dd></div><div data-paimind-skill-meta-row><dt>{zh ? '管理' : 'Managed'}</dt><dd>{installedDetail.managed ? (zh ? '技能中心管理；修改和卸载均保留备份' : 'Managed here with recoverable edits and uninstall') : (zh ? '请回到原来源管理' : 'Manage from its original source')}</dd></div></dl></details>
-              <div data-paimind-skill-actions>{installedDetail.managed && <button type="button" data-paimind-skill-button data-primary="true" disabled={busy} onClick={() => { void editSkill(installedDetail.skillId) }}><PaimindEditIcon size={14} />{zh ? '编辑' : 'Edit'}</button>}{installedRecommended !== undefined && !installedCurrent && <button type="button" data-paimind-skill-button disabled={busy} onClick={() => { void inspectRecommended(installedRecommended) }}><PaimindCheckIcon size={14} />{zh ? '更新' : 'Update'}</button>}{installedDetail.managed ? <button type="button" data-paimind-skill-button data-danger="true" disabled={busy} onClick={() => { setUninstallTarget(installedDetail) }}><PaimindTrashIcon size={14} />{zh ? '卸载' : 'Uninstall'}</button> : <button type="button" data-paimind-skill-button disabled>{zh ? '由原来源管理' : 'Managed externally'}</button>}</div>
+              <details data-paimind-skill-disclosure><summary>{zh ? '来源信息' : 'Source details'}</summary><dl data-paimind-skill-meta><div data-paimind-skill-meta-row><dt>{zh ? '来源' : 'Source'}</dt><dd>{installedPublication !== undefined ? (zh ? '企业分配的固定发布版本' : 'Assigned enterprise publication') : installedRecommended?.source ?? (zh ? '用户创建或导入' : 'Created or imported by user')}</dd></div><div data-paimind-skill-meta-row><dt>{zh ? '管理' : 'Managed'}</dt><dd>{installedPublication !== undefined ? (zh ? '保留历史版本，不允许个人修改、覆盖或卸载；撤销授权不会删除历史内容' : 'Retained history: no personal edits, replacement or uninstall; revocation does not delete historical content') : installedDetail.managed ? (zh ? '技能中心管理；修改和卸载均保留备份' : 'Managed here with recoverable edits and uninstall') : (zh ? '请回到原来源管理' : 'Manage from its original source')}</dd></div></dl></details>
+              <div data-paimind-skill-actions>{hasManagementPresentation && installedPublication === undefined && installedDetail.managed && <button type="button" data-paimind-skill-button data-primary="true" disabled={busy} onClick={() => { void editSkill(installedDetail.skillId) }}><PaimindEditIcon size={14} />{zh ? '编辑' : 'Edit'}</button>}{hasManagementPresentation && installedPublication === undefined && installedRecommended !== undefined && !installedCurrent && <button type="button" data-paimind-skill-button disabled={busy} onClick={() => { void inspectRecommended(installedRecommended) }}><PaimindCheckIcon size={14} />{zh ? '更新' : 'Update'}</button>}{installedPublication !== undefined ? <button type="button" data-paimind-skill-button disabled>{zh ? '企业固定版本（只读）' : 'Enterprise fixed version (read-only)'}</button> : !hasManagementPresentation ? <button type="button" data-paimind-skill-button disabled>{zh ? '由管理员管理' : 'Managed by your administrator'}</button> : installedDetail.managed ? <button type="button" data-paimind-skill-button data-danger="true" disabled={busy} onClick={() => { setUninstallTarget(installedDetail) }}><PaimindTrashIcon size={14} />{zh ? '卸载' : 'Uninstall'}</button> : <button type="button" data-paimind-skill-button disabled>{zh ? '由原来源管理' : 'Managed externally'}</button>}</div>
             </>}
           </aside>
         </div>}
-      </section>
+      </section>}
     </div>}
     {uploadGuideOpen && <div data-paimind-skill-dialog-backdrop><section role="dialog" aria-modal="true" aria-labelledby="paimind-skill-import-guide-title" aria-describedby="paimind-skill-import-guide-copy" data-paimind-skill-dialog data-paimind-skill-import-guide onKeyDown={event => { handleDialogKey(event, () => { setUploadGuideOpen(false) }) }}>
       <div data-paimind-skill-dialog-head><span data-paimind-skill-detail-icon><PaimindUploadIcon size={24} /></span><div><p data-paimind-skill-eyebrow>{zh ? '本地个人导入' : 'Local personal import'}</p><h2 id="paimind-skill-import-guide-title">{zh ? '选择一个可识别的 Skill 包' : 'Choose a recognizable Skill package'}</h2></div></div>
@@ -1034,6 +1209,7 @@ export function SkillCenterSurface(props: SkillCenterSurfaceProps): ReactNode {
 function MountedSkillCenterSurface(props: SkillCenterSurfaceProps): ReactNode {
   const [host, setHost] = useState<Readonly<PaimindProductCenterHost> | null>(null)
   const surface = useRef<HTMLElement>(null)
+  const registerCloseGuard = useCallback((guard: () => boolean) => props.controller.guardClose(guard), [props.controller])
 
   useLayoutEffect(() => {
     const target = resolvePaimindProductCenterHost()
@@ -1061,7 +1237,7 @@ function MountedSkillCenterSurface(props: SkillCenterSurfaceProps): ReactNode {
     data-paimind-product-surface="skill-center"
     aria-labelledby="paimind-skill-center-title"
   >
-    <SkillMarketSection {...props} close={() => { props.controller.close() }} />
+    <SkillMarketSection {...props} registerCloseGuard={registerCloseGuard} close={() => { props.controller.close() }} />
   </main>, host.mount)
 }
 
@@ -1070,6 +1246,11 @@ class SkillMarketBoundary extends Component<{ readonly children: ReactNode }, { 
   static getDerivedStateFromError(): { readonly failed: boolean } { return { failed: true } }
   componentDidCatch(error: Error, info: ErrorInfo): void { console.error('[paimind-skill-market]', error, info) }
   render(): ReactNode { return this.state.failed ? null : this.props.children }
+}
+class SkillContributionBoundary extends Component<{ readonly children: ReactNode }, { readonly failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() { return { failed: true } }
+  render(): ReactNode { return this.state.failed ? <p role="alert">企业技能目录暂时不可用，请重新打开；原技能中心保持可用。</p> : this.props.children }
 }
 
 /** Open the existing Skill Center when the system authoring Tool prepares an unsaved draft. */
@@ -1135,14 +1316,21 @@ export function installSkillAuthoringDraftNavigation(
 }
 
 export async function apply(ctx: SkillMarketClientContext): Promise<() => Promise<void>> {
+  const audience = readPaimindClientAudience()
+  if (audience === 'invalid') throw new Error('Invalid Skill Center presentation metadata')
   const disposeRemote = await ctx.remote.$mount(TYPERT_REMOTE)
   const mounted = ctx.inject([...BASE_INJECT, 'remote.paimindSkillInstaller'], scope => {
     const installer = scope.remote.paimindSkillInstaller
     if (installer === undefined) throw new Error('PAIMind Skill Installer Remote did not mount')
     const surfaceController = new PaimindProductSurfaceController('skill-center')
+    const contributions = new SkillCenterContributionRegistry()
+    scope.effect(() => {
+      const dispose = scope.reflect.provide('paimindSkillCenterContributions', contributions)
+      return () => { contributions.dispose(); void dispose() }
+    }, 'paimind-skill-market: optional governance contribution')
     scope.effect(installSkillMarketStyle, 'paimind-skill-market: style')
     scope.effect(() => () => { surfaceController.dispose() }, 'paimind-skill-market: surface controller')
-    scope.effect(() => installSkillAuthoringDraftNavigation(scope.sessions, installer, surfaceController), 'paimind-skill-market: authoring draft navigation')
+    if (audience === 'default') scope.effect(() => installSkillAuthoringDraftNavigation(scope.sessions, installer, surfaceController), 'paimind-skill-market: authoring draft navigation')
     contributePaimindExtension(scope.slots, {
       id: 'paimind:skill-market', packageName: '@paimind/skill-market', category: 'skills-tools',
       nameZh: '技能中心', nameEn: 'Skill Center',
@@ -1151,7 +1339,9 @@ export async function apply(ctx: SkillMarketClientContext): Promise<() => Promis
       surface: 'shell', maturity: 'available', order: 30,
     })
     const injectProps = () => ({
+      audience,
       controller: surfaceController,
+      contributions,
       installer,
       sessions: scope.sessions,
       locale: scope.locale,

@@ -4,6 +4,7 @@ import {
   describePaimindHostSettings,
   markPaimindHostRemoteMethods,
   mutatePaimindHostSettings,
+  mutatePaimindHostSettingsOperations,
   registerPaimindHostSettings,
   setPaimindHostLoaderEntryEnabled,
   type PaimindHostLoaderFacility,
@@ -20,6 +21,11 @@ import {
   type PaimindFeaturePackView,
   type PaimindFeatureToggleMutationRequest,
 } from './feature-packs.js'
+import {
+  FEATURE_COMMAND_SCHEMA, featureChangePlan, readFeatureJournal, readFeatureSelection,
+  readGovernedFeatureCommand, requireFeatureApproval,
+  type PaimindFeatureChangePlan, type PaimindFeatureCommandJournal, type PaimindGovernedFeatureCommand,
+} from './governance.js'
 
 export * from './feature-packs.js'
 export * from './projection.js'
@@ -29,9 +35,10 @@ export const inject = ['loader', 'settings', 'webServer']
 
 interface PaimindFeaturePackSettings {
   readonly overrides: string
+  readonly governance: string
 }
 
-const DEFAULT_FEATURE_PACK_SETTINGS: PaimindFeaturePackSettings = Object.freeze({ overrides: '{}' })
+const DEFAULT_FEATURE_PACK_SETTINGS: PaimindFeaturePackSettings = Object.freeze({ overrides: '{}', governance: '' })
 const HARNESS_ROOT_INCLUDE_LOADER_ENTRY_ID = 'include'
 
 export interface PaimindFeaturePackHostContext {
@@ -92,6 +99,31 @@ const BOOT_READINESS_RECEIPT_PATH = '/paimind/boot-readiness'
 const BOOT_READINESS_MAX_BODY_BYTES = 256 * 1024
 const BOOT_READINESS_RECEIPT_LIMIT = 24
 
+// Client-supplied diagnostics, never authority or proof of successful boot.
+// Nested details are inert JSON retained only in this owner's bounded memory.
+const BOOT_RECEIPT_FIELDS = new Set(['schema', 'state', 'phase', 'sequence', 'at', 'elapsedMs', 'page',
+  'graphRev', 'hostInventoryCount', 'facade', 'registrationGaps', 'pendingImports', 'pendingPrefetches',
+  'requestTiming', 'events', 'pendingQueueCount', 'mode', 'id', 'importLaunchCount', 'expected'])
+function validBootReceipt(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    && Object.getPrototypeOf(value) === Object.prototype
+    && Object.keys(value).every(key => BOOT_RECEIPT_FIELDS.has(key))
+    && (value as Record<string, unknown>).schema === 'paimind.boot-readiness/v1'
+    && typeof (value as Record<string, unknown>).state === 'string'
+    && ['milestone', 'ready', 'failed', 'reloading'].includes(String((value as Record<string, unknown>).state))
+}
+
+/** Exact process-local diagnostic submission. The gateway must independently
+ * enforce current identity, origin and the caller's private runtime binding. */
+export function isPaimindBootReadinessSubmission(method: string, target: string,
+  contentType: string | undefined, body: Uint8Array): boolean {
+  if (method !== 'POST' || target !== BOOT_READINESS_RECEIPT_PATH
+    || contentType?.split(';')[0]?.trim().toLowerCase() !== 'application/json'
+    || body.byteLength === 0 || body.byteLength > BOOT_READINESS_MAX_BODY_BYTES) return false
+  try { return validBootReceipt(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body))) }
+  catch { return false }
+}
+
 interface PaimindBootReceiptEnvelope {
   readonly receivedAt: number
   readonly receipt: unknown
@@ -111,7 +143,7 @@ async function readPaimindBootReceiptBody(request: PaimindBootHttpRequest): Prom
     body.set(chunk, offset)
     offset += chunk.byteLength
   }
-  return JSON.parse(new TextDecoder().decode(body))
+  return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body))
 }
 
 /** Register the pre-shell watchdog and its bounded, process-local Host receipt endpoint. */
@@ -138,8 +170,9 @@ export function registerPaimindBootReadiness(
         response.writeHead(405, { allow: 'GET, POST' }).end()
         return
       }
-      const receipt = await readPaimindBootReceiptBody(request)
-      if (typeof receipt !== 'object' || receipt === null || Array.isArray(receipt)) {
+      let receipt: unknown
+      try { receipt = await readPaimindBootReceiptBody(request) } catch { receipt = undefined }
+      if (!validBootReceipt(receipt)) {
         response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' }).end('invalid boot readiness receipt')
         return
       }
@@ -524,6 +557,7 @@ export class PaimindFeaturePackService extends PaimindHostRemoteService {
   static inject = inject
   private source: () => Readonly<PaimindFeaturePackSettings> = () => DEFAULT_FEATURE_PACK_SETTINGS
   private reconciliation: Promise<void> = Promise.resolve()
+  private active = true
   private bootSettled = false
   private bootTimer: ReturnType<typeof setTimeout> | undefined
   private externalRepairTimer: ReturnType<typeof setTimeout> | undefined
@@ -537,7 +571,7 @@ export class PaimindFeaturePackService extends PaimindHostRemoteService {
     const settingsScope = registerPaimindHostSettings<PaimindFeaturePackSettings>(
       featureCtx.settings,
       PAIMIND_FEATURE_PACK_SETTINGS_NAMESPACE,
-      { overrides: { kind: 'string', default: '{}', maxLength: 8_192 } },
+      { overrides: { kind: 'string', default: '{}', maxLength: 8_192 }, governance: { kind: 'string', default: '', maxLength: 40_000 } },
       { base: { ...DEFAULT_FEATURE_PACK_SETTINGS } },
     )
     this.source = () => settingsScope.get()
@@ -574,6 +608,7 @@ export class PaimindFeaturePackService extends PaimindHostRemoteService {
     )
     featureCtx.effect(
       () => () => {
+        this.active = false
         stopWatchingSettings()
         stopWatchingEntries()
         stopWatchingRootIncludeReplays()
@@ -586,7 +621,7 @@ export class PaimindFeaturePackService extends PaimindHostRemoteService {
   }
 
   private scheduleBootReconciliation(): void {
-    if (this.bootSettled) return
+    if (!this.active || this.bootSettled) return
     if (this.bootTimer !== undefined) clearTimeout(this.bootTimer)
     // Root Include creates nested groups concurrently. A short quiet-period
     // debounce waits until no new Loader entry is being constructed; Loader
@@ -595,6 +630,7 @@ export class PaimindFeaturePackService extends PaimindHostRemoteService {
     this.bootTimer = setTimeout(() => {
       this.bootTimer = undefined
       void this.featureCtx.loader.await().then(() => {
+        if (!this.active) return
         this.bootSettled = true
         this.queueReconciliation()
       }).catch(error => {
@@ -605,6 +641,7 @@ export class PaimindFeaturePackService extends PaimindHostRemoteService {
   }
 
   private scheduleExternalRepair(): void {
+    if (!this.active) return
     if (this.externalRepairTimer !== undefined) clearTimeout(this.externalRepairTimer)
     // Root Include HMR starts after the initial Host boot barrier and can replay
     // the static disabled composition over a just-enabled product group. A
@@ -617,17 +654,35 @@ export class PaimindFeaturePackService extends PaimindHostRemoteService {
     }, 25)
   }
 
+  /** One owner queue covers desired-state writes, Loader transitions and their
+   * rollback, as well as boot/HMR repair. A rejected command does not poison
+   * later work; its caller still receives the original failure. */
+  private queueOperation<T>(run: () => Promise<T>): Promise<T> {
+    const result = this.reconciliation.then(() => {
+      if (!this.active) throw new Error('PAIMind Feature Pack controller is disposed')
+      return run()
+    })
+    this.reconciliation = result.then(() => {}, () => {})
+    return result
+  }
+
   private queueReconciliation(): void {
-    this.reconciliation = this.reconciliation
-      .then(async () => {
-        // Product groups can be inserted after the control plane and their
-        // children start concurrently. Wait for the Loader transaction to
-        // settle before applying persisted switches, avoiding a startup race
-        // between initial Group creation and Feature Pack reconciliation.
-        await this.featureCtx.loader.await()
-        await this.applyOverrides(decodePaimindFeatureOverrides(this.source().overrides))
-      })
-      .catch(error => { console.warn('[paimind-extension-center] feature-pack reconciliation failed', error) })
+    void this.queueOperation(async () => {
+      // Product groups can be inserted after the control plane and their
+      // children start concurrently. Wait for the Loader transaction to
+      // settle before applying persisted switches, avoiding a startup race
+      // between initial Group creation and Feature Pack reconciliation.
+      await this.featureCtx.loader.await()
+      if (!this.active) return
+      const journal = this.commandState().journal
+      // A cold or external replay must not finish an unconfirmed new command
+      // without fresh control-plane authorization. Retain its durable intent,
+      // but restore only the previously confirmed runtime configuration.
+      const overrides = journal && journal.phase !== 'applied' ? journal.plan.before : this.source().overrides
+      await this.applyOverrides(decodePaimindFeatureOverrides(overrides))
+    }).catch(error => {
+      if (this.active) console.warn('[paimind-extension-center] feature-pack reconciliation failed', error)
+    })
   }
 
   private async disableAllProductGroups(): Promise<void> {
@@ -756,11 +811,17 @@ export class PaimindFeaturePackService extends PaimindHostRemoteService {
     })
     return Object.freeze({
       status: 'ready', packs: Object.freeze(packs),
-      revision: descriptor.revision, writable: descriptor.writable,
+      revision: descriptor.revision, writable: descriptor.writable && this.commandState().journal === undefined,
     })
   }
 
   async mutate(request: PaimindFeatureToggleMutationRequest): Promise<Readonly<PaimindFeaturePackView>> {
+    const command = Object.freeze({ id: request.id, enabled: request.enabled, expectedRevision: request.expectedRevision })
+    return this.queueOperation(() => this.mutateSerially(command))
+  }
+
+  private async mutateSerially(request: PaimindFeatureToggleMutationRequest): Promise<Readonly<PaimindFeaturePackView>> {
+    if (this.commandState().journal !== undefined) throw new Error('Feature Packs are managed through enterprise governance')
     if (findPaimindFeaturePack(request.id) === undefined && findPaimindFeatureCapability(request.id) === undefined) {
       throw new Error(`unknown PAIMind Feature Pack toggle "${request.id}"`)
     }
@@ -822,6 +883,144 @@ export class PaimindFeaturePackService extends PaimindHostRemoteService {
       this.settingsMutationDepth -= 1
     }
     return await this.describe()
+  }
+
+  private commandState() {
+    const descriptor = describePaimindHostSettings(this.featureCtx.settings, PAIMIND_FEATURE_PACK_SETTINGS_NAMESPACE)
+    if (!descriptor || !descriptor.value || typeof descriptor.value !== 'object'
+      || !('overrides' in descriptor.value) || typeof descriptor.value.overrides !== 'string') {
+      throw new Error('Feature Pack Settings are unavailable')
+    }
+    const journal = readFeatureJournal('governance' in descriptor.value ? descriptor.value.governance : undefined)
+    if (journal) {
+      const expectedAfter = JSON.stringify(resolvePaimindFeatureToggleOverrides(journal.plan.selection.id,
+        journal.plan.selection.enabled, decodePaimindFeatureOverrides(journal.plan.before)))
+      const stored = journal.phase === 'applying' || journal.phase === 'applied' ? journal.plan.after : journal.plan.before
+      if (expectedAfter !== journal.plan.after || descriptor.value.overrides !== stored) {
+        throw new Error('Feature Pack command state was changed outside its owner')
+      }
+    }
+    return { revision: descriptor.revision, writable: descriptor.writable, overrides: descriptor.value.overrides, journal }
+  }
+
+  /** Internal owner seam only; deliberately absent from Remote descriptors.
+   * The caller must authorize the current administrator, exact target and
+   * complete impact before sending an execution command over private control. */
+  async previewGovernedChange(request: PaimindFeatureToggleMutationRequest): Promise<PaimindFeatureChangePlan> {
+    const selection = readFeatureSelection(request)
+    return this.queueOperation(() => this.planGovernedChange(selection))
+  }
+
+  private async planGovernedChange(selection: Readonly<PaimindFeatureToggleMutationRequest>): Promise<PaimindFeatureChangePlan> {
+    if (!this.bootSettled) throw new Error('Feature Packs are still starting')
+    const state = this.commandState()
+    if (!state.writable) throw new Error('Feature Pack Settings are read-only')
+    if (state.journal && ['applying', 'rolling-back'].includes(state.journal.phase)) throw new Error('A Feature Pack command still requires confirmation or recovery')
+    if (state.revision !== selection.expectedRevision) throw new Error('Feature Pack Settings revision conflict')
+    const definition = findPaimindFeaturePack(selection.id) ?? findPaimindFeatureCapability(selection.id)
+    if (!definition || !describePaimindHostLoaderEntry(this.featureCtx.loader, definition.loaderEntryId).installed) {
+      throw new Error('The selected Feature Pack toggle is not installed')
+    }
+    const after = resolvePaimindFeatureToggleOverrides(selection.id, selection.enabled, decodePaimindFeatureOverrides(state.overrides))
+    return featureChangePlan(selection, state.overrides, JSON.stringify(after))
+  }
+
+  private async writeCommandState(overrides: string, journal: PaimindFeatureCommandJournal, revision: number): Promise<void> {
+    const encoded = JSON.stringify(journal)
+    readFeatureJournal(encoded)
+    await mutatePaimindHostSettingsOperations(this.featureCtx.settings, PAIMIND_FEATURE_PACK_SETTINGS_NAMESPACE, [
+      { op: 'set', path: ['overrides'], value: overrides },
+      { op: 'set', path: ['governance'], value: encoded },
+    ], revision)
+    const stored = this.commandState()
+    if (stored.overrides !== overrides || JSON.stringify(stored.journal) !== encoded) throw new Error('Feature Pack command write could not be confirmed')
+  }
+
+  private async requireGovernedReconciliation(overrides: string): Promise<void> {
+    const view = await this.describe(), wanted = decodePaimindFeatureOverrides(overrides)
+    if (view.status !== 'ready') throw new Error('Feature Pack runtime reconciliation is unavailable')
+    for (const pack of view.packs) {
+      const expected = pack.installed && featureToggleEnabled(pack.id, wanted)
+      const runtime = describePaimindHostLoaderEntry(this.featureCtx.loader, pack.loaderEntryId)
+      // The product view masks runtime flags with desired state. Inspect the
+      // original Loader too, so an ineffective disable cannot look successful.
+      if (runtime.enabled !== expected || pack.enabled !== expected || expected && pack.failure
+        || expected && pack.requiredPackIds.some(id => !view.packs.some(required => required.id === id && required.installed && required.enabled))) {
+        throw new Error('Feature Pack runtime reconciliation remains incomplete')
+      }
+      for (const capability of pack.capabilities) {
+        const enabled = expected && capability.installed && featureToggleEnabled(capability.id, wanted)
+        const runtime = describePaimindHostLoaderEntry(this.featureCtx.loader, capability.loaderEntryId)
+        if (runtime.enabled !== enabled || capability.enabled !== enabled || enabled && capability.failure) {
+          throw new Error('Feature Pack capability reconciliation remains incomplete')
+        }
+      }
+    }
+  }
+
+  /** Bounded metadata read, including while a Loader call is still in flight.
+   * A command receipt is neither a new permission nor proof of Browser E2E. */
+  async describeGovernedFeatures() {
+    if (!this.active) throw new Error('PAIMind Feature Pack controller is disposed')
+    const before = this.commandState(), view = await this.describe(), after = this.commandState()
+    if (before.revision !== after.revision || JSON.stringify(before.journal) !== JSON.stringify(after.journal)) {
+      throw new Error('Feature Pack state changed during readback')
+    }
+    return { view, command: before.journal ?? null }
+  }
+
+  /** Trusted internal actuator, not an exposed Remote or an authorization
+   * service. After atomic intent acceptance, request cancellation only stops
+   * waiting: original Loader work must settle and its durable outcome survive. */
+  async applyGovernedChange(input: PaimindGovernedFeatureCommand, signal?: AbortSignal) {
+    const command = readGovernedFeatureCommand(input)
+    return this.queueOperation(async () => {
+      signal?.throwIfAborted(); requireFeatureApproval(command)
+      let state = this.commandState(), journal = state.journal
+      if (journal?.commandId === command.commandId) {
+        if (journal.requestDigest !== command.requestDigest || journal.plan.planDigest !== command.planDigest
+          || JSON.stringify(journal.plan.selection) !== JSON.stringify(command.selection)) throw new Error('Feature Pack command identity conflict')
+        if (journal.phase === 'applied' || journal.phase === 'rolled-back') return { ...await this.describeGovernedFeatures(), replayed: true }
+      } else {
+        const plan = await this.planGovernedChange(command.selection)
+        if (plan.planDigest !== command.planDigest) throw new Error('Feature Pack plan changed before execution')
+        journal = Object.freeze({ schema: FEATURE_COMMAND_SCHEMA, commandId: command.commandId,
+          requestDigest: command.requestDigest, plan, phase: 'applying' as const })
+      }
+      this.settingsMutationDepth += 1
+      try {
+        if (state.journal?.commandId !== command.commandId) {
+          signal?.throwIfAborted()
+          await this.writeCommandState(journal.plan.after, journal, state.revision)
+        }
+        // Already accepted work is recovered only after current approval above.
+        // A previous failed application must continue rollback, not try enable.
+        if (journal.phase === 'rolling-back') {
+          await this.applyOverrides(decodePaimindFeatureOverrides(journal.plan.before))
+          await this.requireGovernedReconciliation(journal.plan.before)
+          await this.writeCommandState(journal.plan.before, { ...journal, phase: 'rolled-back' }, this.commandState().revision)
+          return { ...await this.describeGovernedFeatures(), replayed: true }
+        }
+        try {
+          await this.applyOverrides(decodePaimindFeatureOverrides(journal.plan.after), journal.plan.selection.id)
+          await this.requireGovernedReconciliation(journal.plan.after)
+        } catch (error) {
+          try {
+            journal = { ...journal, phase: 'rolling-back' }
+            state = this.commandState()
+            await this.writeCommandState(journal.plan.before, journal, state.revision)
+            await this.applyOverrides(decodePaimindFeatureOverrides(journal.plan.before))
+            await this.requireGovernedReconciliation(journal.plan.before)
+            await this.writeCommandState(journal.plan.before, { ...journal, phase: 'rolled-back' }, this.commandState().revision)
+          } catch (rollbackError) { throw new AggregateError([error, rollbackError], 'Governed Feature Pack change requires rollback recovery') }
+          return { ...await this.describeGovernedFeatures(), replayed: false }
+        }
+        // If this final receipt write is uncertain, keep the applying journal.
+        // Do not blindly roll back a runtime transition that already succeeded.
+        await this.writeCommandState(journal.plan.after, { ...journal, phase: 'applied' }, this.commandState().revision)
+        return { ...await this.describeGovernedFeatures(), replayed: false }
+      } finally { this.settingsMutationDepth -= 1 }
+    })
   }
 }
 

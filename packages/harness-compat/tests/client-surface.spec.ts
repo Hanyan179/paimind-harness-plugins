@@ -8,12 +8,107 @@ import {
   resolvePaimindProductCenterHost,
   requestPaimindAgentBuilder,
   requestPaimindProductSurface,
+  isPaimindProductSurfaceAvailable,
+  subscribePaimindProductSurfaceAvailability,
+  observeHarnessConnectionLoss,
 } from '../src/client-surface.js'
 
 afterEach(() => {
   document.body.innerHTML = ''
   document.body.style.overflow = ''
   vi.useRealTimers()
+})
+
+describe('original Harness connection loss observation', () => {
+  it('ignores startup and description replacement, reports loss once per connected generation and stops on unload', () => {
+    let description: object | undefined
+    const listeners = new Set<() => void>()
+    let late!: () => void
+    const start = vi.fn(), lost = vi.fn(), unsubscribe = vi.fn()
+    const connection = { start, hostDescription: { getSnapshot: () => description,
+      subscribe(listener: () => void) { listeners.add(listener); late = listener; return () => { unsubscribe(); listeners.delete(listener) } } } }
+    const stop = observeHarnessConnectionLoss(connection, lost)
+    const publish = (next?: object) => { description = next; for (const listener of listeners) listener() }
+    publish(); expect(lost).not.toHaveBeenCalled()
+    publish({}); publish({}); expect(lost).not.toHaveBeenCalled()
+    publish(); publish(); expect(lost).toHaveBeenCalledTimes(1)
+    publish({}); publish(); expect(lost).toHaveBeenCalledTimes(2)
+    publish({}); stop(); stop(); description = undefined; late()
+    expect(lost).toHaveBeenCalledTimes(2); expect(unsubscribe).toHaveBeenCalledTimes(1)
+    expect(start).not.toHaveBeenCalled(); expect(listeners.size).toBe(0)
+  })
+  it('observes an already connected generation and catches loss during subscription', () => {
+    let description: object | undefined = {}
+    const lost = vi.fn()
+    const stop = observeHarnessConnectionLoss({ hostDescription: {
+      getSnapshot: () => description, subscribe: () => { description = undefined; return () => {} },
+    } }, lost)
+    expect(lost).toHaveBeenCalledTimes(1); stop()
+  })
+  it('rejects incompatible owners rather than starting another stream or inventing readiness', () => {
+    for (const connection of [undefined, null, {}, { hostDescription: {} }]) {
+      expect(() => observeHarnessConnectionLoss(connection, vi.fn())).toThrow('Harness connection description source is unavailable')
+    }
+  })
+})
+
+describe('PAIMind product surface availability', () => {
+  it('tracks only presence changes for the requested entry and releases queued work on disposal', async () => {
+    const states: boolean[] = []
+    const stop = subscribePaimindProductSurfaceAvailability('agent-center', () => {
+      states.push(isPaimindProductSurfaceAvailable('agent-center'))
+    })
+    try {
+      expect(isPaimindProductSurfaceAvailable('agent-center')).toBe(false)
+      const entry = document.createElement('button')
+      entry.dataset.paimindProductTrigger = 'agent-center'
+      document.body.append(entry)
+      await Promise.resolve()
+      expect(states).toEqual([true])
+
+      entry.title = 'Changed presentation'
+      entry.append(document.createElement('span'))
+      const other = document.createElement('button')
+      other.dataset.paimindProductTrigger = 'skill-center'
+      document.body.append(other)
+      await Promise.resolve()
+      expect(states).toEqual([true])
+
+      entry.dataset.paimindProductTrigger = 'skill-center'
+      await Promise.resolve()
+      expect(states).toEqual([true, false])
+      entry.dataset.paimindProductTrigger = 'agent-center'
+      await Promise.resolve()
+      expect(states).toEqual([true, false, true])
+
+      entry.remove()
+      await Promise.resolve()
+      expect(states).toEqual([true, false, true, false])
+      document.body.append(entry)
+      stop(); stop()
+      await Promise.resolve()
+      expect(states).toEqual([true, false, true, false])
+      expect(isPaimindProductSurfaceAvailable('agent-center')).toBe(true)
+    } finally { stop() }
+  })
+
+  it('observes the supplied document rather than another window or a detached entry', async () => {
+    const doc = document.implementation.createHTMLDocument('isolated')
+    const listener = vi.fn()
+    const stop = subscribePaimindProductSurfaceAvailability('agent-center', listener, doc)
+    try {
+      document.body.innerHTML = '<button data-paimind-product-trigger="agent-center"></button>'
+      const entry = doc.createElement('button')
+      entry.dataset.paimindProductTrigger = 'agent-center'
+      await Promise.resolve()
+      expect(listener).not.toHaveBeenCalled()
+      expect(isPaimindProductSurfaceAvailable('agent-center', doc)).toBe(false)
+      doc.body.append(entry)
+      await Promise.resolve()
+      expect(listener).toHaveBeenCalledTimes(1)
+      expect(isPaimindProductSurfaceAvailable('agent-center', doc)).toBe(true)
+    } finally { stop() }
+  })
 })
 
 describe('PAIMind product surface controller', () => {
@@ -59,6 +154,29 @@ describe('PAIMind product surface controller', () => {
 
     agents.dispose()
     skills.dispose()
+  })
+
+  it('honors and releases UI-owned close guards for toggle and cross-product navigation', () => {
+    const agents = new PaimindProductSurfaceController('agent-center', window, document)
+    const skills = new PaimindProductSurfaceController('skill-center', window, document)
+    const guard = vi.fn(() => false)
+    try {
+      agents.open()
+      const release = agents.guardClose(guard)
+      agents.toggle()
+      skills.open()
+      expect(guard).toHaveBeenCalledTimes(2)
+      expect(agents.getSnapshot().open).toBe(true)
+      expect(skills.getSnapshot().open).toBe(false)
+      guard.mockReturnValue(true)
+      skills.open()
+      expect(guard).toHaveBeenCalledTimes(3)
+      expect(agents.getSnapshot().open).toBe(false)
+      expect(skills.getSnapshot().open).toBe(true)
+      release(); release()
+      agents.open(); expect(agents.close()).toBe(true)
+      expect(guard).toHaveBeenCalledTimes(3)
+    } finally { agents.dispose(); skills.dispose() }
   })
 
   it('defers catastrophic surface recovery until every close blocker releases', () => {

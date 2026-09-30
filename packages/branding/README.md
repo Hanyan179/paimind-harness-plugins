@@ -8,6 +8,11 @@ Package rules: [Plugin Authoring Standard](../../docs/standards/plugin-authoring
 
 Role: **Client plugin**. It owns the product projection described above; Harness remains the canonical runtime and domain owner.
 
+The host contributes only its static product manifest at
+`/plugins/@paimind/branding/manifest.webmanifest`. The client uses that same-origin
+resource with explicit credentials; no data-URL manifest or independent account
+state is created. Enterprise authentication stays at the existing gateway.
+
 ## Public entry points
 
 | Export | Target | Contract |
@@ -20,6 +25,7 @@ Role: **Client plugin**. It owns the product projection described above; Harness
 ## Dependencies
 
 - Internal runtime dependencies: `@paimind/harness-compat` (`workspace:^`).
+- Host service injection: `webServer` for the exact, source-owned manifest route.
 - External runtime or peer dependencies: `react` (`>=18.0.0 <20.0.0`), `react-dom` (`>=18.0.0 <20.0.0`).
 - Client service injection: `@deepseek-ai/dsh-client-runtime`, `@deepseek-ai/dsh-client-ui-conversation`, `@deepseek-ai/dsh-client-ui-slots`, `@deepseek-ai/dsh-client-ui-layout`, `@deepseek-ai/dsh-client-ui-sidebar`.
 
@@ -29,9 +35,13 @@ The manifest is authoritative for dependency direction and version selection.
 
 Harness discovers `./client` through `dsh.client`. Cordis waits for declared injected services before activation. UI, listeners and registrations must be installed through scoped effects so unload removes them. Missing host services delay activation; package-local rendering failures must not corrupt the native shell.
 
+The manifest route permits only exact GET/HEAD reads, carries no credentials or
+member data in its response, and unregisters with its host scope. Client unload
+restores the original title, icon, manifest URL and credential-mode attribute.
+
 ## Published files
 
-The manifest allowlist is `lib/**/*.js`, `lib/**/*.js.map`, `lib/**/*.d.ts`, `lib/**/*.d.ts.map`. Generated build metadata, source tests, local Harness homes, coverage and credentials are excluded.
+The manifest allowlist is `lib/**/*.js`, `lib/**/*.js.map`, `lib/**/*.d.ts`, `lib/**/*.d.ts.map`, excluding the bundled private `document-identity.d.ts*` declarations. Generated build metadata, source tests, local Harness homes, coverage and credentials are excluded.
 
 ## Verification
 

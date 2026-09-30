@@ -1,4 +1,5 @@
 import { PAIMIND_AGENT_PREPARE_CREATE_TOOL } from '@paimind/contracts'
+import { readHarnessPromptCorrelation } from '@paimind/harness-compat/client-surface'
 
 export interface AgentAuthoringDraftContext {
   readonly productKind: 'personal' | 'business'
@@ -175,20 +176,20 @@ export function historyTurn(event: { readonly type: string; readonly data?: unkn
   return typeof turn === 'number' && Number.isInteger(turn) ? turn : null
 }
 
-export function authoringPromptRpcId(event: { readonly type: string; readonly data?: unknown }): string | null {
+export function authoringPromptRpcId(event: { readonly type: string; readonly data?: unknown }, sessionId: string): string | null {
   if (event.type !== 'user/message' || typeof event.data !== 'object' || event.data === null) return null
   const source = (event.data as { readonly source?: { readonly kind?: unknown; readonly rpcId?: unknown } }).source
-  return source?.kind === 'user' && typeof source.rpcId === 'string' ? source.rpcId : null
+  return readHarnessPromptCorrelation(source, sessionId)
 }
 
-export function authoringInboxMessageId(event: { readonly type: string; readonly data?: unknown }, rpcId: string): string | null {
+export function authoringInboxMessageId(event: { readonly type: string; readonly data?: unknown }, rpcId: string, sessionId: string): string | null {
   if (event.type !== 'agent/inbox/spliced' || typeof event.data !== 'object' || event.data === null) return null
   const inserted = (event.data as { readonly inserted?: unknown }).inserted
   if (!Array.isArray(inserted)) return null
   for (const candidate of inserted) {
     if (typeof candidate !== 'object' || candidate === null) continue
     const message = candidate as { readonly id?: unknown; readonly source?: { readonly kind?: unknown; readonly rpcId?: unknown } }
-    if (message.source?.kind === 'user' && message.source.rpcId === rpcId && typeof message.id === 'string') return message.id
+    if (readHarnessPromptCorrelation(message.source, sessionId) === rpcId && typeof message.id === 'string') return message.id
   }
   return null
 }
@@ -202,12 +203,13 @@ export function assistantTurn(event: { readonly type: string; readonly data?: un
 export function correlateAuthoringTurn(
   events: readonly { readonly type: string; readonly seq?: number; readonly data?: unknown }[],
   rpcId: string,
+  sessionId: string,
 ): { readonly turn: number; readonly userSeq: number } | null {
   let openTurn: number | null = null
   for (const event of [...events].sort((left, right) => historySeq(left) - historySeq(right))) {
     const started = historyTurn(event, 'turn/start')
     if (started !== null) openTurn = started
-    if (authoringPromptRpcId(event) === rpcId) {
+    if (authoringPromptRpcId(event, sessionId) === rpcId) {
       const userSeq = historySeq(event)
       if (openTurn === null || userSeq < 0) throw new Error('智能体创建消息缺少原生 Turn 边界')
       return Object.freeze({ turn: openTurn, userSeq })
@@ -222,14 +224,16 @@ export function hasAuthoringTurnCollision(
   events: readonly { readonly type: string; readonly seq?: number; readonly data?: unknown }[],
   target: { readonly turn: number; readonly userSeq: number },
   rpcId: string,
+  sessionId: string,
 ): boolean {
   let openTurn: number | null = null
   for (const event of [...events].sort((left, right) => historySeq(left) - historySeq(right))) {
     const started = historyTurn(event, 'turn/start')
     if (started !== null) openTurn = started
-    if (openTurn === target.turn && event.type === 'user/message') {
-      const otherRpcId = authoringPromptRpcId(event)
-      if (otherRpcId !== null && otherRpcId !== rpcId) return true
+    const source = (event.data as { readonly source?: { readonly kind?: unknown } } | undefined)?.source
+    if (openTurn === target.turn && event.type === 'user/message' && source?.kind === 'user') {
+      // An unprojectable user origin cannot be treated as proof of no collision.
+      if (historySeq(event) !== target.userSeq || authoringPromptRpcId(event, sessionId) !== rpcId) return true
     }
     const ended = historyTurn(event, 'turn/end')
     if (ended !== null && ended === openTurn) openTurn = null

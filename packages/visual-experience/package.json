@@ -19,6 +19,7 @@
     "lib/**/*.js.map",
     "lib/**/*.d.ts",
     "lib/**/*.d.ts.map",
+    "!lib/types/client/agent-avatars.d.ts*",
     "assets/*.webp",
     "assets/ASSETS.md",
     "ASSETS.md"

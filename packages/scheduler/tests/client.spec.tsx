@@ -1,13 +1,71 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PaimindLocaleSource } from '@paimind/harness-compat'
+import { createClientContextFixture } from '@paimind/testkit'
 import {
+  apply,
   SCHEDULE_STARTER_PROMPT,
   SchedulerController,
   SchedulerOverlay,
   SchedulerSettingsEntry,
   SchedulerTrigger,
 } from '../src/client/index.tsx'
+
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers() })
+
+describe('platform scheduler client audience lifecycle', () => {
+  function mountFixture() {
+    const f = fixture()
+    const client = createClientContextFixture()
+    const unmountRemote = vi.fn(async () => {})
+    const remote = { $mount: vi.fn(async () => unmountRemote), paimindScheduler: { list: f.list } }
+    const context = {
+      ...client.context, remote, sessions: f.sessions, workspaces: f.workspaces, conversation: {},
+      inject: vi.fn((_dependencies: readonly string[], install: (ctx: unknown) => void) => {
+        install(context)
+        return Object.assign(Promise.resolve(), { dispose: async () => client.disposeEffects() })
+      }),
+    }
+    return { ...f, client, context, remote, unmountRemote }
+  }
+
+  it.each([
+    ['member', { schemaVersion: 1, audience: 'member' }],
+    ['invalid', { schemaVersion: 2, audience: 'member' }],
+  ])('does not mount management, register controls or poll for %s presentation', async (_name, metadata) => {
+    vi.useFakeTimers(); vi.stubGlobal('__PAIMIND_CLIENT_AUDIENCE__', metadata)
+    const f = mountFixture()
+    const dispose = await apply(f.context as never)
+    try {
+      await vi.advanceTimersByTimeAsync(15_000)
+      expect(f.remote.$mount).not.toHaveBeenCalled()
+      expect(f.context.inject).not.toHaveBeenCalled()
+      expect(f.list).not.toHaveBeenCalled()
+      expect(f.client.slots).toHaveLength(0)
+      expect(f.client.services.has('paimindSchedulerCenter')).toBe(false)
+    } finally { await dispose(); f.client.disposeEffects() }
+  })
+
+  it('preserves ordinary and administrator startup, polling and disposal without an audience override', async () => {
+    vi.useFakeTimers()
+    const f = mountFixture()
+    const dispose = await apply(f.context as never)
+    try {
+      await vi.advanceTimersByTimeAsync(0)
+      expect(f.remote.$mount).toHaveBeenCalledOnce()
+      expect(f.list).toHaveBeenCalledTimes(1)
+      expect(f.client.services.has('paimindSchedulerCenter')).toBe(true)
+      expect(f.client.slots.some(row => row.options.id === 'paimind-platform-scheduler')).toBe(true)
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(f.list).toHaveBeenCalledTimes(3)
+    } finally { await dispose(); f.client.disposeEffects() }
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(f.list).toHaveBeenCalledTimes(3)
+    expect(f.unmountRemote).toHaveBeenCalledOnce()
+    expect(f.client.services.has('paimindSchedulerCenter')).toBe(false)
+    expect(f.client.slots.every(row => row.disposed())).toBe(true)
+  })
+})
 
 function locale(active = 'en'): PaimindLocaleSource {
   return { getLocale: () => ({ active }), subscribe: () => () => {} }

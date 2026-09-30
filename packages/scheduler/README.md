@@ -33,6 +33,8 @@ The manifest is authoritative for dependency direction and version selection.
 
 Harness discovers `./client` through `dsh.client`. Cordis waits for declared injected services before activation. UI, listeners and registrations must be installed through scoped effects so unload removes them. Missing host services delay activation; package-local rendering failures must not corrupt the native shell.
 
+Managed member or invalid audience presentation does not mount the platform-management Remote, register scheduler controls, or start polling. Ordinary and administrator compositions retain the existing lifecycle. This presentation guard grants no authority; the enterprise gateway independently denies member scheduler management. Notification and job/artifact owners are not replaced by this guard.
+
 ## Published files
 
 The manifest allowlist is `lib/**/*.js`, `lib/**/*.js.map`, `lib/**/*.d.ts`, `lib/**/*.d.ts.map`. Generated build metadata, source tests, local Harness homes, coverage and credentials are excluded.

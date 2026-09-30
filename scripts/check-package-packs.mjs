@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { collectExportTargets, loadWorkspacePackages } from './package-governance.mjs'
+import { auditPackedDeclarations, declaredTypeEntries, isDeclaration } from './declaration-reachability.mjs'
 
 const failures = []
 const packages = await loadWorkspacePackages()
@@ -43,7 +44,18 @@ for (const pkg of packages) {
     if (path.startsWith('lib/') && path.endsWith('.js') && !declaredRuntime.has(path)) {
       failures.push(`${pkg.manifest.name}: packed JavaScript has no export, client or declared runtime entry: ${path}`)
     }
+    if (path.endsWith('.map') && !packed.has(path.slice(0, -4))) {
+      failures.push(`${pkg.manifest.name}: packed source map has no packed artifact: ${path}`)
+    }
   }
+  const declarations = new Map([...packed].filter(isDeclaration)
+    .map(path => [path, readFileSync(join(pkg.root, path), 'utf8')]))
+  const declarationAudit = auditPackedDeclarations(declarations,
+    declaredTypeEntries(pkg.manifest, collectExportTargets(pkg.manifest.exports)))
+  for (const path of declarationAudit.orphaned) {
+    failures.push(`${pkg.manifest.name}: packed declaration has no public or declared runtime consumer: ${path}`)
+  }
+  for (const error of declarationAudit.missing) failures.push(`${pkg.manifest.name}: ${error}`)
   for (const target of collectExportTargets(pkg.manifest.exports)) {
     if (!target.startsWith('./') || target === './package.json') continue
     const path = target.slice(2)
@@ -60,5 +72,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`)
   process.exitCode = 1
 } else {
-  console.log(`package pack audit passed: ${packages.length} tarball dry run(s), zero build metadata, source, test, local-runtime or credential pollution, every export target packed, and every packed JavaScript file reachable from an export, client or declared runtime entry`)
+  console.log(`package pack audit passed: ${packages.length} tarball dry run(s), zero build metadata, source, test, local-runtime or credential pollution, every export and local type dependency packed, all JavaScript/declarations reachable from public or declared runtime entries, and no orphan source maps`)
 }

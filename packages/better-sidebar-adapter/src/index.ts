@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react'
 import type { PaimindLocaleSource } from '@paimind/harness-compat'
 import type { PaimindWorkspaceProjectService } from '@paimind/workspace-project'
+export { PAIMIND_SIDEBAR_DOWNLINK_PATHS, parsePaimindSidebarDownlink, parsePaimindSidebarTreeRequest, projectPaimindSidebarTree,
+  parsePaimindSidebarFileRequest, projectPaimindSidebarFile, parsePaimindSidebarFileResource } from './gateway.js'
+export { preparePaimindSidebarPresentationRead, type PaimindSidebarPresentationRead } from './presentation.js'
 
 /** Host half of the FP05 adapter plugin. */
 export const name = 'paimind-better-sidebar-adapter'

@@ -1,6 +1,8 @@
 {
   "files": [],
   "references": [
+    { "path": "apps/enterprise-server" },
+    { "path": "packages/enterprise-admin" },
     { "path": "packages/contracts" },
     { "path": "packages/presentation-contracts" },
     { "path": "packages/harness-compat" },

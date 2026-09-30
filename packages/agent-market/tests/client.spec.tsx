@@ -21,6 +21,7 @@ import {
 } from '../src/client/index.js'
 import { AGENT_CENTER_STYLE } from '../src/client/styles.js'
 import { authoringProposalFromHistoryEvents } from '../src/client/authoring-session.js'
+import { AgentCenterContributionRegistry } from '../src/client/contributions.js'
 
 const roster = {
   presets: [
@@ -113,6 +114,7 @@ function services() {
       subscribe: () => () => {},
       getSnapshot: () => runtimeSnapshot,
       start: vi.fn().mockResolvedValue('session-new'),
+      prepareContributedConversation: vi.fn().mockResolvedValue('session-native-contribution'),
       author: vi.fn().mockImplementation(async ({ sessionId, onSessionCreated }: { readonly sessionId: string | null; readonly onSessionCreated?: (sessionId: string) => void }) => {
         const resolvedSessionId = sessionId ?? 'session-authoring'
         if (sessionId === null) onSessionCreated?.(resolvedSessionId)
@@ -124,6 +126,7 @@ function services() {
         proposal: null,
       }}),
       prepareAuthoringContext: vi.fn().mockResolvedValue(undefined),
+      beginAuthoringSession: vi.fn().mockResolvedValue({ sessionId: 'paimind-authoring-explicit', cursor: 1 }),
       suppressAutomaticMigration: vi.fn(() => vi.fn()),
       watchAuthoringSession: vi.fn((_sessionId, _afterSeq, _skills, callbacks) => {
         authoringWatch = callbacks
@@ -183,12 +186,133 @@ function services() {
 
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   document.body.innerHTML = ''
   document.body.style.overflow = ''
   document.head.querySelectorAll('style[data-paimind-plugin="@paimind/agent-market"]').forEach(node => { node.remove() })
 })
 
 describe('Agent Center business UI', () => {
+  it('adds only owner-contributed catalogs on demand and restores the original tabs after provider removal', async () => {
+    const f = services(), contributions = new AgentCenterContributionRegistry(), Panel = vi.fn(({ query }: { query: string }) => <p>Granted catalog: {query}</p>)
+    const view = render(<AgentCenterSection contributions={contributions} close={() => {}} api={api()} profiles={f.profiles as never}
+      skills={f.skills as never} runtime={f.runtime as never} locale={locale()} openAdvanced={() => false} />)
+    await screen.findByRole('heading', { name: 'Research Agent' })
+    expect(screen.getByRole('tab', { name: 'My Agents' })).toBeInTheDocument()
+    let remove!: () => void
+    act(() => { remove = contributions.register({ id: 'enterprise', personalLabel: { zh: '我创建的', en: 'Created by me' },
+      tabs: [{ id: 'assigned', zh: '企业分配的', en: 'Assigned by enterprise', Panel }],
+      PersonalAction: ({ selection }) => <p>Submit exact revision: {selection.configVersion}</p> }) })
+    expect(screen.getByRole('tab', { name: 'Created by me' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Business Agents' })).toBeInTheDocument(); expect(Panel).not.toHaveBeenCalled()
+    expect(screen.getByText('Submit exact revision: v1-a')).toBeInTheDocument()
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Created by me' }), { key: 'End' }); expect(screen.getByText('Granted catalog:')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Assigned by enterprise' })).toHaveFocus()
+    expect(screen.queryByRole('heading', { name: 'Research Agent' })).toBeNull()
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search Agents' }), { target: { value: 'Hansen' } })
+    expect(screen.getByText('Granted catalog: Hansen')).toBeInTheDocument(); expect(f.runtime.start).not.toHaveBeenCalled()
+    act(() => remove()); expect(screen.queryByRole('tab', { name: 'Assigned by enterprise' })).toBeNull()
+    expect(screen.getByRole('tab', { name: 'My Agents' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByText(/Granted catalog:/)).toBeNull()
+    view.unmount(); contributions.dispose()
+  })
+  it('locks filtering, native actions and tab changes while a contributed personal form is open', async () => {
+    const f = services(), contributions = new AgentCenterContributionRegistry()
+    contributions.register({ id: 'enterprise', personalLabel: { zh: '我创建的', en: 'Created by me' },
+      tabs: [{ id: 'assigned', zh: '企业分配的', en: 'Assigned', Panel: () => <p>Assigned only</p> }],
+      PersonalAction: ({ onEditing }) => <><button onClick={() => onEditing(true)}>Open review form</button><button onClick={() => onEditing(false)}>Cancel review form</button></> })
+    render(<AgentCenterSection contributions={contributions} close={() => {}} api={api()} profiles={f.profiles as never}
+      skills={f.skills as never} runtime={f.runtime as never} locale={locale()} openAdvanced={() => false} />)
+    await screen.findByRole('heading', { name: 'Research Agent' }); fireEvent.click(screen.getByRole('button', { name: 'Open review form' }))
+    expect(screen.getByRole('searchbox', { name: 'Search Agents' })).toBeDisabled()
+    expect(screen.getByRole('tab', { name: 'Business Agents' })).toBeDisabled(); expect(screen.getByRole('tab', { name: 'Assigned' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Edit', exact: true })).toBeDisabled(); expect(screen.getByRole('button', { name: 'Start conversation' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Advanced configuration' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel review form' })); expect(screen.getByRole('searchbox', { name: 'Search Agents' })).toBeEnabled()
+    expect(f.runtime.start).not.toHaveBeenCalled(); expect(f.profiles.saveProfile).not.toHaveBeenCalled()
+    contributions.dispose()
+  })
+  it('exposes only narrow prepared-conversation navigation to a contributed panel', async () => {
+    const f = services(), contributions = new AgentCenterContributionRegistry(), close = vi.fn(), registerCloseGuard = vi.fn(() => vi.fn())
+    let received!: import('../src/client/contributions.js').AgentCenterPanelProps
+    contributions.register({ id: 'enterprise', personalLabel: { zh: '我创建的', en: 'Created by me' },
+      tabs: [{ id: 'assigned', zh: '企业分配的', en: 'Assigned', Panel: props => {
+        received = props; return <button onClick={() => props.onEditing?.(true)}>Prepare assigned</button>
+      } }], PersonalAction: () => null })
+    render(<AgentCenterSection contributions={contributions} close={close} registerCloseGuard={registerCloseGuard} api={api()}
+      profiles={f.profiles as never} skills={f.skills as never} runtime={f.runtime as never} locale={locale()} openAdvanced={() => false} />)
+    fireEvent.click(await screen.findByRole('tab', { name: 'Assigned' }))
+    expect(Object.keys(received).sort()).toEqual(['onEditing', 'prepareConversation', 'query', 'registerCloseGuard', 'returnToConversation'])
+    fireEvent.click(screen.getByRole('button', { name: 'Prepare assigned' })); expect(screen.getByRole('tab', { name: 'Created by me' })).toBeDisabled()
+    const signal = new AbortController().signal
+    await expect(received.prepareConversation!('assigned-preset', signal)).resolves.toBe('session-native-contribution')
+    expect(f.runtime.prepareContributedConversation).toHaveBeenCalledWith('assigned-preset', signal)
+    expect(close).not.toHaveBeenCalled(); expect(f.runtime.start).not.toHaveBeenCalled(); expect(f.profiles.bindSession).not.toHaveBeenCalled()
+    act(() => { received.onEditing?.(false); received.returnToConversation?.() }); expect(close).toHaveBeenCalledWith(false)
+    expect(screen.getByRole('tab', { name: 'Created by me' })).toBeEnabled(); contributions.dispose()
+  })
+  it('does not report an idle manual editor as preparing and connects only after the explicit action', async () => {
+    const f = services(), presetApi = api()
+    vi.mocked(f.runtime.sessionState).mockReturnValue({ running: false, completed: false, error: null })
+    render(<AgentCenterSection audience="member" close={() => {}} api={presetApi} profiles={f.profiles as never}
+      skills={f.skills as never} runtime={f.runtime as never} locale={locale()} openAdvanced={() => false} />)
+    await screen.findByRole('heading', { name: 'Research Agent' })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+    const builder = await screen.findByRole('region', { name: 'Edit Agent' })
+    expect(screen.queryByText('Preparing the creation assistant')).toBeNull()
+    expect(f.runtime.beginAuthoringSession).not.toHaveBeenCalled()
+    expect(f.runtime.author).not.toHaveBeenCalled()
+    fireEvent.change(within(builder).getByRole('textbox', { name: 'Role', exact: true }), { target: { value: 'Manually refined role' } })
+    fireEvent.click(within(builder).getByRole('button', { name: 'Connect creation assistant', exact: true }))
+    await screen.findByText('Creation assistant is ready')
+    expect(f.runtime.beginAuthoringSession).toHaveBeenCalledOnce()
+    expect(f.runtime.beginAuthoringSession).toHaveBeenCalledWith(expect.objectContaining({ draft: expect.objectContaining({ role: 'Manually refined role', basePresetId: 'standard' }) }))
+    expect(within(builder).getByRole('textbox', { name: 'Role', exact: true })).toHaveValue('Manually refined role')
+    expect(f.runtime.author).not.toHaveBeenCalled(); expect(f.profiles.saveProfile).not.toHaveBeenCalled(); expect(presetApi.copy).not.toHaveBeenCalled()
+  })
+
+  it('retains a manual draft after connection failure and retries without sending a model prompt', async () => {
+    const f = services()
+    f.runtime.beginAuthoringSession.mockRejectedValueOnce(new Error('Native session unavailable'))
+    vi.mocked(f.runtime.sessionState).mockReturnValue({ running: false, completed: false, error: null })
+    render(<AgentCenterSection close={() => {}} api={api()} profiles={f.profiles as never} skills={f.skills as never}
+      runtime={f.runtime as never} locale={locale()} openAdvanced={() => false} />)
+    await screen.findByRole('heading', { name: 'Research Agent' }); fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Connect creation assistant', exact: true }))
+    await screen.findByText('Creation assistant failed to connect')
+    expect(screen.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue('Research Agent')
+    expect(screen.getByRole('button', { name: 'Close and return to conversation', exact: true })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry connection', exact: true }))
+    await screen.findByText('Creation assistant is ready')
+    expect(f.runtime.beginAuthoringSession).toHaveBeenCalledTimes(2)
+    expect(f.runtime.author).not.toHaveBeenCalled(); expect(f.profiles.saveProfile).not.toHaveBeenCalled()
+  })
+
+  it('leaves manual editing available with creation disabled and offers no false connection progress', async () => {
+    const f = services(), policy = mutableAuthoringPolicy(false)
+    render(<AgentCenterSection close={() => {}} api={api()} profiles={f.profiles as never} skills={f.skills as never}
+      runtime={f.runtime as never} locale={locale()} openAdvanced={() => false} authoringPolicy={policy.source} />)
+    await screen.findByRole('heading', { name: 'Research Agent' }); fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+    expect(screen.queryByText('Preparing the creation assistant')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Connect creation assistant', exact: true })).toBeNull()
+    expect(screen.getByRole('textbox', { name: 'Role', exact: true })).toBeEnabled()
+    expect(f.runtime.beginAuthoringSession).not.toHaveBeenCalled()
+  })
+
+  it('ignores a completed connection after the editor has unmounted', async () => {
+    const f = services()
+    let complete!: (value: { sessionId: string; cursor: number }) => void
+    f.runtime.beginAuthoringSession.mockReturnValueOnce(new Promise(resolve => { complete = resolve }))
+    const view = render(<AgentCenterSection close={() => {}} api={api()} profiles={f.profiles as never}
+      skills={f.skills as never} runtime={f.runtime as never} locale={locale()} openAdvanced={() => false} />)
+    await screen.findByRole('heading', { name: 'Research Agent' }); fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Connect creation assistant', exact: true }))
+    expect(screen.getByRole('button', { name: 'Connecting…', exact: true })).toBeDisabled()
+    view.unmount()
+    await act(async () => { complete({ sessionId: 'paimind-authoring-late', cursor: 1 }) })
+    expect(f.runtime.openSession).not.toHaveBeenCalled()
+    expect(f.runtime.author).not.toHaveBeenCalled()
+  })
   it('stacks the shared footer actions in expanded and collapsed sidebars', () => {
     expect(AGENT_CENTER_STYLE).toContain("button[data-paimind-product-trigger='agent-center'][data-wide='true'])")
     expect(AGENT_CENTER_STYLE).toContain("button[data-paimind-product-trigger='agent-center'][data-wide='false'])")
@@ -381,7 +505,9 @@ describe('Agent Center business UI', () => {
 
     const closeBuilder = within(builder).getByRole('button', { name: 'Close and return to conversation' })
     await waitFor(() => expect(closeBuilder).toBeEnabled())
+    const confirmDiscard = vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
     fireEvent.click(closeBuilder)
+    expect(confirmDiscard).toHaveBeenCalledOnce(); confirmDiscard.mockRestore()
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Create Agent' })).toBeNull())
     expect(close).toHaveBeenCalledTimes(1)
     expect(fixture.runtime.resumeAuthoringSession).toHaveBeenCalledTimes(1)
@@ -414,7 +540,8 @@ describe('Agent Center business UI', () => {
     await screen.findByRole('heading', { name: 'Requirement Clarifier' })
 
     const builder = await screen.findByRole('region', { name: 'Edit Agent' })
-    expect(within(builder).getByText('Saved')).toBeInTheDocument()
+    expect(within(builder).getByRole('button', { name: 'Saved', exact: true })).toBeDisabled()
+    expect(builder.querySelector('[data-paimind-agent-save-state]')).toHaveTextContent('Saved')
     expect(within(builder).queryByText('Unsaved draft')).toBeNull()
     expect(fixture.runtime.resumeAuthoringSession).toHaveBeenCalledWith(
       authoringSessionId,
@@ -491,9 +618,12 @@ describe('Agent Center business UI', () => {
     expect(fixture.runtime.currentSessionId()).toBe(firstSessionId)
 
     vi.mocked(fixture.runtime.openSession).mockClear()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Close and return to conversation' })).toBeEnabled())
+    const confirmNavigation = vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
     fireEvent.click(screen.getByRole('button', { name: 'Second authoring history' }))
-    const secondBuilder = await screen.findByRole('region', { name: 'Create Agent' })
-    await waitFor(() => expect(within(secondBuilder).getByDisplayValue('Second history Agent')).toBeInTheDocument())
+    expect(confirmNavigation).toHaveBeenCalledOnce(); confirmNavigation.mockRestore()
+    await screen.findByDisplayValue('Second history Agent')
+    expect(within(screen.getByRole('region', { name: 'Create Agent' })).getByDisplayValue('Second history Agent')).toBeInTheDocument()
     expect(controller.getSnapshot().open).toBe(true)
     expect(fixture.runtime.currentSessionId()).toBe(secondSessionId)
     expect(fixture.runtime.openSession).toHaveBeenCalledWith(secondSessionId)
@@ -912,7 +1042,74 @@ describe('Agent Center business UI', () => {
     runtime.dispose()
   })
 
-  it('adapts configuration turns to the native Standard Session API contract and parses only the model proposal', async () => {
+  it('connects and reconnects the exact native configuration Session without a model prompt or profile write', async () => {
+    const f = services()
+    const rows: Record<string, { cwd: string }> = {}
+    const sessions = { list: { getSnapshot: () => ({ current: undefined, byId: rows }), subscribe: () => () => {} }, open: vi.fn() }
+    const prepare = vi.fn(async ({ sessionId }: { sessionId: string }) => ({ ok: true, value: { sessionId, prepared: true } }))
+    const seal = vi.fn(async ({ sessionId }: { sessionId: string }) => ({ ok: true, value: { sessionId, agentPreset: 'standard', sealed: true } }))
+    const native = {
+      create: vi.fn(async ({ sessionId }: { sessionId: string }) => {
+        rows[sessionId] ??= { cwd: '/workspace/Hansen 项目' }
+        return { result: { ok: true, value: { sessionId, agentPreset: 'standard' } } }
+      }),
+      history: vi.fn().mockResolvedValue({ result: { ok: true, value: { events: [{ event: { type: 'session/end-seed', seq: 7 } }], hasMore: false } } }),
+      prompt: vi.fn(),
+    }
+    const runtime = new AgentCenterRuntime(null, { ...f.profiles, sealAuthoringSession: seal, prepareAuthoringTurn: prepare } as never,
+      sessions as never, { list: { getSnapshot: () => ({ items: [], recentWorkspaceId: 'workspace-hansen' }) } } as never,
+      {} as never, native as never)
+    const draft = { productKind: 'personal' as const, businessCategory: '', name: 'Hansen Assistant', description: '',
+      basePresetId: 'standard', role: 'Current manual role', goal: '', behavior: '', instructions: '', preferredSkillNames: [] }
+    const first = await runtime.beginAuthoringSession({ sessionId: null, draft, skills: [], locale: 'en-US' })
+    expect(first).toEqual({ sessionId: expect.stringMatching(/^paimind-authoring-/), cursor: 7 })
+    expect(native.create).toHaveBeenCalledWith({ sessionId: first.sessionId, agentPreset: 'standard', workspaceId: 'workspace-hansen' }, expect.any(AbortSignal))
+    expect(prepare).toHaveBeenCalledWith({ sessionId: first.sessionId, draft, skills: [], locale: 'en-US' })
+    await expect(runtime.beginAuthoringSession({ sessionId: first.sessionId, draft, skills: [], locale: 'en-US' })).resolves.toEqual(first)
+    expect(native.create).toHaveBeenCalledTimes(2)
+    expect(native.create).toHaveBeenLastCalledWith({ sessionId: first.sessionId, cwd: '/workspace/Hansen 项目' }, expect.any(AbortSignal))
+    expect(native.history).toHaveBeenCalledWith({ sessionId: first.sessionId, beforeSeq: 0, maxMessages: 1 }, expect.any(AbortSignal))
+    seal.mockResolvedValueOnce({ ok: true, value: { sessionId: 'another-session', agentPreset: 'standard', sealed: true } })
+    await expect(runtime.beginAuthoringSession({ sessionId: first.sessionId, draft, skills: [], locale: 'en-US' })).rejects.toThrow('系统能力隔离')
+    expect(prepare).toHaveBeenCalledTimes(2)
+    // A rejected connection releases its lock and never falls back to another Session.
+    await expect(runtime.beginAuthoringSession({ sessionId: first.sessionId, draft, skills: [], locale: 'en-US' })).resolves.toEqual(first)
+    expect(native.create).toHaveBeenCalledTimes(4)
+    expect(native.prompt).not.toHaveBeenCalled(); expect(sessions.open).not.toHaveBeenCalled()
+    expect(f.profiles.saveProfile).not.toHaveBeenCalled()
+    runtime.dispose()
+  })
+
+  it.each(['history', 'restore', 'identity', 'preset', 'disposed', 'cwd', 'cwd-changed'])('rejects %s during exact authoring restoration without a prompt, new identity, or profile write', async failure => {
+    const f = services(), id = 'paimind-authoring-existing'
+    const listed = { cwd: failure === 'cwd' ? undefined : '/workspace/Hansen 项目' }
+    const seal = vi.fn(), prepare = vi.fn()
+    const native = {
+      history: vi.fn(async () => ({ result: { ok: true, value: { events: [], hasMore: false } } })),
+      create: vi.fn(async ({ sessionId }: { sessionId: string }) => ({ result: { ok: true, value: { sessionId, agentPreset: 'standard' } } })),
+      prompt: vi.fn(),
+    }
+    const runtime = new AgentCenterRuntime(null, { ...f.profiles, sealAuthoringSession: seal, prepareAuthoringTurn: prepare } as never,
+      { list: { getSnapshot: () => ({ current: undefined, byId: { [id]: listed } }), subscribe: () => () => {} } } as never,
+      {} as never, {} as never, native as never)
+    const denied = { result: { ok: false, error: { code: 'denied', message: 'Original native denial' } } }
+    if (failure === 'history') native.history.mockResolvedValue(denied as never)
+    if (failure === 'restore') native.create.mockResolvedValue(denied as never)
+    if (failure === 'identity') native.create.mockResolvedValue({ result: { ok: true, value: { sessionId: 'another-session', agentPreset: 'standard' } } })
+    if (failure === 'preset') native.create.mockResolvedValue({ result: { ok: true, value: { sessionId: id, agentPreset: 'foreign-preset' } } })
+    if (failure === 'disposed') native.history.mockImplementation(async () => { runtime.dispose(); return { result: { ok: true, value: { events: [], hasMore: false } } } })
+    if (failure === 'cwd-changed') native.history.mockImplementation(async () => { listed.cwd = '/workspace/changed'; return { result: { ok: true, value: { events: [], hasMore: false } } } })
+    const draft = { productKind: 'personal' as const, businessCategory: '', name: 'Hansen Assistant', description: '',
+      basePresetId: 'standard', role: 'Unchanged manual role', goal: '', behavior: '', instructions: '', preferredSkillNames: [] }
+    await expect(runtime.beginAuthoringSession({ sessionId: id, draft, skills: [], locale: 'en-US' })).rejects.toThrow()
+    expect(native.create).toHaveBeenCalledTimes(['history', 'disposed', 'cwd', 'cwd-changed'].includes(failure) ? 0 : 1)
+    if (native.create.mock.calls.length) expect(native.create).toHaveBeenCalledWith({ sessionId: id, cwd: '/workspace/Hansen 项目' }, expect.any(AbortSignal))
+    expect(seal).not.toHaveBeenCalled(); expect(prepare).not.toHaveBeenCalled(); expect(native.prompt).not.toHaveBeenCalled()
+    expect(f.profiles.saveProfile).not.toHaveBeenCalled(); expect(draft.role).toBe('Unchanged manual role')
+    runtime.dispose()
+  })
+
+  it.each(['standalone', 'managed'])('adapts %s configuration turns to the native Standard Session API contract and parses only the model proposal', async carrier => {
     const events: Array<{ readonly event: { readonly type: string; readonly seq: number; readonly data?: unknown } }> = []
     const sessionListeners = new Set<() => void>()
     let nativeAuthoringSessionId: string | undefined
@@ -927,6 +1124,8 @@ describe('Agent Center business UI', () => {
       prompt: vi.fn().mockImplementation(async () => {
         turn += 1
         const rpcId = `rpc-authoring-${turn}`
+        const historyRpcId = carrier === 'standalone' ? rpcId
+          : `paimind-origin-v1.${Buffer.from(JSON.stringify({ nativeSessionId: nativeAuthoringSessionId, clientRpcId: rpcId })).toString('base64url')}.${'a'.repeat(43)}`
         sessionSnapshot = { lastAgentError: sessionSnapshot.lastAgentError, partial: { turn, blocks: [
           { kind: 'reasoning', text: 'hidden chain of thought' },
           { kind: 'text', text: '模型正在整理上下文。<paimind_agent_draft>{"secret":true}' },
@@ -939,7 +1138,7 @@ describe('Agent Center business UI', () => {
             : '你希望这个助手优先服务新客户开发，还是老客户跟进？\n<!--PAIMIND_AGENT_DRAFT\n{"name":"销售助手","role":"销售顾问"}\n-->'
         events.push(
           { event: { type: 'turn/start', seq: turn * 10, data: { turn } } },
-          { event: { type: 'user/message', seq: turn * 10 + 1, data: { id: `message-${turn}`, source: { kind: 'user', rpcId }, content: [{ type: 'text', text: 'authoring prompt' }] } } },
+          { event: { type: 'user/message', seq: turn * 10 + 1, data: { id: `message-${turn}`, source: { kind: 'user', rpcId: historyRpcId }, content: [{ type: 'text', text: 'authoring prompt' }] } } },
           { event: { type: 'assistant/message', seq: turn * 10 + 2, data: { turn, step: 1, message: { content: [{ type: 'text', text }] } } } },
           { event: { type: 'turn/end', seq: turn * 10 + 3, data: { turn, reason: { kind: 'completed' } } } },
         )
@@ -961,7 +1160,7 @@ describe('Agent Center business UI', () => {
         sealAuthoringSession,
       } as never,
       {
-        list: { getSnapshot: () => ({ current: undefined, byId: nativeAuthoringSessionId === undefined ? {} : { [nativeAuthoringSessionId]: { running: false, agentPreset: 'standard' } } }), subscribe: () => () => {} },
+        list: { getSnapshot: () => ({ current: undefined, byId: nativeAuthoringSessionId === undefined ? {} : { [nativeAuthoringSessionId]: { running: false, agentPreset: 'standard', cwd: '/workspace/Hansen 项目' } } }), subscribe: () => () => {} },
         binding: () => ({ session: {
           getSnapshot: () => sessionSnapshot,
           subscribe: (listener: () => void) => { sessionListeners.add(listener); return () => { sessionListeners.delete(listener) } },
@@ -1008,7 +1207,8 @@ describe('Agent Center business UI', () => {
 
     sessionSnapshot = { ...sessionSnapshot, lastAgentError: 'stale failure from a previous turn' }
     const second = await runtime.author({ sessionId: first.sessionId, draft: { ...draft, ...first.proposal }, prompt: '总预算控制在 300 元以内', skills: [{ name: 'web-research', description: 'Search current facts' }], locale: 'zh-CN' })
-    expect(authoringApi.create).toHaveBeenCalledTimes(1)
+    expect(authoringApi.create).toHaveBeenCalledTimes(2)
+    expect(authoringApi.create).toHaveBeenLastCalledWith({ sessionId: first.sessionId, cwd: '/workspace/Hansen 项目' }, expect.any(AbortSignal))
     expect(second).toMatchObject({ sessionId: first.sessionId, proposal: { instructions: '总预算不超过 300 元，雨天优先室内路线。' } })
     expect(authoringApi.prompt).toHaveBeenCalledTimes(2)
     const resumed = await runtime.resumeAuthoringSession(first.sessionId, draft, [{ name: 'web-research' }])
@@ -1113,23 +1313,27 @@ describe('Agent Center business UI', () => {
           throw new Error(`stop-${sessionId}`)
         }),
       } as never,
-      { list: { getSnapshot: () => ({ current: undefined, byId: {} }), subscribe: () => () => {} } } as never,
+      { list: { getSnapshot: () => ({ current: undefined, byId: { 'session-a': { cwd: '/workspace/Hansen 项目' }, 'session-b': { cwd: '/workspace/Hansen 项目' } } }), subscribe: () => () => {} } } as never,
       { list: { getSnapshot: () => ({ items: [], recentWorkspaceId: undefined }), subscribe: () => () => {} } } as never,
       { input: { for: () => ({ setDraft: vi.fn() }) } } as never,
-      {} as never,
+      {
+        history: vi.fn(async () => ({ result: { ok: true, value: { events: [], hasMore: false } } })),
+        create: vi.fn(async ({ sessionId }: { sessionId: string }) => ({ result: { ok: true, value: { sessionId, agentPreset: 'standard' } } })),
+      } as never,
     )
     const draft = {
       productKind: 'personal' as const, businessCategory: '', name: '', description: 'Concurrent authoring',
       basePresetId: 'standard', role: '', goal: '', behavior: '', instructions: '', preferredSkillNames: [],
     }
     const first = runtime.author({ sessionId: 'session-a', draft, prompt: 'first', skills: [], locale: 'en' })
+    const firstRejected = expect(first).rejects.toThrow('stop-session-a')
     await expect(runtime.author({ sessionId: 'session-a', draft, prompt: 'duplicate', skills: [], locale: 'en' }))
       .rejects.toThrow('这个会话')
     await expect(runtime.author({ sessionId: 'session-b', draft, prompt: 'second', skills: [], locale: 'en' }))
       .rejects.toThrow('stop-session-b')
     expect(sealAuthoringSession).toHaveBeenCalledWith({ sessionId: 'session-b' })
     releaseFirst?.()
-    await expect(first).rejects.toThrow('stop-session-a')
+    await firstRejected
     runtime.dispose()
   })
 
@@ -1163,7 +1367,91 @@ describe('Agent Center business UI', () => {
     expect(screen.queryByRole('button', { name: 'Copy and edit' })).toBeNull()
   })
 
-  it('persists a new Agent from the internal standard foundation and selected Business Skills', async () => {
+  it('keeps member personal creation while removing misleading business and advanced entry points', async () => {
+    const fixture = services(), presetApi = api(), openAdvanced = vi.fn(() => true)
+    render(<AgentCenterSection audience="member" close={() => {}} api={presetApi} profiles={fixture.profiles as never}
+      skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={openAdvanced} />)
+    await screen.findByRole('heading', { name: 'Research Agent' })
+    expect(screen.queryByRole('button', { name: 'Advanced configuration' })).toBeNull()
+    fireEvent.click(screen.getByRole('tab', { name: 'Business Agents' }))
+    expect(screen.getByText('No Business Agents yet')).toBeInTheDocument()
+    expect(screen.getByText(/Business Agents and advanced configuration are managed by an administrator/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Create Business Agent' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Copy and edit' })).toBeNull()
+    // Local business rows are not relabelled as an unverified enterprise assignment.
+    expect(screen.queryByRole('tab', { name: 'Assigned Agents' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Create Personal Agent' }))
+    expect(screen.getByRole('tab', { name: 'My Agents' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('dialog', { name: 'Start with one sentence' })).toBeInTheDocument()
+    expect(fixture.runtime.author).not.toHaveBeenCalled()
+    expect(presetApi.copy).not.toHaveBeenCalled()
+    expect(openAdvanced).not.toHaveBeenCalled()
+  })
+
+  it('rejects a member business builder request without silently converting it into a personal draft', async () => {
+    const fixture = services(), presetApi = api()
+    const surface = new PaimindProductSurfaceController('agent-center', window, document)
+    const requests = new PaimindAgentBuilderRequestController(surface, window)
+    try {
+      render(<AgentCenterSection audience="member" close={() => {}} api={presetApi} profiles={fixture.profiles as never}
+        skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} builderRequests={requests} />)
+      await screen.findByRole('heading', { name: 'Research Agent' })
+      act(() => { requestPaimindAgentBuilder({ productKind: 'business', brief: 'Create a team-wide resource' }, window) })
+      expect(await screen.findByRole('alert')).toHaveTextContent(/managed by an administrator/)
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(fixture.runtime.author).not.toHaveBeenCalled()
+      expect(fixture.runtime.prepareAuthoringContext).not.toHaveBeenCalled()
+      expect(presetApi.copy).not.toHaveBeenCalled()
+      expect(fixture.profiles.saveProfile).not.toHaveBeenCalled()
+    } finally { requests.dispose(); surface.dispose() }
+  })
+
+  it('presents a business profile as non-editable to a member without disabling its existing conversation action', async () => {
+    const fixture = services(), business = { ...profile, productKind: 'business' as const, businessCategory: 'Research', businessCategoryId: 'research' }
+    fixture.profiles.listProfiles.mockResolvedValue({ ok: true, value: { profiles: [business] } })
+    render(<AgentCenterSection audience="member" close={() => {}} api={api()} profiles={fixture.profiles as never}
+      skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
+    await screen.findByText('No personal Agents yet')
+    fireEvent.click(screen.getByRole('tab', { name: 'Business Agents' }))
+    await screen.findByRole('heading', { name: 'Research Agent' })
+    expect(screen.getByText('Business configuration is maintained by an administrator.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Delete Research Agent' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Research Agent' }))
+    expect(fixture.profiles.removeProfile).not.toHaveBeenCalled()
+    expect(fixture.runtime.author).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Start conversation' }))
+    await waitFor(() => expect(fixture.runtime.start).toHaveBeenCalledWith('mine', business))
+  })
+
+  it('does not reactivate a business authoring editor in member presentation', async () => {
+    const fixture = services()
+    fixture.runtime.openSession('paimind-authoring-business')
+    fixture.profiles.listProfiles.mockResolvedValue({ ok: true, value: { profiles: [{ ...profile, productKind: 'business',
+      businessCategory: 'Research', businessCategoryId: 'research', authoringSessionId: 'paimind-authoring-business' }] } })
+    render(<AgentCenterSection audience="member" close={() => {}} api={api()} profiles={fixture.profiles as never}
+      skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/managed by an administrator/)
+    expect(fixture.runtime.resumeAuthoringSession).not.toHaveBeenCalled()
+    expect(fixture.runtime.prepareAuthoringContext).not.toHaveBeenCalled()
+    expect(screen.queryByRole('region', { name: 'Edit Agent' })).toBeNull()
+  })
+
+  it('rejects unknown startup presentation before mounting any Agent remote or scope', async () => {
+    const key = '__PAIMIND_CLIENT_AUDIENCE__', previous = Object.getOwnPropertyDescriptor(globalThis, key)
+    const mount = vi.fn(), injectScope = vi.fn()
+    try {
+      Object.defineProperty(globalThis, key, { configurable: true, value: { schemaVersion: 2, audience: 'member' } })
+      await expect(apply({ remote: { $mount: mount }, inject: injectScope } as never)).rejects.toThrow('Invalid Agent Center presentation metadata')
+      expect(mount).not.toHaveBeenCalled(); expect(injectScope).not.toHaveBeenCalled()
+    } finally {
+      if (previous) Object.defineProperty(globalThis, key, previous)
+      else Reflect.deleteProperty(globalThis, key)
+    }
+  })
+
+  it.each(['default', 'member'] as const)('persists a new Agent from the internal standard foundation and selected Business Skills for %s presentation', async audience => {
     const fixture = services()
     const presetApi = api()
     let copiedPresetId = ''
@@ -1178,7 +1466,7 @@ describe('Agent Center business UI', () => {
     fixture.profiles.saveProfile.mockImplementation(async input => ({ ok: true, value: {
       ...input, revision: 1, configVersion: 'v1-test', updatedAt: 1, health: 'healthy' as const,
     } }))
-    render(<AgentCenterSection close={() => {}} api={presetApi} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
+    render(<AgentCenterSection audience={audience} close={() => {}} api={presetApi} profiles={fixture.profiles as never} skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />)
     await screen.findByRole('heading', { name: 'Research Agent' })
     fireEvent.click(screen.getByRole('button', { name: 'Create Personal Agent' }))
     fireEvent.change(screen.getByLabelText('What Agent do you want to create?'), { target: { value: 'Analyze product decisions' } })
@@ -1706,7 +1994,58 @@ describe('Agent Center business UI', () => {
     controller.dispose()
   })
 
-  it('closes only the starter, but exits the whole product surface from Builder on the first Escape', async () => {
+  it.each(['default', 'member'] as const)('retains unsaved %s edits and navigation when leaving is cancelled, then discards only after confirmation', async audience => {
+    const fixture = services(), controller = new PaimindProductSurfaceController('agent-center', window, document)
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const center = document.createElement('main'), nativeConversation = document.createElement('div')
+    nativeConversation.dataset.slot = 'conversation'; nativeConversation.append(document.createElement('section'))
+    center.append(nativeConversation); document.body.append(center)
+    const navigate = vi.fn(() => { fixture.runtime.openSession('session-other') })
+    try {
+      render(<>
+        <button onClick={navigate}>Another workspace</button>
+        <AgentCenterTrigger wide controller={controller} locale={locale()} />
+        <AgentCenterSurface audience={audience} controller={controller} api={api()} profiles={fixture.profiles as never}
+          skills={fixture.skills as never} runtime={fixture.runtime as never} locale={locale()} openAdvanced={() => true} />
+      </>)
+      fireEvent.click(screen.getByRole('button', { name: 'Open Agent Center' }))
+      await screen.findByRole('heading', { name: 'Research Agent' })
+      fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+      const name = screen.getByRole('textbox', { name: 'Name', exact: true })
+      fireEvent.change(name, { target: { value: 'Hansen unsaved review' } })
+      fireEvent.keyDown(name, { key: 'Escape' })
+      fireEvent.click(screen.getByRole('button', { name: 'Close and return', exact: true }))
+      fireEvent.click(screen.getByRole('button', { name: 'Open Agent Center' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Another workspace' }))
+      expect(confirm).toHaveBeenCalledTimes(4)
+      expect(confirm).toHaveBeenLastCalledWith(expect.stringContaining('unsaved changes'))
+      expect(name).toHaveValue('Hansen unsaved review')
+      expect(screen.getByRole('region', { name: 'Edit Agent' })).toBeInTheDocument()
+      expect(controller.getSnapshot().open).toBe(true)
+      expect(navigate).not.toHaveBeenCalled()
+      expect(fixture.runtime.currentSessionId()).toBe('session-origin')
+      expect(fixture.profiles.saveProfile).not.toHaveBeenCalled()
+      expect(fixture.profiles.removeProfile).not.toHaveBeenCalled()
+      const unload = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(unload)
+      expect(unload.defaultPrevented).toBe(true)
+      confirm.mockReturnValue(true)
+      fireEvent.keyDown(name, { key: 'Escape' })
+      await waitFor(() => expect(screen.queryByRole('main', { name: 'Agent Center' })).toBeNull())
+      expect(confirm).toHaveBeenCalledTimes(5)
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Open Agent Center' })).toHaveFocus())
+      const after = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(after)
+      expect(after.defaultPrevented).toBe(false)
+      expect(fixture.profiles.saveProfile).not.toHaveBeenCalled()
+      expect(fixture.profiles.removeProfile).not.toHaveBeenCalled()
+      // A released guard must not affect a later clean view.
+      fireEvent.click(screen.getByRole('button', { name: 'Open Agent Center' }))
+      await screen.findByRole('heading', { name: 'Research Agent' })
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(confirm).toHaveBeenCalledTimes(5)
+    } finally { confirm.mockRestore(); controller.dispose() }
+  })
+
+  it('closes only the starter, then exits the whole Builder surface after confirming unsaved changes', async () => {
     const fixture = services()
     vi.mocked(fixture.runtime.currentAuthoringSessionId).mockImplementation(() => (
       fixture.runtime.currentSessionId() === 'session-authoring' ? 'session-authoring' : null
@@ -1767,7 +2106,9 @@ describe('Agent Center business UI', () => {
     expect(markdown).toHaveAttribute('data-paimind-agent-draft-question-recovered', 'true')
     expect(markdown).not.toHaveTextContent('PAIMIND_AGENT_DRAFT')
     expect(markdown).not.toHaveTextContent('Internal draft name')
+    const confirmDiscard = vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
     fireEvent.keyDown(builder, { key: 'Escape' })
+    expect(confirmDiscard).toHaveBeenCalledOnce(); confirmDiscard.mockRestore()
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Create Agent' })).toBeNull())
     await waitFor(() => expect(fixture.runtime.openSession).toHaveBeenCalledWith('session-origin'))
     expect(center).not.toHaveAttribute('data-paimind-product-center-native-conversation')
@@ -1814,7 +2155,9 @@ describe('Agent Center business UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start creating' }))
     const firstBuilder = await screen.findByRole('region', { name: 'Create Agent' })
     await waitFor(() => expect(fixture.runtime.currentSessionId()).toBe('session-authoring-first'))
+    const confirmFirst = vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
     fireEvent.keyDown(firstBuilder, { key: 'Escape' })
+    expect(confirmFirst).toHaveBeenCalledOnce(); confirmFirst.mockRestore()
     await waitFor(() => expect(fixture.runtime.currentSessionId()).toBe('session-origin'))
     await waitFor(() => expect(screen.queryByRole('main', { name: 'Agent Center' })).toBeNull())
 
@@ -1830,7 +2173,9 @@ describe('Agent Center business UI', () => {
     await waitFor(() => expect(closeAndReturn).toBeEnabled())
     vi.mocked(fixture.runtime.openSession).mockClear()
     vi.mocked(fixture.runtime.beginAgentCenterBrowse).mockClear()
+    const confirmSecond = vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
     fireEvent.click(closeAndReturn)
+    expect(confirmSecond).toHaveBeenCalledOnce(); confirmSecond.mockRestore()
     await waitFor(() => expect(screen.queryByRole('main', { name: 'Agent Center' })).toBeNull())
     expect(fixture.runtime.beginAgentCenterBrowse).toHaveBeenCalledOnce()
     expect(fixture.runtime.currentSessionId()).toBe('session-second-origin')
@@ -1855,7 +2200,9 @@ describe('Agent Center business UI', () => {
     await screen.findByText('Creation assistant is ready')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Close and return to conversation' })).toHaveFocus())
     expect(builder.querySelector('[data-paimind-agent-conversation-composer]')).toBeNull()
+    const confirmDiscard = vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
     fireEvent.keyDown(builder, { key: 'Escape' })
+    expect(confirmDiscard).toHaveBeenCalledOnce(); confirmDiscard.mockRestore()
     await waitFor(() => expect(trigger).toHaveFocus())
     expect(screen.queryByRole('region', { name: 'Create Agent' })).toBeNull()
     expect(starter).not.toBeInTheDocument()

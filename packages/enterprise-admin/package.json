@@ -1,0 +1,26 @@
+{
+  "name": "@paimind/enterprise-admin",
+  "version": "0.1.0-alpha.0",
+  "description": "Enterprise account, member and audit contributions inside native Harness Settings",
+  "license": "UNLICENSED",
+  "engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./client": { "types": "./lib/types/client/index.d.ts", "default": "./lib/client.js" },
+    "./auth-boundary": { "types": "./lib/types/auth-boundary.d.ts", "default": "./lib/auth-boundary.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/**/*.js", "lib/**/*.js.map", "lib/**/*.d.ts", "lib/**/*.d.ts.map", "!lib/types/client/auth-lifecycle.d.ts*", "!lib/types/client/style.d.ts*", "!lib/types/client/groups.d.ts*", "!lib/types/client/publications.d.ts*", "!lib/types/client/publication-view.d.ts*", "!lib/types/client/member-publications.d.ts*", "!lib/types/client/member-skills.d.ts*", "!lib/types/client/skill-content.d.ts*", "!lib/types/client/skill-review.d.ts*", "!lib/types/client/skill-submit.d.ts*", "!lib/types/client/member-content.d.ts*", "!lib/types/client/feature-management.d.ts*", "!lib/types/client/model-state.d.ts*", "!lib/types/client/instruction-settings.d.ts*", "!lib/types/client/connector-state.d.ts*", "!lib/types/client/connector-view.d.ts*", "!lib/types/client/connector-governance.d.ts*", "!lib/types/client/runtime-management.d.ts*", "!lib/types/client/runtime-view.d.ts*"],
+  "dsh": { "client": {
+    "platform": "web",
+    "inject": ["@deepseek-ai/dsh-client-runtime", "@deepseek-ai/dsh-client-locale", "@deepseek-ai/dsh-client-ui-settings"]
+  } },
+  "dependencies": { "@paimind/agent-market": "workspace:^", "@paimind/extension-center": "workspace:^", "@paimind/skill-market": "workspace:^", "@paimind/harness-compat": "workspace:^", "@paimind/ui-foundation": "workspace:^" },
+  "peerDependencies": { "react": ">=18.0.0 <20.0.0" },
+  "devDependencies": { "@paimind/testkit": "workspace:^", "react": "^18.3.1", "react-dom": "^18.3.1" },
+  "paimindBuild": { "node": ["src/index.ts", "src/auth-boundary.ts"], "client": "src/client/index.tsx" },
+  "scripts": { "typecheck": "tsc -b --pretty false" }
+}

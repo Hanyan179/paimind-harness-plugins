@@ -2,6 +2,10 @@ import { createHash, randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { cp, lstat, mkdir, readFile, readdir, realpath, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { z } from 'zod'
+import { createAgentPublicationSnapshot, ENTERPRISE_AGENT_PRESET_PREFIX, type AgentPublicationSnapshot } from './publication.js'
+import { ADOPTION_RECEIPT_FILE, adoptedPresetId, readAdoptionInput, readAdoptionReceipt,
+  type AgentPublicationAdoptionInput, type AgentPublicationAdoption } from './adoption.js'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
 import {
   PAIMIND_AGENT_PREPARE_CREATE_TOOL,
@@ -13,10 +17,14 @@ import {
 } from '@paimind/contracts'
 import {
   definePaimindHarnessTool,
+  assertPaimindManagedOriginGuard,
+  copyPaimindNativeStandardPreset,
   PaimindHostRemoteService,
   describePaimindHostSettings,
   markPaimindHostRemoteMethods,
   mutatePaimindHostSettings,
+  readPaimindNativeSessionReference,
+  listPaimindNativeFirstHumanTurnReplies,
   type PaimindHostSettingsFacility,
   type PaimindHostToolRegistry,
   type PaimindToolRunContext,
@@ -125,6 +133,27 @@ interface AgentCenterState {
   readonly verifications: readonly AgentVerificationRecord[]
 }
 
+const storedId = z.string().regex(AGENT_PRESET_ID)
+const storedText = z.string().min(1)
+const storedTimestamp = z.number().finite().nonnegative()
+const storedBinding = z.object({
+  sessionId: storedText, agentId: storedId, presetId: storedId, configVersion: storedText,
+  purpose: z.enum(['conversation', 'builder-test']).optional(), boundAt: storedTimestamp,
+}).strict().transform(({ purpose, ...binding }) => ({ ...binding, ...(purpose === undefined ? {} : { purpose }) }))
+const storedState = z.object({
+  schemaVersion: z.literal(STATE_VERSION),
+  bindings: z.record(storedText, storedBinding).refine(rows => Object.entries(rows)
+    .every(([sessionId, binding]) => binding.sessionId === sessionId)),
+  migrations: z.array(z.object({
+    sourceSessionId: storedText, targetSessionId: storedText, agentId: storedId, presetId: storedId,
+    fromVersion: storedText, toVersion: storedText, summary: z.string(), migratedAt: storedTimestamp,
+  }).strict()),
+  verifications: z.array(z.object({
+    sessionId: storedText, agentId: storedId, presetId: storedId, configVersion: storedText,
+    firstTurnId: storedText, result: z.enum(['passed', 'failed']), message: z.string(), verifiedAt: storedTimestamp,
+  }).strict()),
+}).strict()
+
 export interface AgentBuilderHostSession {
   readonly id?: string
   readonly header?: { readonly id?: string; readonly agentPreset?: string }
@@ -228,10 +257,16 @@ export interface AgentBuilderHostContext {
   }
   readonly agentPresets: {
     composedPreset(agentContext: AgentBuilderHostAgent['ctx']): string | undefined
+    copy?(from: string, id: string, name?: string): Promise<void>
     remove?(id: string): Promise<void>
   }
   get(name: 'settings'): PaimindHostSettingsFacility | undefined
   get(name: 'paimindAgentProfiles'): AgentBusinessSkillSelectionSource | undefined
+  get(name: 'sessionPersistence'): unknown
+  get(name: 'paimindManagedOriginGuard'): unknown
+  get(name: 'paimindSkillInstaller'): { getSkillPackage(input: { readonly skillId: string }): Promise<{
+    readonly skillId: string; readonly name: string; readonly digest: string; readonly managed: boolean
+  }> } | undefined
   effect(install: () => void | (() => void | Promise<void>), label?: string): void
   on(
     event: 'system-prompt/assemble',
@@ -638,6 +673,14 @@ export function summarizeConversationEvents(events: readonly unknown[], sourceSe
   ].join('\n\n').slice(0, 6_000)
 }
 
+function hasHumanTurn(session: AgentBuilderHostSession): boolean {
+  return (session.events ?? []).some(row => {
+    if (typeof row !== 'object' || row === null) return false
+    const event = row as { type?: unknown; data?: { source?: { kind?: unknown } } }
+    return event.type === 'user/message' && event.data?.source?.kind === 'user'
+  })
+}
+
 /** Resolve the native preset that was effective when the first human turn began. */
 export function effectivePresetForFirstTurn(session: AgentBuilderHostSession): string | undefined {
   let effective = session.header?.agentPreset
@@ -655,7 +698,7 @@ export function effectivePresetForFirstTurn(session: AgentBuilderHostSession): s
   return effective
 }
 
-/** Find the last visible assistant reply before the second human turn. Tool-only steps do not complete verification. */
+/** Legacy display helper only; visible text alone is not evidence of successful verification. */
 export function visibleAssistantReplyForFirstTurn(session: AgentBuilderHostSession): Readonly<{ seq?: unknown; text: string }> | undefined {
   let sawHuman = false
   let reply: Readonly<{ seq?: unknown; text: string }> | undefined
@@ -679,7 +722,7 @@ export function visibleAssistantReplyForFirstTurn(session: AgentBuilderHostSessi
 
 /** Headless workflow service. Native Harness Presets remain the runtime source of truth. */
 export class PaimindAgentProfileService extends PaimindHostRemoteService implements AgentBusinessSkillSelectionSource {
-  static inject = ['settings', 'sessions', 'tools', 'agents', 'agentPresets', 'systemPrompt']
+  static inject = inject
   private readonly presetRoot: string
   private readonly skillRoot: string
   private readonly stateRoot: string
@@ -711,7 +754,7 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
       .catch(error => { this.runtimePreparationError = error })
       .finally(() => { this.runtimeReady = true })
     markPaimindHostRemoteMethods(this, [
-      'listProfiles', 'saveProfile', 'setDefault', 'sealAuthoringSession', 'prepareAuthoringTurn', 'bindSession', 'migrationPlan',
+      'listProfiles', 'saveProfile', 'setDefault', 'getPublicationSnapshot', 'sealAuthoringSession', 'prepareAuthoringTurn', 'bindSession', 'migrationPlan',
       'listSessionBindings', 'recordMigration', 'recordVerification', 'verifySession', 'listAudit',
     ])
     agentCtx.effect(
@@ -762,6 +805,8 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
       })
       const stopPreStep = agentCtx.on('agent/pre-step', async ({ agent }, next) => {
         await this.runtimePreparation
+        const presetId = agentCtx.agentPresets.composedPreset(agent.ctx) ?? effectivePresetForFirstTurn(agent.session)
+        if (presetId?.startsWith(ENTERPRISE_AGENT_PRESET_PREFIX)) assertPaimindManagedOriginGuard(agentCtx)
         await this.assertNoLegacyFilesystemProvider(agent)
         return await next()
       })
@@ -852,6 +897,7 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
       }
       for (const entry of entries) {
         if (!entry.isDirectory() || !AGENT_PRESET_ID.test(entry.name)) continue
+        if (entry.name.startsWith(ENTERPRISE_AGENT_PRESET_PREFIX)) continue
         try {
           if (await this.retireLegacySkillFilesystemProvider(join(this.presetRoot, entry.name))) {
             this.retiredLegacyPresetIds.add(entry.name)
@@ -1055,6 +1101,9 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
       const profiles: AgentBusinessProfile[] = []
       for (const entry of entries) {
         if (!entry.isDirectory() || !AGENT_PRESET_ID.test(entry.name)) continue
+        // Assigned entries belong to the live enterprise catalog, not the
+        // editable personal/business catalog. Native history is still retained.
+        if (entry.name.startsWith(ENTERPRISE_AGENT_PRESET_PREFIX)) continue
         const root = join(this.presetRoot, entry.name)
         const profile = await this.readProfile(root)
         if (profile === undefined) continue
@@ -1072,6 +1121,9 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
   /** Read the authoritative profile selection without projecting, repairing, or persisting any Skill state. */
   async businessSkillNamesForPreset(inputPresetId: string): Promise<readonly string[] | undefined> {
     const presetId = validateId(inputPresetId, '预设标识')
+    if (presetId.startsWith(ENTERPRISE_AGENT_PRESET_PREFIX)) {
+      return (await this.getAdoptedPublication({ presetId })).snapshot.content.profile.preferredSkillNames
+    }
     const profile = await this.readProfile(join(this.presetRoot, presetId))
     if (profile === undefined || profile.presetId !== presetId) return undefined
     return Object.freeze([...profile.preferredSkillNames])
@@ -1081,6 +1133,7 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
     return await this.withMutationLock(async () => {
       const agentId = validateId(input.agentId, '智能体标识')
       const presetId = validateId(input.presetId, '预设标识')
+      this.requirePersonalWrite(presetId)
       const basePresetId = validateId(input.basePresetId, '基础能力模板')
       if (agentId !== presetId) throw new Error('智能体标识必须与预设标识一致')
       const source = join(this.presetRoot, presetId)
@@ -1097,6 +1150,13 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
         ...(input.authoringSessionId === undefined && previous?.authoringSessionId !== undefined ? { authoringSessionId: previous.authoringSessionId } : {}),
         ...(input.authoringCursor === undefined && previous?.authoringCursor !== undefined ? { authoringCursor: previous.authoringCursor } : {}),
       }, (previous?.revision ?? 0) + 1, this.now())
+      await this.writeProfileProjection(source, profile)
+      return profile
+    })
+  }
+
+  private async writeProfileProjection(source: string, profile: AgentBusinessProfile, adoption?: AgentPublicationAdoption): Promise<void> {
+      const presetId = profile.presetId
       const staging = join(this.stateRoot, 'staging', `${presetId}-${randomUUID()}`)
       const backup = join(this.stateRoot, 'backups', `${presetId}-${this.now()}-${randomUUID()}`)
       await mkdir(dirname(staging), { recursive: true, mode: 0o700 })
@@ -1111,24 +1171,174 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
         await writeFile(compositionFile, removePresetSkillFilesystemOverride(withPersona), { mode: 0o600 })
         await writeFile(join(staging, 'preset.yml'), presetMetadata(profile), { mode: 0o600 })
         await writeFile(join(staging, AGENT_PROFILE_FILE), `${JSON.stringify(profile, null, 2)}\n`, { mode: 0o600 })
+        if (adoption) {
+          await writeFile(join(staging, ADOPTION_RECEIPT_FILE), `${JSON.stringify(adoption, null, 2)}\n`, { mode: 0o600, flag: 'wx' })
+          await this.validatePublicationDependencies(adoption.snapshot)
+        }
         await rename(source, backup)
         try { await rename(staging, source) } catch (error) { await rename(backup, source); throw error }
-        return profile
       } catch (error) {
         await rm(staging, { recursive: true, force: true })
         throw error
       }
+  }
+
+  private requirePersonalWrite(presetId: string): void {
+    if (presetId.startsWith(ENTERPRISE_AGENT_PRESET_PREFIX)) throw new Error('企业采用版本不可通过个人资源入口改写或删除')
+  }
+
+  /** Same-process only: deliberately absent from Remote/Typert descriptors.
+   * The trusted enterprise integration must authorize first. This materializes
+   * exact semantic content through native Standard copy; it grants no execution.
+   * A failed copy/projection is retained sealed, never deleted over history. */
+  async adoptPublication(input: AgentPublicationAdoptionInput): Promise<Readonly<AgentPublicationAdoption>> {
+    const data = readAdoptionInput(input)
+    return this.withMutationLock(async () => {
+      const presetId = adoptedPresetId(data.publicationId), root = join(this.presetRoot, presetId)
+      const existing = await lstat(root).catch(error => {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+        throw error
+      })
+      if (existing) {
+        const receipt = await this.readAdoptedPublication(root)
+        if (receipt.tenantId !== data.tenantId || receipt.publicationId !== data.publicationId
+          || receipt.sourceUserId !== data.sourceUserId || receipt.snapshot.digest !== data.snapshot.digest) {
+          throw new Error('企业采用编号已占用或来源已变化，不能覆盖原版本')
+        }
+        return receipt
+      }
+      const { avatarId, ...business } = data.snapshot.content.profile
+      const profile = stableProfile({ ...business, ...(avatarId === undefined ? {} : { avatarId }), agentId: presetId, presetId,
+        productKind: 'business', businessCategory: '企业发布版本', businessCategoryId: 'enterprise-publication' }, 1, this.now())
+      // Reject normalization drift before the native owner creates anything.
+      for (const [key, value] of Object.entries(data.snapshot.content.profile)) {
+        if (JSON.stringify(Reflect.get(profile, key)) !== JSON.stringify(value)) throw new Error('发布内容无法无损映射到原生业务配置')
+      }
+      // Materialization is not governance approval: the private control-plane
+      // caller must separately authorize every published dependency. Here only
+      // the exact member's existing Skill owner may prove local content.
+      await this.validatePublicationDependencies(data.snapshot)
+      await copyPaimindNativeStandardPreset(this.agentCtx, presetId, profile.name)
+      await this.assertAdoptionRoot(root)
+      const composition = await this.readAdoptionFile(root, 'agent.cordis.yml')
+      const projected = removePresetSkillFilesystemOverride(replacePresetPersona(composition, profile))
+      const receipt = readAdoptionReceipt({ ...data, schema: 'paimind.agent-adoption/v1', presetId,
+        configVersion: profile.configVersion, adoptedAt: profile.updatedAt,
+        nativeCompositionDigest: `sha256:${createHash('sha256').update(projected).digest('hex')}` })
+      await this.writeProfileProjection(root, profile, receipt)
+      return this.readAdoptedPublication(root)
     })
+  }
+
+  /** Immutable provenance only, not authorization or a second Session registry. */
+  async getAdoptedPublication(input: { readonly presetId: string }): Promise<Readonly<AgentPublicationAdoption>> {
+    const presetId = validateId(input.presetId, '预设标识')
+    if (!presetId.startsWith(ENTERPRISE_AGENT_PRESET_PREFIX)) throw new Error('该预设不是企业采用版本')
+    return this.withMutationLock(() => this.readAdoptedPublication(join(this.presetRoot, presetId)))
+  }
+
+  private async assertAdoptionRoot(root: string): Promise<void> {
+    if (!(await lstat(root)).isDirectory() || await realpath(root) !== join(await realpath(this.presetRoot), root.slice(this.presetRoot.length + 1))) {
+      throw new Error('企业采用路径无效')
+    }
+  }
+
+  private async readAdoptionFile(root: string, name: string): Promise<string> {
+    const path = join(root, name), info = await lstat(path)
+    if (!info.isFile() || info.isSymbolicLink() || info.nlink !== 1 || info.size > 262144) throw new Error('企业采用文件无效')
+    return readFile(path, 'utf8')
+  }
+
+  private async readAdoptedPublication(root: string): Promise<Readonly<AgentPublicationAdoption>> {
+    await this.assertAdoptionRoot(root)
+    const receipt = readAdoptionReceipt(JSON.parse(await this.readAdoptionFile(root, ADOPTION_RECEIPT_FILE)))
+    if (root !== join(this.presetRoot, receipt.presetId)) throw new Error('企业采用预设身份不一致')
+    const profile = JSON.parse(await this.readAdoptionFile(root, AGENT_PROFILE_FILE)) as AgentBusinessProfile
+    const { avatarId, ...business } = receipt.snapshot.content.profile
+    const expected = stableProfile({ ...business, ...(avatarId === undefined ? {} : { avatarId }), agentId: receipt.presetId, presetId: receipt.presetId,
+      productKind: 'business', businessCategory: '企业发布版本', businessCategoryId: 'enterprise-publication' }, 1, receipt.adoptedAt)
+    if (JSON.stringify(profile) !== JSON.stringify(expected) || profile.configVersion !== receipt.configVersion) throw new Error('企业采用配置已被改写')
+    const composition = await this.readAdoptionFile(root, 'agent.cordis.yml')
+    if (`sha256:${createHash('sha256').update(composition).digest('hex')}` !== receipt.nativeCompositionDigest
+      || replacePresetPersona(composition, expected) !== composition || removePresetSkillFilesystemOverride(composition) !== composition
+      || await this.readAdoptionFile(root, 'preset.yml') !== presetMetadata(expected)
+      || await lstat(join(root, AGENT_SKILL_SCOPE_DIRECTORY)).then(() => true, error => {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+        throw error
+      })) throw new Error('企业采用原生组合已变化，不会自动修复或替换历史版本')
+    await this.validatePublicationDependencies(receipt.snapshot)
+    return receipt
+  }
+
+  /** Existing business repository remains the sole byte/revision owner.
+   * Name equality, the upload artifact digest and a past successful adoption
+   * are not proof that the currently installed dependency is the same version.
+   * This never installs, updates, enables or grants a Skill. */
+  private async validatePublicationDependencies(snapshot: Readonly<AgentPublicationSnapshot>): Promise<void> {
+    if (!snapshot.content.dependencies.length) return
+    const current = await this.readPublicationDependencies(snapshot.content.profile.preferredSkillNames)
+    if (current.some(value => value.digest !== snapshot.content.dependencies.find(row => row.name === value.name)?.digest)) {
+      throw new Error('企业依赖技能版本缺失或已变化，不会自动替换原版本')
+    }
+  }
+
+  private async readPublicationDependencies(names: readonly string[]): Promise<{ name: string; digest: string }[]> {
+    if (!names.length) return []
+    const installer = this.agentCtx.get('paimindSkillInstaller')
+    if (!installer) throw new Error('技能来源服务不可用，不能验证企业依赖版本')
+    const systemNames = new Set<string>([...PAIMIND_SYSTEM_SKILL_NAMES, ...(await this.agentCtx.skills?.list?.() ?? []).map(row => row.name)])
+    const dependencies = []
+    for (const name of names) {
+      if (systemNames.has(name)) throw new Error('企业依赖与系统技能名称冲突')
+      const current = await installer.getSkillPackage({ skillId: name })
+      if (current.skillId !== name || current.name !== name || current.managed !== true
+        || !/^sha256:[a-f0-9]{64}$/u.test(current.digest)) throw new Error('智能体发布依赖不是准确的受管业务技能')
+      dependencies.push({ name, digest: current.digest })
+    }
+    return dependencies
   }
 
   async setDefault(input: { readonly presetId: string }): Promise<{ readonly presetId: string }> {
     const presetId = validateId(input.presetId, '预设标识')
+    this.requirePersonalWrite(presetId)
     const settings = this.agentCtx.get('settings')
     if (settings === undefined) throw new Error('当前 Harness 设置不可用')
     const descriptor = describePaimindHostSettings(settings, 'agent-presets')
     if (descriptor === undefined || !descriptor.writable) throw new Error('当前 Harness 设置不可写')
     await mutatePaimindHostSettings(settings, 'agent-presets', 'default', presetId, descriptor.revision)
     return Object.freeze({ presetId })
+  }
+
+  /** The control plane selects this owner's cell. Callers select only a saved
+   * revision; they never supply authoritative publication content or Skill bytes. */
+  async getPublicationSnapshot(input: { readonly presetId: string; readonly expectedVersion: string }): Promise<Readonly<AgentPublicationSnapshot>> {
+    return this.withMutationLock(async () => {
+      const presetId = validateId(input.presetId, '预设标识')
+      this.requirePersonalWrite(presetId)
+      const root = join(this.presetRoot, presetId)
+      if (await realpath(root) !== join(await realpath(this.presetRoot), presetId) || !(await lstat(root)).isDirectory()) throw new Error('智能体发布来源路径无效')
+      for (const path of [join(root, AGENT_PROFILE_FILE), join(root, 'agent.cordis.yml')]) {
+        const info = await lstat(path)
+        if (!info.isFile() || info.isSymbolicLink() || info.nlink !== 1 || info.size > 262144) throw new Error('智能体发布来源文件无效')
+      }
+      const profile = await this.readProfile(root)
+      if (!profile || profile.agentId !== presetId || profile.presetId !== presetId
+        || typeof input.expectedVersion !== 'string' || profile.configVersion !== input.expectedVersion) throw new Error('智能体已更新或不存在，请刷新后重新提交')
+      const normalized = stableProfile(profile, profile.revision, profile.updatedAt)
+      if (normalized.configVersion !== profile.configVersion) throw new Error('智能体发布配置与版本不一致')
+      const composition = await readFile(join(root, 'agent.cordis.yml'), 'utf8')
+      // Read-only: an out-of-date projection must be repaired by its owner
+      // before publishing, not quietly changed by a publication request.
+      if (replacePresetPersona(composition, normalized) !== composition
+        || removePresetSkillFilesystemOverride(composition) !== composition) throw new Error('智能体原生组合与已保存配置不一致')
+      const dependencies = await this.readPublicationDependencies(normalized.preferredSkillNames)
+      const { name, description, role, goal, behavior, instructions, avatarId, preferredSkillNames } = normalized
+      return createAgentPublicationSnapshot({ schema: 'paimind.agent-publication/v1',
+        agentId: presetId, presetId, configVersion: normalized.configVersion,
+        profile: { name, description, basePresetId: 'standard', role, goal, behavior, instructions,
+          ...(avatarId === undefined ? {} : { avatarId }), preferredSkillNames }, dependencies,
+        nativeCompositionDigest: `sha256:${createHash('sha256').update(composition).digest('hex')}` })
+    })
   }
 
   /**
@@ -1141,16 +1351,21 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
     readonly removed: true
   }>> {
     const presetId = validateId(input.presetId, '预设标识')
-    const profile = (await this.listProfiles()).profiles.find(row => row.presetId === presetId)
-    if (profile === undefined) throw new Error('智能体不存在或已经删除')
-    const state = await this.readState()
-    const referenced = Object.values(state.bindings).filter(binding => binding.presetId === presetId)
-    if (referenced.length > 0) {
-      throw new Error(`该智能体仍被 ${referenced.length} 个历史会话使用；请先迁移或删除这些会话，再删除智能体`)
-    }
-    if (this.agentCtx.agentPresets.remove === undefined) throw new Error('当前 Harness 不支持删除个人智能体')
-    await this.agentCtx.agentPresets.remove(presetId)
-    return Object.freeze({ presetId, removed: true })
+    this.requirePersonalWrite(presetId)
+    return await this.withMutationLock(async () => {
+      const profile = await this.readProfile(join(this.presetRoot, presetId))
+      if (profile === undefined || profile.presetId !== presetId) throw new Error('智能体不存在或已经删除')
+      const state = await this.readState()
+      const referenced = Object.values(state.bindings).filter(binding => binding.presetId === presetId)
+      if (referenced.length > 0) {
+        throw new Error(`该智能体仍被 ${referenced.length} 个历史会话使用；请先迁移或删除这些会话，再删除智能体`)
+      }
+      if (this.agentCtx.agentPresets.remove === undefined) throw new Error('当前 Harness 不支持删除个人智能体')
+      // Keep the queue through the native owner's completion: no profile edit,
+      // binding or migration can commit between this check and deletion.
+      await this.agentCtx.agentPresets.remove(presetId)
+      return Object.freeze({ presetId, removed: true as const })
+    })
   }
 
   /** Validate one native Standard authoring Session. Its workflow comes from the canonical bundled Skill. */
@@ -1176,11 +1391,34 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
   }
 
   async bindSession(input: Omit<AgentSessionBinding, 'boundAt'>): Promise<Readonly<AgentSessionBinding>> {
-    const profile = (await this.listProfiles()).profiles.find(row => row.agentId === input.agentId)
-    if (profile === undefined || profile.presetId !== input.presetId || profile.configVersion !== input.configVersion) throw new Error('智能体配置版本不匹配')
-    const binding = Object.freeze({ ...input, sessionId: bounded(input.sessionId, 200, '会话标识', true), boundAt: this.now() })
-    await this.mutateState(state => ({ ...state, bindings: Object.freeze({ ...state.bindings, [binding.sessionId]: binding }) }))
+    let binding!: Readonly<AgentSessionBinding>
+    await this.mutateState(async state => {
+      await this.requireBindingProfile(input)
+      const session = await readPaimindNativeSessionReference(this.agentCtx, input.sessionId)
+      if (effectivePresetForFirstTurn(session) !== input.presetId) throw new Error('原生会话使用的智能体与绑定不一致')
+      const previous = state.bindings[input.sessionId]
+      const sameVersion = previous?.agentId === input.agentId && previous.presetId === input.presetId
+        && previous.configVersion === input.configVersion
+      if (previous !== undefined && !sameVersion && hasHumanTurn(session)) throw new Error('历史会话绑定版本不可覆盖，请使用新会话迁移')
+      if (input.purpose !== undefined && !['conversation', 'builder-test'].includes(input.purpose)) throw new Error('会话用途无效')
+      const purpose = input.purpose ?? previous?.purpose
+      if (sameVersion && purpose === previous.purpose) { binding = previous; return state }
+      binding = Object.freeze({ sessionId: input.sessionId, agentId: input.agentId, presetId: input.presetId,
+        configVersion: input.configVersion, ...(purpose === undefined ? {} : { purpose }),
+        boundAt: sameVersion ? previous.boundAt : this.now() })
+      return { ...state, bindings: Object.freeze({ ...state.bindings, [binding.sessionId]: binding }) }
+    })
     return binding
+  }
+
+  /** Called inside the product write queue; native Preset files remain owner-managed. */
+  private async requireBindingProfile(input: Pick<AgentSessionBinding, 'agentId' | 'presetId' | 'configVersion'>): Promise<AgentBusinessProfile> {
+    const presetId = validateId(input.presetId, '预设标识')
+    const profile = await this.readProfile(join(this.presetRoot, presetId))
+    if (profile === undefined || profile.agentId !== input.agentId || profile.presetId !== presetId
+      || profile.configVersion !== input.configVersion) throw new Error('智能体配置版本不匹配')
+    await this.ensureProfileProjection(join(this.presetRoot, presetId), profile)
+    return profile
   }
 
   /** Read durable native Session bindings so product surfaces can project their own Session types. */
@@ -1197,7 +1435,7 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
     if (binding === undefined || state.migrations.some(row => row.sourceSessionId === input.sourceSessionId && row.fromVersion === binding.configVersion)) return null
     const profile = (await this.listProfiles()).profiles.find(row => row.agentId === binding.agentId)
     if (profile === undefined || profile.configVersion === binding.configVersion) return null
-    const events = this.agentCtx.sessions?.get(input.sourceSessionId)?.events ?? []
+    const events = (await readPaimindNativeSessionReference(this.agentCtx, input.sourceSessionId)).events
     return Object.freeze({
       sourceSessionId: input.sourceSessionId, agentId: binding.agentId,
       presetId: profile.presetId, fromVersion: binding.configVersion, toVersion: profile.configVersion,
@@ -1206,53 +1444,83 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
   }
 
   async recordMigration(input: Omit<AgentMigrationRecord, 'migratedAt'>): Promise<Readonly<AgentMigrationRecord>> {
-    const record = Object.freeze({ ...input, migratedAt: this.now() })
-    await this.mutateState(state => ({
-      ...state,
-      bindings: Object.freeze({ ...state.bindings, [record.targetSessionId]: Object.freeze({
+    let record!: Readonly<AgentMigrationRecord>
+    await this.mutateState(async state => {
+      if (input.sourceSessionId === input.targetSessionId) throw new Error('迁移必须使用新的原生会话')
+      const sourceBinding = state.bindings[input.sourceSessionId]
+      if (sourceBinding === undefined || sourceBinding.agentId !== input.agentId || sourceBinding.presetId !== input.presetId
+        || sourceBinding.configVersion !== input.fromVersion || input.fromVersion === input.toVersion) throw new Error('原会话迁移版本不匹配')
+      await this.requireBindingProfile({ ...input, configVersion: input.toVersion })
+      const source = await readPaimindNativeSessionReference(this.agentCtx, input.sourceSessionId)
+      const target = await readPaimindNativeSessionReference(this.agentCtx, input.targetSessionId)
+      if (effectivePresetForFirstTurn(source) !== input.presetId || effectivePresetForFirstTurn(target) !== input.presetId) {
+        throw new Error('迁移会话使用的智能体与绑定不一致')
+      }
+      const summary = summarizeConversationEvents(source.events, input.sourceSessionId)
+      if (summary !== input.summary) throw new Error('原会话内容已变化，请重新读取迁移计划')
+      const existing = state.migrations.find(row => row.sourceSessionId === input.sourceSessionId && row.fromVersion === input.fromVersion)
+      if (existing !== undefined) {
+        if (existing.targetSessionId !== input.targetSessionId || existing.toVersion !== input.toVersion
+          || existing.agentId !== input.agentId || existing.presetId !== input.presetId || existing.summary !== summary) throw new Error('原会话已经迁移到其他会话或版本')
+        record = existing
+        return state
+      }
+      if (state.bindings[input.targetSessionId] !== undefined) throw new Error('迁移目标会话已存在智能体绑定')
+      record = Object.freeze({ sourceSessionId: input.sourceSessionId, targetSessionId: input.targetSessionId,
+        agentId: input.agentId, presetId: input.presetId, fromVersion: input.fromVersion, toVersion: input.toVersion,
+        summary, migratedAt: this.now() })
+      return { ...state, bindings: Object.freeze({ ...state.bindings, [record.targetSessionId]: Object.freeze({
         sessionId: record.targetSessionId, agentId: record.agentId, presetId: record.presetId,
-        configVersion: record.toVersion, boundAt: record.migratedAt,
-      }) }),
-      migrations: Object.freeze([...state.migrations, record].slice(-200)),
-    }))
+        configVersion: record.toVersion, purpose: sourceBinding.purpose ?? 'conversation', boundAt: record.migratedAt,
+      }) }), migrations: Object.freeze([...state.migrations, record].slice(-200)) }
+    })
     return record
   }
 
   async recordVerification(input: Omit<AgentVerificationRecord, 'verifiedAt'>): Promise<Readonly<AgentVerificationRecord>> {
-    const record = Object.freeze({ ...input, message: bounded(input.message, 1_000, '验收说明', true), verifiedAt: this.now() })
-    await this.mutateState(state => ({
-      ...state,
-      verifications: Object.freeze([
-        ...state.verifications.filter(row => !(row.sessionId === record.sessionId
-          && row.configVersion === record.configVersion && row.firstTurnId === record.firstTurnId)),
-        record,
-      ].slice(-200)),
-    }))
-    return record
+    // Retain the public shape, but external fields are assertions, never proof.
+    return await this.verifyAndRecord(input.sessionId, input)
   }
 
   async verifySession(input: { readonly sessionId: string }): Promise<Readonly<AgentVerificationRecord>> {
-    const state = await this.readState()
-    const binding = state.bindings[input.sessionId]
-    if (binding === undefined) throw new Error('会话未绑定个人智能体')
-    const profile = (await this.listProfiles()).profiles.find(row => row.agentId === binding.agentId)
-    const session = this.agentCtx.sessions?.get(input.sessionId)
-    const events = session?.events ?? []
-    const firstUser = events.find(event => {
-      if (typeof event !== 'object' || event === null || (event as { type?: unknown }).type !== 'user/message') return false
-      const data = (event as { readonly data?: unknown }).data as { readonly source?: { readonly kind?: unknown } } | undefined
-      return data?.source?.kind === 'user'
-    }) as { readonly seq?: unknown } | undefined
-    const firstAssistant = session === undefined ? undefined : visibleAssistantReplyForFirstTurn(session)
-    const valid = profile !== undefined && profile.configVersion === binding.configVersion
-      && session !== undefined && effectivePresetForFirstTurn(session) === binding.presetId
-      && firstUser !== undefined && firstAssistant !== undefined
-    return await this.recordVerification({
-      sessionId: input.sessionId, agentId: binding.agentId, presetId: binding.presetId,
-      configVersion: binding.configVersion, firstTurnId: `event:${String(firstAssistant?.seq ?? 'unknown')}`,
-      result: valid ? 'passed' : 'failed',
-      message: valid ? '真实首轮已完成，预设绑定与配置版本一致。' : '真实首轮、预设绑定或配置版本校验失败。',
+    return await this.verifyAndRecord(input.sessionId)
+  }
+
+  private async verifyAndRecord(sessionId: string, expected?: Omit<AgentVerificationRecord, 'verifiedAt'>): Promise<Readonly<AgentVerificationRecord>> {
+    let record!: Readonly<AgentVerificationRecord>
+    await this.mutateState(async state => {
+      const binding = state.bindings[sessionId]
+      if (binding === undefined) throw new Error('会话未绑定个人智能体')
+      const profile = await this.readProfile(join(this.presetRoot, validateId(binding.presetId, '预设标识')))
+      const session = await readPaimindNativeSessionReference(this.agentCtx, sessionId)
+      const reply = listPaimindNativeFirstHumanTurnReplies(session)
+        .filter(row => visibleAgentAuthoringText(textBlocks(row.content)) !== '').at(-1)
+      const valid = profile !== undefined && profile.agentId === binding.agentId && profile.presetId === binding.presetId
+        && profile.configVersion === binding.configVersion && effectivePresetForFirstTurn(session) === binding.presetId
+        && reply !== undefined
+      const derived: Omit<AgentVerificationRecord, 'verifiedAt'> = {
+        sessionId, agentId: binding.agentId, presetId: binding.presetId, configVersion: binding.configVersion,
+        firstTurnId: `event:${String(reply?.seq ?? 'unknown')}`, result: valid ? 'passed' : 'failed',
+        message: valid ? '原生首轮正常完成，模型可见回复、预设绑定与配置版本一致。'
+          : '原生首轮尚未正常完成，或模型可见回复、预设绑定及配置版本校验失败。',
+      }
+      if (expected !== undefined && (expected.agentId !== derived.agentId || expected.presetId !== derived.presetId
+        || expected.configVersion !== derived.configVersion || expected.firstTurnId !== derived.firstTurnId
+        || expected.result !== derived.result)) throw new Error('提交的验证结果与原生会话证据不一致')
+      const existing = state.verifications.find(row => row.sessionId === sessionId
+        && row.configVersion === derived.configVersion && row.firstTurnId === derived.firstTurnId)
+      if (existing !== undefined && existing.agentId === derived.agentId && existing.presetId === derived.presetId
+        && existing.result === derived.result && existing.message === derived.message) {
+        record = existing
+        return state
+      }
+      record = Object.freeze({ ...derived, verifiedAt: this.now() })
+      return { ...state, verifications: Object.freeze([
+        ...state.verifications.filter(row => !(row.sessionId === sessionId
+          && row.configVersion === record.configVersion && row.firstTurnId === record.firstTurnId)), record,
+      ].slice(-200)) }
     })
+    return record
   }
 
   async listAudit(): Promise<Readonly<{ migrations: readonly AgentMigrationRecord[]; verifications: readonly AgentVerificationRecord[] }>> {
@@ -1281,6 +1549,7 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
   }
 
   private async ensureProfileProjection(root: string, profile: AgentBusinessProfile): Promise<void> {
+    if (profile.presetId.startsWith(ENTERPRISE_AGENT_PRESET_PREFIX)) { await this.readAdoptedPublication(root); return }
     if (profile.basePresetId !== PAIMIND_STANDARD_AGENT_BASE_PRESET_ID) throw new Error('旧版智能体未迁移到标准基座')
     const compositionFile = join(root, 'agent.cordis.yml')
     const composition = await readFile(compositionFile, 'utf8')
@@ -1325,17 +1594,29 @@ export class PaimindAgentProfileService extends PaimindHostRemoteService impleme
   }
 
   private async readState(): Promise<AgentCenterState> {
+    let content: string
     try {
-      const value = JSON.parse(await readFile(this.stateFile, 'utf8')) as Partial<AgentCenterState>
-      if (value.schemaVersion !== STATE_VERSION || typeof value.bindings !== 'object' || value.bindings === null
-        || !Array.isArray(value.migrations) || !Array.isArray(value.verifications)) return defaultState()
-      return Object.freeze({ schemaVersion: STATE_VERSION, bindings: Object.freeze(value.bindings), migrations: Object.freeze(value.migrations), verifications: Object.freeze(value.verifications) }) as AgentCenterState
-    } catch { return defaultState() }
+      content = await readFile(this.stateFile, 'utf8')
+    } catch (error) {
+      // Only a genuinely absent first-use file is empty. I/O failures must not
+      // discard history or bypass the referenced-Preset deletion guard.
+      if (error !== null && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return defaultState()
+      throw new Error('智能体状态无法读取，已停止操作；请保留原文件并检查存储', { cause: error })
+    }
+    let value: unknown
+    try { value = JSON.parse(content) } catch { throw new Error('智能体状态内容损坏，已停止操作；请保留原文件并恢复有效记录') }
+    const result = storedState.safeParse(value)
+    if (!result.success) throw new Error('智能体状态结构或版本不受支持，已停止操作；请保留原文件并检查版本')
+    return Object.freeze({ schemaVersion: STATE_VERSION,
+      bindings: Object.freeze(result.data.bindings), migrations: Object.freeze(result.data.migrations),
+      verifications: Object.freeze(result.data.verifications) })
   }
 
-  private async mutateState(update: (state: AgentCenterState) => AgentCenterState): Promise<void> {
+  private async mutateState(update: (state: AgentCenterState) => AgentCenterState | Promise<AgentCenterState>): Promise<void> {
     const execute = async (): Promise<void> => {
-      const next = update(await this.readState())
+      const current = await this.readState()
+      const next = await update(current)
+      if (next === current) return
       await mkdir(this.stateRoot, { recursive: true, mode: 0o700 })
       const temporary = join(this.stateRoot, `state-${randomUUID()}.tmp`)
       await writeFile(temporary, `${JSON.stringify(next, null, 2)}\n`, { mode: 0o600 })

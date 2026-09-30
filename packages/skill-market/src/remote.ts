@@ -18,10 +18,18 @@ const preview = z.object({
   warnings: z.array(z.string()).readonly(),
   runtimeRequirements: z.array(z.enum(['python', 'node', 'system'])).readonly(),
 }).readonly()
+const publication = z.object({ schema: z.literal('paimind.skill-adoption/v1'), adoptedAt: z.number().int().nonnegative(),
+  tenantId: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,159}$/), publicationId: z.uuid(), sourceUserId: z.uuid(),
+  name: skillName, packageDigest: digest, archiveDigest: digest, archiveBytes: z.number().int().min(1).max(226492416),
+  expandedBytes: z.number().int().min(1).max(209715200), entryCount: z.number().int().min(1).max(10000),
+}).strict().readonly()
 const record = z.object({
   skillId: skillName, ...metadata, digest,
   sourceFileName: z.string(), installedAt: z.number().nonnegative(), updatedAt: z.number().nonnegative(),
   managed: z.boolean(),
+  publication: publication.optional(),
+  publicationEligible: z.boolean().optional(),
+  publicationPreference: z.object({ revision: z.number().int().nonnegative(), enabled: z.boolean(), direct: z.boolean() }).strict().readonly().optional(),
   runtimeRequirements: z.array(z.enum(['python', 'node', 'system'])).readonly(),
 }).readonly()
 const installResult = z.object({ operation: z.enum(['installed', 'updated']), record }).readonly()
@@ -41,6 +49,17 @@ const packageDirectoryPage = z.object({
   path: z.string().max(500), entries: z.array(packageEntry).max(500).readonly(),
   nextCursor: z.string().regex(/^\d+$/).optional(),
 }).readonly()
+const adoptedReference = publication.unwrap().omit({ schema: true, adoptedAt: true }).readonly()
+const adoptedContentInput = z.discriminatedUnion('kind', [
+  z.object({ reference: adoptedReference, kind: z.literal('directory'), path: z.string().max(500), cursor: z.string().regex(/^(0|[1-9][0-9]{0,4})$/).optional() }).strict(),
+  z.object({ reference: adoptedReference, kind: z.literal('file'), path: z.string().min(1).max(500), offset: z.number().int().min(0).max(209715200) }).strict(),
+]).readonly()
+const adoptedContent = z.discriminatedUnion('kind', [
+  z.object({ reference: adoptedReference, runtimeGrant: z.literal(false), kind: z.literal('directory'), page: packageDirectoryPage }).strict(),
+  z.object({ reference: adoptedReference, runtimeGrant: z.literal(false), kind: z.literal('file'), path: z.string().min(1).max(500),
+    size: z.number().int().min(0).max(209715200), offset: z.number().int().min(0).max(209715200),
+    data: z.string().max(43692), nextOffset: z.number().int().min(1).max(209715200).nullable() }).strict(),
+]).readonly()
 const packageDocument = z.object({
   skillId: skillName, ...metadata, digest, managed: z.boolean(),
   root: packageDirectoryPage,
@@ -189,6 +208,18 @@ export const PAIMIND_SKILL_INSTALLER_REMOTE_DESCRIPTORS = Object.freeze([
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 1106, column: 3 },
   },
   {
+    id: '@paimind/skill-market#paimindSkillInstaller/setAdoptedSkillPreference',
+    service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'setAdoptedSkillPreference',
+    invocation: { kind: 'direct' as const },
+    parameters: [{ name: 'input', wire: 'input', source: 'json' as const, codec: {
+      mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillAdoptedPreferenceInput',
+      schema: z.object({ reference: adoptedReference, expectedRevision: z.number().int().nonnegative(), field: z.enum(['enabled', 'direct']), value: z.boolean() }).strict().readonly(),
+    } }],
+    result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillAdoptedPreferenceResult',
+      schema: z.object({ reference: adoptedReference, revision: z.number().int().nonnegative(), enabled: z.boolean(), direct: z.boolean(), runtimeGrant: z.literal(false) }).strict().readonly() },
+    sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 2360, column: 3 },
+  },
+  {
     id: '@paimind/skill-market#paimindSkillInstaller/getSkillSource',
     service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'getSkillSource',
     invocation: { kind: 'direct' as const },
@@ -254,6 +285,15 @@ export const PAIMIND_SKILL_INSTALLER_REMOTE_DESCRIPTORS = Object.freeze([
     }],
     result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillInstallResult', schema: installResult },
     sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 895, column: 3 },
+  },
+  {
+    id: '@paimind/skill-market#paimindSkillInstaller/readAdoptedSkillContent',
+    service: 'paimindSkillInstaller', namespace: 'paimindSkillInstaller', method: 'readAdoptedSkillContent',
+    invocation: { kind: 'direct' as const },
+    parameters: [{ name: 'input', wire: 'input', source: 'json' as const,
+      codec: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillAdoptedContentInput', schema: adoptedContentInput } }],
+    result: { mode: 'strict' as const, typeSymbol: '@paimind/skill-market#SkillAdoptedContent', schema: adoptedContent },
+    sourceLocation: { file: 'packages/skill-market/src/installer.ts', line: 2550, column: 3 },
   },
   {
     id: '@paimind/skill-market#paimindSkillInstaller/getSkillPackage',

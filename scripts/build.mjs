@@ -3,6 +3,7 @@ import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { build } from 'esbuild'
+import { createRawImportPlugin } from './raw-import-plugin.mjs'
 
 const root = resolve('.')
 const require = createRequire(import.meta.url)
@@ -15,24 +16,7 @@ const clientPlatformExternals = [
   'react-dom/client',
   '@deepseek-ai/dsh-client-ui-primitives',
 ]
-const rawImportPlugin = {
-  name: 'paimind-raw-import',
-  setup(api) {
-    api.onResolve({ filter: /\?raw$/ }, async args => {
-      const resolved = await api.resolve(args.path.slice(0, -4), {
-        importer: args.importer,
-        resolveDir: args.resolveDir,
-        kind: args.kind,
-      })
-      if (resolved.errors.length > 0) return resolved
-      return { path: resolved.path, namespace: 'paimind-raw-file' }
-    })
-    api.onLoad({ filter: /.*/, namespace: 'paimind-raw-file' }, async args => ({
-      contents: await readFile(args.path, 'utf8'),
-      loader: 'text',
-    }))
-  },
-}
+const rawImportPlugin = createRawImportPlugin(root)
 
 for (const entry of await readdir(packagesRoot, { withFileTypes: true })) {
   if (!entry.isDirectory()) continue
@@ -54,6 +38,10 @@ const types = spawnSync(process.execPath, [typescriptCli, '-b', '--force', '--pr
 if (types.status !== 0) {
   throw new Error(`declaration build failed\n${types.stdout}\n${types.stderr}`)
 }
+
+// Enterprise backend artifact only. All product UI uses the Harness client
+// plugin build below; the control plane never bundles a second React runtime.
+await import('./enterprise/build-app.mjs')
 
 // Build every package's node-facing exports first. Client bundles may consume
 // runtime values from another workspace package (for example the Extension

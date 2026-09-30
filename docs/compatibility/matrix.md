@@ -16,6 +16,7 @@ evidence, not in a second active matrix.
   },
   "cordis": [
     { "package": "@deepseek-ai/cordis", "version": "4.0.1", "purpose": "Harness runtime" },
+    { "package": "@deepseek-ai/cordis-plugin-loader", "version": "1.0.2", "purpose": "Existing native Loader; version-gated managed workflow selection" },
     { "package": "cordis", "version": "4.0.0-rc.8", "purpose": "External provider compatibility" }
   ],
   "providers": [
@@ -38,6 +39,30 @@ evidence, not in a second active matrix.
 <!-- compatibility-data:end -->
 
 ## Promotion rule
+
+The managed connector placement seam consumes the existing native
+`@deepseek-ai/dsh-mcp-client@0.1.1-rc.2` and its currently locked
+`@modelcontextprotocol/sdk@1.30.0`. Both are resolved from the selected native
+installation and checked at boot; no new direct runtime dependency is added.
+The SDK version gate covers its stdio environment-default merge and native
+process/disposal contract. The September 23 source-overlay Linux diagnostic
+proves stdio placement only. The later `haas-connector-egress-alEzGf` diagnostic
+adds the original HTTP transport's fixed-destination relay, real SDK sessions,
+SSE/tool calls and certificate checks using owned peers on an internal bridge.
+The synthetic peer CA is diagnostic-only, never a production TLS exception.
+Neither slice promotes a final image, full-cell outbound policy, enterprise
+activation, member authorization, formal gateway TLS or browser acceptance.
+
+The managed connector provenance adapter additionally pins the selected native
+`@deepseek-ai/dsh-tools@0.1.1-rc.2` private `dispatchToolBody` seam. Its final
+synchronous check runs after native asynchronous dispatch wrappers without
+copying the dispatcher or changing other application roots. Loader 1.0.2 stores
+a thenable fiber handle distinct from `ctx.fiber`; ownership compares the exact
+handle's `ctx`, not handle object identity or a numeric ID. Cordis per-caller
+method proxies require a configurable instance descriptor. The real native
+Loader/registry/SDK tests in `haas-connector-origin-Qo1Vi7` cover ordinary calls,
+disable/reload, scoped shadows, late replacement/body mutation and actual list
+notifications. They do not establish enterprise approval or Browser E2E.
 
 A new runtime or provider version starts as a candidate. It becomes selected
 only after metadata, adapter contract, package gates, real isolated profile,

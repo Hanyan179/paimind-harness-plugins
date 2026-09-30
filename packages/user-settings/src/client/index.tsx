@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import {
   contributePaimindExtension,
+  readPaimindClientAudience,
   type HarnessRemoteMountService,
   type HarnessRemoteResult,
   type PaimindClientContext,
@@ -251,6 +252,12 @@ export function UserSettingsSection({ scope, zh }: { readonly scope: PaimindSett
 }
 
 export async function apply(ctx: UserSettingsClientContext): Promise<() => Promise<void>> {
+  const audience = readPaimindClientAudience()
+  if (audience === 'invalid') throw new Error('Invalid User Settings presentation metadata')
+  // The enterprise member role does not expose this platform-wide prompt
+  // configuration panel. Do not start its hidden describe/mutation lifecycle.
+  // This is presentation only; the authenticated gateway still denies access.
+  if (audience === 'member') return async () => {}
   const disposeRemote = await ctx.remote.$mount(TYPERT_REMOTE)
   const mounted = ctx.inject([...BASE_INJECT, 'remote.paimindUserSettings'], scopeCtx => {
     const remote = scopeCtx.remote.paimindUserSettings

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ComponentType } from 'react'
-import { describe, expect, it, vi } from 'vitest'
-import type { PaimindExtensionCenterClientContext } from '@paimind/harness-compat'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { contributePaimindExtension, type PaimindExtensionCenterClientContext } from '@paimind/harness-compat'
 import { createClientContextFixture } from '@paimind/testkit'
 import {
   apply,
@@ -59,7 +59,132 @@ function createExtensionContext(fixture: ReturnType<typeof createClientContextFi
   return context
 }
 
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers() })
+
+describe('Extension Center client boot settling', () => {
+  async function setup(recoveryAttempted: boolean) {
+    vi.useFakeTimers()
+    const storage = window.sessionStorage
+    const key = 'paimind:feature-pack-client-recovery-v1'
+    const previous = storage.getItem(key)
+    if (recoveryAttempted) storage.setItem(key, 'attempted')
+    else storage.removeItem(key)
+    const reload = vi.fn()
+    vi.stubGlobal('window', { sessionStorage: storage, location: { reload } })
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const fixture = createClientContextFixture()
+    const context = createExtensionContext(fixture)
+    const dispose = await apply(context as never)
+    const remote = context.remote as ReturnType<typeof createExtensionRemote>
+    const inventory = remote.pluginInventory as { list: ReturnType<typeof vi.fn> }
+    inventory.list.mockResolvedValue({ ok: true, value: { entries: [{
+      entryId: 'agent-market', moduleName: '@paimind/agent-market', enabled: true, fiberPhase: 'active',
+    }] } })
+    const packs = remote.paimindFeaturePacks as { describe: ReturnType<typeof vi.fn> }
+    packs.describe.mockResolvedValue({ ok: true, value: { status: 'ready', revision: 1, writable: true, packs: [{
+      id: 'paimind:pack:agents', loaderEntryId: 'paimind-pack-agents', nameZh: '智能体中心', nameEn: 'Agent Center',
+      descriptionZh: '智能体能力。', descriptionEn: 'Agent capabilities.', order: 20,
+      defaultEnabled: true, requiredPackIds: [], packageNames: ['@paimind/agent-market'],
+      installed: true, desiredEnabled: true, enabled: true, capabilities: [],
+    }] } })
+    return {
+      reload, error, inventory, packs,
+      contribute: () => contributePaimindExtension(fixture.context.slots, {
+        ...extension, id: 'paimind:agent-market', packageName: '@paimind/agent-market',
+      }),
+      async close() {
+        await dispose(); fixture.disposeEffects(); error.mockRestore()
+        if (previous === null) storage.removeItem(key)
+        else storage.setItem(key, previous)
+      },
+    }
+  }
+
+  it.each([false, true])('waits for a late client contribution before recovery (prior recovery: %s)', async attempted => {
+    const fixture = await setup(attempted)
+    try {
+      await vi.advanceTimersByTimeAsync(250)
+      expect(document.documentElement.getAttribute('data-paimind-boot-consistency')).toBe('checking')
+      expect(fixture.reload).not.toHaveBeenCalled()
+      expect(fixture.error).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(1750)
+      fixture.contribute()
+      await vi.advanceTimersByTimeAsync(250)
+      expect(document.documentElement.getAttribute('data-paimind-boot-consistency')).toBe('ready')
+      expect(window.sessionStorage.getItem('paimind:feature-pack-client-recovery-v1')).toBeNull()
+      await vi.advanceTimersByTimeAsync(6000)
+      expect(fixture.reload).not.toHaveBeenCalled()
+      expect(fixture.error).not.toHaveBeenCalled()
+    } finally { await fixture.close() }
+  })
+
+  it.each([false, true])('keeps persistent client gaps bounded (prior recovery: %s)', async attempted => {
+    const fixture = await setup(attempted)
+    try {
+      await vi.advanceTimersByTimeAsync(4750)
+      expect(document.documentElement.getAttribute('data-paimind-boot-consistency')).toBe('checking')
+      expect(fixture.reload).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(250)
+      expect(document.documentElement.getAttribute('data-paimind-boot-consistency')).toBe(attempted ? 'failed' : 'reloading')
+      expect(fixture.reload).toHaveBeenCalledTimes(attempted ? 0 : 1)
+      if (attempted) expect(fixture.error).toHaveBeenCalledWith(
+        '[paimind-extension-center] Client Feature Pack recovery remained incomplete', ['paimind:pack:agents'],
+      )
+      const calls = fixture.inventory.list.mock.calls.length
+      await vi.advanceTimersByTimeAsync(10000)
+      expect(fixture.inventory.list).toHaveBeenCalledTimes(calls)
+      expect(fixture.reload).toHaveBeenCalledTimes(attempted ? 0 : 1)
+    } finally { await fixture.close() }
+  })
+
+  it('disposes a pending client readiness check without a late reload or failure', async () => {
+    const fixture = await setup(false)
+    await vi.advanceTimersByTimeAsync(250)
+    await fixture.close()
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(document.documentElement.hasAttribute('data-paimind-boot-consistency')).toBe(false)
+    expect(fixture.reload).not.toHaveBeenCalled()
+  })
+})
+
 describe('Extension Center client contribution', () => {
+  it.each([
+    { metadata: { schemaVersion: 1, audience: 'member' }, role: 'status', text: '企业扩展由管理员管理', state: 'not-applicable' },
+    { metadata: { schemaVersion: 2, audience: 'member' }, role: 'alert', text: '无法确认扩展管理界面配置', state: 'invalid-presentation' },
+  ])('does not mount, prefetch or retry management for $state and preserves the discovery slot owner', async ({ metadata, role, text, state }) => {
+    vi.useFakeTimers()
+    vi.stubGlobal('__PAIMIND_CLIENT_AUDIENCE__', metadata)
+    const fixture = createClientContextFixture()
+    const context = createExtensionContext(fixture) as PaimindExtensionCenterClientContext
+    const remote = (context as unknown as { remote: ReturnType<typeof createExtensionRemote> }).remote
+    const attribute = 'data-paimind-boot-consistency'
+    const previous = document.documentElement.getAttribute(attribute)
+    document.documentElement.setAttribute(attribute, 'bootstrap')
+    let dispose: (() => Promise<void>) | undefined
+    try {
+      dispose = await apply(context as never)
+      const entry = fixture.slots.find(row => row.options.id === 'paimind-extensions')!
+      expect(entry.options.children).toEqual({ 'paimind.extension': { kind: 'list', scope: 'root' } })
+      const Settings = entry.component as ComponentType
+      render(<Settings />)
+      expect(screen.getByRole(role)).toHaveTextContent(text)
+      expect(screen.queryByRole('switch')).toBeNull()
+      expect(fixture.slots.some(row => row.options.id === 'paimind:extension-center')).toBe(false)
+      await vi.advanceTimersByTimeAsync(6000)
+      expect(remote.$mount).not.toHaveBeenCalled()
+      expect((remote.pluginInventory as { list: unknown }).list).not.toHaveBeenCalled()
+      expect(remote.paimindFeaturePacks).toBeUndefined()
+      expect(document.documentElement.getAttribute(attribute)).toBe(state)
+      await dispose()
+      expect(fixture.slots.every(row => row.disposed())).toBe(true)
+      expect(document.getElementById('@paimind/extension-center')).toBeNull()
+      expect(document.documentElement.getAttribute(attribute)).toBe('bootstrap')
+    } finally {
+      await dispose?.(); fixture.disposeEffects()
+      if (previous === null) document.documentElement.removeAttribute(attribute)
+      else document.documentElement.setAttribute(attribute, previous)
+    }
+  })
   it('detects an active Host Pack whose sentinel Client contribution missed fresh boot', () => {
     const view = {
       status: 'ready' as const, revision: 1, writable: true,

@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NotificationRecord } from '@paimind/contracts'
 import type { PaimindLocaleSource } from '@paimind/harness-compat'
 import {
@@ -57,12 +57,86 @@ function fixture(items: NotificationRecord[] = [record()]) {
   return { controller, list, markRead, markAllRead, sessions, workspaces, artifacts, sidebar }
 }
 
+// jsdom does not implement native modality. These stubs verify component
+// lifecycle only; real focus trapping/inertness require browser evidence.
+const modalDescriptors = Object.fromEntries(['showModal', 'close'].map(key => [key, Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, key)]))
+beforeEach(() => {
+  const previous = new WeakMap<HTMLDialogElement, HTMLElement>()
+  Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: function(this: HTMLDialogElement) {
+    if (document.activeElement instanceof HTMLElement) previous.set(this, document.activeElement)
+    this.open = true
+  } })
+  Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: function(this: HTMLDialogElement) {
+    this.open = false
+    const target = previous.get(this)
+    if (target?.isConnected) target.focus()
+  } })
+})
 afterEach(() => {
+  cleanup()
+  for (const [key, descriptor] of Object.entries(modalDescriptors)) {
+    if (descriptor) Object.defineProperty(HTMLDialogElement.prototype, key, descriptor)
+    else Reflect.deleteProperty(HTMLDialogElement.prototype, key)
+  }
+  vi.restoreAllMocks()
   vi.useRealTimers()
   document.head.querySelectorAll('style[data-paimind-plugin]').forEach(node => { node.remove() })
 })
 
 describe('FP12 Notification Center client', () => {
+  it('opens an actual dialog element, cancels back to the trigger and releases modality on unmount', async () => {
+    const f = fixture([])
+    const view = render(<><NotificationTrigger wide controller={f.controller} locale={locale()} /><NotificationOverlay controller={f.controller} locale={locale()} /></>)
+    const trigger = screen.getByRole('button', { name: 'Open Notification Center' })
+    fireEvent.click(trigger)
+    const modal = await screen.findByRole('dialog', { name: 'Notification Center' })
+    expect(modal).toBeInstanceOf(HTMLDialogElement)
+    expect(modal).toHaveAttribute('open')
+    expect(screen.getByRole('button', { name: 'Close Notification Center' })).toHaveFocus()
+    fireEvent(modal, new Event('cancel', { cancelable: true }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(trigger).toHaveFocus()
+    fireEvent.click(trigger)
+    const reopened = screen.getByRole('dialog') as HTMLDialogElement
+    view.unmount()
+    expect(reopened.open).toBe(false)
+    f.controller.dispose()
+  })
+  it('releases the modal before following a target and does not reclaim destination focus', async () => {
+    const f = fixture([record({ readAt: 1, target: { kind: 'surface', surfaceId: 'owned-surface' } })])
+    render(<><button>Destination</button><NotificationTrigger wide controller={f.controller} locale={locale()} /><NotificationOverlay controller={f.controller} locale={locale()} /></>)
+    fireEvent.click(screen.getByRole('button', { name: 'Open Notification Center' }))
+    await screen.findByText('Quarterly report')
+    const modal = screen.getByRole('dialog') as HTMLDialogElement
+    f.sidebar.openTab.mockImplementation(() => {
+      expect(modal.open).toBe(false)
+      screen.getByRole('button', { name: 'Destination' }).focus()
+      return true
+    })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Open', exact: true })) })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Destination' })).toHaveFocus()
+    f.controller.dispose()
+  })
+  it.each(['zh', 'en'])('distinguishes a failed list from an empty inbox and supports a focused retry (%s)', async language => {
+    const f = fixture([])
+    f.list.mockRejectedValueOnce(new Error('HTTP 403'))
+    render(<><NotificationTrigger wide controller={f.controller} locale={locale(language)} /><NotificationOverlay controller={f.controller} locale={locale(language)} /></>)
+    fireEvent.click(screen.getByRole('button', { name: language === 'zh' ? '打开通知中心' : 'Open Notification Center' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('HTTP 403')
+    expect(screen.queryByText(/这里暂时没有通知|No notifications here yet/)).toBeNull()
+    expect(screen.queryByText(/没有未读消息|No unread messages/)).toBeNull()
+    const retry = screen.getByRole('button', { name: language === 'zh' ? '重新加载通知' : 'Retry notifications' })
+    retry.focus()
+    expect(retry).toHaveFocus()
+    fireEvent.click(retry)
+    await screen.findByText(language === 'zh' ? '这里暂时没有通知。' : 'No notifications here yet.')
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('button', { name: language === 'zh' ? '关闭通知中心' : 'Close Notification Center' })).toHaveFocus()
+    expect(f.list).toHaveBeenCalledTimes(2)
+    expect(screen.getByRole('button', { name: language === 'zh' ? '全部已读' : 'Mark all read' })).toBeDisabled()
+    f.controller.dispose()
+  })
   it('renders plain text, filters unread, and follows an exact Artifact target', async () => {
     const f = fixture([record(), record({ id: 'notification:read', version: 'version:read', title: 'Already read', body: 'Read body', readAt: Date.now() })])
     render(<><NotificationTrigger wide controller={f.controller} locale={locale()} /><NotificationOverlay controller={f.controller} locale={locale()} /></>)

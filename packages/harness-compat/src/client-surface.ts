@@ -6,6 +6,33 @@ import type {
   HarnessAgentPresetSeatControl,
 } from './index.js'
 
+export { readHarnessPromptCorrelation } from './prompt-correlation.js'
+
+/** Observe the selected Harness connection owner's generation description.
+ * Never start its stream pump or treat a description as enterprise authority.
+ * The first handshake may still be pending; only a known connection loss is
+ * an outage notification. The consumer owns its recovery presentation. */
+export function observeHarnessConnectionLoss(connection: unknown, onLoss: () => void): () => void {
+  const source = (connection as { hostDescription?: {
+    getSnapshot(): unknown; subscribe(listener: () => void): () => void
+  } } | undefined)?.hostDescription
+  if (!source || typeof source.getSnapshot !== 'function' || typeof source.subscribe !== 'function') {
+    throw new Error('Harness connection description source is unavailable')
+  }
+  let connected = source.getSnapshot() !== undefined
+  let active = true
+  const update = () => {
+    if (!active) return
+    const available = source.getSnapshot() !== undefined
+    const lost = connected && !available
+    connected = available
+    if (lost) onLoss()
+  }
+  const unsubscribe = source.subscribe(update)
+  update()
+  return () => { if (active) { active = false; unsubscribe() } }
+}
+
 /** Shared product-surface ids; Harness still owns shell routing and history. */
 export const PAIMIND_PRODUCT_SURFACE_IDS = ['agent-center', 'skill-center', 'workspace-blueprints'] as const
 
@@ -122,6 +149,35 @@ export function isPaimindProductSurfaceAvailable(
   doc: Document = document,
 ): boolean {
   return productSurfaceTrigger(doc, id) !== null
+}
+
+/** Observe the existing entry lifecycle without creating a plugin registry. */
+export function subscribePaimindProductSurfaceAvailability(
+  id: PaimindProductSurfaceId,
+  listener: () => void,
+  doc: Document = document,
+): () => void {
+  let available = isPaimindProductSurfaceAvailable(id, doc)
+  let active = true
+  const Observer = doc.defaultView?.MutationObserver ?? MutationObserver
+  const observer = new Observer(() => {
+    if (!active) return
+    const next = isPaimindProductSurfaceAvailable(id, doc)
+    if (next === available) return
+    available = next
+    listener()
+  })
+  observer.observe(doc, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['data-paimind-product-trigger'],
+  })
+  return () => {
+    if (!active) return
+    active = false
+    observer.disconnect()
+  }
 }
 
 /**
@@ -357,6 +413,7 @@ export class PaimindProductSurfaceController {
   private snapshot: PaimindProductSurfaceSnapshot = closedSnapshot
   private readonly listeners = new Set<() => void>()
   private readonly closeBlockers = new Set<symbol>()
+  private readonly closeGuards = new Set<() => boolean>()
   private disposed = false
   private deferredClose: { readonly restoreFocus: boolean } | null = null
   private restoreTarget: HTMLElement | null = null
@@ -404,9 +461,17 @@ export class PaimindProductSurfaceController {
     this.deferredClose = { restoreFocus }
   }
 
+  /** The contributing UI owns discard decisions; this controller stores no draft. */
+  guardClose(guard: () => boolean): () => void {
+    if (this.disposed) return () => {}
+    this.closeGuards.add(guard)
+    return () => { this.closeGuards.delete(guard) }
+  }
+
   close(restoreFocus = true): boolean {
     if (!this.snapshot.open) return true
     if (this.closeBlockers.size > 0) return false
+    if ([...this.closeGuards].some(guard => !guard())) return false
     this.publish(closedSnapshot)
     if (!restoreFocus) return true
     const target = this.restoreTarget?.isConnected === true
@@ -428,6 +493,7 @@ export class PaimindProductSurfaceController {
     this.snapshot = closedSnapshot
     this.listeners.clear()
     this.closeBlockers.clear()
+    this.closeGuards.clear()
     this.deferredClose = null
     this.restoreTarget = null
   }

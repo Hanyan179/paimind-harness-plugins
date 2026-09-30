@@ -1,5 +1,6 @@
 import { readFile, readdir } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import { spawnSync } from 'node:child_process'
 
 const root = resolve('.')
 const packagesRoot = resolve(root, 'packages')
@@ -425,8 +426,23 @@ for (const entry of await readdir(packagesRoot, { withFileTypes: true })) {
   const manifest = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'))
   if (manifest.dsh?.client === undefined) continue
   const clientSource = await readFile(resolve(packageRoot, manifest.paimindBuild?.client), 'utf8')
-  if (clientSource.includes("category: 'governance'")) {
-    failures.push(`${manifest.name}: Governance product must not appear before an authenticated authorization provider exists`)
+  if (/category\s*:\s*['"]governance['"]/u.test(clientSource)) {
+    if (manifest.name !== '@paimind/enterprise-admin') {
+      failures.push(`${manifest.name}: Governance product needs an explicit authenticated-provider contract and lifecycle verifier`)
+      continue
+    }
+    // This is an executable client-visibility gate, not a server authority or
+    // enterprise acceptance claim. Only the explicitly reviewed native plugin
+    // is admitted; arbitrary governance products remain rejected.
+    const check = spawnSync(process.execPath, [resolve(root, 'node_modules/vitest/vitest.mjs'), 'run',
+      'packages/enterprise-admin/tests/governance.spec.tsx', '--reporter=json'], { cwd: root, encoding: 'utf8', timeout: 60_000 })
+    if (check.stderr) process.stderr.write(check.stderr)
+    let result
+    try { result = JSON.parse(check.stdout) } catch {}
+    if (check.status !== 0 || !result?.success || !(result.numPassedTests > 0)
+      || result.numFailedTests !== 0 || result.numPendingTests !== 0 || result.numTodoTests !== 0) {
+      failures.push(`${manifest.name}: authenticated governance lifecycle did not execute with zero failed/pending/todo tests`)
+    }
   }
 }
 
@@ -464,5 +480,5 @@ if (failures.length > 0) {
   console.error(failures.join('\n'))
   process.exitCode = 1
 } else {
-  console.log(`framework verification passed: ${pluginPackages.length} client plugin(s), six Product Feature Packs with a nested Runtime Orb capability, seven-category technical descriptor taxonomy, Registry remains installation/version truth, Loader remains lifecycle truth, Task Monitor is a complete native read-only monitor, Bento is hidden on-demand and adapter-only, no synthetic Governance product, every user-visible client contributes one descriptor, only compatibility-neutral home-path imports exist outside harness-compat, zero Better Sidebar imports outside better-sidebar-adapter`)
+  console.log(`framework verification passed: ${pluginPackages.length} client plugin(s), six Product Feature Packs with a nested Runtime Orb capability, seven-category technical descriptor taxonomy, Registry remains installation/version truth, Loader remains lifecycle truth, Task Monitor is a complete native read-only monitor, Bento is hidden on-demand and adapter-only, Governance discovery requires executable authenticated lifecycle checks (not backend or Browser E2E acceptance), every user-visible client contributes one descriptor, only compatibility-neutral home-path imports exist outside harness-compat, zero Better Sidebar imports outside better-sidebar-adapter`)
 }

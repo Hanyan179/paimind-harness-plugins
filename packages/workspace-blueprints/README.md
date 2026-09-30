@@ -37,6 +37,8 @@ The host service mounts with `workspaceRegistry`, exposes a strict Remote surfac
 
 The manifest publishes built Node and client entries plus the read-only `templates/**/*` catalog. Source tests, local Harness homes, generated acceptance screenshots, caches, and credentials are excluded.
 
+Bundled empty folders use zero-byte `.gitkeep` packaging markers so a fresh checkout and package install preserve the same directory snapshot. Only built-in catalogs interpret these markers; they are not copied into user workspaces or counted in the immutable content digest. Nonempty markers and symbolic links fail closed. User-authored files are not implicitly filtered by this convention.
+
 ## Verification
 
 - `pnpm exec tsc -b packages/workspace-blueprints/tsconfig.json --pretty false`

@@ -1,11 +1,12 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { createReadStream, createWriteStream, readFileSync } from 'node:fs'
+import { constants, createReadStream, createWriteStream, readFileSync } from 'node:fs'
 import {
   access,
   cp,
   copyFile,
   lstat,
   mkdir,
+  mkdtemp,
   open,
   readFile,
   readdir,
@@ -19,7 +20,12 @@ import {
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { basename, dirname, extname, isAbsolute, join, normalize, relative, resolve, sep } from 'node:path'
 import { pipeline } from 'node:stream/promises'
+import { isDeepStrictEqual } from 'node:util'
 import { Transform } from 'node:stream'
+import { SKILL_ADOPTED_CONTENT_BYTES, readSkillAdoptedContentInput, type SkillAdoptedContentInput, type SkillAdoptedContent } from './adopted-content.js'
+export type { SkillAdoptedContentInput, SkillAdoptedContent } from './adopted-content.js'
+import { readSkillAdoptedPreferenceInput, type SkillAdoptedPreferenceInput, type SkillAdoptedPreferenceResult } from './adopted-preference.js'
+export type { SkillAdoptedPreferenceInput, SkillAdoptedPreferenceResult } from './adopted-preference.js'
 import yauzl, { type Entry, type ZipFile } from 'yauzl'
 import { parseDocument } from 'yaml'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
@@ -67,6 +73,13 @@ import {
   type SkillCatalogSnapshot,
 } from './recommended.js'
 import { resolvePaimindSkillScope } from './scope.js'
+import { SkillPublicationExports, type SkillPublicationSource } from './publication-export.js'
+import { SkillPublicationImports } from './publication-import.js'
+import { SKILL_PUBLICATION_MAX_ENTRIES, SKILL_PUBLICATION_MAX_EXPANDED_BYTES,
+  readSkillPublicationAdoption, readSkillPublicationAdoptionInput,
+  type SkillPublicationSelection, type SkillPublicationExport, type SkillPublicationChunk,
+  type SkillPublicationAdoption, type SkillPublicationAdoptionInput, type SkillPublicationImportStart,
+  type SkillPublicationImportChunk } from './publication.js'
 
 const SKILL_NAME = /^[a-z0-9][a-z0-9-]*$/
 const UPLOAD_ID = /^[a-f0-9-]{36}$/
@@ -148,6 +161,11 @@ export interface SkillInstallRecord extends SkillPackageMetadata {
   readonly updatedAt: number
   readonly managed: boolean
   readonly runtimeRequirements: readonly SkillRuntimeRequirement[]
+  readonly publication?: Readonly<SkillPublicationAdoption>
+  /** Live enterprise assignment projection; never persisted or an execution grant. */
+  readonly publicationEligible?: boolean
+  /** Read-only projection of this owner's stored intent, not current permission. */
+  readonly publicationPreference?: Readonly<{ revision: number; enabled: boolean; direct: boolean }>
 }
 
 export interface SkillInstallResult {
@@ -299,6 +317,11 @@ interface StoredUserSkillPolicyV3 {
   readonly enabledOptionalSystemSkillNames: readonly string[]
   readonly disabledBusinessSkillNames: readonly string[]
   readonly directBusinessSkillNames: readonly string[]
+}
+
+interface StoredUserSkillPolicyV4 extends Omit<StoredUserSkillPolicyV3, 'schema'> {
+  readonly schema: 'paimind.user-skill-policy-storage/v4'
+  readonly enabledAdoptedSkillIds: readonly string[]
 }
 
 export interface SkillInstallerOptions {
@@ -490,11 +513,23 @@ async function scanSkillPackageFiles(root: string): Promise<readonly Readonly<Sk
 
 /** Stable folder revision without retaining package contents in memory. */
 async function skillPackageRevision(root: string): Promise<string> {
-  const rows: Array<Readonly<Pick<SkillPackageEntry, 'path' | 'kind' | 'size' | 'digest'>>> = []
+  return skillPackageDigest(await skillPackageInventory(root))
+}
+
+/** One canonical directory traversal/digest vocabulary for authoring and export.
+ * Export additionally bounds work and refuses links; ordinary revision semantics
+ * and ordering remain unchanged. */
+async function skillPackageInventory(root: string, publicationSignal?: AbortSignal): Promise<SkillPublicationSource['entries']> {
+  const rows: Array<SkillPublicationSource['entries'][number]> = []
+  let expandedBytes = 0
   const visit = async (directory: string, prefix = ''): Promise<void> => {
+    publicationSignal?.throwIfAborted()
+    if (publicationSignal && await realpath(directory) !== directory) throw new Error('Skill 发布路径不能包含符号链接')
     const entries = await readdir(directory, { withFileTypes: true })
     for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
       if (entry.name === INSTALL_MANIFEST) continue
+      publicationSignal?.throwIfAborted()
+      if (publicationSignal && rows.length >= SKILL_PUBLICATION_MAX_ENTRIES) throw new Error('Skill 发布文件数量超过上限')
       const path = safeSkillPackageFilePath(prefix === '' ? entry.name : `${prefix}/${entry.name}`)
       const target = join(root, path)
       const info = await lstat(target)
@@ -505,11 +540,15 @@ async function skillPackageRevision(root: string): Promise<string> {
         continue
       }
       if (!info.isFile()) throw new Error(`Skill 包含不受支持的文件类型：${path}`)
-      rows.push(Object.freeze({ path, kind: 'binary', size: info.size, digest: await digestFile(target) }))
+      expandedBytes += info.size
+      if (publicationSignal && (info.nlink !== 1 || expandedBytes > SKILL_PUBLICATION_MAX_EXPANDED_BYTES)) {
+        throw new Error('Skill 发布文件存在硬链接或内容超过上限')
+      }
+      rows.push(Object.freeze({ path, kind: 'binary', size: info.size, digest: await digestFile(target, publicationSignal) }))
     }
   }
   await visit(root)
-  return skillPackageDigest(rows)
+  return Object.freeze(rows)
 }
 
 function safeSkillPackageDirectoryPath(raw: string | undefined): string {
@@ -779,9 +818,10 @@ async function readZipEntry(zip: ZipFile, entry: Entry): Promise<Buffer> {
   return Buffer.concat(chunks)
 }
 
-async function inspectZip(path: string, repositorySelection?: Readonly<{ subdirectory?: string }>): Promise<ArchiveInspection> {
+async function inspectZip(path: string, repositorySelection?: Readonly<{ subdirectory?: string }>, publicationSignal?: AbortSignal): Promise<ArchiveInspection> {
   const zip = await openZip(path, { lazyEntries: true, validateEntrySizes: true, autoClose: false })
   const rows: { entry: Entry; path: string; directory: boolean }[] = []
+  const publicationPaths = new Set<string>()
   const skillFiles: { entry: Entry; path: string }[] = []
   let expandedBytes = 0
   let compressedBytes = 0
@@ -793,8 +833,14 @@ async function inspectZip(path: string, repositorySelection?: Readonly<{ subdire
       zip.once('error', fail)
       zip.on('entry', (entry: Entry) => {
         try {
+          publicationSignal?.throwIfAborted()
           const entryPath = safeArchivePath(entry.fileName)
-          if (ignoredArchivePath(entryPath)) { zip.readEntry(); return }
+          if (!publicationSignal && ignoredArchivePath(entryPath)) { zip.readEntry(); return }
+          if (publicationSignal && (entryPath !== entry.fileName || basename(entryPath) === INSTALL_MANIFEST
+            || rows.length >= SKILL_PUBLICATION_MAX_ENTRIES || publicationPaths.has(entryPath.replace(/\/$/, '')))) {
+            throw new Error('企业 Skill 压缩包路径重复、保留或超过上限')
+          }
+          publicationPaths.add(entryPath.replace(/\/$/, ''))
           if ((entry.generalPurposeBitFlag & 0x1) !== 0) throw new Error('不支持加密压缩包')
           if (isSymlink(entry)) throw new Error(`压缩包包含符号链接：${entryPath}`)
           const directory = /\/$/.test(entry.fileName)
@@ -805,7 +851,7 @@ async function inspectZip(path: string, repositorySelection?: Readonly<{ subdire
             if (entry.compressedSize > 0 && entry.uncompressedSize / entry.compressedSize > MAX_EXPANSION_RATIO) {
               throw new Error(`压缩比异常：${entryPath}`)
             }
-            if (basename(entryPath).toLocaleLowerCase() === 'skill.md') skillFiles.push({ entry, path: entryPath })
+            if (publicationSignal ? entryPath === 'SKILL.md' : basename(entryPath).toLocaleLowerCase() === 'skill.md') skillFiles.push({ entry, path: entryPath })
             if (entryPath.split('/').includes('scripts')) warnings.add('包含脚本文件；安装过程不会执行脚本')
             if ((zipUnixMode(entry) & 0o111) !== 0) warnings.add('包含可执行文件；请确认来源可信')
             const manifest = basename(entryPath).toLocaleLowerCase()
@@ -878,7 +924,7 @@ async function ensureDiskCapacity(path: string, expandedBytes: number): Promise<
   if (expandedBytes > free * 0.8) throw new Error('临时磁盘空间不足，无法安全解压')
 }
 
-async function extractZip(path: string, inspection: ArchiveInspection, targetRoot: string): Promise<void> {
+async function extractZip(path: string, inspection: ArchiveInspection, targetRoot: string, signal?: AbortSignal): Promise<void> {
   await ensureDiskCapacity(targetRoot, inspection.expandedBytes)
   const zip = await openZip(path, { lazyEntries: true, validateEntrySizes: true, autoClose: false })
   const byPath = new Map(inspection.entries.map(row => [row.path, row]))
@@ -891,6 +937,7 @@ async function extractZip(path: string, inspection: ArchiveInspection, targetRoo
         if (active) { reject(new Error('压缩包读取状态无效')); return }
         active = true
         void (async () => {
+          signal?.throwIfAborted()
           const entryPath = safeArchivePath(entry.fileName)
           const row = byPath.get(entryPath)
           if (row === undefined) { active = false; zip.readEntry(); return }
@@ -907,7 +954,7 @@ async function extractZip(path: string, inspection: ArchiveInspection, targetRoo
                 else resolveStream(stream)
               })
             })
-            await pipeline(input, createWriteStream(destination, { mode: (zipUnixMode(entry) & 0o111) === 0 ? 0o600 : 0o700 }))
+            await pipeline(input, createWriteStream(destination, { mode: (zipUnixMode(entry) & 0o111) === 0 ? 0o600 : 0o700 }), ...(signal ? [{ signal }] : []))
           }
           active = false
           zip.readEntry()
@@ -923,9 +970,9 @@ async function pathExists(path: string): Promise<boolean> {
   try { await access(path); return true } catch { return false }
 }
 
-async function digestFile(path: string): Promise<string> {
+async function digestFile(path: string, signal?: AbortSignal): Promise<string> {
   const hash = createHash('sha256')
-  for await (const chunk of createReadStream(path)) hash.update(chunk as Buffer)
+  for await (const chunk of createReadStream(path, signal ? { signal } : undefined)) hash.update(chunk as Buffer)
   return `sha256:${hash.digest('hex')}`
 }
 
@@ -983,17 +1030,25 @@ async function readInstallManifest(path: string): Promise<SkillInstallRecord | u
     const value = JSON.parse(await readFile(path, 'utf8')) as Partial<InstallManifest>
     if (value.schemaVersion !== 1 || typeof value.skillId !== 'string' || !SKILL_NAME.test(value.skillId)
       || typeof value.digest !== 'string' || typeof value.installedAt !== 'number' || typeof value.updatedAt !== 'number'
-      || typeof value.sourceFileName !== 'string' || typeof value.name !== 'string' || typeof value.description !== 'string') return undefined
+      || typeof value.sourceFileName !== 'string' || typeof value.name !== 'string' || typeof value.description !== 'string') throw new Error('Skill 安装回执无效，保留原内容')
+    const publication = value.publication === undefined ? undefined : readSkillPublicationAdoption(value.publication)
+    if (publication && (publication.name !== value.skillId || publication.name !== value.name || publication.archiveDigest !== value.digest)) {
+      throw new Error('企业 Skill 安装回执身份不一致')
+    }
     return Object.freeze({
       skillId: value.skillId, name: value.name, description: value.description,
       ...(typeof value.whenToUse === 'string' ? { whenToUse: value.whenToUse } : {}),
       digest: value.digest, sourceFileName: value.sourceFileName,
       installedAt: value.installedAt, updatedAt: value.updatedAt, managed: true,
+      ...(publication ? { publication } : {}),
       runtimeRequirements: Object.freeze(Array.isArray(value.runtimeRequirements)
         ? value.runtimeRequirements.filter((item): item is SkillRuntimeRequirement => ['python', 'node', 'system'].includes(String(item)))
         : []),
     })
-  } catch { return undefined }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw error
+  }
 }
 
 function storedPolicyNames(value: unknown, field: string): readonly string[] {
@@ -1008,27 +1063,29 @@ function storedPolicyNames(value: unknown, field: string): readonly string[] {
 
 function emptyStoredUserSkillPolicy(
   defaultOptionalSystemSkillNames: readonly string[] = Object.freeze([]),
-): Readonly<StoredUserSkillPolicyV3> {
+): Readonly<StoredUserSkillPolicyV4> {
   return Object.freeze({
-    schema: 'paimind.user-skill-policy-storage/v3',
+    schema: 'paimind.user-skill-policy-storage/v4',
     revision: 0,
     enabledOptionalSystemSkillNames: Object.freeze([...defaultOptionalSystemSkillNames].sort()),
     disabledBusinessSkillNames: Object.freeze([]),
     directBusinessSkillNames: Object.freeze([]),
+    enabledAdoptedSkillIds: Object.freeze([]),
   })
 }
 
 function parseStoredUserSkillPolicy(
   value: unknown,
   legacyDefaultOptionalSystemSkillNames: readonly string[] = Object.freeze([]),
-): Readonly<StoredUserSkillPolicyV3> {
+): Readonly<StoredUserSkillPolicyV4> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new Error('用户 Skill Policy 文件无效')
   }
-  const candidate = value as Partial<LegacyStoredUserSkillPolicyV1 | StoredUserSkillPolicyV2 | StoredUserSkillPolicyV3>
+  const candidate = value as Partial<LegacyStoredUserSkillPolicyV1 | StoredUserSkillPolicyV2 | StoredUserSkillPolicyV3 | StoredUserSkillPolicyV4>
   if ((candidate.schema !== 'paimind.user-skill-policy-storage/v1'
     && candidate.schema !== 'paimind.user-skill-policy-storage/v2'
-    && candidate.schema !== 'paimind.user-skill-policy-storage/v3')
+    && candidate.schema !== 'paimind.user-skill-policy-storage/v3'
+    && candidate.schema !== 'paimind.user-skill-policy-storage/v4')
     || !Number.isSafeInteger(candidate.revision) || (candidate.revision ?? -1) < 0) {
     throw new Error('用户 Skill Policy 文件无效')
   }
@@ -1046,8 +1103,13 @@ function parseStoredUserSkillPolicy(
           ...enabledOptionalSystemSkillNames,
         ]
       : enabledOptionalSystemSkillNames
+  const adopted = candidate.schema === 'paimind.user-skill-policy-storage/v4' ? candidate.enabledAdoptedSkillIds : []
+  if (!Array.isArray(adopted) || adopted.length > 128 || new Set(adopted).size !== adopted.length
+    || adopted.some(id => typeof id !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu.test(id))) {
+    throw new Error('用户 Skill Policy 企业启用意愿无效')
+  }
   return Object.freeze({
-    schema: 'paimind.user-skill-policy-storage/v3',
+    schema: 'paimind.user-skill-policy-storage/v4',
     revision: candidate.revision!,
     enabledOptionalSystemSkillNames: Object.freeze([...new Set(migratedOptionalSystemSkillNames)].sort()),
     disabledBusinessSkillNames: storedPolicyNames(
@@ -1055,6 +1117,7 @@ function parseStoredUserSkillPolicy(
       'disabledBusinessSkillNames',
     ),
     directBusinessSkillNames: storedPolicyNames(candidate.directBusinessSkillNames, 'directBusinessSkillNames'),
+    enabledAdoptedSkillIds: Object.freeze([...adopted].sort()),
   })
 }
 
@@ -1097,6 +1160,11 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
   private legacyMigration: Promise<void> | null = null
   private policyMutation: Promise<void> = Promise.resolve()
   private packageMutation: Promise<void> = Promise.resolve()
+  private readonly publicationExports: SkillPublicationExports
+  private readonly publicationImports: SkillPublicationImports
+  private readonly adoptedLifetime = new AbortController()
+  private contentReads = 0
+  private preferenceWrites = 0
 
   constructor(private readonly installerCtx: SkillInstallerHostContext, options: SkillInstallerOptions = {}) {
     super(installerCtx, 'paimindSkillInstaller')
@@ -1117,12 +1185,20 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       ?? (this.supportsAtomicSystemSkillLifecycle ? packagedSkillBody(new URL('../SKILL.md', import.meta.url)) : '')
     this.authoringSkillBody = options.bundledSkillBodies?.authoring
       ?? (this.supportsAtomicSystemSkillLifecycle ? packagedSkillBody(new URL('../SKILL_AUTHORING.md', import.meta.url)) : '')
+    this.publicationExports = new SkillPublicationExports(join(this.stateRoot, 'publication-exports'),
+      (selection, signal) => this.readPublicationSource(selection, signal))
+    installerCtx.effect(() => () => this.publicationExports.dispose(), 'paimind-skill-market: transient publication exports')
+    this.publicationImports = new SkillPublicationImports(join(this.stateRoot, 'publication-imports'),
+      (input, signal) => this.withPackageMutation(() => this.readAdoptedSkill(input, signal, true)),
+      (input, path, signal) => this.withPackageMutation(() => this.installPublishedSkill(input, path, signal)))
+    installerCtx.effect(() => () => this.publicationImports.dispose(), 'paimind-skill-market: transient publication imports')
+    installerCtx.effect(() => () => this.adoptedLifetime.abort(), 'paimind-skill-market: adopted content and preference operations')
     markPaimindHostRemoteMethods(this, [
       'listCatalog', 'inspectCatalog', 'inspectUpload', 'installUpload', 'listInstalled', 'uninstall',
       'getSkillSource', 'saveSkillSource', 'getSkillPackage', 'listSkillPackageDirectory',
-      'readSkillPackageFile', 'saveSkillPackage',
+      'readSkillPackageFile', 'saveSkillPackage', 'readAdoptedSkillContent',
       'getAuthoringDraft', 'dismissAuthoringDraft',
-      'getUserSkillPolicy', 'replaceUserSkillPolicy', 'listSystemSkills',
+      'getUserSkillPolicy', 'replaceUserSkillPolicy', 'setAdoptedSkillPreference', 'listSystemSkills',
       'getSessionBusinessSkillSelection', 'replaceSessionBusinessSkillSelection',
     ])
     installerCtx.effect(() => {
@@ -1194,6 +1270,15 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       : undefined
   }
 
+  private loaderFacility(): PaimindHostLoaderFacility | undefined {
+    const dynamic = this.installerCtx.get?.('loader') as PaimindHostLoaderFacility | undefined
+    if (dynamic !== undefined) return dynamic
+    // Loader is optional, not a required Service injection. Cordis rejects an
+    // absent uninjected property; plain host/test contexts may expose it as an
+    // own property. Keep lookup failures observable and guard only that fallback.
+    try { return this.installerCtx.loader } catch { return undefined }
+  }
+
   private async workspaceComposition(
     session: SkillInstallerHostSession,
   ): Promise<Readonly<PaimindWorkspaceCompositionSnapshotV1> | undefined> {
@@ -1216,11 +1301,14 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       && agentSource.describeAgentAuthoringCapability !== undefined) {
       names.push(PAIMIND_AGENT_AUTHORING_SKILL)
     }
-    if (this.installerCtx.loader !== undefined) names.push(PAIMIND_GENUI_SKILL)
+    const loader = this.loaderFacility()
+    if (loader !== undefined && describePaimindHostLoaderEntry(loader, PAIMIND_GENUI_LOADER_ENTRY_ID).installed) {
+      names.push(PAIMIND_GENUI_SKILL)
+    }
     return Object.freeze(names.sort())
   }
 
-  private readStoredUserSkillPolicySync(): Readonly<StoredUserSkillPolicyV3> {
+  private readStoredUserSkillPolicySync(): Readonly<StoredUserSkillPolicyV4> {
     const defaults = this.defaultOptionalSystemSkillNames()
     try {
       return parseStoredUserSkillPolicy(
@@ -1337,7 +1425,8 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
 
   private async applyOptionalSystemSkillPolicy(names: readonly string[]): Promise<void> {
     // Persisted policy may outlive an optional source Plugin. Known-but-absent
-    // sources are inert here and are reconciled if their provider later mounts.
+    // sources are inert here; keep their choice for the next installed-source
+    // startup (Agent Center also has its explicit live reconciliation hook).
     this.assertKnownOptionalSystemSkillPolicy(names)
     const enabled = new Set(names)
     if (enabled.has(PAIMIND_SKILL_AUTHORING_SKILL)) this.enableAuthoringCapability()
@@ -1348,12 +1437,9 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
     if (agentSource?.setAgentAuthoringEnabled !== undefined) {
       await agentSource.setAgentAuthoringEnabled(enabled.has(PAIMIND_AGENT_AUTHORING_SKILL))
     }
-    const loader = this.installerCtx.loader
+    const loader = this.loaderFacility()
     if (loader !== undefined) {
       const state = describePaimindHostLoaderEntry(loader, PAIMIND_GENUI_LOADER_ENTRY_ID)
-      if (!state.installed && enabled.has(PAIMIND_GENUI_SKILL)) {
-        throw new Error('GenUI System Skill 来源插件当前未安装')
-      }
       if (state.installed) {
         await setPaimindHostLoaderEntryEnabled(loader, PAIMIND_GENUI_LOADER_ENTRY_ID, enabled.has(PAIMIND_GENUI_SKILL))
       }
@@ -1440,11 +1526,10 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
     return session
   }
 
-  private async sessionKindAndAgentSkills(agent: SkillInstallerHostAgent): Promise<Readonly<{
+  private async sessionKindAndAgentSkills(presetId: string | undefined): Promise<Readonly<{
     kind: 'direct' | 'agent'
     names: readonly string[]
   }>> {
-    const presetId = resolvePaimindLiveAgentPreset(agent)
     if (presetId === undefined || presetId === PAIMIND_STANDARD_AGENT_BASE_PRESET_ID) {
       return Object.freeze({ kind: 'direct', names: Object.freeze([]) })
     }
@@ -1456,15 +1541,24 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
     return Object.freeze({ kind: 'agent', names: names ?? Object.freeze([]) })
   }
 
-  private async scopedSkillDefinitions(
-    agent: SkillInstallerHostAgent,
-  ): Promise<readonly Readonly<PaimindScopedSkillDefinition>[]> {
+  private async scopedSkillSelection(session: SkillInstallerHostSession, presetId: string | undefined, includeGovernedIntent = false) {
     const installed = await this.listInstalled()
     const system = await this.listSystemSkills()
-    const policy = await this.getUserSkillPolicy()
-    const sessionSelection = this.sessionSelection(agent.session)
-    const agentSelection = await this.sessionKindAndAgentSkills(agent)
-    const workspaceComposition = await this.workspaceComposition(agent.session)
+    let policy = await this.getUserSkillPolicy()
+    if (includeGovernedIntent) {
+      // Intent is not eligibility. Reuse the same resolver before asking the
+      // enterprise authority; do not enable, register or persist these choices.
+      const stored = await this.readStoredUserSkillPolicy(), disabled = new Set(stored.disabledBusinessSkillNames)
+      const enabled = installed.items.filter(item => !disabled.has(item.name)
+        && (!item.publication || stored.enabledAdoptedSkillIds.includes(item.publication.publicationId)))
+      policy = definePaimindUserSkillPolicy({ ...policy,
+        enabledBusinessSkillNames: enabled.map(item => item.name),
+        directBusinessSkillNames: stored.directBusinessSkillNames.filter(name => enabled.some(item => item.name === name)),
+      })
+    }
+    const sessionSelection = this.sessionSelection(session)
+    const agentSelection = await this.sessionKindAndAgentSkills(presetId)
+    const workspaceComposition = await this.workspaceComposition(session)
     const systemNames = new Set<string>([
       ...PAIMIND_SYSTEM_SKILL_NAMES,
       ...system.items.map(reference => reference.name),
@@ -1507,6 +1601,82 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       workspaceComposition,
       sessionBusinessSkillNames: sessionSelection.skillNames,
     })
+    return { installedByName, resolved }
+  }
+
+  /** Trusted native control only. Exact selected enterprise intent and bytes,
+   * never a new registry, browser method, eligibility switch or execution grant. */
+  async getSelectedPublicationReferences(input: { readonly nativeSessionId: string; readonly presetId: string; readonly requiredPublicationIds?: readonly string[]; readonly skillSelection?: 'captured' }, signal = new AbortController().signal): Promise<readonly Readonly<SkillPublicationAdoptionInput>[]> {
+    if (input === null || typeof input !== 'object' || !['nativeSessionId,presetId', 'nativeSessionId,presetId,requiredPublicationIds', 'nativeSessionId,presetId,requiredPublicationIds,skillSelection'].includes(Object.keys(input).sort().join(','))
+      || Object.hasOwn(input, 'skillSelection') && (input.skillSelection !== 'captured' || !Array.isArray(input.requiredPublicationIds))
+      || typeof input.presetId !== 'string' || !/^[a-z0-9][a-z0-9_-]{0,159}$/u.test(input.presetId)) throw new Error('Invalid native Skill selection')
+    const retained = input.requiredPublicationIds === undefined ? [] : input.requiredPublicationIds
+    if (!Array.isArray(retained) || retained.length > 128 || new Set(retained).size !== retained.length
+      || retained.some(id => typeof id !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(id))) throw new Error('Invalid retained Skill requirements')
+    const required = [...retained], captured = input.skillSelection === 'captured'
+    return this.withPackageMutation(async () => {
+      signal.throwIfAborted()
+      const session = this.requireSession(input.nativeSessionId)
+      // Read the original installation receipts without consulting the parent's
+      // later mutable catalog for an already-started native job. This is not a
+      // permission cache: every retained version is fully re-read below.
+      const { installedByName, resolved } = captured
+        ? { installedByName: new Map((await this.listInstalled()).items.map(row => [row.name, row])), resolved: [] }
+        : await this.scopedSkillSelection(session, input.presetId, true)
+      const names = new Set(resolved.filter(row => row.kind === 'business' && installedByName.get(row.name)?.publication !== undefined).map(row => row.name))
+      for (const id of required) {
+        const matches = [...installedByName.values()].filter(row => row.publication?.publicationId === id)
+        if (matches.length !== 1) throw new Error('已使用的企业技能固定版本缺失或不唯一，不能省略权限检查')
+        names.add(matches[0]!.name)
+      }
+      if (names.size > 128) throw new Error('当前会话超过128个企业技能依赖，未截断权限检查')
+      const proofs: Readonly<SkillPublicationAdoptionInput>[] = []
+      for (const name of [...names].sort()) {
+        const { schema: _schema, adoptedAt: _at, ...origin } = installedByName.get(name)!.publication!
+        const input = readSkillPublicationAdoptionInput(origin)
+        await this.readAdoptedSkill(input, signal, false)
+        proofs.push(input)
+      }
+      signal.throwIfAborted(); return Object.freeze(proofs)
+    })
+  }
+
+  /** Same-process execution provenance only; never registered as a Remote
+   * method. Compare the actually loaded native value with the original owned
+   * immutable package. This neither selects a Skill nor grants its use. */
+  async getLoadedPublicationReference(value: { readonly name: string; readonly provider: string; readonly content: string; readonly resourceBase?: unknown },
+    signal = new AbortController().signal): Promise<Readonly<SkillPublicationAdoptionInput> | undefined> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)
+      || !['content,name,provider', 'content,name,provider,resourceBase'].includes(Object.keys(value).sort().join(','))
+      || typeof value.name !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(value.name)
+      || typeof value.provider !== 'string' || !value.provider || typeof value.content !== 'string') throw new Error('Invalid native loaded Skill value')
+    value = structuredClone(value)
+    return this.withPackageMutation(async () => {
+      signal.throwIfAborted()
+      const matches = (await this.listInstalled()).items.filter(row => row.name === value.name)
+      if (matches.length > 1) throw new Error('原生技能来源不唯一')
+      const record = matches[0]
+      if (value.provider !== 'paimind-session-business-skills') {
+        if (record?.publication) throw new Error('同名原生技能不是企业固定版本的原提供方')
+        return undefined
+      }
+      if (!record) throw new Error('原生技能的受管来源已不存在')
+      if (!record.publication) return undefined
+      const { schema: _schema, adoptedAt: _at, ...origin } = record.publication
+      const reference = readSkillPublicationAdoptionInput(origin)
+      await this.readAdoptedSkill(reference, signal, false)
+      const directory = join(this.skillRoot, record.skillId)
+      const document = skillDocumentParts(await readFile(join(directory, 'SKILL.md'), 'utf8'))
+      const expected = { name: reference.name, provider: 'paimind-session-business-skills',
+        resourceBase: { kind: 'directory', path: directory }, content: document.instructions }
+      if (!isDeepStrictEqual(value, expected)) throw new Error('已读取的原生技能正文或资源来源与企业固定版本不一致')
+      await this.readAdoptedSkill(reference, signal, false)
+      signal.throwIfAborted(); return reference
+    })
+  }
+
+  private async scopedSkillDefinitions(agent: SkillInstallerHostAgent): Promise<readonly Readonly<PaimindScopedSkillDefinition>[]> {
+    const { installedByName, resolved } = await this.scopedSkillSelection(agent.session, resolvePaimindLiveAgentPreset(agent))
     const effectiveBusinessNames = new Set(
       resolved.filter(reference => reference.kind === 'business').map(reference => reference.name),
     )
@@ -1889,6 +2059,10 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
   }
 
   async installUpload(input: { readonly uploadId: string; readonly digest: string }): Promise<Readonly<SkillInstallResult>> {
+    return this.withPackageMutation(() => this.installUploadNow(input))
+  }
+
+  private async installUploadNow(input: { readonly uploadId: string; readonly digest: string }): Promise<Readonly<SkillInstallResult>> {
     await this.migrateLegacyManagedSkills()
     const upload = this.upload(input.uploadId)
     if (upload.digest !== input.digest) throw new Error('上传摘要不匹配，请重新上传')
@@ -1896,6 +2070,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
     await this.assertNoSystemSkillCollision(preview.name)
     const staging = join(this.stagingRoot, `${preview.name}-${randomUUID()}`)
     const destination = join(this.skillRoot, preview.name)
+    await this.assertMutableSkill(destination)
     const backup = join(this.backupRoot, `${preview.name}-${this.now()}-${randomUUID()}`)
     if (!contained(this.skillRoot, destination)) throw new Error('Skill 安装目标越界')
     await mkdir(this.stagingRoot, { recursive: true, mode: 0o700 })
@@ -1961,7 +2136,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
     }
     const agentDescriptor = this.agentProfileSource()?.describeAgentAuthoringCapability?.()
     if (agentDescriptor !== undefined) optional.set(agentDescriptor.name, agentDescriptor)
-    const loader = this.installerCtx.loader
+    const loader = this.loaderFacility()
     if (loader !== undefined) {
       await loader.await()
       if (describePaimindHostLoaderEntry(loader, PAIMIND_GENUI_LOADER_ENTRY_ID).installed) {
@@ -2022,10 +2197,48 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
         }))
       } catch { /* invalid folders remain Harness-owned and are omitted from the business list */ }
     }
-    return Object.freeze({ items: Object.freeze(items.sort((left, right) => left.name.localeCompare(right.name))) })
+    const eligible = await this.currentPublicationEligibility(items)
+    const policy = items.some(item => item.publication) ? await this.readStoredUserSkillPolicy() : undefined
+    return Object.freeze({ items: Object.freeze(items.map(item => item.publication
+      ? Object.freeze({ ...item, publicationEligible: eligible.has(item.publication.publicationId), publicationPreference: Object.freeze({
+        revision: policy!.revision,
+        enabled: policy!.enabledAdoptedSkillIds.includes(item.publication.publicationId) && !policy!.disabledBusinessSkillNames.includes(item.name),
+        direct: policy!.enabledAdoptedSkillIds.includes(item.publication.publicationId) && !policy!.disabledBusinessSkillNames.includes(item.name)
+          && policy!.directBusinessSkillNames.includes(item.name),
+      }) }) : item)
+      .sort((left, right) => left.name.localeCompare(right.name))) })
   }
 
-  private async readStoredUserSkillPolicy(): Promise<Readonly<StoredUserSkillPolicyV3>> {
+  private async currentPublicationEligibility(items: readonly SkillInstallRecord[]): Promise<ReadonlySet<string>> {
+    const governed = items.filter(item => item.publication)
+    if (!governed.length) return new Set()
+    const provider = this.installerCtx.get?.('paimindEnterpriseSkillEligibility') as {
+      read?: (references: readonly Readonly<SkillPublicationAdoptionInput>[], signal: AbortSignal) => Promise<unknown>
+    } | undefined
+    if (provider === undefined) return new Set()
+    if (!provider || typeof provider.read !== 'function') throw new Error('企业技能可用资格服务无效')
+    const references = Object.freeze(governed.map(item => {
+      const { schema: _schema, adoptedAt: _at, ...origin } = item.publication!
+      return readSkillPublicationAdoptionInput(origin)
+    }))
+    if (references.length > 128 || new Set(references.map(item => item.publicationId)).size !== references.length
+      || new Set(references.map(item => item.name)).size !== references.length) throw new Error('企业技能可用资格引用无效')
+    const signal = AbortSignal.timeout(4000)
+    for (const reference of references) await this.readAdoptedSkill(reference, signal, false)
+    const eligible = await provider.read(references, signal)
+    signal.throwIfAborted()
+    if (this.installerCtx.get?.('paimindEnterpriseSkillEligibility') !== provider
+      || !Array.isArray(eligible) || eligible.length > references.length || new Set(eligible).size !== eligible.length
+      || eligible.some(id => typeof id !== 'string' || !references.some(reference => reference.publicationId === id))) {
+      throw new Error('企业技能可用资格响应无效或提供方已变化')
+    }
+    for (const reference of references) await this.readAdoptedSkill(reference, signal, false)
+    signal.throwIfAborted()
+    if (this.installerCtx.get?.('paimindEnterpriseSkillEligibility') !== provider) throw new Error('企业技能可用资格提供方已撤回')
+    return new Set(eligible as string[])
+  }
+
+  private async readStoredUserSkillPolicy(): Promise<Readonly<StoredUserSkillPolicyV4>> {
     const defaults = this.defaultOptionalSystemSkillNames()
     try {
       return parseStoredUserSkillPolicy(
@@ -2039,7 +2252,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
     }
   }
 
-  private async writeStoredUserSkillPolicy(policy: Readonly<StoredUserSkillPolicyV3>): Promise<void> {
+  private async writeStoredUserSkillPolicy(policy: Readonly<StoredUserSkillPolicyV4>): Promise<void> {
     await mkdir(this.stateRoot, { recursive: true, mode: 0o700 })
     const temporary = `${this.userSkillPolicyPath}.${randomUUID()}.tmp`
     try {
@@ -2052,11 +2265,13 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
   }
 
   private async materializeUserSkillPolicy(
-    stored: Readonly<StoredUserSkillPolicyV3>,
+    stored: Readonly<StoredUserSkillPolicyV4>,
   ): Promise<Readonly<PaimindUserSkillPolicyV1>> {
     const installed = await this.listInstalled()
     const installedNames = new Set(installed.items.map(skill => skill.name))
     const disabled = new Set(stored.disabledBusinessSkillNames)
+    const unavailable = new Set(installed.items.filter(item => item.publication && !item.publicationEligible).map(item => item.name))
+    const explicit = new Set(installed.items.filter(item => !item.publication || stored.enabledAdoptedSkillIds.includes(item.publication.publicationId)).map(item => item.name))
     const systemSkillNames = await this.currentSystemSkillNames()
     // A persisted preference can outlive an optional source Plugin. Preserve
     // that known preference without making the independent Skill Center read
@@ -2068,8 +2283,11 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       schema: 'paimind.user-skill-policy/v1',
       revision: stored.revision,
       enabledOptionalSystemSkillNames: stored.enabledOptionalSystemSkillNames,
-      enabledBusinessSkillNames: [...installedNames].filter(name => !disabled.has(name)),
-      directBusinessSkillNames: stored.directBusinessSkillNames.filter(name => installedNames.has(name)),
+      // Preferences never confer enterprise eligibility. Read the current
+      // assignment every time; actual execution additionally checks login,
+      // immutable bytes and current authority at its own native boundaries.
+      enabledBusinessSkillNames: [...installedNames].filter(name => explicit.has(name) && !disabled.has(name) && !unavailable.has(name)),
+      directBusinessSkillNames: stored.directBusinessSkillNames.filter(name => explicit.has(name) && !disabled.has(name) && !unavailable.has(name)),
     })
   }
 
@@ -2109,14 +2327,19 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
       const collision = candidate.enabledBusinessSkillNames.find(name => systemSkillNames.has(name))
       if (collision !== undefined) throw new Error(`Skill 名称与当前系统能力冲突：${collision}`)
       const enabledBusiness = new Set(candidate.enabledBusinessSkillNames)
+      if (installed.items.some(item => item.publication && !item.publicationEligible
+        && (enabledBusiness.has(item.name) || candidate.directBusinessSkillNames.includes(item.name)))) {
+        throw new Error('企业 Skill 当前不可用或运行授权尚未接入，采用回执不能作为启用许可')
+      }
       const stored = Object.freeze({
-        schema: 'paimind.user-skill-policy-storage/v3' as const,
+        schema: 'paimind.user-skill-policy-storage/v4' as const,
         revision: candidate.revision,
         enabledOptionalSystemSkillNames: candidate.enabledOptionalSystemSkillNames,
         disabledBusinessSkillNames: Object.freeze(
           [...installedNames].filter(name => !enabledBusiness.has(name)).sort(),
         ),
         directBusinessSkillNames: candidate.directBusinessSkillNames,
+        enabledAdoptedSkillIds: Object.freeze(installed.items.filter(item => item.publication && enabledBusiness.has(item.name)).map(item => item.publication!.publicationId).sort()),
       })
       await this.writeStoredUserSkillPolicy(stored)
       try {
@@ -2136,6 +2359,50 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
     const result = await operation
     await this.refreshAfterDurableMutation()
     return result
+  }
+
+  /** Change exactly one adopted Skill preference, not system capabilities or
+   * enterprise assignment. Legacy policy files are upgraded only on this write. */
+  async setAdoptedSkillPreference(input: SkillAdoptedPreferenceInput): Promise<Readonly<SkillAdoptedPreferenceResult>> {
+    const selected = readSkillAdoptedPreferenceInput(input)
+    const signal = AbortSignal.any([this.adoptedLifetime.signal, AbortSignal.timeout(30_000)])
+    signal.throwIfAborted()
+    if (this.preferenceWrites >= 2) throw new Error('企业技能使用意愿正在保存，请稍后重试')
+    this.preferenceWrites += 1
+    try {
+      await this.ensureLifecycleReady(); signal.throwIfAborted()
+      const operation = this.policyMutation.then(async () => {
+        signal.throwIfAborted()
+        const current = await this.readStoredUserSkillPolicy()
+        if (current.revision !== selected.expectedRevision || current.revision >= Number.MAX_SAFE_INTEGER) throw new Error('用户技能策略已变化，请刷新后重试')
+        await this.readAdoptedSkill(selected.reference, signal, false)
+        const enabled = new Set(current.enabledAdoptedSkillIds), disabled = new Set(current.disabledBusinessSkillNames)
+        const direct = new Set(current.directBusinessSkillNames), { name, publicationId } = selected.reference
+        if (selected.field === 'direct' && selected.value && (!enabled.has(publicationId) || disabled.has(name))) throw new Error('请先明确允许使用这个企业技能')
+        const authorize = selected.value ? this.adoptedEligibilityCheck(selected.reference, signal) : undefined
+        await authorize?.()
+        if (selected.field === 'enabled') {
+          if (selected.value) { enabled.add(publicationId); disabled.delete(name) }
+          else { enabled.delete(publicationId); disabled.add(name); direct.delete(name) }
+        } else if (selected.value) direct.add(name)
+        else direct.delete(name)
+        if (enabled.size > 128) throw new Error('企业技能启用意愿数量超限')
+        const stored: StoredUserSkillPolicyV4 = Object.freeze({ ...current, revision: current.revision + 1,
+          enabledAdoptedSkillIds: Object.freeze([...enabled].sort()), disabledBusinessSkillNames: Object.freeze([...disabled].sort()),
+          directBusinessSkillNames: Object.freeze([...direct].sort()) })
+        await this.readAdoptedSkill(selected.reference, signal, false); await authorize?.(); signal.throwIfAborted()
+        await this.writeStoredUserSkillPolicy(stored)
+        // A committed preference is not permission. Later revocation need not
+        // erase it; scope and execution always consult current assignment.
+        const isEnabled = enabled.has(publicationId) && !disabled.has(name)
+        return Object.freeze({ reference: selected.reference, revision: stored.revision, enabled: isEnabled,
+          direct: isEnabled && direct.has(name), runtimeGrant: false as const })
+      })
+      this.policyMutation = operation.then(() => undefined, () => undefined)
+      const result = await operation
+      await this.refreshAfterDurableMutation()
+      return result
+    } finally { this.preferenceWrites -= 1 }
   }
 
   async getSkillSource(input: { readonly skillId: string }): Promise<Readonly<SkillSourceDocument>> {
@@ -2158,11 +2425,16 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
   }
 
   async saveSkillSource(input: SkillSourceSaveInput): Promise<Readonly<SkillInstallResult>> {
+    return this.withPackageMutation(() => this.saveSkillSourceNow(input))
+  }
+
+  private async saveSkillSourceNow(input: SkillSourceSaveInput): Promise<Readonly<SkillInstallResult>> {
     await this.migrateLegacyManagedSkills()
     const name = boundedAuthoringText(input.name, 63, 'Skill name')
     if (!SKILL_NAME.test(name)) throw new Error('Skill name 必须使用小写字母、数字和连字符')
     await this.assertNoSystemSkillCollision(name)
     const destination = join(this.skillRoot, name)
+    await this.assertMutableSkill(destination)
     if (!contained(this.skillRoot, destination)) throw new Error('Skill 保存目标越界')
     const existing = await pathExists(destination)
     const existingFile = join(destination, 'SKILL.md')
@@ -2208,6 +2480,217 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
     }
   }
 
+  /** Trusted same-process/private-cell operations only: deliberately NOT marked
+   * Remote, declared in Typert, or exposed as a browser native RPC. */
+  beginPublicationExport(input: SkillPublicationSelection, signal?: AbortSignal): Promise<Readonly<SkillPublicationExport>> {
+    return this.publicationExports.begin(input, signal)
+  }
+
+  beginPublicationAdoption(input: SkillPublicationAdoptionInput, signal?: AbortSignal): Promise<SkillPublicationImportStart> {
+    return this.publicationImports.begin(input, signal)
+  }
+
+  writePublicationAdoption(input: SkillPublicationImportChunk, signal?: AbortSignal) {
+    return this.publicationImports.write(input, signal)
+  }
+
+  commitPublicationAdoption(input: { readonly importId: string }, signal?: AbortSignal): Promise<Readonly<SkillPublicationAdoption>> {
+    return this.publicationImports.commit(input, signal)
+  }
+
+  releasePublicationAdoption(input: { readonly importId: string }) {
+    return this.publicationImports.release(input)
+  }
+
+  getAdoptedSkillPublication(input: SkillPublicationAdoptionInput, signal?: AbortSignal): Promise<Readonly<SkillPublicationAdoption>> {
+    const selected = readSkillPublicationAdoptionInput(input)
+    return this.withPackageMutation(async () => {
+      const receipt = await this.readAdoptedSkill(selected, signal ?? new AbortController().signal, false)
+      if (!receipt) throw new Error('企业 Skill 采用版本不存在')
+      return receipt
+    })
+  }
+
+  private async assertMutableSkill(root: string): Promise<void> {
+    const receipt = await readInstallManifest(join(root, INSTALL_MANIFEST))
+    if (receipt?.publication) throw new Error('企业 Skill 发布版本只读，不能编辑、覆盖或卸载其历史内容')
+  }
+
+  private async readAdoptedSkill(input: SkillPublicationAdoptionInput, signal: AbortSignal, allowMissing: boolean): Promise<Readonly<SkillPublicationAdoption> | undefined> {
+    const selected = readSkillPublicationAdoptionInput(input)
+    await this.migrateLegacyManagedSkills(); signal.throwIfAborted()
+    await this.assertNoSystemSkillCollision(selected.name)
+    const root = join(this.skillRoot, selected.name)
+    const info = await lstat(root).catch(error => { if (error.code === 'ENOENT') return undefined; throw error })
+    if (!info && allowMissing) return undefined
+    if (!info?.isDirectory() || await realpath(root) !== root) throw new Error('企业 Skill 采用目录不存在或被替换')
+    const manifestPath = join(root, INSTALL_MANIFEST), manifestInfo = await lstat(manifestPath)
+    if (!manifestInfo.isFile() || manifestInfo.isSymbolicLink() || manifestInfo.nlink !== 1 || manifestInfo.size > METADATA_SCAN_BYTES) {
+      throw new Error('企业 Skill 采用回执无效')
+    }
+    const record = await readInstallManifest(manifestPath)
+    if (!record?.publication) throw new Error('同名个人 Skill 已存在，不能覆盖或借用')
+    const { schema: _schema, adoptedAt: _at, ...origin } = record.publication
+    if (JSON.stringify(origin) !== JSON.stringify(selected)) throw new Error('同名 Skill 已由其他发布版本占用')
+    const entries = await skillPackageInventory(root, signal)
+    if (skillPackageDigest(entries) !== selected.packageDigest || entries.length !== selected.entryCount
+      || entries.reduce((sum, entry) => sum + entry.size, 0) !== selected.expandedBytes) throw new Error('企业 Skill 完整内容已变化，不会自动修复')
+    const metadata = parseSkillMetadata(await readPrefix(join(root, 'SKILL.md')))
+    if (metadata.name !== selected.name || metadata.description !== record.description || metadata.whenToUse !== record.whenToUse) {
+      throw new Error('企业 Skill 元数据已变化')
+    }
+    signal.throwIfAborted(); return record.publication
+  }
+
+  private async installPublishedSkill(input: SkillPublicationAdoptionInput, archivePath: string, signal: AbortSignal): Promise<Readonly<SkillPublicationAdoption>> {
+    const selected = readSkillPublicationAdoptionInput(input)
+    const previous = await this.readAdoptedSkill(selected, signal, true)
+    if (previous) return previous
+    signal.throwIfAborted()
+    if (await digestFile(archivePath, signal) !== selected.archiveDigest) throw new Error('企业 Skill 归档摘要不一致')
+    const inspection = await inspectZip(archivePath, undefined, signal)
+    if (inspection.metadata.name !== selected.name || inspection.rootPrefix !== '' || inspection.entries.length !== selected.entryCount
+      || inspection.expandedBytes !== selected.expandedBytes) throw new Error('企业 Skill 归档结构与发布版本不一致')
+    await mkdir(this.stagingRoot, { recursive: true, mode: 0o700 })
+    if (await realpath(this.stagingRoot) !== this.stagingRoot) throw new Error('企业 Skill 暂存目录被替换')
+    const staging = await mkdtemp(join(this.stagingRoot, 'enterprise-')), stageIdentity = await lstat(staging)
+    const destination = join(this.skillRoot, selected.name)
+    let promoted = false
+    try {
+      await extractZip(archivePath, inspection, staging, signal)
+      signal.throwIfAborted()
+      const entries = await skillPackageInventory(staging, signal)
+      if (skillPackageDigest(entries) !== selected.packageDigest || entries.length !== selected.entryCount
+        || await digestFile(archivePath, signal) !== selected.archiveDigest) throw new Error('企业 Skill 解压后完整版本不一致')
+      const publication = readSkillPublicationAdoption({ ...selected, schema: 'paimind.skill-adoption/v1', adoptedAt: this.now() })
+      const record: SkillInstallRecord = { skillId: selected.name, ...inspection.metadata, digest: selected.archiveDigest,
+        sourceFileName: 'Enterprise Skill publication', installedAt: publication.adoptedAt, updatedAt: publication.adoptedAt,
+        managed: true, runtimeRequirements: inspection.runtimeRequirements, publication }
+      await writeFile(join(staging, INSTALL_MANIFEST), `${JSON.stringify(installManifest(record), null, 2)}\n`, { flag: 'wx', mode: 0o600 })
+      await mkdir(this.skillRoot, { recursive: true, mode: 0o700 })
+      if (await realpath(this.skillRoot) !== this.skillRoot) throw new Error('企业 Skill 目标仓库被替换')
+      await this.assertNoSystemSkillCollision(selected.name); signal.throwIfAborted()
+      const occupied = await lstat(destination).then(() => true, error => { if (error.code === 'ENOENT') return false; throw error })
+      if (occupied) throw new Error('企业 Skill 目标已被占用，保留现有内容')
+      await rename(staging, destination); promoted = true
+      const checked = await this.readAdoptedSkill(selected, signal, false)
+      if (!checked) throw new Error('企业 Skill 提升后无法确认准确版本')
+      await this.refreshAfterDurableMutation()
+      return checked
+    } finally {
+      if (!promoted) {
+        const current = await lstat(staging).catch(error => { if (error.code === 'ENOENT') return undefined; throw error })
+        if (current) {
+          if (!current.isDirectory() || current.dev !== stageIdentity.dev || current.ino !== stageIdentity.ino || await realpath(staging) !== staging) {
+            throw new Error('企业 Skill 暂存目标被替换，保留现场')
+          }
+          await rm(staging, { recursive: true })
+        }
+      }
+    }
+  }
+
+  readPublicationExport(input: { readonly exportId: string; readonly offset: number }, signal?: AbortSignal): Promise<Readonly<SkillPublicationChunk>> {
+    return this.publicationExports.read(input, signal)
+  }
+
+  releasePublicationExport(input: { readonly exportId: string }): Promise<Readonly<{ exportId: string; released: true }>> {
+    return this.publicationExports.release(input)
+  }
+
+  private async readPublicationSource(selection: SkillPublicationSelection, signal: AbortSignal): Promise<SkillPublicationSource> {
+    signal.throwIfAborted(); await this.migrateLegacyManagedSkills(); signal.throwIfAborted()
+    await this.assertNoSystemSkillCollision(selection.skillId); signal.throwIfAborted()
+    const root = join(this.skillRoot, selection.skillId)
+    if (await realpath(this.skillRoot) !== this.skillRoot || await realpath(root) !== root) throw new Error('Skill 发布来源路径无效')
+    await assertNoSkillPackageSymlink(root, 'SKILL.md')
+    const entries = await skillPackageInventory(root, signal)
+    if (!entries.some(entry => entry.path === 'SKILL.md' && entry.kind === 'binary')) throw new Error('Skill 发布入口缺失')
+    const metadata = parseSkillMetadata(await readPrefix(join(root, 'SKILL.md')))
+    const manifestPath = join(root, INSTALL_MANIFEST), info = await lstat(manifestPath)
+    if (!info.isFile() || info.nlink !== 1 || await realpath(manifestPath) !== manifestPath) throw new Error('Skill 发布需要受管来源')
+    const manifest = await readInstallManifest(manifestPath)
+    if (metadata.name !== selection.skillId || manifest?.skillId !== selection.skillId || manifest.name !== selection.skillId) {
+      throw new Error('Skill 发布来源身份不一致')
+    }
+    const digest = skillPackageDigest(entries)
+    signal.throwIfAborted()
+    if (digest !== selection.expectedDigest) throw new Error('Skill 发布来源版本已变化')
+    return Object.freeze({ root, entries, digest })
+  }
+
+  private adoptedEligibilityCheck(reference: SkillPublicationAdoptionInput, signal: AbortSignal): () => Promise<void> {
+    const provider = this.installerCtx.get?.('paimindEnterpriseSkillEligibility') as {
+      read?: (references: readonly SkillPublicationAdoptionInput[], signal: AbortSignal) => Promise<unknown>
+    } | undefined
+    if (!provider || typeof provider.read !== 'function') throw new Error('当前企业分配资格服务不可用')
+    return async () => {
+      signal.throwIfAborted()
+      if (this.installerCtx.get?.('paimindEnterpriseSkillEligibility') !== provider) throw new Error('企业分配资格提供方已变化')
+      let stop!: () => void
+      const cancelled = new Promise<never>((_resolve, reject) => {
+        stop = () => reject(signal.reason); signal.addEventListener('abort', stop, { once: true }); if (signal.aborted) stop()
+      })
+      try {
+        const result = await Promise.race([Promise.resolve().then(() => provider.read!([reference], signal)), cancelled])
+        signal.throwIfAborted()
+        if (this.installerCtx.get?.('paimindEnterpriseSkillEligibility') !== provider || !Array.isArray(result)
+          || result.length !== 1 || result[0] !== reference.publicationId) throw new Error('当前企业技能分配不可用，操作已拒绝')
+      } finally { signal.removeEventListener('abort', stop) }
+    }
+  }
+
+  /** Bounded bytes from this native owner's exact adopted version. The gateway
+   * independently owns the current login; the provider owns current assignment.
+   * Neither an install receipt nor an earlier read grants future access. */
+  async readAdoptedSkillContent(input: SkillAdoptedContentInput): Promise<Readonly<SkillAdoptedContent>> {
+    const selected = readSkillAdoptedContentInput(input)
+    const signal = AbortSignal.any([this.adoptedLifetime.signal, AbortSignal.timeout(30_000)])
+    signal.throwIfAborted()
+    if (this.contentReads >= 2) throw new Error('已采用技能内容正在读取，请稍后重试')
+    this.contentReads += 1
+    try { return await this.withPackageMutation(async () => {
+      signal.throwIfAborted()
+      const authorize = this.adoptedEligibilityCheck(selected.reference, signal)
+      await this.readAdoptedSkill(selected.reference, signal, false); await authorize()
+      const root = join(this.skillRoot, selected.reference.name)
+      let result: SkillAdoptedContent
+      if (selected.kind === 'directory') {
+        const page = await listSkillPackageDirectoryPage(root, { path: selected.path, limit: 100,
+          ...(selected.cursor === undefined ? {} : { cursor: selected.cursor }) })
+        result = { reference: selected.reference, runtimeGrant: false, kind: 'directory', page }
+      } else {
+        const path = safeSkillPackageFilePath(selected.path), target = join(root, path)
+        await assertNoSkillPackageSymlink(root, path); signal.throwIfAborted()
+        const file = await open(target, constants.O_RDONLY | constants.O_NOFOLLOW)
+        try {
+          const before = await file.stat()
+          if (!before.isFile() || before.nlink !== 1 || before.size > selected.reference.expandedBytes
+            || (before.size === 0 ? selected.offset !== 0 : selected.offset >= before.size)) throw new Error('已采用技能文件或偏移无效')
+          const bytes = Buffer.alloc(Math.min(SKILL_ADOPTED_CONTENT_BYTES, before.size - selected.offset))
+          for (let offset = 0; offset < bytes.length;) {
+            signal.throwIfAborted()
+            const read = await file.read(bytes, offset, bytes.length - offset, selected.offset + offset)
+            if (!read.bytesRead) throw new Error('已采用技能文件读取不完整')
+            offset += read.bytesRead
+          }
+          const after = await file.stat(), current = await lstat(target)
+          await assertNoSkillPackageSymlink(root, path)
+          for (const actual of [after, current]) {
+            if (!actual.isFile() || actual.nlink !== 1 || ['dev', 'ino', 'size', 'mtimeMs', 'ctimeMs'].some(key => actual[key as keyof typeof actual] !== before[key as keyof typeof before])) {
+              throw new Error('已采用技能文件在读取中变化')
+            }
+          }
+          const next = selected.offset + bytes.length
+          result = { reference: selected.reference, runtimeGrant: false, kind: 'file', path, size: before.size,
+            offset: selected.offset, data: bytes.toString('base64'), nextOffset: next < before.size ? next : null }
+        } finally { await file.close() }
+      }
+      await this.readAdoptedSkill(selected.reference, signal, false); await authorize(); signal.throwIfAborted()
+      return Object.freeze(result)
+    }) } finally { this.contentReads -= 1 }
+  }
+
   async getSkillPackage(input: { readonly skillId: string }): Promise<Readonly<SkillPackageDocument>> {
     await this.migrateLegacyManagedSkills()
     if (!SKILL_NAME.test(input.skillId)) throw new Error('Skill 名称无效')
@@ -2251,10 +2734,11 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
   }
 
   async saveSkillPackage(input: SkillPackageSaveInput): Promise<Readonly<SkillInstallResult>> {
-    const run = this.packageMutation.then(
-      async () => await this.saveSkillPackageNow(input),
-      async () => await this.saveSkillPackageNow(input),
-    )
+    return this.withPackageMutation(() => this.saveSkillPackageNow(input))
+  }
+
+  private async withPackageMutation<T>(operation: () => Promise<T>): Promise<T> {
+    const run = this.packageMutation.then(operation, operation)
     this.packageMutation = run.then(() => undefined, () => undefined)
     return await run
   }
@@ -2275,6 +2759,7 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
     const skillId = existingId ?? metadata.name
     await this.assertNoSystemSkillCollision(skillId)
     const destination = join(this.skillRoot, skillId)
+    await this.assertMutableSkill(destination)
     if (!contained(this.skillRoot, destination)) throw new Error('Skill 保存目标越界')
     const existing = await pathExists(destination)
     if (existing !== (existingId !== undefined)) {
@@ -2380,9 +2865,14 @@ export class PaimindSkillInstallerService extends PaimindHostRemoteService {
   }
 
   async uninstall(input: { readonly skillId: string; readonly version?: string }): Promise<Readonly<SkillRemovalRecord>> {
+    return this.withPackageMutation(() => this.uninstallNow(input))
+  }
+
+  private async uninstallNow(input: { readonly skillId: string; readonly version?: string }): Promise<Readonly<SkillRemovalRecord>> {
     await this.migrateLegacyManagedSkills()
     if (!SKILL_NAME.test(input.skillId)) throw new Error('Skill 名称无效')
     const source = join(this.skillRoot, input.skillId)
+    await this.assertMutableSkill(source)
     if (!contained(this.skillRoot, source) || !(await pathExists(source))) throw new Error('Skill 不存在')
     const manifest = await readInstallManifest(join(source, INSTALL_MANIFEST))
     if (manifest === undefined) throw new Error('只能从技能市场卸载由 PAIMind 安装的 Skill')

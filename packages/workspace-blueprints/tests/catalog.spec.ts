@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises'
+import { cp, mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -18,6 +18,38 @@ afterEach(async () => {
 })
 
 describe('Workspace Blueprint catalog', () => {
+  it('retains identical builtin digests with physical empty folders or packaging markers', async () => {
+    const stateRoot = await temporaryState()
+    const templatesRoot = join(stateRoot, 'templates')
+    await cp(bundledTemplates, templatesRoot, { recursive: true })
+    const catalog = new WorkspaceBlueprintCatalog({ list: () => [] }, {
+      templatesRoot, userTemplatesRoot: join(stateRoot, 'user-templates'),
+    })
+    const before = await catalog.listBlueprints({ source: 'builtin' })
+    for (const directory of ['docs', 'outputs']) {
+      await rm(join(templatesRoot, 'enterprise-project-delivery/1.0.0/files', directory, '.gitkeep'))
+    }
+    const after = await catalog.listBlueprints({ source: 'builtin' })
+    expect(after.items).toEqual(before.items)
+    expect(before.items.flatMap(item => item.files).some(file => file.path.endsWith('.gitkeep'))).toBe(false)
+  })
+
+  it('rejects nonempty builtin directory markers and never follows marker symlinks', async () => {
+    const stateRoot = await temporaryState()
+    const templatesRoot = join(stateRoot, 'templates')
+    await cp(bundledTemplates, templatesRoot, { recursive: true })
+    const marker = join(templatesRoot, 'enterprise-project-delivery/1.0.0/files/docs/.gitkeep')
+    const catalog = new WorkspaceBlueprintCatalog({ list: () => [] }, {
+      templatesRoot, userTemplatesRoot: join(stateRoot, 'user-templates'),
+    })
+    await writeFile(marker, 'must not be silently discarded')
+    await expect(catalog.listBlueprints()).rejects.toThrow('marker must be empty')
+    await rm(marker)
+    const outside = join(stateRoot, 'outside')
+    await writeFile(outside, '')
+    await symlink(outside, marker)
+    await expect(catalog.listBlueprints()).rejects.toThrow('Symbolic links')
+  })
   it('lists immutable built-ins with real file indexes and canonical composition', async () => {
     const stateRoot = await temporaryState()
     const catalog = new WorkspaceBlueprintCatalog({ list: () => [] }, {

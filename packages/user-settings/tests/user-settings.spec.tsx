@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PaimindSettingsScope, PaimindSettingsScopeSnapshot } from '@paimind/harness-compat'
 import {
   DEFAULT_PAIMIND_PERSONALIZATION,
@@ -9,7 +9,9 @@ import {
   renderPaimindPersonalizationContext,
   type PaimindPersonalization,
 } from '../src/index.ts'
-import { RemotePaimindSettingsScope, UserSettingsSection } from '../src/client/index.tsx'
+import { apply, RemotePaimindSettingsScope, UserSettingsSection, type UserSettingsClientContext } from '../src/client/index.tsx'
+
+afterEach(() => { vi.unstubAllGlobals() })
 
 class MemoryScope implements PaimindSettingsScope<PaimindPersonalization> {
   private snapshot: PaimindSettingsScopeSnapshot<PaimindPersonalization>
@@ -29,6 +31,35 @@ class MemoryScope implements PaimindSettingsScope<PaimindPersonalization> {
 }
 
 describe('FP14 PAIMind personalization', () => {
+  function clientContext() {
+    const disposeRemote = vi.fn(async () => {})
+    const disposeMount = vi.fn(async () => {})
+    const mount = vi.fn(async () => disposeRemote)
+    const inject = vi.fn(() => Object.assign(Promise.resolve(), { dispose: disposeMount }))
+    return { ctx: { remote: { $mount: mount }, inject } as unknown as UserSettingsClientContext,
+      mount, inject, disposeRemote, disposeMount }
+  }
+  it('does not mount a denied platform personalization panel or issue its startup RPC in a member cell', async () => {
+    vi.stubGlobal('__PAIMIND_CLIENT_AUDIENCE__', { schemaVersion: 1, audience: 'member' })
+    const f = clientContext()
+    const dispose = await apply(f.ctx)
+    expect(f.mount).not.toHaveBeenCalled()
+    expect(f.inject).not.toHaveBeenCalled()
+    await dispose()
+  })
+  it('keeps the original non-enterprise/admin client lifecycle and fails closed for malformed presentation metadata', async () => {
+    const f = clientContext()
+    const dispose = await apply(f.ctx)
+    expect(f.mount).toHaveBeenCalledOnce()
+    expect(f.inject).toHaveBeenCalledOnce()
+    await dispose()
+    expect(f.disposeMount).toHaveBeenCalledOnce()
+    expect(f.disposeRemote).toHaveBeenCalledOnce()
+    vi.stubGlobal('__PAIMIND_CLIENT_AUDIENCE__', { schemaVersion: 1, audience: 'administrator' })
+    const invalid = clientContext()
+    await expect(apply(invalid.ctx)).rejects.toThrow('presentation metadata')
+    expect(invalid.mount).not.toHaveBeenCalled()
+  })
   it('renders only enabled, meaningful personalization as bounded user context', () => {
     expect(renderPaimindPersonalizationContext(DEFAULT_PAIMIND_PERSONALIZATION)).toBe('')
     const custom = decodePaimindPersonalization({

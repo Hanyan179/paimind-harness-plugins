@@ -15,6 +15,12 @@
     - id: paimind-extension-center
       name: '@paimind/extension-center'
 
+    # Enterprise-only: installed but never enabled by a non-enterprise profile.
+    # The authenticated enterprise composition must explicitly activate it.
+    - id: paimind-enterprise-admin
+      name: '@paimind/enterprise-admin'
+      disabled: true
+
     - id: paimind-extension-center-invariant
       name: '@paimind/extension-center/invariant'
       inject: [invariants]

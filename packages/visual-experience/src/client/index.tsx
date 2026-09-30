@@ -34,6 +34,7 @@ import {
   resolvePaimindAgentAvatarOverride,
   subscribePaimindAgentAvatarOverrides,
   isPaimindProductSurfaceAvailable,
+  subscribePaimindProductSurfaceAvailability,
   requestPaimindAgentBuilder,
   requestPaimindProductSurface,
 } from '@paimind/harness-compat/client-surface'
@@ -1063,6 +1064,10 @@ export class PaimindAgentAvatarPresenter {
   }
 }
 
+const subscribeAgentCenterAvailability = (listener: () => void): (() => void) =>
+  subscribePaimindProductSurfaceAvailability('agent-center', listener)
+const readAgentCenterAvailability = (): boolean => isPaimindProductSurfaceAvailable('agent-center')
+
 export function QuickAgents({ bridge, mode, locale }: {
   readonly bridge: HarnessAgentChoiceBridge
   readonly mode: PaimindExperienceModeController
@@ -1071,11 +1076,11 @@ export function QuickAgents({ bridge, mode, locale }: {
   const experience = useMode(mode)
   const snapshot = useBridge(bridge)
   const zh = useChinese(locale)
+  const centerAvailable = useSyncExternalStore(subscribeAgentCenterAvailability, readAgentCenterAvailability)
   const choices = useMemo(() => snapshot.choices
     .filter(choice => choice.category === 'recommended')
     .slice(0, 4), [snapshot.choices])
   if (experience.mode !== 'paimind' || snapshot.status !== 'ready' || choices.length === 0) return null
-  const centerAvailable = isPaimindProductSurfaceAvailable('agent-center')
   return <section data-paimind-quick-agents aria-label={zh ? '快捷智能体' : 'Quick Agents'}>
     <div data-paimind-quick-agents-label><PaimindAgentIcon size={13} />{zh ? '快捷 Agent' : 'Quick Agents'}</div>
     <div data-paimind-quick-agents-list>

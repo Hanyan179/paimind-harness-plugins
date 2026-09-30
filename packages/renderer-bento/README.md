@@ -39,7 +39,7 @@ Harness discovers `./client` through `dsh.client`. Cordis waits for declared inj
 
 ## Published files
 
-The manifest allowlist is `lib/**/*.js`, `lib/**/*.js.map`, `lib/**/*.d.ts`, `lib/**/*.d.ts.map`. Generated build metadata, source tests, local Harness homes, coverage and credentials are excluded.
+The manifest includes built JavaScript, declarations and their maps, excluding the internal `lib/types/legacy-mode-compat.d.ts` and its map because no public type entry consumes them. Legacy compatibility remains in the runtime bundle. Generated build metadata, source tests, local Harness homes, coverage and credentials are excluded.
 
 ## Verification
 

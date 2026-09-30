@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { MANIFEST_PATH, PRODUCT_NAME } from '../document-identity.js'
 import {
   contributePaimindExtension,
   installHarnessDocumentBranding,
@@ -11,17 +12,10 @@ import {
 
 export const inject = ['slots']
 
-const PRODUCT_NAME = 'Paramont Harness'
 const STYLE_ID = '@paimind/branding'
 const EMPTY_SEATS: HarnessBrandSeats = Object.freeze({ wordmark: null, compact: null, hero: null })
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="70 0 465 175"><style>path{fill:#082e54}@media(prefers-color-scheme:dark){path{fill:#f9f7f2}}</style><path fill-rule="evenodd" d="M302.1 0 89.4 174.4h425.4L302.1 0Zm38.1 116.7 91.9 31.7-130.4-104-130.4 104 91.1-31.4-22.4 30.2 51-28.3 10.7 36 10.7-35.7 50.4 28-22.6-30.5Z" clip-rule="evenodd"/></svg>`
 const FAVICON_HREF = `data:image/svg+xml,${encodeURIComponent(FAVICON_SVG)}`
-const MANIFEST_HREF = `data:application/manifest+json,${encodeURIComponent(JSON.stringify({
-  name: PRODUCT_NAME,
-  short_name: 'Paramont',
-  display: 'standalone',
-  start_url: '/',
-}))}`
 
 const STYLE = `
 [data-paimind-native-hero-brand]{display:none!important}
@@ -158,7 +152,7 @@ export function apply(ctx: PaimindClientContext): void {
   ctx.effect(() => installHarnessDocumentBranding(document, {
     productName: PRODUCT_NAME,
     faviconHref: FAVICON_HREF,
-    manifestHref: MANIFEST_HREF,
+    manifestHref: MANIFEST_PATH,
   }), 'paimind-branding: document identity')
   ctx.slots.inject('sidebar.brand.mark', () => ctx.slots.register({
     name: 'sidebar.brand.mark',

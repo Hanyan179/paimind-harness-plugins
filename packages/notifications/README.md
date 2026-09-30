@@ -29,6 +29,8 @@ The manifest is authoritative for dependency direction and version selection.
 
 ## Lifecycle and failure
 
+The existing overlay uses a native modal dialog with contained keyboard navigation and explicit opener restoration across React portal removal. Closing or unloading releases modality. `NotificationCenterController.follow` accepts an optional `beforeNavigate` callback after a successful read-state check, so the overlay releases modality before the original destination takes focus. Failed artifact navigation retains the original error surface; list refresh restores a removed retry control's focus only when the user has not chosen another control. No notification persistence or native object ownership changes.
+
 Harness discovers `./client` through `dsh.client`. Cordis waits for declared injected services before activation. UI, listeners and registrations must be installed through scoped effects so unload removes them. Missing host services delay activation; package-local rendering failures must not corrupt the native shell.
 
 ## Published files

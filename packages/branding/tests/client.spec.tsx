@@ -67,6 +67,8 @@ describe('Paramont branding client contribution', () => {
     expect(screen.getByText('预览版')).toBeInTheDocument()
     expect(document.querySelector('[data-paimind-paramont-hero-mark] path')?.getAttribute('d')).toContain('M302.1 0 89.4 174.4')
     expect(document.title).toBe('Planning — Paramont Harness')
+    expect(document.querySelector('link[rel="manifest"]')).toHaveAttribute('href', '/plugins/@paimind/branding/manifest.webmanifest')
+    expect(document.querySelector('link[rel="manifest"]')).toHaveAttribute('crossorigin', 'use-credentials')
     expect(document.querySelector('style[data-paimind-plugin="@paimind/branding"]')).not.toBeNull()
 
     const nativeHeadline = document.querySelector('#headline')
@@ -88,5 +90,6 @@ describe('Paramont branding client contribution', () => {
     expect(document.title).toBe('Planning — DeepSeek Harness')
     expect(document.querySelector<HTMLLinkElement>('link[rel~="icon"]')?.getAttribute('href')).toBe('/favicon.svg')
     expect(document.querySelector<HTMLLinkElement>('link[rel="manifest"]')?.getAttribute('href')).toBe('/manifest.webmanifest')
+    expect(document.querySelector('link[rel="manifest"]')).not.toHaveAttribute('crossorigin')
   })
 })

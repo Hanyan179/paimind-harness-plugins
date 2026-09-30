@@ -12,6 +12,7 @@
     { "name": "@paimind/conversation-title", "path": "packages/conversation-title", "role": "client-plugin" },
     { "name": "@paimind/contracts", "path": "packages/contracts", "role": "shared-support" },
     { "name": "@paimind/developer-resources", "path": "packages/developer-resources", "role": "client-plugin" },
+    { "name": "@paimind/enterprise-admin", "path": "packages/enterprise-admin", "role": "client-plugin" },
     { "name": "@paimind/extension-center", "path": "packages/extension-center", "role": "client-plugin" },
     { "name": "@paimind/fact-layer", "path": "packages/fact-layer", "role": "headless-plugin" },
     { "name": "@paimind/generator-bento", "path": "packages/generator-bento", "role": "client-plugin" },

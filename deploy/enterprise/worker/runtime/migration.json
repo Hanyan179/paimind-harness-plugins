@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "sourceWorktree": "paimind-harness-plugins-enterprise-multiuser",
+  "sourceHead": "3795f91725074799d70b835f74e1285e4fbfd930",
+  "sourceState": "preserved-dirty-migration-source-not-committed-files",
+  "capturedArchive": "haas-legacy-source-D8JN4i",
+  "assets": {
+    "worker-build-root-contract.mjs": "35aaa4125f7cb9e8e70c00c887f2fc936e7304daa6bb74fddb971e01ece424ad",
+    "worker-build-root-contract.spec.mjs": "9fed5b387a489e97d3ce0e19ba339473715525ec4466fa30c0b4e04807734946",
+    "verify-pnpm-effective-policy.mjs": "3cca2b40234ba8d14b0687f8c5fd64b7c93b97794c2a6d82ad55e48380e09404",
+    "verify-pnpm-effective-policy.spec.mjs": "35091f29460b1efddced2ae47d0254fcdcf30797ceacb695fcc80697e56d7a67",
+    "normalize-pnpm-project-registry.mjs": "f394cdc1e563f1ef52b3b0a41524ab67b214f5ea3114fb8beee0dc0f33deba8b",
+    "normalize-pnpm-project-registry.spec.mjs": "c9c76a6ae17479d69366cf3d3dcab9e5364c676a77790fc5cbc2ab92c150be85",
+    "verify-pnpm-offline-store.mjs": "4b5d84eadf5f6992eedac78be89a3a26752abc13d17c7f940201fef9f8b04dee",
+    "verify-pnpm-offline-store.spec.mjs": "7908a26af58def00920955370d38c51099cad85c53c88aaaebf455ad8415ee02",
+    "run-pnpm-offline-store-fetch.mjs": "0bc54bafa178bfe6a32d593efa578b262d18a79be1018ad08baed9e466225a9b",
+    "run-pnpm-offline-store-fetch.spec.mjs": "85c9363a2d264040490d1c69f78c903ced022de0faaceb997de36c1ee6bef2d1",
+    "verify-node-gyp-local-headers.mjs": "d25b9d12caf5b97b292ee8cd64ebf60dd3c83c2a6fa80a6e55f46f78cc442f23",
+    "verify-node-gyp-local-headers.spec.mjs": "60b2bd287e5d77ac11cfad4e2a71385179095c8365b541face09c21fe05412bd",
+    "normalize-runtime-tree.mjs": "1d9fb74272cffb52fc3b822e13ebf27a9103acf899546d24904aa4e4fb652b41"
+  },
+  "adaptation": "Policy receipt schema 3 adds actual source producer and numeric-zero consumer readback; its exact eight-field reader is reused before Producer fetch. Missing-time bypass is rejected. Registry normalizer is migrated unchanged; Store verifier adds strictly separate policy-only consumption evidence. Fetch policy v8 recognizes exact pinned-pnpm request-timeout terminals as network failures, retains wrapper-only watchdog authority and locked retry bounds, and rejects all executable write bits and ownership/link drift. Asset digests identify reviewed legacy inputs, not adapted outputs. Old receipts and images do not prove the new build.",
+  "excluded": "No old application, UI, package inventory authority, source overlay or final image was imported."
+}

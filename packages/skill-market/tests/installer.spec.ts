@@ -285,6 +285,103 @@ describe('streaming Skill installer', () => {
     await harness.dispose()
   })
 
+  it('does not advertise or enable absent GenUI merely because the native Loader exists', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-skill-absent-genui-'))
+    roots.push(base)
+    const harness = systemLifecycleHarness()
+    const update = vi.fn()
+    Object.assign(harness.context, { loader: {
+      entries: () => [], await: async () => {}, update,
+      resolve: () => { throw new Error('missing') },
+    } })
+    const service = new PaimindSkillInstallerService(harness.context, {
+      skillRoot: join(base, 'skills'), stateRoot: join(base, 'state'),
+      bundledSkillBodies: { installation: 'Install.', authoring: 'Author.' },
+    })
+    try {
+      const policy = await service.getUserSkillPolicy()
+      expect(policy.enabledOptionalSystemSkillNames).toEqual(['paimind-skill-authoring', 'paimind-skill-installation'])
+      expect((await service.listSystemSkills()).items.map(item => item.name)).toEqual(policy.enabledOptionalSystemSkillNames)
+      await expect(service.listInstalled()).resolves.toEqual({ items: [] })
+      await expect(service.replaceUserSkillPolicy({
+        expectedRevision: policy.revision,
+        enabledOptionalSystemSkillNames: [...policy.enabledOptionalSystemSkillNames, 'genui'],
+        enabledBusinessSkillNames: [], directBusinessSkillNames: [],
+      })).rejects.toThrow('genui')
+      expect(await service.getUserSkillPolicy()).toEqual(policy)
+      expect(update).not.toHaveBeenCalled()
+    } finally { await harness.dispose() }
+  })
+
+  it.each([false, true])('reads an optional Loader through its structural lookup (available=%s)', async available => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-skill-optional-loader-'))
+    roots.push(base)
+    const harness = systemLifecycleHarness(), update = vi.fn()
+    const loader = { entries: () => [], await: async () => {}, update,
+      resolve: () => { throw Error('No GenUI source') } }
+    Object.assign(harness.context, { get: (name: string) => name === 'loader' && available ? loader : undefined })
+    Object.defineProperty(harness.context, 'loader', { get() { throw Error('Uninjected Loader property') } })
+    const service = new PaimindSkillInstallerService(harness.context, { skillRoot: join(base, 'skills'), stateRoot: join(base, 'state'),
+      bundledSkillBodies: { installation: 'Install.', authoring: 'Author.' } })
+    try {
+      const policy = await service.getUserSkillPolicy()
+      expect(policy.enabledOptionalSystemSkillNames).toEqual(['paimind-skill-authoring', 'paimind-skill-installation'])
+      expect((await service.listSystemSkills()).items.map(item => item.name)).toEqual(policy.enabledOptionalSystemSkillNames)
+      await service.replaceUserSkillPolicy({ expectedRevision: policy.revision, enabledOptionalSystemSkillNames: [],
+        enabledBusinessSkillNames: [], directBusinessSkillNames: [] })
+      expect((await service.getUserSkillPolicy()).enabledOptionalSystemSkillNames).toEqual([])
+      expect(update).not.toHaveBeenCalled()
+    } finally { await harness.dispose() }
+  })
+
+  it('does not disguise an optional Loader lookup failure as an absent provider', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-skill-loader-failure-'))
+    roots.push(base)
+    const harness = systemLifecycleHarness()
+    Object.assign(harness.context, { get(name: string) { if (name === 'loader') throw Error('Loader lookup failed'); return undefined } })
+    const service = new PaimindSkillInstallerService(harness.context, { skillRoot: join(base, 'skills'), stateRoot: join(base, 'state'),
+      bundledSkillBodies: { installation: 'Install.', authoring: 'Author.' } })
+    try {
+      await expect(service.getUserSkillPolicy()).rejects.toMatchObject({ message: 'System Skill 生命周期启动失败', cause: { message: 'Loader lookup failed' } })
+    } finally { await harness.dispose() }
+  })
+
+  it.each([true, false])('preserves the absent GenUI preference and restores it on installed-source restart (enabled=%s)', async enabled => {
+    const base = await mkdtemp(join(tmpdir(), 'paimind-skill-returning-genui-'))
+    roots.push(base)
+    const stateRoot = join(base, 'state')
+    await mkdir(stateRoot)
+    const policyFile = join(stateRoot, 'user-skill-policy.json')
+    const saved = JSON.stringify({
+      schema: 'paimind.user-skill-policy-storage/v3', revision: 7,
+      enabledOptionalSystemSkillNames: enabled ? ['genui'] : [],
+      disabledBusinessSkillNames: [], directBusinessSkillNames: [],
+    })
+    await writeFile(policyFile, saved)
+    for (const installed of [false, true]) {
+      const harness = systemLifecycleHarness()
+      const entry = { id: 'genui', options: { id: 'genui', name: '@changfenhuang/dsh-genui', disabled: null as boolean | null },
+        update: vi.fn(async (options: { disabled?: boolean | null }) => { entry.options.disabled = options.disabled ?? null }) }
+      Object.assign(harness.context, { loader: {
+        entries: () => installed ? [entry] : [], await: async () => {}, update: vi.fn(),
+        resolve: () => { if (!installed) throw new Error('missing'); return entry },
+      } })
+      const service = new PaimindSkillInstallerService(harness.context, {
+        skillRoot: join(base, 'skills'), stateRoot,
+        bundledSkillBodies: { installation: 'Install.', authoring: 'Author.' },
+      })
+      try {
+        await expect(service.getUserSkillPolicy()).resolves.toMatchObject({ revision: 7,
+          enabledOptionalSystemSkillNames: enabled ? ['genui'] : [] })
+        await expect(service.listInstalled()).resolves.toEqual({ items: [] })
+        expect((await service.listSystemSkills()).items.some(item => item.name === 'genui')).toBe(installed)
+        if (installed) expect(entry.options.disabled === true).toBe(!enabled)
+        else expect(entry.update).not.toHaveBeenCalled()
+        expect(await readFile(policyFile, 'utf8')).toBe(saved)
+      } finally { await harness.dispose() }
+    }
+  })
+
   it('controls all four built-in capabilities through their real source lifecycles without a host restart', async () => {
     const base = await mkdtemp(join(tmpdir(), 'paimind-all-system-lifecycles-'))
     roots.push(base)

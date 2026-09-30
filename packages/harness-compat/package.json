@@ -16,6 +16,34 @@
       "types": "./lib/types/host.d.ts",
       "default": "./lib/host.js"
     },
+    "./gateway-transport": {
+      "types": "./lib/types/gateway-transport.d.ts",
+      "default": "./lib/gateway-transport.js"
+    },
+    "./managed-runtime": {
+      "types": "./lib/types/managed-runtime.d.ts",
+      "default": "./lib/managed-runtime.js"
+    },
+    "./managed-subprocess": {
+      "types": "./lib/types/managed-subprocess.d.ts",
+      "default": "./lib/managed-subprocess.js"
+    },
+    "./managed-filesystem": {
+      "types": "./lib/types/managed-filesystem.d.ts",
+      "default": "./lib/managed-filesystem.js"
+    },
+    "./managed-directory-picker": {
+      "types": "./lib/types/managed-directory-picker.d.ts",
+      "default": "./lib/managed-directory-picker.js"
+    },
+    "./managed-code-runtime": {
+      "types": "./lib/types/managed-code-runtime.d.ts",
+      "default": "./lib/managed-code-runtime.js"
+    },
+    "./managed-workflow": {
+      "types": "./lib/types/managed-workflow.d.ts",
+      "default": "./lib/managed-workflow.js"
+    },
     "./client-icons": {
       "types": "./lib/types/client-icons.d.ts",
       "default": "./lib/client-icons.js"
@@ -29,20 +57,42 @@
       "default": "./lib/client-input-trigger.js"
     }
   },
-  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map"],
+  "files": ["lib/**/*.js","lib/**/*.js.map","lib/**/*.d.ts","lib/**/*.d.ts.map","!lib/types/managed-json-pipe.d.ts*","!lib/types/managed-settlement.d.ts*","!lib/types/managed-jobs.d.ts*","!lib/types/managed-command.d.ts*","!lib/types/connector-inventory.d.ts*","!lib/types/connector-configuration.d.ts*","!lib/types/managed-connector.d.ts*","!lib/types/connector-http-egress.d.ts*","!lib/types/connector-tool-origin.d.ts*","!lib/types/connector-authority.d.ts*"],
   "dependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/cordis-plugin-loader": "1.0.2",
     "@deepseek-ai/dsh-client-ui-primitives": "0.1.1-rc.2",
     "@deepseek-ai/dsh-agent": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-agent-presets": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-app-boot": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-cmdline": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-code-runtime": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-code-runtime-worker-thread": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-fs": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-fs-local": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-fs-sandbox": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-launch-environment": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-host-apiproxy": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-host-directory-picker": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-host-directory-picker-browse": "0.1.1-rc.2",
     "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-sandbox": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-sandbox-policy": "0.1.1-rc.2",
     "@deepseek-ai/dsh-schedule": "0.1.1-rc.2",
     "@deepseek-ai/dsh-storage-domain": "0.1.1-rc.2",
     "@deepseek-ai/dsh-settings": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-session-persistence": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-subprocess": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-subprocess-local": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-subagent": "0.1.1-rc.2",
     "@deepseek-ai/dsh-tools": "0.1.1-rc.2",
     "@deepseek-ai/dsh-typert-protocol": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-workflow": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-workflow-worker-thread": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-workspace": "0.1.1-rc.2",
     "@deepseek-ai/schemastery": "^3.18.1",
     "@paimind/contracts": "workspace:^"
   },
-  "paimindBuild": { "node": ["src/index.ts", "src/host.ts", "src/client-icons.ts", "src/client-surface.ts", "src/client-input-trigger.ts"] },
+  "paimindBuild": { "node": ["src/index.ts", "src/host.ts", "src/gateway-transport.ts", "src/managed-runtime.ts", "src/managed-subprocess.ts", "src/managed-filesystem.ts", "src/managed-directory-picker.ts", "src/managed-code-runtime.ts", "src/managed-workflow.ts", "src/client-icons.ts", "src/client-surface.ts", "src/client-input-trigger.ts"] },
   "scripts": { "typecheck": "tsc -b --pretty false" }
 }

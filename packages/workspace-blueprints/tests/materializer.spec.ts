@@ -63,6 +63,8 @@ describe('Workspace Blueprint materializer', () => {
     expect((await readdir(workspace)).sort()).toEqual([
       '.paimind', 'PROJECT.md', 'delivery', 'docs', 'execution', 'inputs', 'outputs', 'planning',
     ])
+    expect(await readdir(join(workspace, 'docs'))).toEqual([])
+    expect(await readdir(join(workspace, 'outputs'))).toEqual([])
   })
 
   it('projects persisted Business Skill composition by Workspace or exact native Session membership', async () => {

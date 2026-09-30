@@ -16,6 +16,10 @@ import {
   scheduleView,
 } from '@deepseek-ai/dsh-schedule'
 import { resolveHarnessSettingsNamespace } from './index.js'
+import { resolveSessionPreset } from '@deepseek-ai/dsh-agent-presets'
+import type { ApiProxy } from '@deepseek-ai/dsh-host-apiproxy'
+import { isAbsolute, normalize } from 'node:path'
+import { createHash } from 'node:crypto'
 
 /** Host Remote base kept behind the rc.8 compatibility boundary. */
 export abstract class PaimindHostRemoteService extends TypertRemoteService {
@@ -29,6 +33,463 @@ export abstract class PaimindHostService extends Service {
   protected constructor(ctx: object, serviceKey: string) {
     super(ctx as Context, serviceKey)
   }
+}
+
+/** Same-process installation witness only, never a current execution grant.
+ * The original root guard still checks each native step/tool independently.
+ * Keeping the witness in the native service scope also works across separately
+ * bundled public entry points without a duplicate module-private authority. */
+export function assertPaimindManagedOriginGuard(context: { get(name: 'paimindManagedOriginGuard'): unknown }): void {
+  const value = context.get('paimindManagedOriginGuard') as {
+    schema?: unknown; assertReady?: () => unknown
+  } | undefined
+  const failure = () => new Error('企业采用版本需要当前运行时的来源与权限守卫')
+  if (!value || value.schema !== 'paimind.managed-origin-guard/v1' || typeof value.assertReady !== 'function') throw failure()
+  const result = value.assertReady()
+  if (result !== undefined) {
+    if (typeof (result as PromiseLike<unknown>)?.then === 'function') void Promise.resolve(result).catch(() => undefined)
+    throw failure()
+  }
+}
+
+/** Native rc.2 owns preset creation; no composition text or target path crosses
+ * this facade. The native copy operation refuses every occupied target. */
+export async function copyPaimindNativeStandardPreset(
+  context: { readonly agentPresets: { copy?(from: string, id: string, name?: string): Promise<void> } },
+  presetId: string, name: string,
+): Promise<void> {
+  if (typeof presetId !== 'string' || !/^[a-z0-9][a-z0-9_-]{0,159}$/.test(presetId) || typeof name !== 'string' || name.length > 80) {
+    throw new Error('原生标准预设复制参数无效')
+  }
+  if (typeof context.agentPresets.copy !== 'function') throw new Error('原生标准预设复制服务不可用')
+  await context.agentPresets.copy('standard', presetId, name)
+}
+
+/** Detached read-only identity and events; never a second Session owner. */
+export interface PaimindNativeSessionReference {
+  readonly id: string
+  readonly header: { readonly id: string; readonly agentPreset?: string; readonly seedLength?: number }
+  readonly events: readonly unknown[]
+}
+
+/** Read through native live ownership, then the native non-publishing inspector. */
+export async function readPaimindNativeSessionReference(
+  context: { readonly sessions: { get(id: string): unknown }; get(name: 'sessionPersistence'): unknown },
+  sessionId: string,
+): Promise<Readonly<PaimindNativeSessionReference>> {
+  const session = await nativeSessionSnapshot(context, sessionId)
+  return Object.freeze({ id: sessionId, header: Object.freeze({ id: sessionId,
+    ...(typeof session.header.agentPreset === 'string' ? { agentPreset: session.header.agentPreset } : {}),
+    ...(typeof session.header.seedLength === 'number' ? { seedLength: session.header.seedLength } : {}) }),
+  events: Object.freeze([...session.events]) })
+}
+
+/** Read-only original cwd, including cold history; never invokes agent resume. */
+export async function readPaimindNativeSessionDirectoryReference(
+  context: Parameters<typeof readPaimindNativeSessionReference>[0], sessionId: string, signal: AbortSignal,
+): Promise<Readonly<{ sessionId: string; cwd: string }>> {
+  signal.throwIfAborted()
+  const session = await nativeSessionSnapshot(context, sessionId, signal)
+  signal.throwIfAborted()
+  const cwd = session.header.cwd
+  if (typeof cwd !== 'string' || cwd.length > 4096 || cwd.includes('\0') || !isAbsolute(cwd)
+    || normalize(cwd) !== cwd) throw new Error('原生会话目录无法验证')
+  return Object.freeze({ sessionId, cwd })
+}
+
+async function nativeSessionSnapshot(
+  context: Parameters<typeof readPaimindNativeSessionReference>[0], sessionId: string, signal?: AbortSignal,
+) {
+  signal?.throwIfAborted()
+  if (typeof sessionId !== 'string' || sessionId.length === 0 || sessionId.length > 200
+    || sessionId.trim() !== sessionId || /[\u0000-\u001f\u007f]/u.test(sessionId)) throw new Error('原生会话标识无效')
+  const reference = (value: unknown) => {
+    const session = value as { id?: unknown; header?: { id?: unknown; agentPreset?: unknown; cwd?: unknown; seedLength?: unknown }; events?: unknown } | undefined
+    if (!session || session.header?.id !== sessionId || session.id !== undefined && session.id !== sessionId
+      || !Array.isArray(session.events) || session.header.agentPreset !== undefined && typeof session.header.agentPreset !== 'string') {
+      throw new Error('原生会话身份或历史无法验证')
+    }
+    if (session.header.seedLength !== undefined && (!Number.isSafeInteger(session.header.seedLength)
+      || (session.header.seedLength as number) < 0 || (session.header.seedLength as number) > session.events.length)) {
+      throw new Error('原生会话种子边界无法验证')
+    }
+    return { header: { ...session.header }, events: [...session.events] }
+  }
+  const live = context.sessions.get(sessionId)
+  if (live !== undefined) return reference(live)
+  const persistence = context.get('sessionPersistence') as {
+    inspect?(id: string, signal: AbortSignal): Promise<{ meta: unknown; events: unknown }>
+  } | undefined
+  if (typeof persistence?.inspect !== 'function') throw new Error('原生历史会话检查服务不可用')
+  let cold: { meta: unknown; events: unknown }
+  try { cold = await persistence.inspect(sessionId, AbortSignal.any([AbortSignal.timeout(5_000), ...(signal ? [signal] : [])])) }
+  catch { throw new Error('原生会话不存在或历史无法读取') }
+  signal?.throwIfAborted()
+  // A concurrently published native Session supersedes the inspected cold view.
+  const current = context.sessions.get(sessionId)
+  return reference(current ?? { header: cold?.meta, events: cold?.events })
+}
+
+export interface PaimindNativeEventSelection { readonly afterSeq: number; readonly afterDigest?: string }
+export interface PaimindNativeEvent {
+  readonly seq: number; readonly time: number; readonly digest: string
+  readonly kind: 'user.message' | 'assistant.message' | 'turn.started' | 'turn.ended' | 'step.started' | 'step.ended'
+    | 'tool.started' | 'tool.ended' | 'queue.changed' | 'session.checkpoint' | 'approval.required' | 'approval.decided'
+  readonly data: Readonly<Record<string, string | number | boolean>>
+}
+export type PaimindNativeEventPage = {
+  readonly sessionId: string; readonly afterSeq: number; readonly headSeq: number; readonly hasMore: boolean
+  readonly events: readonly PaimindNativeEvent[]; readonly cursorMatched: boolean
+}
+
+/** One bounded, detached projection of the original log. No history cache,
+ * resume, persistence write or event subscription is owned by this reader.
+ * Prefix checks detect truncation/replacement instead of silently moving a
+ * cursor. Internal sources, request configs and reasoning never cross it. */
+export async function readPaimindNativeSessionEventPage(
+  context: Parameters<typeof readPaimindNativeSessionReference>[0], sessionId: string,
+  selection: PaimindNativeEventSelection, signal: AbortSignal,
+): Promise<PaimindNativeEventPage> {
+  signal.throwIfAborted()
+  if (!Number.isSafeInteger(selection.afterSeq) || selection.afterSeq < -1
+    || (selection.afterSeq === -1 ? selection.afterDigest !== undefined
+      : typeof selection.afterDigest !== 'string' || !/^[A-Za-z0-9_-]{43}$/u.test(selection.afterDigest)
+        || Buffer.from(selection.afterDigest, 'base64url').toString('base64url') !== selection.afterDigest)) throw Error('事件游标格式无效')
+  const original = await nativeSessionSnapshot(context, sessionId, signal)
+  signal.throwIfAborted()
+  const events = original.events
+  if (events.length > 10000 || Buffer.byteLength(JSON.stringify(events)) > 2 * 1024 * 1024) throw Error('原生事件历史超出读取界限')
+  const result: PaimindNativeEvent[] = [], headSeq = events.length - 1
+  if (selection.afterSeq > headSeq) return { sessionId, afterSeq: selection.afterSeq, headSeq, events: [], hasMore: false, cursorMatched: false }
+  const hash = createHash('sha256').update(JSON.stringify({ sessionId, seedLength: original.header.seedLength ?? 0 }) + '\n')
+  let cursorMatched = selection.afterSeq === -1, bytes = 0
+  const record = (value: unknown): Record<string, any> => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, any> : {}
+  for (let seq = 0; seq < events.length; seq++) {
+    const event = record(events[seq])
+    if (event.seq !== seq || typeof event.type !== 'string' || typeof event.time !== 'number' || !Number.isFinite(event.time)) throw Error('原生事件顺序无法验证')
+    hash.update(JSON.stringify(events[seq]) + '\n')
+    const digest = hash.copy().digest('base64url')
+    if (seq === selection.afterSeq) cursorMatched = digest === selection.afterDigest
+    if (seq <= selection.afterSeq) continue
+    if (!cursorMatched) break
+    let kind: PaimindNativeEvent['kind'] = 'session.checkpoint', data: Record<string, string | number | boolean> = {}
+    const raw = record(event.data), message = event.type === 'user/message' ? raw : record(raw.message)
+    if (['user/message', 'assistant/message'].includes(event.type)
+      && record(message.source).kind === (event.type === 'user/message' ? 'user' : 'model')
+      && message.visibility !== 'hidden' && message.hidden !== true && raw.visibility !== 'hidden' && raw.hidden !== true) {
+      if (!Array.isArray(message.content)) throw Error('原生消息内容无法验证')
+      const blocks = message.content.filter((block: unknown) => {
+        const item = record(block); return item.type === 'text' && typeof item.text === 'string' && item.visibility !== 'hidden' && item.hidden !== true
+      })
+      kind = event.type === 'user/message' ? 'user.message' : 'assistant.message'
+      data = { text: blocks.map((block: any) => block.text).join('\n'), omittedBlocks: message.content.length - blocks.length }
+    } else if (['turn/start', 'turn/end', 'step/start', 'step/end'].includes(event.type)) {
+      if (!Number.isSafeInteger(raw.turn) || raw.turn < 1) throw Error('原生轮次无法验证')
+      kind = ({ 'turn/start': 'turn.started', 'turn/end': 'turn.ended', 'step/start': 'step.started', 'step/end': 'step.ended' } as const)[event.type as 'turn/start']
+      data = { turn: raw.turn }
+      if (event.type.startsWith('step/')) {
+        if (!Number.isSafeInteger(raw.step) || raw.step < 1) throw Error('原生步骤无法验证')
+        data.step = raw.step
+      }
+      if (event.type === 'turn/end') data.reason = ['completed', 'blocked', 'aborted', 'interrupted', 'error', 'max-tokens'].includes(raw.reason?.kind) ? raw.reason.kind : 'unknown'
+    } else if (event.type === 'tool/call' && typeof raw.callId === 'string' && typeof raw.name === 'string') {
+      if (raw.callId.length > 200 || raw.name.length > 200) throw Error('原生工具标识超出界限')
+      kind = 'tool.started'; data = { callId: raw.callId, name: raw.name }
+    } else if (event.type === 'tool/result' && typeof message.callId === 'string' && typeof message.isError === 'boolean') {
+      if (message.callId.length > 200) throw Error('原生工具标识超出界限')
+      kind = 'tool.ended'; data = { callId: message.callId, isError: message.isError }
+    } else if (['approval/asked', 'approval/decided'].includes(event.type)) {
+      const approval = projectNativeApprovalReference(sessionId, events.slice(0, seq + 1), raw.id)
+      kind = event.type === 'approval/asked' ? 'approval.required' : 'approval.decided'
+      data = { approvalId: approval.approvalId, version: approval.version, toolName: approval.toolName }
+      if (approval.outcome !== null) data.outcome = approval.outcome
+    } else if (event.type === 'agent/inbox/spliced') kind = 'queue.changed'
+    const projected = { seq, time: event.time, digest, kind, data }, length = Buffer.byteLength(JSON.stringify(projected))
+    if (length > 128 * 1024) throw Error('单个原生事件超出读取界限')
+    if (result.length >= 128 || bytes + length > 128 * 1024) break
+    bytes += length; result.push(projected)
+  }
+  signal.throwIfAborted()
+  return { sessionId, afterSeq: selection.afterSeq, headSeq, events: cursorMatched ? result : [], cursorMatched,
+    hasMore: cursorMatched && (result.at(-1)?.seq ?? selection.afterSeq) < headSeq }
+}
+
+/** Original audit state is distinct from a live, answerable native request.
+ * rpcId is private owner correlation only, never a public approval grant. */
+export interface PaimindNativeApprovalReference {
+  readonly sessionId: string; readonly approvalId: string; readonly version: string
+  readonly toolName: string; readonly askedSeq: number; readonly decidedSeq: number | null
+  readonly outcome: 'allowed-once' | 'rejected' | 'cancelled' | 'unavailable' | null
+  readonly answerable: boolean; readonly rpcId: string | null
+  readonly persisted: boolean
+}
+
+function projectNativeApprovalReference(sessionId: string, events: readonly unknown[], approvalId: unknown): PaimindNativeApprovalReference {
+  if (typeof approvalId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u.test(approvalId)) throw Error('原生审批标识无效')
+  if (events.length > 10000 || Buffer.byteLength(JSON.stringify(events)) > 2 * 1024 * 1024) throw Error('原生审批历史超出读取界限')
+  let asked: any, decided: any
+  for (let seq = 0; seq < events.length; seq++) {
+    const event = events[seq] as { seq?: unknown; type?: unknown; data?: { id?: unknown; toolName?: unknown; outcome?: unknown } }
+    if (!event || event.seq !== seq) throw Error('原生审批历史顺序无法验证')
+    if (event.data?.id !== approvalId || !['approval/asked', 'approval/decided'].includes(event.type as string)) continue
+    if (event.type === 'approval/asked') {
+      if (asked || typeof event.data.toolName !== 'string' || !event.data.toolName || event.data.toolName.length > 200) throw Error('原生审批请求无法验证')
+      asked = event
+    } else {
+      if (!asked || decided || !['allowed-once', 'rejected', 'cancelled', 'unavailable'].includes(event.data.outcome as string)) throw Error('原生审批决定无法验证')
+      decided = event
+    }
+  }
+  if (!asked) throw Error('原生审批不存在或历史不可读')
+  return { sessionId, approvalId, toolName: asked.data.toolName, askedSeq: asked.seq, decidedSeq: decided?.seq ?? null,
+    outcome: decided?.data.outcome ?? null, answerable: false, rpcId: null, persisted: false,
+    version: createHash('sha256').update(JSON.stringify({ sessionId, approvalId, asked, decided: decided ?? null })).digest('base64url') }
+}
+
+/** Physical stored-prefix read, unlike inspect() which may borrow live memory.
+ * A matching terminal pair proves storage, not who caused it or tool success.
+ * Never flush, repair, resume or reconstruct a pending request while reading. */
+async function persistedApproval(context: { get(name: 'sessionPersistence'): unknown },
+  state: PaimindNativeApprovalReference, signal: AbortSignal): Promise<PaimindNativeApprovalReference> {
+  signal.throwIfAborted()
+  if (state.outcome === null) return state
+  const owner = context.get('sessionPersistence') as {
+    readFrom?(id: string, fromSeq: number, signal: AbortSignal): Promise<{ meta: { id?: unknown }; events: unknown[] }>
+    readStoredRevision?(id: string, signal: AbortSignal): Promise<unknown>
+  } | undefined
+  if (typeof owner?.readFrom !== 'function' || typeof owner.readStoredRevision !== 'function') throw Error('原生审批持久化读取不可用')
+  const revision = await owner.readStoredRevision(state.sessionId, signal)
+  signal.throwIfAborted()
+  if (revision === undefined) return state
+  const stored = await owner.readFrom(state.sessionId, 0, signal)
+  signal.throwIfAborted()
+  if (stored.meta?.id !== state.sessionId || !Array.isArray(stored.events)
+    || stored.events.length > 10000 || Buffer.byteLength(JSON.stringify(stored.events)) > 2 * 1024 * 1024) throw Error('原生审批持久化身份或范围无法验证')
+  if (stored.events.length <= state.askedSeq) return state
+  const confirmed = projectNativeApprovalReference(state.sessionId, stored.events, state.approvalId)
+  if (confirmed.outcome !== null && confirmed.version !== state.version) throw Error('原生审批持久化结果冲突')
+  return { ...state, persisted: confirmed.outcome !== null && confirmed.version === state.version }
+}
+
+/** Detached historical projection plus bounded observation of the original
+ * ApiProxy pending snapshot. No second pending table, resume, decision or
+ * persistence write. Absence of a frame means not observed answerable, never
+ * automatic rejection, approval, restart recovery or retry permission. */
+export async function readPaimindNativeApprovalReference(
+  context: { readonly sessions: { get(id: string): unknown }; get(name: 'sessionPersistence' | 'apiProxy'): unknown },
+  sessionId: string, approvalId: string, signal: AbortSignal,
+): Promise<PaimindNativeApprovalReference> {
+  const before = await nativeSessionSnapshot(context, sessionId, signal)
+  const state = projectNativeApprovalReference(sessionId, before.events, approvalId)
+  const live = context.sessions.get(sessionId)
+  if (state.outcome !== null || !live || state.askedSeq < (typeof before.header.seedLength === 'number' ? before.header.seedLength : 0)) return persistedApproval(context, state, signal)
+  const api = context.get('apiProxy') as { events?: { mux(request: { rpcId: string; payload: object }, signal: AbortSignal): AsyncIterable<unknown> } } | undefined
+  if (typeof api?.events?.mux !== 'function') return state
+  const stop = new AbortController(), observation = AbortSignal.any([signal, stop.signal])
+  const deadline = setTimeout(() => stop.abort(), 250); deadline.unref()
+  let rpcId: string | null = null, count = 0
+  try {
+    for await (const raw of api.events.mux({ rpcId: 'approval-read', payload: {} }, observation)) {
+      signal.throwIfAborted()
+      if (++count > 512) throw Error('原生审批观察超出读取界限')
+      const frame = raw as { rpcId?: unknown; payload?: { type?: unknown; sessionId?: unknown; approvalId?: unknown; toolName?: unknown } }
+      if (frame.payload?.type === 'stream/error') throw Error('原生审批观察失败')
+      if (frame.payload?.type !== 'approval/requested' || frame.payload.sessionId !== sessionId || frame.payload.approvalId !== approvalId) continue
+      if (typeof frame.rpcId !== 'string' || !frame.rpcId || frame.rpcId.length > 200 || frame.payload.toolName !== state.toolName) throw Error('原生审批关联无法验证')
+      rpcId = frame.rpcId; break
+    }
+  } catch (error) { if (!stop.signal.aborted || signal.aborted) throw error }
+  finally { clearTimeout(deadline); stop.abort() }
+  signal.throwIfAborted()
+  const after = await nativeSessionSnapshot(context, sessionId, signal)
+  const latest = projectNativeApprovalReference(sessionId, after.events, approvalId)
+  if (latest.version !== state.version || context.sessions.get(sessionId) !== live) return persistedApproval(context, latest, signal)
+  return { ...latest, answerable: rpcId !== null, rpcId }
+}
+
+/** Minimal private governance readback, not a session/permission registry. */
+export interface PaimindNativeSessionPresetReference {
+  readonly sessionId: string
+  readonly agentPreset: string | null
+  readonly hasForkBoundary: boolean
+}
+
+export async function readPaimindNativeSessionPresetReference(
+  context: Parameters<typeof readPaimindNativeSessionReference>[0], sessionId: string, signal: AbortSignal,
+): Promise<Readonly<PaimindNativeSessionPresetReference>> {
+  signal.throwIfAborted()
+  const session = await nativeSessionSnapshot(context, sessionId, signal)
+  signal.throwIfAborted()
+  // The original resolver consumes header.agentPreset and the native selected
+  // events. Use the detached original header, not a fabricated creation fact
+  // or a reconstruction of the native selection algorithm.
+  const preset = resolveSessionPreset(session as unknown as Parameters<typeof resolveSessionPreset>[0])
+  if (preset !== undefined && (typeof preset !== 'string' || !/^[a-z0-9][a-z0-9_-]{0,159}$/u.test(preset))) {
+    throw new Error('原生会话智能体身份无法验证')
+  }
+  return Object.freeze({ sessionId, agentPreset: preset ?? null,
+    hasForkBoundary: session.events.some(event => event !== null && typeof event === 'object' && 'type' in event && event.type === 'turn/end') })
+}
+
+/** rc.2's cold list uses the creation header, unlike its live list and resume
+ * resolver. Correct only this display field through the original non-publishing
+ * inspector and preset resolver. No log writes, Agent activation, cache, shadow
+ * registry, cross-cell lookup or authorization decision is introduced. */
+export function projectPaimindNativeSessionList(
+  context: Parameters<typeof readPaimindNativeSessionReference>[0] & Pick<Context, 'effect'>,
+  sessions: ApiProxy['sessions'],
+): ApiProxy['sessions'] {
+  const lifetime = new AbortController()
+  context.effect(() => () => lifetime.abort())
+  const native = sessions.list.bind(sessions)
+  let pending = 0
+  return { ...sessions, async list(input) {
+    if (lifetime.signal.aborted || pending >= 4) return failure()
+    pending += 1
+    const stop = new AbortController(), signal = AbortSignal.any([lifetime.signal, stop.signal, AbortSignal.timeout(5_000)])
+    const bounded = async <T>(operation: () => Promise<T>): Promise<T> => {
+      signal.throwIfAborted()
+      return new Promise<T>((resolve, reject) => {
+        const abort = () => reject(new Error('Native list read aborted'))
+        signal.addEventListener('abort', abort, { once: true })
+        Promise.resolve().then(() => { signal.throwIfAborted(); return operation() })
+          .then(value => { signal.throwIfAborted(); resolve(value) }, reject)
+          .catch(reject).finally(() => signal.removeEventListener('abort', abort))
+      })
+    }
+    function failure(): Awaited<ReturnType<ApiProxy['sessions']['list']>> {
+      return { rpcId: input.rpcId, result: { ok: false, error: { code: 'internal',
+        message: '无法确认会话列表中的当前智能体，请重试。', details: {} } } }
+    }
+    try {
+      const response = await bounded(() => native(input))
+      if (!response.result.ok) return response
+      const original = response.result.value.items, items = [...original]
+      let next = 0
+      await Promise.all(Array.from({ length: Math.min(4, items.length) }, async () => {
+        while (next < items.length) {
+          signal.throwIfAborted()
+          const index = next++, row = original[index]!
+          const reference = await bounded(() => readPaimindNativeSessionPresetReference(context, row.sessionId, signal))
+          const { agentPreset: _creationPreset, ...fields } = row
+          items[index] = { ...fields, ...(reference.agentPreset === null ? {} : { agentPreset: reference.agentPreset }) }
+        }
+      }))
+      signal.throwIfAborted()
+      return { ...response, result: { ...response.result, value: { ...response.result.value, items } } }
+    } catch { return failure() }
+    finally { stop.abort(); pending -= 1 }
+  } }
+}
+
+export interface PaimindNativeSessionCreationReference {
+  readonly sessionId: string | null
+  readonly kind: 'new' | 'existing'
+  readonly agentPreset: string | null
+}
+
+/** Read-only rc.2 creation resolution. The selected JSONL owner exposes its
+ * revision lookup: only explicit absence means new; corrupt/unreadable stored
+ * sessions are never reclassified from a failed inspection. No registry, raw
+ * file scan, recovery commit or native session creation happens here. */
+export async function readPaimindNativeSessionCreationReference(
+  context: Parameters<typeof readPaimindNativeSessionReference>[0] & { get(name: 'agentPresets'): unknown },
+  sessionId: string | undefined, signal: AbortSignal,
+): Promise<Readonly<PaimindNativeSessionCreationReference>> {
+  signal.throwIfAborted()
+  if (sessionId !== undefined && (typeof sessionId !== 'string' || !sessionId || sessionId.length > 200
+    || sessionId.trim() !== sessionId || /[\u0000-\u001f\u007f]/u.test(sessionId))) throw Error('原生会话标识无效')
+  const existing = async (): Promise<Readonly<PaimindNativeSessionCreationReference> | undefined> => {
+    if (sessionId === undefined) return undefined
+    let present = context.sessions.get(sessionId) !== undefined
+    if (!present) {
+      const persistence = context.get('sessionPersistence') as { readStoredRevision?(id: string, signal: AbortSignal): Promise<unknown> } | undefined
+      if (typeof persistence?.readStoredRevision !== 'function') throw Error('原生会话存在性检查不可用')
+      present = await persistence.readStoredRevision(sessionId, signal) !== undefined
+      signal.throwIfAborted()
+      present ||= context.sessions.get(sessionId) !== undefined
+    }
+    if (!present) return undefined
+    const reference = await readPaimindNativeSessionPresetReference(context, sessionId, signal)
+    return Object.freeze({ sessionId, kind: 'existing', agentPreset: reference.agentPreset })
+  }
+  const current = await existing()
+  if (current) return current
+  const presets = context.get('agentPresets') as { resolve?(id?: string): Promise<{ id: string }> } | undefined
+  if (typeof presets?.resolve !== 'function') throw Error('原生默认智能体检查不可用')
+  const selected = await presets.resolve()
+  signal.throwIfAborted()
+  if (typeof selected?.id !== 'string' || !/^[a-z0-9][a-z0-9_-]{0,159}$/u.test(selected.id)) throw Error('原生默认智能体身份无法验证')
+  return await existing() ?? Object.freeze({ sessionId: sessionId ?? null, kind: 'new', agentPreset: selected.id })
+}
+
+/** Model message facts only; the product owner decides whether their content is visible. */
+export interface PaimindNativeModelReply {
+  readonly seq: number
+  readonly content: unknown
+}
+
+/**
+ * Read completed steps of the first native turn containing a human message.
+ * A queued batch is one turn. Later turns, interrupted/replaced messages and
+ * incomplete/error boundaries cannot supply proof for that first turn.
+ */
+export function listPaimindNativeFirstHumanTurnReplies(
+  session: Pick<PaimindNativeSessionReference, 'events'>,
+): readonly Readonly<PaimindNativeModelReply>[] {
+  const object = (value: unknown): Record<string, unknown> =>
+    typeof value === 'object' && value !== null ? value as Record<string, unknown> : {}
+  const rows = session.events.map(object)
+  const firstHuman = rows.findIndex(row => row.type === 'user/message'
+    && object(object(row.data).source).kind === 'user')
+  const empty: readonly Readonly<PaimindNativeModelReply>[] = Object.freeze([])
+  if (firstHuman < 0 || rows[firstHuman]?.surfaceOp !== 'append') return empty
+  let start = firstHuman - 1
+  while (start >= 0 && rows[start]?.type !== 'turn/start') {
+    if (rows[start]?.type === 'turn/end') return empty
+    start--
+  }
+  if (start < 0) return empty
+  const turn = object(rows[start]?.data).turn
+  if (typeof turn !== 'number' || !Number.isSafeInteger(turn) || turn < 0) return empty
+  let end = firstHuman + 1
+  while (end < rows.length && rows[end]?.type !== 'turn/end') {
+    if (rows[end]?.type === 'turn/start') return empty
+    end++
+  }
+  const ending = object(rows[end]?.data)
+  if (ending.turn !== turn || object(ending.reason).kind !== 'completed') return empty
+
+  const replies: Readonly<PaimindNativeModelReply>[] = []
+  let openStep: number | undefined
+  let pending: Readonly<PaimindNativeModelReply>[] = []
+  let previousSeq = -1
+  for (let index = start; index <= end; index++) {
+    const row = rows[index]!, data = object(row.data)
+    if (typeof row.seq !== 'number' || !Number.isSafeInteger(row.seq) || row.seq <= previousSeq) return empty
+    previousSeq = row.seq
+    if (row.type === 'step/start') {
+      if (openStep !== undefined || data.turn !== turn || typeof data.step !== 'number'
+        || !Number.isSafeInteger(data.step) || data.step < 0) return empty
+      openStep = data.step
+      pending = []
+    } else if (row.type === 'step/end') {
+      if (openStep === undefined || data.turn !== turn || data.step !== openStep) return empty
+      replies.push(...pending)
+      pending = []
+      openStep = undefined
+    } else if (index > firstHuman && row.type === 'assistant/message') {
+      const message = object(data.message), source = object(message.source)
+      if (openStep !== undefined && data.turn === turn && data.step === openStep
+        && row.surfaceOp === 'append' && data.interrupted !== true
+        && message.role === 'assistant' && source.kind === 'model'
+        && typeof source.provider === 'string' && source.provider.trim() !== ''
+        && typeof source.model === 'string' && source.model.trim() !== '') {
+        pending.push(Object.freeze({ seq: row.seq, content: message.content }))
+      }
+    }
+  }
+  return openStep === undefined ? Object.freeze(replies) : empty
 }
 
 /** Browser-safe Schedule view projected from Harness's canonical Session log. */
@@ -1002,6 +1463,23 @@ export interface PaimindHostToolRegistry {
 export interface PaimindHostSystemPrompt {
   section(input: { readonly name: string; readonly order?: number; readonly text: string }): () => void
   context(input: { readonly name: string; readonly order: number; readonly text: string }): () => void
+  variable?(name: string, provider: () => string | undefined): () => void
+}
+
+/** The selected native renderer interpolates section templates once, but never
+ * rescans variable values. Keep administrator-authored text literal (including
+ * {{examples}}), without replacing the native assembler or prompt registry. */
+export function registerPaimindHostLiteralPrompt(
+  prompt: PaimindHostSystemPrompt,
+  input: { readonly name: string; readonly order: number; readonly variable: string; readonly text: () => string },
+): () => void {
+  if (typeof prompt.variable !== 'function' || !/^paimind_[a-z0-9_]+$/.test(input.variable)
+    || !Number.isFinite(input.order)) throw new Error('Native literal prompt registration unavailable')
+  const removeVariable = prompt.variable(input.variable, input.text)
+  try {
+    const removeSection = prompt.section({ name: input.name, order: input.order, text: `{{${input.variable}}}` })
+    return () => { removeSection(); removeVariable() }
+  } catch (error) { removeVariable(); throw error }
 }
 
 export interface PaimindHostFsTarget {

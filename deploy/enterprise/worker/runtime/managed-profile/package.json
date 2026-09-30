@@ -1,0 +1,9 @@
+{
+  "name": "paimind-native-enterprise-profile",
+  "private": true,
+  "dsh": {
+    "profile": {
+      "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app", "dsh-better-sidebar", "@huanlin/dsh-plugin-better-sidebar-plugin-office", "@paimind/harness-bundle"]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "outDir": "lib/types", "rootDir": "src", "emitDeclarationOnly": true },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "references": [{ "path": "../../packages/harness-compat" }, { "path": "../../packages/enterprise-admin" }, { "path": "../../packages/better-sidebar-adapter" }, { "path": "../../packages/agent-builder" }, { "path": "../../packages/skill-market" }, { "path": "../../packages/extension-center" }, { "path": "../../packages/artifacts" }]
+}

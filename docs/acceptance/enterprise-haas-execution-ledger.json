@@ -1,0 +1,1751 @@
+{
+  "schemaVersion": 1,
+  "reviewedOn": "2026-09-30",
+  "purpose": "执行状态与下一动作；不替代正式验收结论",
+  "formalMatrix": "enterprise-haas-e2e-matrix.md",
+  "formalRowsSnapshotSha256": "9aacf8fa083c8c7dbc445e3089d93716585a7b9b1c7fa526be4e5d2e67871222",
+  "goalDocument": "../plans/enterprise-haas-delivery.md",
+  "applicationGoal": {
+    "observedStatus": "paused",
+    "objectiveUpdated": true,
+    "note": "2026-09-30交接轮读取目标工具返回paused；本轮未调用目标状态变更。用户已授权当前交接工作，本机新环境暂缓，后续转指定云电脑继续。完整全文与87→整合→88保持；交接完成不等于总目标完成。"
+  },
+  "scope": {
+    "totalFormalRows": 88,
+    "enterprisePreIntegrationRows": 87,
+    "integrationResult": "HAAS-12",
+    "formalRowsClosedByThisAudit": 6,
+    "requirementsChanged": false
+  },
+  "observedSource": {
+    "asOf": "2026-09-15",
+    "enterpriseHead": "d7078f53b75427f0344105bebccd4605c51e742f",
+    "productHead": "b55e45211bba92a981c3ee93e768f83c5b1a5c9c",
+    "candidateSourceDigest": "sha256:8bbe0f21bed706df529755fe3e69c2f3a4bcf449585c8f78ff046e95c768c679",
+    "inputFilesMatched": 785,
+    "successfulEngineeringLogsMatched": 14
+  },
+  "states": {
+    "VERIFIED_GATE": "原编号仓库门禁已对准确冻结输入验证通过；相关变化时重开，整合最终版本仍复核，不代表浏览器或整个目标完成",
+    "ENGINEERING_EVIDENCE": "本项工程范围已有当前输入的成功证据；并非整个目标或浏览器验收通过",
+    "PARTIAL_BROWSER": "已有真实浏览器局部／历史证据；仍缺本行完整动作、环境或证据条件",
+    "IMPLEMENTATION_GAP": "有明确接口／管理闭环缺口或未证明接通；先补实现而非反复跑测试",
+    "RECONCILE_EVIDENCE": "已有源码／历史记录需逐行核对适用性；不能据本次盘点认定未执行或全部通过",
+    "NO_COMPLETE_EVIDENCE": "本次未找到本行完整端到端证据；不等于断言从未执行",
+    "AGGREGATE_GATE": "汇总关联业务证据的门禁；不重复创建另一套相同业务场景",
+    "INTEGRATION_PENDING": "两线独立验收后的整合结果；不得充当开始整合的前置条件"
+  },
+  "evidenceIndex": {
+    "cloudHandoffDecision": {
+      "path": "../handoffs/cloud-execution-20260930.md",
+      "scope": "2026-09-30用户确认本机新环境暂缓、域名后置及云电脑接续；告知现有仓库公开后，明确授权统一推送两条专用交接分支，保留main和原工作树，不上传凭证／用户数据／原始运行证据，不发布部署。仅交接决策与执行说明，不增加正式验收通过。"
+    },
+    "resumeAudit20260930": {
+      "path": "../../../.paimind-goal-evidence/haas-resume-20260930-JCkKTg/receipt.json",
+      "scope": "同日恢复审计匹配874源码、829运行产物、REPO-01的25件及REPO-07的23件材料；主线三修改摘要保持。Docker引擎无法连接，不推断旧容器／卷状态；未运行新测试、浏览器或重启。该审计当时目标active，当前应用状态以本台账applicationGoal最新读取为准。"
+    },
+    "currentFormalAdmissionReadiness": {
+      "path": "../../../.paimind-goal-evidence/haas-admission-readiness-woc0wJ/receipt.json",
+      "scope": "原ISO-04／REPO-06下一动作只读复核：浏览器库存本轮恢复可读、旧凭证交接页不在；三准确合成容器仍旧5074镜像，旧公开入口与3080无监听。874源码及主线差异不变，没有页面测试或服务操作。已发准确产品接续／专用配额环境／证书信任选择，未获新确认。修正历史等待入口，不增加正式通过或宣称整个目标阻塞。"
+    },
+    "currentCandidateReleaseGate": {
+      "path": "../../../.paimind-goal-evidence/haas-release-current-sAf4ya/receipt.json",
+      "scope": "原REPO-07当前874输入ce145fc1：13项快速检查逐条核对，10项复用；补框架／文档及旧清单未绑定全部导入文件的232项构建测试，39文件现清单完整。当前兼容层变化后一次实际产品模式组合12次启动／移除／缺席检查全部通过，子进程0，临时配置清理且无句柄，缓存保留。两次记录器断言及旧测试重复键警告保留，根／集成／构建／包不重跑。不是企业启用浏览器、主产品独立、最终运行准入或发布。"
+    },
+    "currentCandidateFullSuite": {
+      "path": "../../../.paimind-goal-evidence/haas-current-suite-UJ5WpP/receipt.json",
+      "scope": "REPO-01当前874输入ce145fc1：完整根224文件2536项、真实独立数据库集成22文件430项全部通过，配置文件清单和逐项断言无遗漏，25件原材料摘要匹配。根进程0；集成关闭后记录器因既有测试生成辅助文件变化退出1，子进程退出码和信号未保存、不补写。原编译参数在内存重建精确匹配，其他828运行产物及源码不变。数据库已备份停止，容器卷保留；无重跑或浏览器结论，不等于最终双成员准入。"
+    },
+    "currentCandidateImage": {
+      "path": "../../../.paimind-goal-evidence/haas-current-image-gate-RFv6E7/receipt.json",
+      "scope": "REPO-03当前874输入ce145fc1完整有效策略、离线源码／产品／后端构建、运行依赖装配及不可变镜像774f5695aab4实际回读、隔离无网络原生启动通过。57件材料封存；首次获取成功，构建子进程0，记录器两次顺序／诊断断言失败保留后纠正，未重建。旧成员容器／挂载及主线不变。非最终双成员准入、正式安全入口或浏览器验收。"
+    },
+    "currentProductIndependentGate": {
+      "path": "../../../.paimind-goal-evidence/haas-product-readiness-FlW78h/receipt.json",
+      "scope": "原HAAS-12产品独立前置，当前main 659输入：141文件786项测试、10个非接口阶段（含构建）通过，接口仅提案适配器运行／声明两摘要失败。历史R13 204行的181变化／20同字节／3自引用不等于当前全流程覆盖。保留三处既有修改和旧证据，未更新快照、未真实宿主／浏览器、未独立验收通过或整合。"
+    },
+    "currentProductContractFailures": {
+      "path": "../../../.paimind-goal-evidence/haas-product-contract-probe-BWr3Mg/receipt.json",
+      "scope": "原HAAS-12前置的定向失败核实：准确HEAD入口生成v1分析且能消费，当前入口消费同文件退出1；当前v2分析生成182事实的事实集及25页提纲，格式检查通过而下游绑定检查退出1，额外两个来源及61个不在事实集的事实。实际合成CLI，不是浏览器。主线三文件未改；须协调保留原修改的接续修复，不放宽校验或刷新快照掩盖失败。"
+    },
+    "boundedLeaseObservation": {
+      "path": "../../../.paimind-goal-evidence/haas-lease-observation-oLbGWp/receipt.json",
+      "scope": "OPS-07准确连接读取失败后同一10秒内至多一次完整重读，原身份／资源／围栏及30秒租约保持；28项相关检查和真实双单元单次明确连接故障只读补验通过。没有续租写入、在线控制器切换或浏览器，不关闭P1。保留两次实际夹具／诊断失败；镜像输入中一处启动脚本变化，REPO-03重开，原镜像和其他门禁证据保留。"
+    },
+    "memberInstructionBrowserPartial": {
+      "path": "../../../.paimind-goal-evidence/haas-instruction-browser-jKX0GA/receipt.json",
+      "scope": "固定874输入NQNl05的真实三单元／认证／数据库及原生浏览器局部交互：3次保存与审计相符，四档不同操作切片、取消焦点和停用保留；两个独立文件、10次实际成员后台拒绝及Hansen冷恢复逐字节保持。不是各档全流程、正式TLS、实际模型提示词使用或完整后段网络；Chrome翻译影响保留。0020与合成jqdWEd更新已完成，原组／主线不动。"
+    },
+    "instructionBrowserRuntimeIncident": {
+      "path": "../../../.paimind-goal-evidence/haas-instruction-browser-jKX0GA/runtime-incident.json",
+      "scope": "原P1于04:18:26Z再次出现：jqdWEd管理员的准确storage-fence探测21ms／118字节／退出1／engine-unavailable，随后控制器撤回。Hansen／Alex继续运行；未确定底层原因或与Hansen计划恢复的因果，不重复恢复／成功采样或放宽租约。"
+    },
+    "enterpriseNativePluginLifecycle": {
+      "path": "../../../.paimind-goal-evidence/haas-enterprise-plugin-lifecycle-s3IDAL/receipt.json",
+      "scope": "REPO-06原生命令／页面载体切片：真实隔离宿主安装／启用、移除补丁后恢复及准确缺包监听前ERR_MODULE_NOT_FOUND拒绝。原卸载保留本地链接，第一轮非真实缺包，事实不删除；只隔离准确测试链接后复验并恢复。没有客户端执行、网关、模型或浏览器，不能关闭本行。"
+    },
+    "browserRequestPolicyUnavailable": {
+      "path": "../../../.paimind-goal-evidence/haas-enterprise-plugin-lifecycle-s3IDAL/browser-blocker.json",
+      "scope": "本批两次真实cua.getState均无法加载browser request-header policy，浏览器库存为空，Chrome应用仍被报告运行中。不是页面或PAIMind认证故障，无页面操作／浏览器重启／策略绕过。下一次只复核能力是否恢复，不循环重跑成功原生检查。"
+    },
+    "currentReleaseGate": {
+      "path": "../../../.paimind-goal-evidence/haas-release-composition-Do1BtS/receipt.json",
+      "scope": "REPO-07按原13项check:fast及真实组合检查完整范围通过；866输入，生产构建及锁文件与rvitiZ完全一致，仅测试六文件差异。有效源码／类型／包等证据逐条回读复用，本批真实产品模式安装／启动／卸载／功能缺席组合退出0。记录器临时目录额外谓词退出1保留，配置／进程已清理，剩余空目录及编译缓存保留。不是单次完整重跑，不代替企业启用生命周期、主产品独立验收、真实浏览器或最终镜像。"
+    },
+    "currentProductModeComposition": {
+      "path": "../../../.paimind-goal-evidence/haas-release-composition-Do1BtS/composition-result.json",
+      "scope": "当前企业工作树源码与实际产物，准确宿主／侧栏／文档查看器，在一次性配置／随机回环端口实际完成原安装、启动、卸载、独立视觉及指定功能缺席组合。企业管理插件按契约禁用；REPO-06企业启用／卸载及缺依赖闭环仍未证明。清理详见同目录cleanup-verification.json，原组合不重复。"
+    },
+    "currentFullSourceBuild": {
+      "path": "../../../.paimind-goal-evidence/haas-worker-runtime-rvitiZ/verified-source-build.json",
+      "scope": "完整离线冻结安装及scripts/build.mjs实际退出0，锁文件7596c46d与当前相同。当前866输入相对原864只有六个测试文件差异，生产／构建／依赖保持，Do1BtS逐项核对。完整构建可复用但不等于最终镜像准入或浏览器验收。"
+    },
+    "currentPackageGates": {
+      "path": "../../../.paimind-goal-evidence/haas-engine-transport-CeHCoj/receipt.json",
+      "scope": "REPO-04／05当前866输入通过：41包接口、角色与依赖、打包、严格结构及141个外部导出消费验证。精确重现旧客户端后只更新扩展中心已测试修复摘要；其他40包与公开入口／声明不变。后续四份映射内容刷新已证明运行代码字节不变，148映射回读匹配，门禁按准确影响复用。不是浏览器、最终镜像准入或发布。"
+    },
+    "currentFastRemainder": {
+      "path": "../../../.paimind-goal-evidence/haas-engine-transport-CeHCoj/fast-remainder-receipt.json",
+      "scope": "原REPO-07范围的232项构建脚本、体积、示例及框架检查通过；零失败／跳过／待办。尚需完整构建／锁文件／文档与真实组合证据逐条核对，不宣称整个check:release通过；框架内组件测试不是浏览器验收。"
+    },
+    "boundedEngineObservation": {
+      "path": "../../../.paimind-goal-evidence/haas-engine-transport-CeHCoj/result.json",
+      "scope": "原OPS-07／HAAS-04：一次限定20轮的准确卷引用查询及独立套接字只读探测均成功，套接字身份稳定。仅本次未复现，未解释01:51:51Z引擎通信失败；P1不关闭，不重复无变化采样，不恢复单元或改租约。"
+    },
+    "currentSourceGate": {
+      "path": "../../../.paimind-goal-evidence/haas-candidate-source-kkfRI0/source-gate-receipt.json",
+      "scope": "REPO-01通过，当前866输入／8f90fa8b；完整文件清单核对后复用未变化的220根测试文件及17集成文件，新增守卫9项、三个端口相关文件及原生发布三场景定向复验。合计根221文件2513项、集成21文件417项，无失败／跳过／待定。四处修改及两个新增均为测试，生产输入与类型项目图不变，REPO-02继续适用；不是一次新的全量重跑，不替代浏览器或最终镜像准入。原失败完整保留。"
+    },
+    "morganRuntimeWithdrawal": {
+      "path": "../../../.paimind-goal-evidence/haas-candidate-source-kkfRI0/morgan-withdrawal.json",
+      "scope": "c3Bzcz合成Morgan于2026-09-24T01:51:51Z因runtime-references引擎通信失败被准确撤回，退出0且非OOM，数据库暂停／租约失效；Hansen和Alex仍就绪。原组及产品修改摘要不变，未恢复、重启或调整租约。与测试时间重叠不证明因果，P1根因仍未解决。"
+    },
+    "currentCandidateRootSuite": {
+      "path": "../../../.paimind-goal-evidence/haas-candidate-source-kkfRI0/result.json",
+      "scope": "rvitiZ的864输入前后全部匹配；根源码完整220文件2504项通过，无失败／待定／待办，产品修改摘要保持。不替代服务端集成、其他工程门禁或浏览器，旧失败与定向修复证据保留。"
+    },
+    "currentCandidateTypeGate": {
+      "path": "../../../.paimind-goal-evidence/haas-candidate-source-kkfRI0/type-gate.json",
+      "scope": "REPO-02当前独立通过。Node24.19执行tsc -b tsconfig.json和apps/enterprise-server/tsconfig.json，完整声明项目图退出0；864输入前后匹配，绑定rvitiZ摘要。相关源码／锁文件／类型配置或编译器变化后重核适用性，不因无关浏览器待定反复重跑。"
+    },
+    "currentCandidateIntegrationRun": {
+      "path": "../../../.paimind-goal-evidence/haas-candidate-source-kkfRI0/integration-result.json",
+      "scope": "当前候选完整服务端集成已结束，864输入匹配：21文件，411通过／4失败及两个文件因固定旧端口未收集。独立60810数据库，原57631／54194未操作。此为保留的原失败，后续准确修复与复验见currentSourceGate；不再等待执行1645。"
+    },
+    "withdrawalHostWindow": {
+      "path": "../../../.paimind-goal-evidence/haas-candidate-source-kkfRI0/engine-window.json",
+      "scope": "原HAAS-04／OPS-07准确历史窗口的桌面与虚拟机日志提供6条独立记录，印证控制器驱动停止；现有日志不解释CLI通信失败，不证明引擎重启或P1解决。无配置、恢复、故障注入或租约策略修改。"
+    },
+    "clientSettlingBrowserVerified": {
+      "path": "../../../.paimind-goal-evidence/haas-client-settling-d1XmgO/receipt.json",
+      "scope": "rvitiZ完整候选864输入匹配，备份并保留六卷更新合成组三单元c3Bzcz；真实管理员启动／刷新达到ready，连续235条筛选事件无截断或错误。原生扩展中心Hansen状态、四档只读布局及420键盘／加载切片有效，未批准开关仍禁用；初始／尾段截断与失真原始截图保留。旧Alex自发撤回诊断为runtime-logs引擎通信失败，P1未关闭；原组／主线未变，正式行不关闭。"
+    },
+    "candidateBrowserBootGap": {
+      "path": "../../../.paimind-goal-evidence/haas-candidate-composition-gbeyi6/receipt.json",
+      "scope": "QBzwav完整候选与真实认证数据库三独立单元的账户／管理员模型读取切片；响应和数据库审计对应。真实浏览器复现客户端过早恢复失败，5项反向测试先失败后25项相关检查及类型通过，修复未经过新候选浏览器。旧标签网络丢失／截断、截图缩放、Chrome断开及功能包准确范围403保留。原组／草稿／主线未动，正式行不关闭。"
+    },
+    "clientSettlingCandidateBuild": {
+      "path": "../../../.paimind-goal-evidence/haas-worker-runtime-rvitiZ/candidate-image.json",
+      "scope": "执行5128已退出0；完整构建、有效策略／产物及原生启动回读通过，镜像d0958666。864冻结输入及摘要0e204bc679eb7c79a22e839548461c449ef36a1a0d3b72bc9904d6d0760525ac匹配；生产器首次网络失败及有限第二次成功保留。已用于c3Bzcz实际三单元；最终镜像准入仍未完成。"
+    },
+    "nativeSessionArtifactRead": {
+      "path": "../../../.paimind-goal-evidence/haas-session-artifacts-PSZZCk/receipt.json",
+      "scope": "原HAAS-05／10 artifacts路由复用原历史截面、原工具修改视图、原产物投影及准确工作区，当前身份与绑定前后核对；无索引或Agent激活。163个不同相关检查、真实原生持久化活动／冷读取及原客户端规则一致性、真实认证双私有端点15次公开读取与拒绝审计通过。原生呈现器／内容和认证容器标识是明确夹具，不能拼接成实际双完整运行单元、最终镜像或浏览器；正式行不关闭，转最终候选组合。"
+    },
+    "nativeSessionFileDownload": {
+      "path": "../../../.paimind-goal-evidence/haas-session-file-download-y6OSKX/receipt.json",
+      "scope": "原HAAS-05／10已有/sidebar/file完整流式访问复用原私有文件所有者，20MiB原上限／媒体／附件名保持，逐块身份／绑定／审计／版本核对，中途失败不作完整下载。144项定向检查、真实认证数据库41次公开请求和独立真实Linux文件系统20MiB／320块／摘要／全进程回收通过。认证内容及容器身份仍为明确夹具，不能拼接为实际双宿主或最终浏览器；artifacts入口仍待接原有投影，无新索引、原组／主线改动或迁移。"
+    },
+    "nativeSessionFilePreview": {
+      "path": "../../../.paimind-goal-evidence/haas-session-file-content-iaD28z/receipt.json",
+      "scope": "原HAAS-05／10侧栏fs.read沿原会话／受管文件系统有界读取，保持原预览形状，跨块版本及当前身份审计门禁；159个不同场景、真实Linux隔离提供方五组／27辅助进程清理、真实认证数据库29次公开请求通过。后者内容／容器标识是夹具，不能拼接成实际双单元／浏览器证据。完整下载／artifacts及最终组合仍待，失败与精确接口评审保留，无原组／主线／草稿／迁移改动。"
+    },
+    "originalHansenWithdrawal20260924": {
+      "path": "../../../.paimind-goal-evidence/haas-session-files-fhb6GO/runtime-incident.json",
+      "scope": "本批收尾只读发现原控制器在北京时间06:57:25因docker ps子命令退出1撤回Hansen，原容器SIGTERM后退出0、非OOM。115字节原输出未被旧控制器保存，根因未明；当前磁盘诊断增强未在旧进程加载，不能当作已修复。纳入原偶发撤回P1；本批未停止／重启原组，管理员、网关及数据库仍运行。"
+    },
+    "versionedSessionFileDirectory": {
+      "path": "../../../.paimind-goal-evidence/haas-session-files-fhb6GO/receipt.json",
+      "scope": "原HAAS-05／10已有files入口接同一原侧栏目录所有者，保留元数据、显式截断、当前身份／准确绑定／审计和取消。61项相关检查及真实数据库认证下17次公开请求通过，同名原生编号按成员隔离、跨用户／租户／匿名拒绝及准确拒绝审计。目录值和容器标识明确为夹具，不冒充真实文件系统、双最终宿主或浏览器。正文、artifacts及实际组合仍待；原目录Linux及冷历史证据复用，无原组／主线／草稿／迁移改动。"
+    },
+    "nativeApprovalDurableDispatch": {
+      "path": "../../../.paimind-goal-evidence/haas-approval-durable-dispatch-KdA5Qg/receipt.json",
+      "scope": "原HAAS-08最后后台窗口：真实原生反向测试复现决定未落盘即执行工具体，现有受管守卫增加准确准备区间／调用编号的原会话写入检查点，回读存储且复核当前策略后才交回原调度。187个不同相关检查与真实认证数据库／双原生进程组合通过；准确决定物理写入阻塞及SIGKILL证明零工具体，替换后同键只读保留原命令／回执、决定仍未知，历史字节保持、零审批重发／模型／新建。显式模型工具及容器标识夹具，不代表最终镜像或浏览器。类型／构建／精确接口审查通过，无迁移或原组／草稿／主线改动，正式行不关闭。"
+    },
+    "nativeStoredApprovalAndCrash": {
+      "path": "../../../.paimind-goal-evidence/haas-native-durability-wpz3Mb/receipt.json",
+      "scope": "原HAAS-08准确物理存储决定证明及终态批准／拒绝、丢回包、命令保留未消费四种实际SIGKILL／替换只读回查；122项相关检查和真实数据库双进程53次公开调用通过。发现HAAS-05／07此前inspect借用活动内存，准确反向测试先红后绿并修复为readFrom，已有实际队列崩溃证据保持。读取不刷盘／修复／激活，不由相同结果捏造命令归属；私有字段／兼容接口精确审查通过。已消费未落盘窗口、最终镜像及真实浏览器仍待；无原组／草稿／主线变更，无迁移，正式行不关闭。"
+    },
+    "publicSessionApprovalCommands": {
+      "path": "../../../.paimind-goal-evidence/haas-approval-api-LqLp3L/receipt.json",
+      "scope": "原HAAS-08公开路由、0019持久命令身份／载体回执及原因审计；71个不同定向检查与真实认证数据库54194／双完整原生进程通过，48次公开调用覆盖两成员批准拒绝、并发／幂等冲突、相反决定、跨成员租户／匿名拒绝、丢回包保持未确认且不重发。模型／工具／容器身份为明确夹具，非最终镜像或浏览器。只迁移已完整备份的测试库，原57631／网关／草稿／主线未动。载体回执与原决定持久化不同，后者及实际审批中断仍待证明，正式行不关闭。"
+    },
+    "nativeSessionApprovalConsumption": {
+      "path": "../../../.paimind-goal-evidence/haas-approval-command-lk4uoH/receipt.json",
+      "scope": "原HAAS-08答复链：原生载体保持原关联编号与原ApiProxy消费，签名绑定准确决定／版本，观察前后重新核对当前主体，批准要求执行资格，拒绝保留当前登录清理。188个不同相关检查有效通过；真实认证数据库54194和双完整原生进程证明两成员批准／拒绝、跨成员审计拒绝、未签名直接调用拒绝、双并发一次接受、批准前零执行与拒绝零工具体。真实组合发现并修复Cordis函数代理属性冲突，失败保留。模型／工具／容器身份是明确诊断夹具，不算外部副作用恰一次、公开审批幂等命令、持久决定、审批崩溃恢复或浏览器。类型／构建／41包接口审查通过，无迁移或原组／草稿／主线改动，正式行未关闭。"
+    },
+    "nativeSessionApprovalObservation": {
+      "path": "../../../.paimind-goal-evidence/haas-native-approval-9DBQQl/receipt.json",
+      "scope": "原HAAS-08状态读取／事件投影基础：原审批日志与当前ApiProxy可答复性严格分开，有限观察后重新核对原所有者／日志；冷、种子及终态不恢复Agent或副作用，不建待审批注册表。110项相关检查通过，原审批／会话／ApiProxy及原工具调度器的明确本地体／权限夹具证明批准前零执行、重复答复一次接受／执行、拒绝和等待中撤权零执行、终态冷历史只读；私有控制实际传输校验通过。公开决定、真实认证数据库／审计幂等、实际进程中断与浏览器仍未完成。首轮未导出子路径及错误测试守卫阶段失败保留，无生产守卫放宽、迁移或重启。"
+    },
+    "versionedSessionEventContinuation": {
+      "path": "../../../.paimind-goal-evidence/haas-session-events-Af7cUv/receipt.json",
+      "scope": "原HAAS-06公开有界SSE沿原宿主WebSocket唤醒和只读原历史投影，保留原EventEnvelope并补充脱敏投影类型；游标绑定当前租户／用户／稳定单元／会话与原前缀，非认证凭证。192项相关检查与真实数据库／双原生进程证明实时、重连去重、跨主体拒绝、退出断流、连接上限释放，以及SIGKILL替换后同游标冷历史回读、原摘要保持且零激活／模型调用。修复引用遗漏seedLength，继承队列不重跑。初始502通道接入错误、夹具字段及总数失败保留。类型／构建／41包接口审查通过；无迁移、原组／草稿／主线改动。模型和容器身份是明确夹具，审批事件、正式入口／最终双容器／浏览器待验收，正式行未关闭。"
+    },
+    "versionedPendingTurnRecovery": {
+      "path": "../../../.paimind-goal-evidence/haas-pending-turn-rDI6Gs/receipt.json",
+      "scope": "原HAAS-05／07已持久尚未消费队列窗口。复用原Inbox和准确宿主驱动，显式同键恢复核对当前及原排队登录；不新增／重排消息，不重执行已消费／编辑／移除内容。160项相关检查通过。真实数据库／双原生进程中，插入后驱动前显式故障边界，实际SIGKILL准确子进程后原目录替换链恢复；原命令／消息／历史前缀保持，双并发仅一次本地诊断模型调用，无新建和重复插入，执行后重放只读。模型／容器身份是夹具，不替代最终浏览器／外部模型，不覆盖已开始外部副作用的未知结果；正式行未关闭。"
+    },
+    "versionedColdTurnAdmission": {
+      "path": "../../../.paimind-goal-evidence/haas-turn-resume-EPYhie/receipt.json",
+      "scope": "原HAAS-05／07冷会话新消息由原解析器恢复准确编号；恢复前后重授权，仅允许一条原生空end-seed生命周期过渡且旧历史／预设不变，同步入队前再检查。114项相关检查通过，真实认证数据库和双完整原生进程组合证明替换后冷旧回执不激活、新命令双并发只有一次模型调用、零创建、旧历史字节前缀保持和撤权拒绝。原生命周期版本失败与夹具准备失败保留；源码／接口评审无公开运行导出增删。模型／容器标识为诊断夹具，不是最终浏览器证据，崩溃未消费队列仍待完成。正式行不关闭。"
+    },
+    "versionedPublicTurnCommands": {
+      "path": "../../../.paimind-goal-evidence/haas-turn-api-lipomT/receipt.json",
+      "scope": "原HAAS-05／07公开版本、消息提交及原持久回执恢复。真实认证／数据库和双完整原生进程，26次提交、29次读取、22次创建回归，同键并发只执行一次、丢失回包恢复、跨成员拒绝；停止旧进程后准确替换链的冷回执只读确认不激活／重跑，撤权重放拒绝但历史保持。78项定向检查通过，精确接口评审只新增既有兼容入口编解码导出。0018仅备份后应用54194并收窄四列更新权限，原库／组不动。初始夹具模型和冷回执真实失败保留。明确本地模型／容器标识夹具，不是最终镜像／正式入口／浏览器。冷会话新提交和崩溃未消费队列恢复仍待实现，正式行不关闭。"
+    },
+    "versionedNativeTurnAdmission": {
+      "path": "../../../.paimind-goal-evidence/haas-turn-native-vA63K2/receipt.json",
+      "scope": "原HAAS-05／07原生消息入口的同步版本／去重边界及执行前持久化屏障。13项真实原生队列／JSONL检查，3项来源守卫持久化检查，累计111个不同场景通过；queue-replay.json补已编辑／移除及冷只读重放证据。权限为明确夹具、模型阻止，不是公开REST／真实认证数据库／双容器／浏览器。精确API评审旧摘要可复现，公开运行导出不变，仅两摘要更新，41包快照通过。公开持久轮次命令、冷激活／崩溃队列恢复和最终完整验收仍待接通，正式行不关闭。"
+    },
+    "versionedSessionReplacementRecovery": {
+      "path": "../../../.paimind-goal-evidence/haas-session-replacement-StLA7x/versioned-sessions-E85Hy5/receipt.json",
+      "scope": "原HAAS-05／07准确替换链记录和原创建请求恢复。0017仅备份后应用54194测试库，应用角色无写权限；12项数据库多跳／拒绝／不可改写和22项控制器回归通过。真实原生进程先停止退出，再复用同一私有目录启动，原键／编号／目标保持，已确认冷历史只读不激活、前后摘要及停机前缀保持，Alex继续可用。组合22次创建／24次读取／六命令，清理完成。模型及容器／卷标识为明确夹具，非最终容器／卷围栏／浏览器，正式行不关闭。"
+    },
+    "versionedSessionSameCellRecovery": {
+      "path": "../../../.paimind-goal-evidence/haas-session-recovery-O9i0n0/versioned-sessions-oSSl8F/receipt.json",
+      "scope": "原HAAS-05／07同单元未确认创建恢复。真实PG和双原生进程，独立命令进程预留后发送前SIGKILL及原键恢复、双独立命令进程并发同编号恢复均成功，实际原生创建计数1；准确工作区首次挂接失败后恢复计数仍1且历史摘要不变。已确认命令不可读投影夹具验证绝不重建。组合19次公开创建／23次读取、68项受影响回归通过；清理完成。不是运行单元替换／最终镜像／真实模型／浏览器通过，不关闭正式行。"
+    },
+    "versionedSessionCreation": {
+      "path": "../../../.paimind-goal-evidence/haas-session-create-gi4qIe/versioned-sessions-ouEoCs/receipt.json",
+      "scope": "原HAAS-05／07创建、发布源版本映射和持久请求身份；真实数据库、双完整原生进程的15次创建及23次读取，五并发只发送一次、丢失回包后只读确认、错误正文／版本／工作区及跨用户拒绝、撤权重放拒绝和原历史保持。80项组合／相关回归通过；72项既有定向与6项新增编解码分段通过。首次审计UUID及错误样本失败保留，cleanup.json全部完成，api-review.json仅两项新增导出。显式模型／容器标识夹具，不是最终镜像或浏览器。发送前崩溃／部分原生创建／绑定替换恢复仍缺实现，正式行不关闭。"
+    },
+    "versionedSessionReads": {
+      "path": "../../../.paimind-goal-evidence/haas-runtime-resource-policy-Z8ONpf/haas-identity-e2e-puyQLI/versioned-sessions-PQf3Q8/receipt.json",
+      "scope": "HAAS-05两个只读路由实现与真实数据库、双完整原生进程的22次读取：本人列表／历史／分页、他人已知编号／未知编号审计拒绝、跨租户登录拒绝、退出、无关成员继续及原历史摘要不变；cleanup.json确认清理。72项定向检查覆盖故障／取消及既有回归。显式模型／容器标识夹具，不是最终镜像、浏览器或HAAS-05整项通过。"
+    },
+    "persistentStorageEnvironmentDecision": {
+      "path": "../plans/enterprise-storage-quota-decision.md",
+      "scope": "原持久硬配额的专用Linux／XFS项目配额环境提议，包含实际本机容量和隔离权限边界；用户尚未确认新增虚拟机。只读核查及部署决策，不是实现、真实配额或正式通过。"
+    },
+    "persistentStorageCapabilityGap": {
+      "path": "../../../.paimind-goal-evidence/haas-runtime-probe-hAYYQy/storage-capability-audit.json",
+      "scope": "当前Docker Desktop引擎、无选项local测试卷及非特权只读ext4挂载元数据；源码围栏／准入和接口明确尚无持久硬限额。不是压力测试或证明所有内核配额能力不存在。须先确定兼容原所有权／恢复的强制存储机制及准确权限，不能静默改共享磁盘、安装驱动或增加特权。"
+    },
+    "runtimeProbeRecovery": {
+      "path": "../../../.paimind-goal-evidence/haas-runtime-probe-hAYYQy/receipt.json",
+      "scope": "宿主操作者精确阶段／对象与受限失败分类，21项定向检查；复用原合成测试六卷和adIsP3工作单元，在一次受控查询故障后通过真实原生界面显式恢复，原卷、修订4和限额保持，另外两单元不变。新重载窗口158条连续网络事件无截断／错误，旧失败保留。历史偶发撤回P1根因未知，不是稳定性、正式入口、压力或完整行通过。只改变宿主诊断实现，不声称833冻结输入全部匹配。"
+    },
+    "runtimeFourWidthBrowser": {
+      "path": "../../../.paimind-goal-evidence/haas-runtime-browser-e5cKzB/receipt.json",
+      "scope": "当前adIsP3完整候选及真实三单元上，原设置四档资源调整／停止／显式恢复／回读与八次写入响应、实际限额和审计对应；重载状态保持、两成员管理入口隐藏。重载网络截断及收尾Hansen因一次inspect退出1被撤回均保留，后者P1原因未定；不是稳定性、正式安全入口、压力或完整正式行通过。测试组正常关闭保留六卷，原组与草稿不操作。"
+    },
+    "runtimeRecoveryAndSettings": {
+      "path": "../../../.paimind-goal-evidence/haas-runtime-recovery-NblAvh/receipt.json",
+      "scope": "原HAAS-04管理员持久恢复请求、当前权限及单次领取；真实认证网关与双宿主单元验证只恢复Hansen、原卷保持和真实限额生效，Alex16次读取成功。原生企业设置资源与恢复表单、未知结果不重试及键盘／焦点／角色组件通过；不是四档浏览器、最终候选或完整业务恢复。原业务三人组／原库未操作，完整候选adIsP3构建中，正式88行未关闭。"
+    },
+    "runtimeResourceBackend": {
+      "path": "../../../.paimind-goal-evidence/haas-runtime-resource-policy-Z8ONpf/receipt.json",
+      "scope": "原HAAS-04资源及运行意图的管理员版本化接口、幂等／审计与CAS；统一准入视图即时撤回旧观察，操作者按真实容器观察核验准入／续租／替代。独立真实数据库和认证接口、旧回归、源码与控制器证据，首次夹具失败保留。不是最终真实容器变化、持久存储限制、压力或浏览器验收；管理员实际恢复请求闭环和原设置表单仍待接通，原组三人／原库未改。"
+    },
+    "memberManagementBoundaryBrowser": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-member-browser-VnOmvR/receipt.json",
+      "scope": "真实Alex／Hansen管理入口隔离、个人智能体归属和同源双标签退出；本轮新登录已退出，Morgan恢复。Hansen109／Morgan114条登录加载响应无截断，旧窗口失败保留。已知回执有Alex服务端拒绝，浏览器导航被工具阻止，未取得拒绝页。两条准确新增可见初始化标记及水位差异单列，其余原对象／历史／模型保持；不是完整四档、独立同时A/B或正式行通过。"
+    },
+    "resourceManagementGap": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-member-browser-VnOmvR/resource-boundary.json",
+      "scope": "实际三容器固定1核／1GiB／256进程及只读根存在，来源为原启动／准入检查；当前无管理员可管理的配额／运行闭环，未证明持久存储配额或压力／恢复场景。只读缺口核查，无运行改变；为HAAS-04下一实现点与OPS-07提供准确来源，不代替验收。"
+    },
+    "checkpoint": {
+      "path": "../checkpoints/enterprise-haas.md",
+      "scope": "带日期与回执编号的原始范围声明；历史事实不能直接迁成当前正式通过"
+    },
+    "currentEngineering": {
+      "path": "../../../.paimind-goal-evidence/haas-admin-browser-lDt313/reviewed-gates.json",
+      "scope": "2026-09-15 核对的历史基线；与同目录 gates.json、additional-gates.json 联合回读，14份成功日志摘要匹配。9月23日改动后的相关范围不能直接沿用为当前通过。"
+    },
+    "currentInputs": {
+      "path": "../../../.paimind-goal-evidence/haas-worker-runtime-L7EkEL/input-manifest.json",
+      "scope": "2026-09-15 的785项冻结输入；9月23日其中4项已变化，另有新增协议源码及测试。保留旧证据，不称当前输入仍全部匹配。"
+    },
+    "adminBrowser": {
+      "path": "../../../.paimind-goal-evidence/haas-admin-browser-lDt313/layout-receipt.json",
+      "scope": "管理员只读成员内容／模型状态两流程四档；空历史、无模型配置、登录网络不完整"
+    },
+    "serviceContract": {
+      "path": "../api/haas-v1.openapi.json",
+      "scope": "显式待交付的版本化会话／事件／审批契约"
+    },
+    "modelReadOnly": {
+      "path": "../../packages/enterprise-admin/src/client/model-state.tsx",
+      "scope": "既有原生设置贡献：保留只读快照，9月23日已加入独立管理员默认模型／命名凭证确认表单；当前源码不代表最终浏览器或真实调用验收。"
+    },
+    "modelConfigurationProtocol": {
+      "path": "../../../.paimind-goal-evidence/haas-model-configuration-XveumD/receipt.json",
+      "scope": "历史原生协议增量、实际文件所有者和版本投影；52项定向及21项真实数据库权限／审计检查。当时尚未接通写入与前端，后续见modelCommandBackend／modelConfigurationUI；本证据不是成员真实调用或浏览器验收。"
+    },
+    "modelCommandBackend": {
+      "path": "../../../.paimind-goal-evidence/haas-model-commands-4D75TP/receipt.json",
+      "scope": "原生模型持久命令后台已接通；25项真实数据库／认证／私有传输和明确原生协议夹具、21项原只读回归、53项请求边界检查通过，审计事件命名增量2项重验。凭证不入企业记录；未知结果不重发，替代单元显式解除追认仍保留效果未知。不是最终单元、原生前端表单或真实模型调用验收；初轮失败保留。"
+    },
+    "modelConfigurationUI": {
+      "path": "../../../.paimind-goal-evidence/haas-model-ui-D3rAoB/receipt.json",
+      "scope": "原生设置中的管理员默认模型／命名凭证表单、操作查询／未知结果恢复及中文审计反馈源码已接通；最终24项模型组件、195项未受后续只读取消增量影响的同包回归和22项真实数据库读取回归通过。初轮焦点／卸载清空缺陷已修复，旧产物／声明逐字重建后审核接口摘要。未升级最终镜像、未执行真实浏览器或模型调用，不关闭正式验收行。"
+    },
+    "modelConfigurationLive": {
+      "path": "../../../.paimind-goal-evidence/haas-model-live-oy9f4O/receipt.json",
+      "scope": "新完整792输入候选及原组三个独立运行单元已就绪，账户／六卷／全部旧历史保持。真实管理员浏览器一次保存Hansen默认模型并获原生、数据库唯一命令与三条审计确认；四档仅验证草稿禁用／键盘取消／焦点／布局。原写入网络响应缺失保留，后续状态与操作回执响应已独立匹配。凭证录入已交给用户，尚无本组真实模型调用，不关闭正式行。"
+    },
+    "serverRoutes": {
+      "path": "../../apps/enterprise-server/src/server.ts",
+      "scope": "本轮静态核查版本化会话／事件／会话审批路由未接通"
+    },
+    "productBaseline": {
+      "path": "../../../paimind-harness-plugins/docs/acceptance/R13-product-feature-packs-full-e2e.md",
+      "scope": "旧产品30／30独立验收，不代替当前主线／整合版本"
+    },
+    "modelRoleDenialsLive": {
+      "path": "../../../.paimind-goal-evidence/haas-model-denials-61PQjq/attempt-KJIJ1Y/receipt.json",
+      "scope": "当前原组三个不可变单元及真实网关／数据库，Hansen和Alex独立认证的38项模型管理／已知回执／原生凭证越权均403且审计一致；显示设置仅语言／主题，完整原数据／模型记录保持，临时登录已退出。错误凭据来源在发送登录前被挡并保留，正确来源沿同组恢复链核准。不是浏览器、真实凭证配置、模型调用或完整行通过。"
+    },
+    "connectorInventoryProtocol": {
+      "path": "../../../.paimind-goal-evidence/haas-connectors-inventory-la20KP/receipt.json",
+      "scope": "原生加载器盘点、私有通道及卸载取消103项唯一工程场景；原失败与修复保留，接口3字段已审阅。不是完整管理、镜像或浏览器证据；校验器后续内部导出由管理员读取后台验证补充。"
+    },
+    "connectorAdminBackend": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-admin-13Gagy/receipt.json",
+      "scope": "当前管理员／准确成员／原因审计的连接器读取后台，真实独立数据库及私有传输15项新范围加22项原读取回归通过；盘点所有者为明确夹具，无配置写入、授权、真实调用或前端验收。声明／规范修正及实际单元恢复均记录，在线镜像未更新。"
+    },
+    "memberRuntimeRecovery": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-admin-13Gagy/recovery-receipt.json",
+      "scope": "一次容器检查失败导致Hansen撤下，已备份并精确恢复原身份／镜像／权限／卷，完整原生历史与模型值保持、三绑定有效，其他成员及网关未重启。原生设置进程内修订重置，旧表单须重读。仅OPS-01单成员切片，非整组／数据库／浏览器通过；底层临时错误未证明修复。"
+    },
+    "memberRuntimeClosure": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-placement-kpCUMb/runtime-closure.json",
+      "scope": "执行59131终止、59687停听、原三容器退出0并被控制器清理、六卷逐个存在；停机发起者未确定，不据此推断根因。原数据库随后也回读为退出0且容器保留，见同目录receipt.json；本轮未启动或恢复，完整卷内容须下次恢复后对照。不是重启／恢复通过。"
+    },
+    "connectorConfigurationNative": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-config-SFuAJE/receipt.json",
+      "scope": "真实原生 Include 唯一持久配置所有者，停用保存／编辑／删除及重启回读99个唯一工程场景；无审批、启用、工具授权或浏览器验收。此历史切片源版本保留；后续原生准备方法变更见 connectorCommandBackend。"
+    },
+    "connectorCommandBackend": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-commands-FrKrV5/receipt.json",
+      "scope": "管理员持久连接器停用配置后台：真实独立数据库／认证／HTTP私有通道与原生 Include／文件，16个新场景及58项原生、62项既有管理回归共136项当前工程验证。0011迁移已备份并只应用测试库；失败修正保留。无最终镜像、启用授权、真实工具调用或浏览器验收。"
+    },
+    "connectorConfigurationUI": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-ui-wS3xyt/receipt.json",
+      "scope": "既有原生设置中的停用连接器表单与中文审计，新增17项及相关219项组件回归通过。两种传输、精确修订、独立原因确认、敏感值清空、未知回执不重发与角色失效；只保存停用配置，无审批启停或工具授权，在线环境未切换，不是浏览器验收。"
+    },
+    "connectorNativeContract": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-runtime-NP3cl8/receipt.json",
+      "scope": "修复新配置重连零次数被宿主拒绝的问题，旧停用记录不静默改写。15项原生文件、5项实际原生MCP两种传输／工具调用／卸载与成员拒绝、17项真实数据库后台检查共37项通过；协议服务为本地合成测试，非企业启用、授权、最终容器网络或浏览器验收。原生进程／网络不经过现有普通工具执行域的实现缺口已明确，在线候选未变。"
+    },
+    "connectorCandidateRecoveryPreparation": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-live-ui-kvpczp/candidate-and-recovery-ready.json",
+      "scope": "历史准备阶段：jvusle完整823输入候选、镜像回读和原生启动通过，32713退出0；原库恢复57631并备份，彼时0011–0013未迁移、用户单元未启动。后续实际迁移恢复和浏览器见connectorGovernanceBrowserLive，不沿用本条历史停止状态。备份目录不是实际恢复演练。"
+    },
+    "connectorGovernanceBrowserLive": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-live-ui-kvpczp/receipt.json",
+      "scope": "0011–0013原库迁移及六卷只读归档后，原三身份恢复4XV2qh／70280／59687，jvusle不可变镜像。原生全文及设置／凭证文件保持。真实Morgan原生设置完成Hansen本地合成连接器新增停用、准确批准、启用、撤销、授权门禁失效与持久停用；6份浏览器响应与13条数据库审计一致，其他成员治理表不变。四档只验证确认禁用／锁定／键盘取消／焦点／布局；242条去重响应无截断或错误，初始登录缺证及首次视口失败保留。尚无成员模型调用、完整四档业务或正式安全入口，不关闭正式行。"
+    },
+    "connectorGovernanceUI": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-governance-ui-PbT6vb/receipt.json",
+      "scope": "同一原设置中的明确批准／撤销／持久启停、双命令未知保护、离线／停用成员撤权和严格历史回执。18个新增组件场景、原连接器20项以及受影响企业管理全部257项通过；两报告不重复累计。类型／构建和旧产物重建审阅通过，公开声明／导出／依赖不变。没有启动运行组或数据库，不是正式入口、最终双容器或真实浏览器验收。"
+    },
+    "connectorActivationCommands": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-commands-dyPoFa/receipt.json",
+      "scope": "管理员持久启停／历史回执／准确替代环境未知追认，绑定批准修订及原生版本，预留／审计先提交，未知不重发。独立0013只在备份测试库应用；14项新后台、55项旧管理回归、55项原生／协议共124个工程场景通过。首轮同键并发重复预留审计已修，失败保留。不是管理员操作界面、最终镜像／双容器或四档浏览器验收。"
+    },
+    "connectorActivationObservation": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-observation-w9mufz/receipt.json",
+      "scope": "原Include准确启停观察经兼容层命名状态、私有控制和管理员审计回读接入同一原生设置；保持旧停用配置v1，不授予执行权、不探测连接。83项原生／私有协议／组件和6项真实数据库组合通过，共89个工程场景；不是管理员持久启停／批准操作、最终镜像、双容器或四档浏览器验收。"
+    },
+    "connectorLiveAuthority": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-live-8w6Dmg/receipt.json",
+      "scope": "当前批准接入原生依赖生命周期及准确工具实际调用前后核验，有限续验／独立期限／取消／撤回，私有恢复只重验已保存意图。原生34项、私有协议及固定绑定116项、真实数据库双成员实际调用／撤销／恢复2项与批准回归1项、真实替代准入12项分段有效通过，共165个工程场景。初始夹具失败及类型错误保留。不是管理员持久启停／启用配置界面、最终双容器、真实模型或浏览器验收。"
+    },
+    "connectorCurrentAuthority": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-authority-H3BpZ1/receipt.json",
+      "scope": "现有反向HTTP／Unix通道接通准确当前数据库批准读与含登录／会话及原发布权限的执行核验，完整固定单元前后复核。14个唯一新真实数据库组合、57项私有协议／固定绑定及12项真实替代准入回归通过；初次1项夹具字段错误修正并保留。只是当前核验通道，不是原生生命周期租约、持续撤销、每次工具钩子、持久启停命令、最终双容器或浏览器；成员静态拒绝未开放。"
+    },
+    "connectorNativeActivation": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-activation-ZUznRe/receipt.json",
+      "scope": "原Include内部启停与精确Loader依赖门禁：真实冷启动待定、当前回调授权后原MCP连接／调用、撤回卸载及兄弟条目隔离、异步撤销竞争、失败启动停用、旧配置禁启，34个唯一原生场景分段通过。首轮3项夹具缺少必需执行守卫的失败保留并修正。只是内部原生生命周期，不是数据库当前授权桥接、持久启停命令、成员许可、最终容器或浏览器；旧停用配置v1不虚报启用状态。"
+    },
+    "connectorApprovalBackend": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-approval-a9us9m/receipt.json",
+      "scope": "管理员准确配置版本批准／撤销持久后台，绑定准确租户／成员／单元／卷／镜像／策略；审计与幂等原子提交，离线／停用成员可撤销，旧回执不恢复权限。真实数据库／认证／双原生上下文33个唯一场景分段有效通过；首轮2个错误状态码断言失败修正并保留。0012只在备份独立测试库应用，现有记录保持。不是原生启停、当前成员工具许可、最终双容器、界面或浏览器验收；工程门禁及保护状态见回执。"
+    },
+    "connectorStableVersion": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-version-MU6oGn/receipt.json",
+      "scope": "原Include条目内私有随机标记与准确规范化配置生成稳定版本；57项原生／协议和18项真实数据库／认证／双上下文私有组合通过。重启保持，修改／恢复旧输入／重建不复用旧版本，秘密标记不进命令／审计；旧记录不静默迁移。初次类型推断错误已修，旧公开配置响应保持。仅审批依据，不是批准存储、启停、成员授权、最终容器或浏览器；独立测试库停止且保留。"
+    },
+    "connectorToolOrigin": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-origin-Qo1Vi7/receipt.json",
+      "scope": "准确原生提供方／注册对象／执行体来源已接通，75项受影响回归加1项实际SDK列表通知通过。排队后同名替换、卸载重载、局部覆盖、复制或修改执行体、旧列表定义拒绝；新真实调用通过。保留初始Loader句柄、Cordis代理和夹具失败，已修正。不是权限、最终镜像、Linux新证据、双成员数据库或浏览器验收；原成员底线未放开。"
+    },
+    "connectorHttpEgress": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-egress-alEzGf/receipt.json",
+      "scope": "原生HTTP客户端接入固定目的地字节转发；53个唯一源码场景及4组实际Linux内部桥接协议服务检查通过，包含HTTP／HTTPS、原生会话／流式工具调用、准确续传头、凭据分离、私有DNS／重定向／错误证书拒绝、限制取消及单方卸载。首次测试Host、诊断帮助模块和声明注释审阅失败已纠正保留；最终证书校验不受环境关闭影响。非最终镜像、企业授权、正式网关TLS、全运行单元网络准入或浏览器；原在线环境未恢复。"
+    },
+    "connectorStdioPlacement": {
+      "path": "../../../.paimind-goal-evidence/haas-connector-placement-kpCUMb/receipt.json",
+      "scope": "标准输入输出连接器接入既有准备执行域，原模块及协议库继续拥有连接／工具／重连／卸载；46项源码及4组真实Linux准确源码覆盖诊断通过。两成员目录、私有宿主／跨成员／进程／环境／本地网络拒绝，实际调用和重连／后代退出；首次参数夹具失败已修正保留。非最终镜像、双容器、企业许可或浏览器；网络型出口、启停与授权撤销仍待实现。收尾另确认原在线执行已终止及六卷仍存在，见runtime-closure.json；未触发重启，停机发起者未确定。"
+    },
+    "instructionCandidateBuild": {
+      "path": "../../../.paimind-goal-evidence/haas-instruction-commands-Sks6L8/candidate-build-gate.json",
+      "scope": "REPO-03当前874输入的完整产品／后端、离线运行依赖、不可变镜像实际回读与隔离原生启动已通过。NQNl05／执行70823退出0，固定镜像5074f6d73e07；非实际成员准入、正式入口或真实浏览器。"
+    },
+    "memberInstructionCommands": {
+      "path": "../../../.paimind-goal-evidence/haas-instruction-commands-Sks6L8/receipt.json",
+      "scope": "ISO-03受审计幂等命令及原设置界面，67个不同定向场景通过；真实数据库与双原生设置所有者／组件不是实际双容器或浏览器。874输入的类型、精确接口和41包合规通过，独立测试库备份停止保留。NQNl05同源码候选构建中。"
+    },
+    "memberNativeInstructions": {
+      "path": "../../../.paimind-goal-evidence/haas-member-instructions-wcYWCZ/receipt.json",
+      "scope": "ISO-03原生配置及提示词提供方，7项真实原生与29项既有定向检查通过，全部源码／后端类型通过。没有管理员到成员的命令／界面／浏览器；源码867输入变化令相关旧门禁重开。"
+    },
+    "liveControllerReadRecovery": {
+      "path": "../../../.paimind-goal-evidence/haas-controller-live-KMaYeh/receipt.json",
+      "scope": "原OPS-07／HAAS-04在线控制器单次连接失败全量重读并续租、两次失败仅撤回Hansen、管理员真实原生设置明确恢复均有证据；ISO-03恢复后两成员回读补齐。13条审计匹配、原卷和配置保持；仅1440／420切片及五个完整网络动作窗口，不是全程四档／TLS或底层根因修复。"
+    },
+    "liveControllerEvidenceCorrection": {
+      "path": "../../../.paimind-goal-evidence/haas-controller-live-KMaYeh/environment-gates-correction.json",
+      "scope": "追加纠正封存环境记录里误写的SEC-04，原件及74件材料不改，原88编号不扩展。正式安全入口仍是原横切要求。"
+    },
+    "memberManagementNavigation": {
+      "path": "../../../.paimind-goal-evidence/haas-member-navigation-ql23l7/receipt.json",
+      "scope": "原GOV-03／UI-03成员开通、姓名、状态编辑及等待期间连接既有分区导航锁；取消／完成／身份失效解锁。5项旧实现失败保留，18文件290项企业插件组件回归及完整类型、产品／后端构建、41包相关门禁通过。只改两处源码／测试和企业插件一项运行摘要；不是新镜像或真实浏览器验收。"
+    },
+    "memberManagementReconciliation": {
+      "path": "../../../.paimind-goal-evidence/haas-member-navigation-ql23l7/gov03-reconciliation.json",
+      "scope": "当前成员／组管理、租户事务／拒绝／撤销登录及审计已有实现，核实旧33项真实数据库测试报告及22份历史浏览器材料完整；旧管理员为开发夹具，不冒称当前完整通过。明确剩余成员开通／停用和分组、拒绝、四档正式环境浏览器断言，不从头实现后台。"
+    },
+    "controllerGatewayHandleMissing": {
+      "path": "../../../.paimind-goal-evidence/haas-member-navigation-ql23l7/runtime-observation.json",
+      "scope": "中断后准确四进程不存在、执行25367句柄缺失，64753／59687／3080无监听；三合成容器／数据库仍在，三租约均过期，无正常关闭回执。封存后05:22:28Z另有一次非注入引擎连接重读事件。终止发起者／原因未明，不推断与源码构建因果；只读核查，未恢复或停止容器，原容器状态／主线差异保持。"
+    }
+  },
+  "workPackages": {
+    "W1": {
+      "caseIds": [
+        "AUTH-01",
+        "GOV-01",
+        "GOV-02",
+        "GOV-03",
+        "GOV-04",
+        "GOV-05",
+        "GOV-06",
+        "GOV-07",
+        "GOV-08",
+        "EMP-01",
+        "EMP-02",
+        "EMP-03",
+        "ISO-03",
+        "ISO-04",
+        "HAAS-01",
+        "HAAS-02",
+        "HAAS-04"
+      ],
+      "count": 17,
+      "closed": false
+    },
+    "W2": {
+      "caseIds": [
+        "AUTH-02",
+        "AUTH-03",
+        "AUTH-04",
+        "NAV-01",
+        "NAV-02",
+        "NAV-03",
+        "AUTHR-01",
+        "AUTHR-02",
+        "AUTHR-03",
+        "AUTHR-04",
+        "AUTHR-05",
+        "AUTHR-06",
+        "UI-01",
+        "UI-02",
+        "UI-03",
+        "UI-04",
+        "UI-05",
+        "UI-06",
+        "UI-07",
+        "SES-01",
+        "SES-02",
+        "SES-03",
+        "ISO-01",
+        "ISO-02",
+        "ISO-06",
+        "HAAS-03",
+        "HAAS-10"
+      ],
+      "count": 27,
+      "closed": false
+    },
+    "W3": {
+      "caseIds": [
+        "AUTH-05",
+        "AUTH-06",
+        "SES-04",
+        "SES-05",
+        "SES-06",
+        "SES-07",
+        "ISO-05",
+        "SEC-01",
+        "SEC-02",
+        "SEC-03",
+        "FAIL-01",
+        "FAIL-02",
+        "FAIL-03",
+        "HAAS-05",
+        "HAAS-06",
+        "HAAS-07",
+        "HAAS-08",
+        "HAAS-09"
+      ],
+      "count": 18,
+      "closed": false
+    },
+    "W4": {
+      "caseIds": [
+        "OPS-01",
+        "OPS-02",
+        "OPS-03",
+        "OPS-04",
+        "OPS-05",
+        "OPS-06",
+        "OPS-07",
+        "OPS-08"
+      ],
+      "count": 8,
+      "closed": false
+    },
+    "W5": {
+      "caseIds": [
+        "QUALITY-CLICK-CONFIRM",
+        "QUALITY-KEYBOARD-FOCUS",
+        "QUALITY-LOADING-DISABLED",
+        "QUALITY-EMPTY-ERROR",
+        "QUALITY-PERMISSION-DENIED",
+        "QUALITY-NAVIGATION",
+        "QUALITY-RESPONSIVE",
+        "QUALITY-CONSOLE-NETWORK",
+        "REPO-01",
+        "REPO-02",
+        "REPO-03",
+        "REPO-04",
+        "REPO-05",
+        "REPO-06",
+        "REPO-07",
+        "REPO-08",
+        "HAAS-11"
+      ],
+      "count": 17,
+      "closed": false
+    },
+    "W6": {
+      "caseIds": [
+        "HAAS-12"
+      ],
+      "count": 1,
+      "closed": false
+    }
+  },
+  "rows": [
+    {
+      "id": "AUTH-01",
+      "workPackage": "W1",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；对照本行完整动作核对已有服务端／组件／历史浏览器证据，先补实现缺口，再在固定三身份环境完成管理主动作与反向路径。",
+      "closed": false
+    },
+    {
+      "id": "AUTH-02",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "memberManagementBoundaryBrowser",
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "AUTH-03",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "AUTH-04",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "memberManagementBoundaryBrowser",
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "AUTH-05",
+      "workPackage": "W3",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "memberManagementBoundaryBrowser",
+        "checkpoint"
+      ],
+      "nextAction": "先核对准确请求／原生对象／权限及现有后台证据，只补缺失入口或断言，再完成真实浏览器拒绝／故障与无副作用证据。",
+      "closed": false
+    },
+    {
+      "id": "AUTH-06",
+      "workPackage": "W3",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "先核对准确请求／原生对象／权限及现有后台证据，只补缺失入口或断言，再完成真实浏览器拒绝／故障与无副作用证据。",
+      "closed": false
+    },
+    {
+      "id": "NAV-01",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "NAV-02",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "NAV-03",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "AUTHR-01",
+      "workPackage": "W2",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "AUTHR-02",
+      "workPackage": "W2",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "AUTHR-03",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "AUTHR-04",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "AUTHR-05",
+      "workPackage": "W2",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "AUTHR-06",
+      "workPackage": "W2",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "GOV-01",
+      "workPackage": "W1",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "对照本行完整动作核对已有服务端／组件／历史浏览器证据，先补实现缺口，再在固定三身份环境完成管理主动作与反向路径。",
+      "closed": false
+    },
+    {
+      "id": "GOV-02",
+      "workPackage": "W1",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "对照本行完整动作核对已有服务端／组件／历史浏览器证据，先补实现缺口，再在固定三身份环境完成管理主动作与反向路径。",
+      "closed": false
+    },
+    {
+      "id": "GOV-03",
+      "workPackage": "W1",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint",
+        "memberManagementNavigation",
+        "memberManagementReconciliation"
+      ],
+      "nextAction": "成员与组后台已实现，ql23l7已补成员编辑导航保护并通过290项组件及工程门禁，不重做功能或旧HTTP切片。待正式安全入口及当前冻结候选，以原成员／组和经确认的合成开通对象完成真实开通、停用／重启用、旧登录拒绝、分组修改、成员拒绝、取消／冲突／反馈和四档完整交互；独立核对审计与无关成员零改动。现网控制器／网关不在，不能用仍运行的容器冒充服务可用。",
+      "closed": false
+    },
+    {
+      "id": "GOV-04",
+      "workPackage": "W1",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "对照本行完整动作核对已有服务端／组件／历史浏览器证据，先补实现缺口，再在固定三身份环境完成管理主动作与反向路径。",
+      "closed": false
+    },
+    {
+      "id": "GOV-05",
+      "workPackage": "W1",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "对照本行完整动作核对已有服务端／组件／历史浏览器证据，先补实现缺口，再在固定三身份环境完成管理主动作与反向路径。",
+      "closed": false
+    },
+    {
+      "id": "GOV-06",
+      "workPackage": "W1",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "对照本行完整动作核对已有服务端／组件／历史浏览器证据，先补实现缺口，再在固定三身份环境完成管理主动作与反向路径。",
+      "closed": false
+    },
+    {
+      "id": "GOV-07",
+      "workPackage": "W1",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "对照本行完整动作核对已有服务端／组件／历史浏览器证据，先补实现缺口，再在固定三身份环境完成管理主动作与反向路径。",
+      "closed": false
+    },
+    {
+      "id": "GOV-08",
+      "workPackage": "W1",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "对照本行完整动作核对已有服务端／组件／历史浏览器证据，先补实现缺口，再在固定三身份环境完成管理主动作与反向路径。",
+      "closed": false
+    },
+    {
+      "id": "UI-01",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "UI-02",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "UI-03",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint",
+        "memberManagementNavigation"
+      ],
+      "nextAction": "ql23l7已修复成员表单缺少分区锁，5项失败后290项完整企业组件回归通过。下一最终候选补真实键盘开通／姓名／状态表单、待响应保护、取消焦点、身份失效及其他原表单完整交互；组件不冒充浏览器，不再重复旧实现失败。",
+      "closed": false
+    },
+    {
+      "id": "UI-04",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "UI-05",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "UI-06",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "UI-07",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "SES-01",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "SES-02",
+      "workPackage": "W2",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "SES-03",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "SES-04",
+      "workPackage": "W3",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "先核对准确请求／原生对象／权限及现有后台证据，只补缺失入口或断言，再完成真实浏览器拒绝／故障与无副作用证据。",
+      "closed": false
+    },
+    {
+      "id": "SES-05",
+      "workPackage": "W3",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "先核对准确请求／原生对象／权限及现有后台证据，只补缺失入口或断言，再完成真实浏览器拒绝／故障与无副作用证据。",
+      "closed": false
+    },
+    {
+      "id": "SES-06",
+      "workPackage": "W3",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "先核对准确请求／原生对象／权限及现有后台证据，只补缺失入口或断言，再完成真实浏览器拒绝／故障与无副作用证据。",
+      "closed": false
+    },
+    {
+      "id": "SES-07",
+      "workPackage": "W3",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "先核对准确请求／原生对象／权限及现有后台证据，只补缺失入口或断言，再完成真实浏览器拒绝／故障与无副作用证据。",
+      "closed": false
+    },
+    {
+      "id": "ISO-01",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "ISO-02",
+      "workPackage": "W2",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "ISO-03",
+      "workPackage": "W1",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "modelReadOnly",
+        "checkpoint",
+        "memberNativeInstructions",
+        "memberInstructionCommands",
+        "instructionCandidateBuild",
+        "memberInstructionBrowserPartial",
+        "instructionBrowserRuntimeIncident",
+        "liveControllerReadRecovery",
+        "controllerGatewayHandleMissing"
+      ],
+      "nextAction": "原三次真实保存、十次后台拒绝、冷恢复配置保持和KMaYeh恢复后管理员双成员回读已完成相应局部断言，复用不重跑。仍缺实际成员模型提示词消费、正式入口四档完整流程和完整网络。现HryMHp控制器／网关句柄缺失、租约过期，后续运行恢复须核准准确三容器／六卷及备份，不能沿旧在线记录直接验收；原组及主环境保持。",
+      "closed": false
+    },
+    {
+      "id": "ISO-04",
+      "workPackage": "W1",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "modelReadOnly",
+        "modelConfigurationProtocol",
+        "modelCommandBackend",
+        "modelConfigurationUI",
+        "modelConfigurationLive",
+        "modelRoleDenialsLive",
+        "currentFormalAdmissionReadiness",
+        "checkpoint"
+      ],
+      "nextAction": "模型管理后台／原生表单已有实现，历史默认模型保存及双成员38项拒绝证据保留。原5e9RgE在线状态和Chrome1645212811交接页已过期，不再等待旧页或重新开发表单。先完成当前准确候选／正式安全入口准入，之后提供实际管理员页面的凭证交接并独立回读，两成员真实发送回复与完整四档验收；只用该准确运行组的账户和配置，不混用历史组。",
+      "closed": false
+    },
+    {
+      "id": "ISO-05",
+      "workPackage": "W3",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "先核对准确请求／原生对象／权限及现有后台证据，只补缺失入口或断言，再完成真实浏览器拒绝／故障与无副作用证据。",
+      "closed": false
+    },
+    {
+      "id": "ISO-06",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "EMP-01",
+      "workPackage": "W1",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint",
+        "adminBrowser"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；对照本行完整动作核对已有服务端／组件／历史浏览器证据，先补实现缺口，再在固定三身份环境完成管理主动作与反向路径。",
+      "closed": false
+    },
+    {
+      "id": "EMP-02",
+      "workPackage": "W1",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint",
+        "adminBrowser"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；对照本行完整动作核对已有服务端／组件／历史浏览器证据，先补实现缺口，再在固定三身份环境完成管理主动作与反向路径。",
+      "closed": false
+    },
+    {
+      "id": "EMP-03",
+      "workPackage": "W1",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "对照本行完整动作核对已有服务端／组件／历史浏览器证据，先补实现缺口，再在固定三身份环境完成管理主动作与反向路径。",
+      "closed": false
+    },
+    {
+      "id": "SEC-01",
+      "workPackage": "W3",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "先核对准确请求／原生对象／权限及现有后台证据，只补缺失入口或断言，再完成真实浏览器拒绝／故障与无副作用证据。",
+      "closed": false
+    },
+    {
+      "id": "SEC-02",
+      "workPackage": "W3",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "先核对准确请求／原生对象／权限及现有后台证据，只补缺失入口或断言，再完成真实浏览器拒绝／故障与无副作用证据。",
+      "closed": false
+    },
+    {
+      "id": "SEC-03",
+      "workPackage": "W3",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "先核对准确请求／原生对象／权限及现有后台证据，只补缺失入口或断言，再完成真实浏览器拒绝／故障与无副作用证据。",
+      "closed": false
+    },
+    {
+      "id": "FAIL-01",
+      "workPackage": "W3",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；先核对准确请求／原生对象／权限及现有后台证据，只补缺失入口或断言，再完成真实浏览器拒绝／故障与无副作用证据。",
+      "closed": false
+    },
+    {
+      "id": "FAIL-02",
+      "workPackage": "W3",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "先核对准确请求／原生对象／权限及现有后台证据，只补缺失入口或断言，再完成真实浏览器拒绝／故障与无副作用证据。",
+      "closed": false
+    },
+    {
+      "id": "FAIL-03",
+      "workPackage": "W3",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "先核对准确请求／原生对象／权限及现有后台证据，只补缺失入口或断言，再完成真实浏览器拒绝／故障与无副作用证据。",
+      "closed": false
+    },
+    {
+      "id": "OPS-01",
+      "workPackage": "W4",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "memberRuntimeRecovery",
+        "memberRuntimeClosure",
+        "checkpoint",
+        "controllerGatewayHandleMissing"
+      ],
+      "nextAction": "保留既有重启恢复片段；当前实际控制器／网关及句柄缺失、三容器存活但租约过期，无正常关闭回执。不能把容器存活或旧受控恢复当现服务就绪。下一候选恢复先精确备份／核准原卷、旧写入者和绑定，按既有隔离授权处理；原整组／数据库重启及数据、登录、浏览器完整恢复仍须验收，原组不擅自重启。",
+      "closed": false
+    },
+    {
+      "id": "OPS-02",
+      "workPackage": "W4",
+      "phase": "NO_COMPLETE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "尚未找到本行完整当前证据；先回读现有隔离资源和历史运维回执，固定一次性目标、恢复点及受影响用户，再执行本行运维变化和双用户浏览器观察。",
+      "closed": false
+    },
+    {
+      "id": "OPS-03",
+      "workPackage": "W4",
+      "phase": "NO_COMPLETE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "尚未找到本行完整当前证据；先回读现有隔离资源和历史运维回执，固定一次性目标、恢复点及受影响用户，再执行本行运维变化和双用户浏览器观察。",
+      "closed": false
+    },
+    {
+      "id": "OPS-04",
+      "workPackage": "W4",
+      "phase": "NO_COMPLETE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "尚未找到本行完整当前证据；先回读现有隔离资源和历史运维回执，固定一次性目标、恢复点及受影响用户，再执行本行运维变化和双用户浏览器观察。",
+      "closed": false
+    },
+    {
+      "id": "OPS-05",
+      "workPackage": "W4",
+      "phase": "NO_COMPLETE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "尚未找到本行完整当前证据；先回读现有隔离资源和历史运维回执，固定一次性目标、恢复点及受影响用户，再执行本行运维变化和双用户浏览器观察。",
+      "closed": false
+    },
+    {
+      "id": "OPS-06",
+      "workPackage": "W4",
+      "phase": "NO_COMPLETE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "尚未找到本行完整当前证据；先回读现有隔离资源和历史运维回执，固定一次性目标、恢复点及受影响用户，再执行本行运维变化和双用户浏览器观察。",
+      "closed": false
+    },
+    {
+      "id": "OPS-07",
+      "workPackage": "W4",
+      "phase": "NO_COMPLETE_EVIDENCE",
+      "evidenceRefs": [
+        "boundedLeaseObservation",
+        "morganRuntimeWithdrawal",
+        "clientSettlingBrowserVerified",
+        "persistentStorageEnvironmentDecision",
+        "persistentStorageCapabilityGap",
+        "runtimeProbeRecovery",
+        "runtimeFourWidthBrowser",
+        "runtimeResourceBackend",
+        "runtimeRecoveryAndSettings",
+        "resourceManagementGap",
+        "checkpoint",
+        "memberInstructionCommands",
+        "memberInstructionBrowserPartial",
+        "instructionBrowserRuntimeIncident",
+        "liveControllerReadRecovery",
+        "liveControllerEvidenceCorrection",
+        "controllerGatewayHandleMissing"
+      ],
+      "nextAction": "在线有限重读、两次失败撤回和管理员明确恢复已完成，不重做本故障注入或仅反复恢复称稳定。底层引擎原因P1仍开放，05:22:28Z另一次自然重读事件保留；目前控制器／网关缺失、容器仍在且租约过期，准确原因未明。待专用硬配额环境选择及正式入口后继续原处理器／内存／进程／持久存储限额与恢复、无关成员隔离；不得用HTTP切片或存储用量计数替代。",
+      "closed": false
+    },
+    {
+      "id": "OPS-08",
+      "workPackage": "W4",
+      "phase": "NO_COMPLETE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "尚未找到本行完整当前证据；先回读现有隔离资源和历史运维回执，固定一次性目标、恢复点及受影响用户，再执行本行运维变化和双用户浏览器观察。",
+      "closed": false
+    },
+    {
+      "id": "QUALITY-CLICK-CONFIRM",
+      "workPackage": "W5",
+      "phase": "AGGREGATE_GATE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "从原矩阵要求逐条关联W1至W4的动作、断言与回执，缺哪条补哪条；不能用抽样外推全部，也不因汇总重复整套业务。",
+      "closed": false
+    },
+    {
+      "id": "QUALITY-KEYBOARD-FOCUS",
+      "workPackage": "W5",
+      "phase": "AGGREGATE_GATE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "从原矩阵要求逐条关联W1至W4的动作、断言与回执，缺哪条补哪条；不能用抽样外推全部，也不因汇总重复整套业务。",
+      "closed": false
+    },
+    {
+      "id": "QUALITY-LOADING-DISABLED",
+      "workPackage": "W5",
+      "phase": "AGGREGATE_GATE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "从原矩阵要求逐条关联W1至W4的动作、断言与回执，缺哪条补哪条；不能用抽样外推全部，也不因汇总重复整套业务。",
+      "closed": false
+    },
+    {
+      "id": "QUALITY-EMPTY-ERROR",
+      "workPackage": "W5",
+      "phase": "AGGREGATE_GATE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "从原矩阵要求逐条关联W1至W4的动作、断言与回执，缺哪条补哪条；不能用抽样外推全部，也不因汇总重复整套业务。",
+      "closed": false
+    },
+    {
+      "id": "QUALITY-PERMISSION-DENIED",
+      "workPackage": "W5",
+      "phase": "AGGREGATE_GATE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "从原矩阵要求逐条关联W1至W4的动作、断言与回执，缺哪条补哪条；不能用抽样外推全部，也不因汇总重复整套业务。",
+      "closed": false
+    },
+    {
+      "id": "QUALITY-NAVIGATION",
+      "workPackage": "W5",
+      "phase": "AGGREGATE_GATE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "从原矩阵要求逐条关联W1至W4的动作、断言与回执，缺哪条补哪条；不能用抽样外推全部，也不因汇总重复整套业务。",
+      "closed": false
+    },
+    {
+      "id": "QUALITY-RESPONSIVE",
+      "workPackage": "W5",
+      "phase": "AGGREGATE_GATE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "从原矩阵要求逐条关联W1至W4的动作、断言与回执，缺哪条补哪条；不能用抽样外推全部，也不因汇总重复整套业务。",
+      "closed": false
+    },
+    {
+      "id": "QUALITY-CONSOLE-NETWORK",
+      "workPackage": "W5",
+      "phase": "AGGREGATE_GATE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "从原矩阵要求逐条关联W1至W4的动作、断言与回执，缺哪条补哪条；不能用抽样外推全部，也不因汇总重复整套业务。",
+      "closed": false
+    },
+    {
+      "id": "REPO-01",
+      "workPackage": "W5",
+      "phase": "VERIFIED_GATE",
+      "evidenceRefs": [
+        "currentSourceGate",
+        "currentCandidateRootSuite",
+        "currentCandidateIntegrationRun",
+        "checkpoint",
+        "memberNativeInstructions",
+        "currentCandidateFullSuite"
+      ],
+      "nextAction": "当前874输入完整根2536项及真实数据库集成430项已通过，复用UJ5WpP原报告，不重跑未变化的全量测试。保留记录器退出1及集成子进程退出码未保存的限制；仅相关源码／配置／依赖变化或失败重开，最终整合版本仍核对，不替代浏览器。",
+      "closed": true,
+      "acceptance": {
+        "status": "Passed",
+        "at": "2026-09-24T06:32:52.035Z",
+        "sourceDigest": "sha256:ce145fc14bba43c33db9b7fa146eaad4fb6d6b3a66c99f6d1c66c7c57c63dbf9",
+        "evidenceRef": "currentCandidateFullSuite",
+        "integrationApplicabilityRecheckRequired": true
+      },
+      "historicalAcceptance": {
+        "status": "Passed",
+        "sourceDigest": "sha256:8f90fa8bb3cd47e760aa90d8515b7e21eb6e14d07b45f2ff0d92e7db38fc0ffc",
+        "evidenceRef": "currentSourceGate",
+        "integrationApplicabilityRecheckRequired": true
+      },
+      "previousReopenReason": "ISO-03新增企业插件服务端设置／提示词和兼容导出，旧866输入成功证据仍可复用，但不能直接证明新源码；本业务批次统一冻结后复核受影响范围。当前完整测试已补齐，历史原因保留。"
+    },
+    {
+      "id": "REPO-02",
+      "workPackage": "W5",
+      "phase": "VERIFIED_GATE",
+      "evidenceRefs": [
+        "currentSourceGate",
+        "currentCandidateTypeGate",
+        "currentEngineering",
+        "currentInputs",
+        "memberNativeInstructions",
+        "memberInstructionCommands",
+        "memberManagementNavigation"
+      ],
+      "nextAction": "ql23l7当前874输入已完成本行适用检查；企业客户端只改私有编辑状态回调，精确运行摘要已评审，其他公开契约保持。仅相关变更或失败重开，最终整合版本仍核对。",
+      "closed": true,
+      "acceptance": {
+        "status": "Passed",
+        "at": "2026-09-24T05:36:33.814Z",
+        "sourceDigest": "sha256:ce145fc14bba43c33db9b7fa146eaad4fb6d6b3a66c99f6d1c66c7c57c63dbf9",
+        "evidenceRef": "memberManagementNavigation",
+        "integrationApplicabilityRecheckRequired": true
+      },
+      "historicalAcceptance": {
+        "at": "2026-09-24T01:41:03.993Z",
+        "status": "Passed",
+        "sourceDigest": "sha256:0e204bc679eb7c79a22e839548461c449ef36a1a0d3b72bc9904d6d0760525ac",
+        "evidenceRef": "currentCandidateTypeGate",
+        "integrationApplicabilityRecheckRequired": true
+      },
+      "acceptanceHistory": [
+        {
+          "status": "Passed",
+          "sourceDigest": "sha256:0a74aa9b77e72eb0d92eefaeb693739c98c492d61788410f06b49abfe06c3a76",
+          "evidenceRef": "memberNativeInstructions",
+          "integrationApplicabilityRecheckRequired": true
+        },
+        {
+          "status": "Passed",
+          "sourceDigest": "sha256:d80d5d450870e7e8f6e35eae01c5f783d3134803e9c1c6083be641a61981e7ea",
+          "evidenceRef": "memberInstructionCommands",
+          "integrationApplicabilityRecheckRequired": true
+        }
+      ]
+    },
+    {
+      "id": "REPO-03",
+      "workPackage": "W5",
+      "phase": "VERIFIED_GATE",
+      "evidenceRefs": [
+        "currentFullSourceBuild",
+        "clientSettlingCandidateBuild",
+        "currentEngineering",
+        "currentInputs",
+        "instructionCandidateBuild",
+        "boundedLeaseObservation",
+        "currentCandidateImage"
+      ],
+      "nextAction": "当前874输入ce145fc1完整构建、固定镜像774f5695aab4回读及一次性原生启动已通过，复用TxBbsF，不重建未变化源码。仅相关变更或失败重开，最终整合版本复核；旧运行组未升级，正式入口／真实双成员与浏览器仍按原业务行验收。",
+      "closed": true,
+      "acceptance": {
+        "status": "Passed",
+        "at": "2026-09-24T06:11:01.157Z",
+        "sourceDigest": "sha256:ce145fc14bba43c33db9b7fa146eaad4fb6d6b3a66c99f6d1c66c7c57c63dbf9",
+        "imageId": "sha256:774f5695aab4be33564df4fa9ecbfc43c1fea608312ab9edd836db1cd0063823",
+        "evidenceRef": "currentCandidateImage",
+        "integrationApplicabilityRecheckRequired": true
+      },
+      "acceptanceHistory": [
+        {
+          "status": "Passed",
+          "sourceDigest": "sha256:d80d5d450870e7e8f6e35eae01c5f783d3134803e9c1c6083be641a61981e7ea",
+          "imageId": "sha256:5074f6d73e075b73c481b682562ec47d68bce2b3c81bd24ae6879ccdc7c1c709",
+          "evidenceRef": "instructionCandidateBuild",
+          "integrationApplicabilityRecheckRequired": true
+        }
+      ]
+    },
+    {
+      "id": "REPO-04",
+      "workPackage": "W5",
+      "phase": "VERIFIED_GATE",
+      "evidenceRefs": [
+        "currentPackageGates",
+        "memberNativeInstructions",
+        "memberInstructionCommands",
+        "memberManagementNavigation"
+      ],
+      "nextAction": "ql23l7当前874输入已完成本行适用检查；企业客户端只改私有编辑状态回调，精确运行摘要已评审，其他公开契约保持。仅相关变更或失败重开，最终整合版本仍核对。",
+      "closed": true,
+      "historicalAcceptance": {
+        "status": "Passed",
+        "sourceDigest": "sha256:8f90fa8bb3cd47e760aa90d8515b7e21eb6e14d07b45f2ff0d92e7db38fc0ffc",
+        "evidenceRef": "currentPackageGates",
+        "integrationApplicabilityRecheckRequired": true
+      },
+      "acceptance": {
+        "status": "Passed",
+        "at": "2026-09-24T05:36:33.814Z",
+        "sourceDigest": "sha256:ce145fc14bba43c33db9b7fa146eaad4fb6d6b3a66c99f6d1c66c7c57c63dbf9",
+        "evidenceRef": "memberManagementNavigation",
+        "integrationApplicabilityRecheckRequired": true
+      },
+      "acceptanceHistory": [
+        {
+          "status": "Passed",
+          "sourceDigest": "sha256:d80d5d450870e7e8f6e35eae01c5f783d3134803e9c1c6083be641a61981e7ea",
+          "evidenceRef": "memberInstructionCommands",
+          "integrationApplicabilityRecheckRequired": true
+        }
+      ]
+    },
+    {
+      "id": "REPO-05",
+      "workPackage": "W5",
+      "phase": "VERIFIED_GATE",
+      "evidenceRefs": [
+        "currentPackageGates",
+        "memberNativeInstructions",
+        "memberInstructionCommands",
+        "memberManagementNavigation"
+      ],
+      "nextAction": "ql23l7当前874输入已完成本行适用检查；企业客户端只改私有编辑状态回调，精确运行摘要已评审，其他公开契约保持。仅相关变更或失败重开，最终整合版本仍核对。",
+      "closed": true,
+      "historicalAcceptance": {
+        "status": "Passed",
+        "sourceDigest": "sha256:8f90fa8bb3cd47e760aa90d8515b7e21eb6e14d07b45f2ff0d92e7db38fc0ffc",
+        "evidenceRef": "currentPackageGates",
+        "integrationApplicabilityRecheckRequired": true
+      },
+      "acceptance": {
+        "status": "Passed",
+        "at": "2026-09-24T05:36:33.814Z",
+        "sourceDigest": "sha256:ce145fc14bba43c33db9b7fa146eaad4fb6d6b3a66c99f6d1c66c7c57c63dbf9",
+        "evidenceRef": "memberManagementNavigation",
+        "integrationApplicabilityRecheckRequired": true
+      },
+      "acceptanceHistory": [
+        {
+          "status": "Passed",
+          "sourceDigest": "sha256:d80d5d450870e7e8f6e35eae01c5f783d3134803e9c1c6083be641a61981e7ea",
+          "evidenceRef": "memberInstructionCommands",
+          "integrationApplicabilityRecheckRequired": true
+        }
+      ]
+    },
+    {
+      "id": "REPO-06",
+      "workPackage": "W5",
+      "phase": "ENGINEERING_EVIDENCE",
+      "evidenceRefs": [
+        "enterpriseNativePluginLifecycle",
+        "browserRequestPolicyUnavailable",
+        "currentProductModeComposition",
+        "currentCandidateReleaseGate",
+        "currentFormalAdmissionReadiness",
+        "checkpoint"
+      ],
+      "nextAction": "产品模式已由当前sAf4ya补验，s3IDAL企业原生命令／缺包有效切片保留，不重跑。woc0wJ确认当前浏览器库存可读取，旧工具故障不再作为现阻塞；待准确候选与正式安全入口就绪，只补真实认证隔离组合的企业客户端注册／释放、必需提供方缺失及启停四档交互。当前无页面动作证据，仍Pending，不以裸宿主、HTTP200或组件测试替代。",
+      "closed": false
+    },
+    {
+      "id": "REPO-07",
+      "workPackage": "W5",
+      "phase": "VERIFIED_GATE",
+      "evidenceRefs": [
+        "currentReleaseGate",
+        "currentProductModeComposition",
+        "currentFullSourceBuild",
+        "currentFastRemainder",
+        "currentPackageGates",
+        "currentSourceGate",
+        "clientSettlingCandidateBuild",
+        "checkpoint",
+        "memberNativeInstructions",
+        "currentCandidateReleaseGate",
+        "currentCandidateFullSuite",
+        "currentCandidateImage",
+        "memberManagementNavigation"
+      ],
+      "nextAction": "sAf4ya已对当前874输入完成原13项快速检查及真实产品模式组合范围，复用有效证据，不重新运行未变组合或整套发布检查。仅相关变化或失败重开，最终整合版本仍核对；REPO-06企业启用浏览器、正式安全环境、主产品独立和最终运行准入另行验收，不执行发布。",
+      "closed": true,
+      "acceptance": {
+        "status": "Passed",
+        "at": "2026-09-24T06:47:39.596Z",
+        "sourceDigest": "sha256:ce145fc14bba43c33db9b7fa146eaad4fb6d6b3a66c99f6d1c66c7c57c63dbf9",
+        "evidenceRef": "currentCandidateReleaseGate",
+        "integrationApplicabilityRecheckRequired": true
+      },
+      "historicalAcceptance": {
+        "status": "Passed",
+        "sourceDigest": "sha256:8f90fa8bb3cd47e760aa90d8515b7e21eb6e14d07b45f2ff0d92e7db38fc0ffc",
+        "evidenceRef": "currentReleaseGate",
+        "integrationApplicabilityRecheckRequired": true
+      },
+      "previousReopenReason": "ISO-03新增企业插件服务端设置／提示词和兼容导出，旧866输入成功证据仍可复用，但不能直接证明新源码；本业务批次统一冻结后复核受影响范围。当前适用性检查及组合已补齐，原原因保留。"
+    },
+    {
+      "id": "REPO-08",
+      "workPackage": "W5",
+      "phase": "AGGREGATE_GATE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "从原矩阵要求逐条关联W1至W4的动作、断言与回执，缺哪条补哪条；不能用抽样外推全部，也不因汇总重复整套业务。",
+      "closed": false
+    },
+    {
+      "id": "HAAS-01",
+      "workPackage": "W1",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "clientSettlingBrowserVerified",
+        "candidateBrowserBootGap",
+        "clientSettlingCandidateBuild",
+        "checkpoint"
+      ],
+      "nextAction": "d1XmgO已完成新候选真实启动定向复验与四档原生只读切片，不重建或重复本批。继续完整四档管理动作、卸载与正式入口；初始／尾段网络截断不外推为完整通过。",
+      "closed": false
+    },
+    {
+      "id": "HAAS-02",
+      "workPackage": "W1",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "对照本行完整动作核对已有服务端／组件／历史浏览器证据，先补实现缺口，再在固定三身份环境完成管理主动作与反向路径。",
+      "closed": false
+    },
+    {
+      "id": "HAAS-03",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "memberManagementBoundaryBrowser",
+        "checkpoint"
+      ],
+      "nextAction": "复核检查点中与本行对应的已观察切片；保留既有成员、智能体与会话，在同一最终候选上补齐本行真实主动作、归属和反向路径、四档交互及独立回读。",
+      "closed": false
+    },
+    {
+      "id": "HAAS-04",
+      "workPackage": "W1",
+      "phase": "IMPLEMENTATION_GAP",
+      "evidenceRefs": [
+        "boundedLeaseObservation",
+        "morganRuntimeWithdrawal",
+        "clientSettlingBrowserVerified",
+        "candidateBrowserBootGap",
+        "originalHansenWithdrawal20260924",
+        "persistentStorageEnvironmentDecision",
+        "persistentStorageCapabilityGap",
+        "runtimeProbeRecovery",
+        "runtimeFourWidthBrowser",
+        "modelReadOnly",
+        "modelConfigurationProtocol",
+        "modelCommandBackend",
+        "modelConfigurationUI",
+        "modelConfigurationLive",
+        "modelRoleDenialsLive",
+        "connectorInventoryProtocol",
+        "connectorAdminBackend",
+        "connectorConfigurationNative",
+        "connectorCommandBackend",
+        "connectorConfigurationUI",
+        "connectorNativeContract",
+        "connectorStdioPlacement",
+        "connectorHttpEgress",
+        "connectorToolOrigin",
+        "connectorStableVersion",
+        "connectorApprovalBackend",
+        "connectorNativeActivation",
+        "connectorCurrentAuthority",
+        "connectorLiveAuthority",
+        "connectorActivationObservation",
+        "connectorActivationCommands",
+        "connectorGovernanceUI",
+        "connectorCandidateRecoveryPreparation",
+        "connectorGovernanceBrowserLive",
+        "memberManagementBoundaryBrowser",
+        "resourceManagementGap",
+        "runtimeResourceBackend",
+        "runtimeRecoveryAndSettings",
+        "checkpoint",
+        "memberInstructionBrowserPartial",
+        "instructionBrowserRuntimeIncident",
+        "liveControllerReadRecovery",
+        "liveControllerEvidenceCorrection",
+        "controllerGatewayHandleMissing"
+      ],
+      "nextAction": "原控制器修复在线定向验证及管理员明确恢复已完成，不再列为尚未应用；自然故障根因及现控制器消失原因仍未知。继续原模型实际使用／批准启停撤销、正式安全入口、硬配额实现及压力／恢复闭环。新测试环境／证书信任尚需明确，不动原组或共享数据，不循环重跑现有成功片段。",
+      "closed": false
+    },
+    {
+      "id": "HAAS-05",
+      "workPackage": "W3",
+      "phase": "ENGINEERING_EVIDENCE",
+      "evidenceRefs": [
+        "nativeSessionArtifactRead",
+        "nativeSessionFileDownload",
+        "nativeSessionFilePreview",
+        "versionedSessionFileDirectory",
+        "nativeApprovalDurableDispatch",
+        "versionedSessionEventContinuation",
+        "nativeStoredApprovalAndCrash",
+        "versionedPendingTurnRecovery",
+        "versionedColdTurnAdmission",
+        "versionedPublicTurnCommands",
+        "versionedNativeTurnAdmission",
+        "versionedSessionReplacementRecovery",
+        "versionedSessionSameCellRecovery",
+        "versionedSessionCreation",
+        "versionedSessionReads",
+        "serviceContract",
+        "serverRoutes"
+      ],
+      "nextAction": "原目录／预览／完整下载及artifacts路由均已有定向工程证据，按输入复用PSZZCk及前批，不继续新增同类后台场景。转同一最终候选的真实认证、实际双完整运行单元、正式入口及四档浏览器组合，核对独立调用方和异常拒绝；局部夹具不可替代真实组合。保留历史撤回P1、配额环境及全部87→整合→88要求，正式行尚未关闭。",
+      "closed": false
+    },
+    {
+      "id": "HAAS-06",
+      "workPackage": "W3",
+      "phase": "ENGINEERING_EVIDENCE",
+      "evidenceRefs": [
+        "versionedSessionEventContinuation",
+        "serviceContract",
+        "serverRoutes"
+      ],
+      "nextAction": "公开续传／当前读取与重连授权／去重／有界回放／退出及替换证据已取得。继续HAAS-08的原生审批／权限事件语义，再在最终镜像、正式入口及四档真实浏览器验证整行；仅相关改动或失败重开Af7cUv，不把工程证据当最终验收。",
+      "closed": false
+    },
+    {
+      "id": "HAAS-07",
+      "workPackage": "W3",
+      "phase": "IMPLEMENTATION_GAP",
+      "evidenceRefs": [
+        "nativeStoredApprovalAndCrash",
+        "versionedPendingTurnRecovery",
+        "versionedColdTurnAdmission",
+        "versionedPublicTurnCommands",
+        "versionedNativeTurnAdmission",
+        "versionedSessionReplacementRecovery",
+        "versionedSessionSameCellRecovery",
+        "versionedSessionCreation",
+        "checkpoint"
+      ],
+      "nextAction": "原未消费队列SIGKILL恢复已验证，不重做已通过窗口。后续沿事件／审批等原写接口继续幂等与重授权验收，再执行最终组合／故障／浏览器；持久入队不等于执行完成，已消费或未知外部副作用不自动重试，分母保持。",
+      "closed": false
+    },
+    {
+      "id": "HAAS-08",
+      "workPackage": "W3",
+      "phase": "ENGINEERING_EVIDENCE",
+      "evidenceRefs": [
+        "nativeApprovalDurableDispatch",
+        "nativeStoredApprovalAndCrash",
+        "publicSessionApprovalCommands",
+        "nativeSessionApprovalConsumption",
+        "nativeSessionApprovalObservation",
+        "versionedSessionEventContinuation",
+        "serviceContract",
+        "serverRoutes"
+      ],
+      "nextAction": "批准前持久化检查点、准确原决定存储证明及原定中断窗口已具备后台证据，冻结复用，不增加新后台场景。进入同一最终镜像／正式入口／四档真实浏览器，验证等待、批准、拒绝、撤权及未知状态真实反馈；不得把工程证据当整行完成，不恢复丢失关联或重发未知副作用。",
+      "closed": false
+    },
+    {
+      "id": "HAAS-09",
+      "workPackage": "W3",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "checkpoint"
+      ],
+      "nextAction": "先核对准确请求／原生对象／权限及现有后台证据，只补缺失入口或断言，再完成真实浏览器拒绝／故障与无副作用证据。",
+      "closed": false
+    },
+    {
+      "id": "HAAS-10",
+      "workPackage": "W2",
+      "phase": "PARTIAL_BROWSER",
+      "evidenceRefs": [
+        "nativeSessionArtifactRead",
+        "nativeSessionFileDownload",
+        "nativeSessionFilePreview",
+        "originalHansenWithdrawal20260924",
+        "versionedSessionFileDirectory",
+        "checkpoint"
+      ],
+      "nextAction": "目录／预览／下载／产物后台范围已有PSZZCk及前批证据，转实际双单元同一最终候选中的原任务创建／取消／恢复、受权文件产物、隔离清理和四档真实交互。不继续扩展同类后台场景，不将独立所有者和认证夹具拼接成浏览器通过；历史P1、配额环境与原88项完整保留。",
+      "closed": false
+    },
+    {
+      "id": "HAAS-11",
+      "workPackage": "W5",
+      "phase": "RECONCILE_EVIDENCE",
+      "evidenceRefs": [
+        "clientSettlingBrowserVerified",
+        "candidateBrowserBootGap",
+        "clientSettlingCandidateBuild",
+        "checkpoint"
+      ],
+      "nextAction": "rvitiZ构建／回读／864输入和c3Bzcz三单元已核实，启动定向浏览器复验完成；复用本批，不再等待5128。最终完整候选准入仍需正式入口、真实模型／完整管理业务及全部适用门禁；原组与主线继续保护。",
+      "closed": false
+    },
+    {
+      "id": "HAAS-12",
+      "workPackage": "W6",
+      "phase": "INTEGRATION_PENDING",
+      "evidenceRefs": [
+        "productBaseline",
+        "currentProductIndependentGate",
+        "currentProductContractFailures",
+        "checkpoint"
+      ],
+      "nextAction": "当前产品独立准入尚未通过：原三处受保护主线修改有历史v1消费与事实集绑定两条已复现失败，先确认接续修复交接，保留修改并修复／定向回归后精确评审两项接口摘要，再补当前宿主及浏览器验收。企业87项也须独立通过，此后才建第三集成树、本地整合、完整联合及用户验收；本项不作为整合前置通过项。",
+      "closed": false
+    }
+  ],
+  "nextWorkItem": {
+    "owner": "当前协调任务",
+    "workPackage": "W1",
+    "caseIds": [
+      "GOV-03"
+    ],
+    "sharedEvidenceFor": [
+      "UI-03",
+      "ISO-03",
+      "HAAS-04",
+      "OPS-07"
+    ],
+    "action": "先完成两线可还原源码交接及云端执行提示词，之后在用户指定云电脑回读环境和源码。产品两条确定契约失败优先定向修复；企业GOV-03已有实现和导航修复，继续适用候选的真实业务流程。暂不准备本机虚拟机／证书，域名配置后置；正式入口与硬配额仍待对应验收前完成，不阻断无依赖工作。引擎不可达时旧容器／卷状态未知，不按旧配置直接重启。保留全部原编号与87→整合→88。",
+    "started": true,
+    "stage": "2026-09-30用户已选择本机新环境暂缓、域名后置、准备云电脑接续；不继续等待相同本机环境选择。获知仓库公开后已明确授权本次两条专用交接分支推送，其他发布部署权限不扩大。源码交接不等于修复／验收，当前正式6通过／82待定，原P1及87→整合→88不变。",
+    "latestEvidenceRef": "cloudHandoffDecision"
+  },
+  "handoffPushAuthorization": {
+    "date": "2026-09-30",
+    "remote": "https://github.com/Hanyan179/paimind-harness-plugins.git",
+    "visibilityDisclosed": "PUBLIC",
+    "refs": ["codex/cloud-handoff-product-20260930", "codex/cloud-handoff-enterprise-20260930"],
+    "scope": "用户在得知仓库公开后明确授权本次专用分支交接推送，覆盖下方历史规则中本次推送禁令；不移动main、不提前整合、不上传凭证／用户数据／原始运行证据、不发布或部署。"
+  },
+  "reuseRule": "有效证据与实现、环境、配置逐项绑定；仅因相关变化、失败或缺证据重开。最终企业与整合候选的完整门禁和真实浏览器验收保持。",
+  "completionRule": "企业87项与产品独立准入后进入整合；整合版本适用回归、全量联合及用户验收完成后关闭HAAS-12，最终88项均通过。",
+  "authorizationRule": "完整目标及既有准确测试环境的重启／隔离授权有效，不重复索取同范围授权；本轮未重启。保留原组、全部原卷与主线数据；不改共享3080、主.dsh-home，不整合未独立通过的两线，不推送／发布／生产部署／创建自动化。新增专用虚拟机／存储环境及系统证书信任需要用户明确选择；不因已有Docker访问权限扩大到这些动作。模型凭证真实交接尚无完成证据，不绕过浏览器凭证处理边界。"
+}

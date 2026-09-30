@@ -119,6 +119,7 @@ export function installHarnessDocumentBranding(
   const iconHref = existingIcon?.getAttribute('href')
   const iconType = existingIcon?.getAttribute('type')
   const manifestHref = existingManifest?.getAttribute('href')
+  const manifestCrossOrigin = existingManifest?.getAttribute('crossorigin')
 
   if (existingIcon === null) {
     icon.rel = 'icon'
@@ -130,6 +131,11 @@ export function installHarnessDocumentBranding(
   }
   icon.type = 'image/svg+xml'
   icon.href = identity.faviconHref
+  // Manifest fetches omit credentials unless explicitly selected, even on the
+  // same origin. Never extend this to a caller-selected remote manifest.
+  if (/^\/(?!\/)[^\\\u0000-\u0020]*$/u.test(identity.manifestHref)) {
+    manifest.crossOrigin = 'use-credentials'
+  }
   manifest.href = identity.manifestHref
 
   const updateTitle = (): void => {
@@ -152,8 +158,12 @@ export function installHarnessDocumentBranding(
       else icon.setAttribute('type', iconType)
     }
     if (existingManifest === null) manifest.remove()
-    else if (manifestHref === null || manifestHref === undefined) manifest.removeAttribute('href')
-    else manifest.setAttribute('href', manifestHref)
+    else {
+      if (manifestCrossOrigin === null || manifestCrossOrigin === undefined) manifest.removeAttribute('crossorigin')
+      else manifest.setAttribute('crossorigin', manifestCrossOrigin)
+      if (manifestHref === null || manifestHref === undefined) manifest.removeAttribute('href')
+      else manifest.setAttribute('href', manifestHref)
+    }
   }
 }
 
@@ -961,6 +971,151 @@ function resolveHarnessSettingsLabel(entry: HarnessInspectableSlotEntry): string
   } catch { return undefined }
 }
 
+/** Reflow the published 0.1.1-rc.2 native Settings shell at narrow widths.
+ * Identifies it through a live contributed section and its exact structural
+ * shape, not generated CSS names. Keeps every native button, handler, dialog
+ * and content owner. PAIMind appearance mode retains its existing layout owner.
+ * Acquire inside the consumer's effect; unsupported/ambiguous shapes stay native.
+ */
+export function installHarnessSettingsResponsiveLayout(
+  slots: HarnessSlotRegistry, sectionId: string, doc: Document = document,
+): () => void {
+  const registry = slots as Partial<HarnessInspectableSlotRegistry>
+  if (typeof registry.entries !== 'function' || typeof registry.subscribe !== 'function') return () => {}
+  const attribute = 'data-paimind-native-settings-layout'
+  const value = `layout-${++nativeSettingsLayoutSequence}`
+  const selector = `body:not([data-paimind-experience='paimind']) [${attribute}='${value}']`
+  const style = doc.createElement('style')
+  style.dataset.paimindNativeSettingsLayout = value
+  style.textContent = `@media(max-width:600px){
+    ${selector}{width:calc(100vw - 16px)!important;height:calc(100dvh - 16px)!important;max-width:none!important;max-height:none!important;flex-direction:column!important}
+    ${selector}>nav{width:100%!important;min-width:0!important;max-width:none!important;max-height:min(35dvh,240px);flex:0 0 auto;box-sizing:border-box;padding:12px!important;border-right:0!important;border-bottom:1px solid var(--dsw-alias-border-l1);overflow:auto;overscroll-behavior:contain}
+    ${selector}>nav>:first-child{margin:0 0 8px!important;padding:0!important}
+    ${selector}>nav>:last-child{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+    ${selector}>nav>:last-child>button{min-width:0;width:100%;box-sizing:border-box}
+    ${selector}>nav+*{width:100%!important;min-width:0!important;min-height:0!important;height:auto!important;flex:1 1 0!important}
+  }`
+  let owned: HTMLElement | undefined
+  const clear = () => {
+    if (owned?.getAttribute(attribute) === value) owned.removeAttribute(attribute)
+    owned = undefined; style.remove()
+  }
+  const refresh = () => {
+    const entries = registry.entries!('settings.section').filter(entry => entry.options.id === sectionId)
+    const label = entries.length === 1 ? resolveHarnessSettingsLabel(entries[0]!) : undefined
+    const candidates = label === undefined ? [] : [...doc.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')].filter(dialog => {
+      if (dialog.children.length !== 2 || dialog.children[0]?.tagName !== 'NAV') return false
+      const nav = dialog.children[0]!
+      const content = dialog.children[1]!
+      if (nav.children.length !== 2 || content.tagName !== 'DIV' || content.children.length !== 2
+        || !content.children[0]?.querySelector('button')) return false
+      const buttons = [...nav.children[1]!.children]
+      return buttons.length > 0 && buttons.every(button => button.tagName === 'BUTTON')
+        && buttons.filter(button => button.textContent?.trim() === label).length === 1
+    })
+    const next = candidates.length === 1 ? candidates[0] : undefined
+    if (next === owned && style.isConnected) return
+    clear()
+    // A different consumer's marker is not ours to replace or delete.
+    if (!next || next.hasAttribute(attribute)) return
+    next.setAttribute(attribute, value); owned = next; doc.head.append(style)
+  }
+  const Observer = doc.defaultView?.MutationObserver ?? MutationObserver
+  const observer = new Observer(refresh)
+  observer.observe(doc.documentElement, { childList: true, subtree: true, characterData: true })
+  const unsubscribe = registry.subscribe('settings.section', refresh)
+  refresh()
+  return () => { observer.disconnect(); unsubscribe(); clear() }
+}
+let nativeSettingsLayoutSequence = 0
+
+/** Presentation-only projection for the published 0.1.1-rc.2 Settings shell.
+ * The caller owns the allowed section ids; null retains all native navigation.
+ * Keeps the actual native modal, section owners and click handlers. This does
+ * not grant access, suppress RPC errors, or stop plugin startup requests.
+ * Unknown/ambiguous host shapes remain untouched; the gateway must always
+ * enforce authority independently of this reversible convenience layer. */
+export function installHarnessSettingsSectionVisibility(
+  slots: HarnessSlotRegistry,
+  projection: {
+    getSnapshot(): readonly string[] | null
+    subscribe(listener: () => void): () => void
+  },
+  fallbackSectionId: string,
+  doc: Document = document,
+): () => void {
+  const registry = slots as Partial<HarnessInspectableSlotRegistry>
+  if (typeof registry.entries !== 'function' || typeof registry.subscribe !== 'function') return () => {}
+  const hidden = new Map<HTMLButtonElement, { hidden: HTMLButtonElement['hidden']; display: string; priority: string }>()
+  let disposed = false
+  const restore = (button: HTMLButtonElement) => {
+    const previous = hidden.get(button)
+    if (!previous) return
+    button.hidden = previous.hidden
+    if (previous.display === '') button.style.removeProperty('display')
+    else button.style.setProperty('display', previous.display, previous.priority)
+    hidden.delete(button)
+  }
+  const refresh = () => {
+    if (disposed) return
+    const allowed = projection.getSnapshot()
+    const wanted = new Set<HTMLButtonElement>()
+    let fallback: HTMLButtonElement | undefined
+    let redirect = false
+    let moveFocus = false
+    if (allowed !== null && allowed.includes(fallbackSectionId)) {
+      const entries = registry.entries!('settings.section')
+      const labels = entries.map(entry => ({ id: entry.options.id, label: resolveHarnessSettingsLabel(entry) }))
+      const fallbackLabels = labels.filter(row => row.id === fallbackSectionId)
+      const candidates = [...doc.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')].filter(dialog => {
+        const nav = dialog.children[0]
+        return dialog.children.length === 2 && nav?.tagName === 'NAV' && nav.children.length === 2
+          && dialog.children[1]?.tagName === 'DIV' && fallbackLabels.length === 1
+          && [...nav.children[1]!.children].filter(button => button.tagName === 'BUTTON'
+            && button.textContent?.trim() === fallbackLabels[0]!.label).length === 1
+      })
+      if (candidates.length === 1) {
+        const buttons = [...candidates[0]!.children[0]!.children[1]!.children]
+        // A label is only a version-specific join to the authoritative slot id.
+        // Never guess by translated text, order, generated CSS, or substring.
+        const rows = buttons.map(button => ({ button, matches: labels.filter(row => row.label === button.textContent?.trim()) }))
+        if (rows.every(row => row.button.tagName === 'BUTTON' && row.matches.length === 1
+          && typeof row.matches[0]!.id === 'string')) {
+          for (const row of rows) {
+            const button = row.button as HTMLButtonElement
+            const id = row.matches[0]!.id as string
+            if (id === fallbackSectionId) fallback = button
+            if (allowed.includes(id)) continue
+            wanted.add(button)
+            redirect ||= button.getAttribute('aria-current') === 'true'
+            moveFocus ||= doc.activeElement === button
+          }
+        }
+      }
+    }
+    for (const button of hidden.keys()) if (!wanted.has(button)) restore(button)
+    for (const button of wanted) {
+      if (!hidden.has(button)) hidden.set(button, { hidden: button.hidden,
+        display: button.style.getPropertyValue('display'), priority: button.style.getPropertyPriority('display') })
+      button.hidden = true; button.style.setProperty('display', 'none', 'important')
+    }
+    // Invoke the existing native action; do not replace its content or retain
+    // a second active-section state. Preserve the native close-button focus.
+    if (fallback && !fallback.disabled && (redirect || moveFocus)) {
+      fallback.click()
+      if (moveFocus) fallback.focus()
+    }
+  }
+  const Observer = doc.defaultView?.MutationObserver ?? MutationObserver
+  const observer = new Observer(refresh)
+  observer.observe(doc.documentElement, { childList: true, subtree: true, characterData: true,
+    attributes: true, attributeFilter: ['aria-current'] })
+  const offSlots = registry.subscribe('settings.section', refresh)
+  const offProjection = projection.subscribe(refresh)
+  refresh()
+  return () => { disposed = true; observer.disconnect(); offSlots(); offProjection(); for (const button of hidden.keys()) restore(button) }
+}
+
 function resolveHarnessSettingsTrigger(doc: Document): HTMLButtonElement | null {
   const eligible = (button: HTMLButtonElement): boolean => button.closest('[role="dialog"]') === null && !button.disabled
   const slotted = [...new Set(
@@ -1454,3 +1609,4 @@ export interface PaimindBentoHostContext {
   readonly sessions: PaimindHostSessionService
 }
 export * from './client-input-trigger.js'
+export { readPaimindClientAudience } from './client-audience.js'

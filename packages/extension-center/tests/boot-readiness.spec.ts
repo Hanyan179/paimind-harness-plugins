@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createPaimindBootReadinessInjection,
   registerPaimindBootReadiness,
+  isPaimindBootReadinessSubmission,
   type PaimindBootHttpRequest,
   type PaimindBootHttpResponse,
 } from '../src/index.js'
@@ -22,6 +23,22 @@ interface DiagnosticGlobal {
 }
 
 const diagnosticGlobal = globalThis as typeof globalThis & DiagnosticGlobal
+
+describe('boot readiness submission contract', () => {
+  it('accepts current producer fields but never arbitrary routes, authority fields, invalid bytes or unbounded data', () => {
+    const body = new TextEncoder().encode(JSON.stringify({ schema: 'paimind.boot-readiness/v1', state: 'milestone', phase: 'bootstrap', page: { href: 'http://example.test/' } }))
+    expect(isPaimindBootReadinessSubmission('POST', '/paimind/boot-readiness', 'application/json', body)).toBe(true)
+    for (const [method, target, mime, bytes] of [
+      ['GET', '/paimind/boot-readiness', 'application/json', body], ['POST', '/paimind/boot-readiness?', 'application/json', body],
+      ['POST', '/paimind/boot-readiness', 'text/plain', body], ['POST', '/paimind/boot-readiness', 'application/json', new Uint8Array([255])],
+      ['POST', '/paimind/boot-readiness', 'application/json', new Uint8Array(256 * 1024 + 1)],
+    ] as const) expect(isPaimindBootReadinessSubmission(method, target, mime, bytes)).toBe(false)
+    for (const value of [null, [], {}, { schema: 'other', state: 'ready' }, { schema: 'paimind.boot-readiness/v1', state: 'admin' },
+      { schema: 'paimind.boot-readiness/v1', state: 'ready', userId: 'another' }]) {
+      expect(isPaimindBootReadinessSubmission('POST', '/paimind/boot-readiness', 'application/json', new TextEncoder().encode(JSON.stringify(value)))).toBe(false)
+    }
+  })
+})
 
 describe('base Browser boot readiness injection', () => {
   beforeEach(() => {

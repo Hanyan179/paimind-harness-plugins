@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types", "emitDeclarationOnly": true },
+  "include": ["src"],
+  "references": [{ "path": "../agent-market" }, { "path": "../extension-center" }, { "path": "../skill-market" }, { "path": "../harness-compat" }, { "path": "../ui-foundation" }]
+}

@@ -104,6 +104,7 @@ interface ScannedTree {
 
 interface ScanTreeOptions {
   readonly excludedSegments?: ReadonlySet<string>
+  readonly builtinDirectoryMarkers?: boolean
 }
 
 interface LoadedBlueprint {
@@ -305,6 +306,14 @@ async function scanTree(rootInput: string, options: Readonly<ScanTreeOptions> = 
       return
     }
     if (!info.isFile()) throw new Error(`Unsupported Workspace Blueprint entry type: ${path}`)
+    // Git cannot track an empty directory. Only bundled templates interpret a
+    // zero-byte .gitkeep as packaging metadata. It contributes the already
+    // scanned directory, never a runtime file or an extra digest entry. User
+    // folders keep ordinary .gitkeep content; symbolic links were rejected above.
+    if (options.builtinDirectoryMarkers && basename(path) === '.gitkeep') {
+      if (info.size !== 0) throw new Error(`Built-in directory marker must be empty: ${path}`)
+      return
+    }
     if (info.size > MAX_BLUEPRINT_FILE_BYTES) throw new Error(`Workspace Blueprint file is too large: ${path}`)
     fileCount += 1
     totalBytes += info.size
@@ -1026,7 +1035,7 @@ export class WorkspaceBlueprintCatalog {
         if (identities.has(identity)) throw new Error(`Duplicate Workspace Blueprint version: ${identity}`)
         identities.add(identity)
         const filesRoot = join(versionRoot, 'files')
-        const tree = await scanTree(filesRoot)
+        const tree = await scanTree(filesRoot, { builtinDirectoryMarkers: expectedSource === 'builtin' })
         items.push(Object.freeze({
           manifest: manifestFromSource(source, tree),
           root: filesRoot,
