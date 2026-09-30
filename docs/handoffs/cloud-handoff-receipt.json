@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-09-30T07:09:14.360Z",
+  "status": "SOURCE_RESTORE_VERIFIED_NOT_PRODUCT_ACCEPTANCE",
+  "checks": [
+    {
+      "line": "product",
+      "sourceCommit": "dbf89eb30a7f266e16aaecf1584d645dae001472",
+      "filesMatched": 869,
+      "mismatches": 0,
+      "cleanCheckout": true
+    },
+    {
+      "line": "enterprise",
+      "sourceCommit": "4e8ded98b5365ed08122a963ae907c3a7e164028",
+      "filesMatched": 1024,
+      "mismatches": 0,
+      "cleanCheckout": true
+    }
+  ],
+  "mainUnchanged": true,
+  "originalIndexesUnchanged": true,
+  "formalRowsSha256": "9aacf8fa083c8c7dbc445e3089d93716585a7b9b1c7fa526be4e5d2e67871222",
+  "formalPassed": 6,
+  "formalPending": 82,
+  "browserTestsRun": false,
+  "businessTestsRerun": false,
+  "applicationCodeFixed": false,
+  "privacy": {
+    "privatePathsIncluded": false,
+    "highConfidenceSecretPatternHits": 0,
+    "syntheticFixtureAssignmentsReviewed": true,
+    "rawRuntimeEvidenceIncluded": false
+  },
+  "limits": [
+    "No credentials, runtime images, user data or private original evidence are transferred.",
+    "This is not a comprehensive security audit.",
+    "Formal browser, quota and secure-entry gates remain pending.",
+    "Cloud architecture and environment require fresh applicable validation."
+  ]
+}
